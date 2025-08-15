@@ -1,0 +1,193 @@
+import { Hono } from 'hono';
+import { z } from 'zod';
+import type { Env } from '@/types/env';
+import { OptimizelyService } from '@/services/OptimizelyService';
+import { jwt } from '@/middleware/auth';
+
+const optimizely = new Hono<{ Bindings: Env }>();
+
+const DecisionRequestSchema = z.object({
+  userId: z.string(),
+  userAttributes: z.record(z.any()).optional(),
+  experiments: z.array(z.string()).optional(),
+  features: z.array(z.string()).optional(),
+});
+
+const TrackEventSchema = z.object({
+  userId: z.string(),
+  eventKey: z.string(),
+  userAttributes: z.record(z.any()).optional(),
+  eventTags: z.record(z.any()).optional(),
+});
+
+optimizely.use('/decisions', jwt({ required: false }));
+optimizely.use('/track', jwt({ required: false }));
+
+optimizely.post('/decisions', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, userAttributes = {}, experiments = [], features = [] } = 
+      DecisionRequestSchema.parse(body);
+
+    const optimizelyService = new OptimizelyService(c.env);
+    await optimizelyService.initialize();
+
+    const results: any = {
+      userId,
+      experiments: {},
+      features: {},
+      segments: [],
+    };
+
+    if (experiments.length > 0) {
+      for (const experimentKey of experiments) {
+        const variation = await optimizelyService.getVariation(
+          experimentKey,
+          userId,
+          userAttributes
+        );
+        results.experiments[experimentKey] = variation;
+      }
+    }
+
+    if (features.length > 0) {
+      for (const featureKey of features) {
+        const isEnabled = await optimizelyService.isFeatureEnabled(
+          featureKey,
+          userId,
+          userAttributes
+        );
+        const variables = await optimizelyService.getAllFeatureVariables(
+          featureKey,
+          userId,
+          userAttributes
+        );
+        
+        results.features[featureKey] = {
+          enabled: isEnabled,
+          variables,
+        };
+      }
+    }
+
+    const segments = await optimizelyService.getSegments(userId, userAttributes);
+    results.segments = segments;
+
+    await c.env.ANALYTICS.writeDataPoint({
+      blobs: [
+        JSON.stringify(results),
+        'optimizely_decision',
+        userId,
+      ],
+      doubles: [Date.now()],
+      indexes: [userId],
+    });
+
+    return c.json(results);
+  } catch (error) {
+    console.error('Optimizely decision error:', error);
+    return c.json({ error: 'Failed to get decisions' }, 500);
+  }
+});
+
+optimizely.post('/track', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, eventKey, userAttributes = {}, eventTags = {} } = 
+      TrackEventSchema.parse(body);
+
+    const optimizelyService = new OptimizelyService(c.env);
+    await optimizelyService.initialize();
+
+    await optimizelyService.track(eventKey, userId, userAttributes, eventTags);
+
+    await c.env.ANALYTICS.writeDataPoint({
+      blobs: [
+        JSON.stringify({ userId, eventKey, userAttributes, eventTags }),
+        'optimizely_track',
+        eventKey,
+      ],
+      doubles: [Date.now()],
+      indexes: [userId],
+    });
+
+    return c.json({
+      success: true,
+      userId,
+      eventKey,
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    console.error('Optimizely track error:', error);
+    return c.json({ error: 'Failed to track event' }, 500);
+  }
+});
+
+optimizely.get('/experiments', jwt(), async (c) => {
+  try {
+    const optimizelyService = new OptimizelyService(c.env);
+    await optimizelyService.initialize();
+
+    const experiments = optimizelyService.getExperiments();
+    
+    return c.json({
+      experiments: experiments.map(experiment => ({
+        id: experiment.id,
+        key: experiment.key,
+        status: experiment.status,
+        audienceIds: experiment.audienceIds,
+        variations: experiment.variations.map((variation: any) => ({
+          id: variation.id,
+          key: variation.key,
+        })),
+      })),
+    });
+  } catch (error) {
+    console.error('Optimizely experiments error:', error);
+    return c.json({ error: 'Failed to get experiments' }, 500);
+  }
+});
+
+optimizely.get('/features', jwt(), async (c) => {
+  try {
+    const optimizelyService = new OptimizelyService(c.env);
+    await optimizelyService.initialize();
+
+    const features = optimizelyService.getFeatureFlags();
+    
+    return c.json({
+      features: features.map(feature => ({
+        id: feature.id,
+        key: feature.key,
+        experiments: feature.experimentIds,
+        variables: feature.variables.map((variable: any) => ({
+          id: variable.id,
+          key: variable.key,
+          type: variable.type,
+          defaultValue: variable.defaultValue,
+        })),
+      })),
+    });
+  } catch (error) {
+    console.error('Optimizely features error:', error);
+    return c.json({ error: 'Failed to get features' }, 500);
+  }
+});
+
+optimizely.get('/datafile', async (c) => {
+  try {
+    const optimizelyService = new OptimizelyService(c.env);
+    const datafile = await optimizelyService.getDatafile();
+    
+    return c.json(datafile);
+  } catch (error) {
+    console.error('Optimizely datafile error:', error);
+    return c.json({ error: 'Failed to get datafile' }, 500);
+  }
+});
+
+optimizely.get('/health', (c) => {
+  return c.json({ status: 'ok', service: 'optimizely' });
+});
+
+export { optimizely as optimizelyRoutes };

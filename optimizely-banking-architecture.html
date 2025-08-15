@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizely Mobile Banking Personalization Architecture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2e4a6f 100%);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            color: #1e3a5f;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        h3 {
+            color: #2e4a6f;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .section {
+            background: white;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .architecture-diagram {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        
+        .sequence-diagram {
+            background: #fff;
+            border: 2px solid #e0e0e0;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .ui-mapping {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        
+        .highlight {
+            background: #fffacd;
+            padding: 20px;
+            border-left: 4px solid #ffd700;
+            margin: 20px 0;
+        }
+        
+        .benefit-box {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .warning-box {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #ff9800;
+        }
+        
+        svg {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .mobile-ui {
+            width: 300px;
+            background: #fff;
+            border: 2px solid #333;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .card {
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .card-image {
+            height: 120px;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        
+        .card-content {
+            padding: 15px;
+        }
+        
+        .card-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .card-cta {
+            background: #1e3a5f;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            display: inline-block;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+        
+        .mapping-line {
+            stroke: #ff6b6b;
+            stroke-width: 2;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .comparison-table th {
+            background: #1e3a5f;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .comparison-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        @media (max-width: 768px) {
+            .ui-mapping {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Optimizely Mobile Banking Personalization Architecture</h1>
+            <p>Dynamic Content Personalization Without App Redeployment</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Executive Summary -->
+        <section class="section">
+            <h2>Executive Summary</h2>
+            <p>This architecture enables your banking mobile applications to deliver personalized experiences to customers based on their segments and behaviors, all without requiring app redeployment. We present two implementation approaches:</p>
+            
+            <div class="benefit-box">
+                <strong>Use Case 1:</strong> Direct Variable-Driven Personalization - Content delivered through Optimizely Feature Variables
+            </div>
+            
+            <div class="benefit-box">
+                <strong>Use Case 2:</strong> CMS/GraphQL-Driven Personalization - Content retrieved from Optimizely CMS via GraphQL
+            </div>
+            
+            <p style="margin-top: 20px;">Both approaches integrate with Microsoft Dynamics CDP for real-time customer segmentation.</p>
+        </section>
+
+        <!-- Use Case 1: Direct Variable-Driven Personalization -->
+        <section class="section">
+            <h2>Use Case 1: Direct Variable-Driven Personalization</h2>
+            
+            <h3>Architecture Overview</h3>
+            <div class="architecture-diagram">
+                <svg viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Arrows definition -->
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#333" />
+                        </marker>
+                    </defs>
+                    
+                    <!-- Mobile App -->
+                    <rect x="50" y="200" width="200" height="300" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="8"/>
+                    <text x="150" y="230" text-anchor="middle" font-weight="bold">Mobile App (iOS)</text>
+                    
+                    <!-- Components inside Mobile App -->
+                    <rect x="70" y="250" width="160" height="40" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="4"/>
+                    <text x="150" y="275" text-anchor="middle" font-size="14">CDP Bridge</text>
+                    
+                    <rect x="70" y="300" width="160" height="40" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="4"/>
+                    <text x="150" y="325" text-anchor="middle" font-size="14">Optimizely SDK</text>
+                    
+                    <rect x="70" y="350" width="160" height="40" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="4"/>
+                    <text x="150" y="375" text-anchor="middle" font-size="14">UI Builder</text>
+                    
+                    <rect x="70" y="400" width="160" height="80" fill="#90caf9" stroke="#1976d2" stroke-width="1" rx="4"/>
+                    <text x="150" y="425" text-anchor="middle" font-size="14">Dynamic Carousel</text>
+                    <text x="150" y="445" text-anchor="middle" font-size="12">Component</text>
+                    
+                    <!-- Microsoft Dynamics CDP -->
+                    <rect x="450" y="50" width="200" height="100" fill="#e8f5e9" stroke="#4caf50" stroke-width="2" rx="8"/>
+                    <text x="550" y="90" text-anchor="middle" font-weight="bold">Microsoft</text>
+                    <text x="550" y="110" text-anchor="middle" font-weight="bold">Dynamics CDP</text>
+                    
+                    <!-- Optimizely Feature Experimentation -->
+                    <rect x="450" y="300" width="200" height="150" fill="#fff3e0" stroke="#ff9800" stroke-width="2" rx="8"/>
+                    <text x="550" y="330" text-anchor="middle" font-weight="bold">Optimizely Feature</text>
+                    <text x="550" y="350" text-anchor="middle" font-weight="bold">Experimentation</text>
+                    
+                    <!-- Feature Flag Details -->
+                    <rect x="470" y="380" width="160" height="50" fill="#ffe0b2" stroke="#ff9800" stroke-width="1" rx="4"/>
+                    <text x="550" y="400" text-anchor="middle" font-size="12">Feature Flags</text>
+                    <text x="550" y="415" text-anchor="middle" font-size="12">Variables & Variations</text>
+                    
+                    <!-- Targeted Deliveries -->
+                    <rect x="800" y="250" width="180" height="250" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2" rx="8"/>
+                    <text x="890" y="280" text-anchor="middle" font-weight="bold">Targeted Deliveries</text>
+                    
+                    <rect x="820" y="300" width="140" height="40" fill="#e1bee7" stroke="#9c27b0" stroke-width="1" rx="4"/>
+                    <text x="890" y="325" text-anchor="middle" font-size="12">Mortgage Prospects</text>
+                    
+                    <rect x="820" y="350" width="140" height="40" fill="#e1bee7" stroke="#9c27b0" stroke-width="1" rx="4"/>
+                    <text x="890" y="375" text-anchor="middle" font-size="12">Credit Card Users</text>
+                    
+                    <rect x="820" y="400" width="140" height="40" fill="#e1bee7" stroke="#9c27b0" stroke-width="1" rx="4"/>
+                    <text x="890" y="425" text-anchor="middle" font-size="12">New Customers</text>
+                    
+                    <rect x="820" y="450" width="140" height="40" fill="#e1bee7" stroke="#9c27b0" stroke-width="1" rx="4"/>
+                    <text x="890" y="475" text-anchor="middle" font-size="12">Default Experience</text>
+                    
+                    <!-- Connection lines with better routing -->
+                    <!-- 1. CDP Bridge to CDP -->
+                    <path d="M 230 270 L 300 270 L 300 100 L 450 100" 
+                          stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="300" y="90" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">1. Fetch Segments</text>
+                    
+                    <!-- 2. SDK to Optimizely -->
+                    <path d="M 230 320 L 450 320" 
+                          stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="340" y="310" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">2. Decide with Context</text>
+                    
+                    <!-- 3. Optimizely to Targeted Deliveries -->
+                    <path d="M 650 375 L 800 375" 
+                          stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="725" y="365" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">3. Match Rules</text>
+                    
+                    <!-- 4. Targeted Deliveries back to UI Builder -->
+                    <path d="M 800 450 L 720 450 L 720 520 L 300 520 L 300 370 L 230 370" 
+                          stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+                    <text x="500" y="540" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">4. Return Variables</text>
+                </svg>
+            </div>
+
+            <h3>Sequence Diagram</h3>
+            <div class="sequence-diagram">
+                <svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Participants -->
+                    <rect x="50" y="20" width="120" height="40" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="4"/>
+                    <text x="110" y="45" text-anchor="middle" font-weight="bold">User</text>
+                    
+                    <rect x="250" y="20" width="120" height="40" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="4"/>
+                    <text x="310" y="45" text-anchor="middle" font-weight="bold">Mobile App</text>
+                    
+                    <rect x="450" y="20" width="120" height="40" fill="#e8f5e9" stroke="#4caf50" stroke-width="2" rx="4"/>
+                    <text x="510" y="45" text-anchor="middle" font-weight="bold">CDP API</text>
+                    
+                    <rect x="650" y="20" width="120" height="40" fill="#fff3e0" stroke="#ff9800" stroke-width="2" rx="4"/>
+                    <text x="710" y="45" text-anchor="middle" font-weight="bold">Optimizely</text>
+                    
+                    <!-- Lifelines -->
+                    <line x1="110" y1="60" x2="110" y2="650" stroke="#999" stroke-width="1" stroke-dasharray="5,5"/>
+                    <line x1="310" y1="60" x2="310" y2="650" stroke="#999" stroke-width="1" stroke-dasharray="5,5"/>
+                    <line x1="510" y1="60" x2="510" y2="650" stroke="#999" stroke-width="1" stroke-dasharray="5,5"/>
+                    <line x1="710" y1="60" x2="710" y2="650" stroke="#999" stroke-width="1" stroke-dasharray="5,5"/>
+                    
+                    <!-- Interactions -->
+                    <!-- 1. Open App -->
+                    <line x1="110" y1="100" x2="310" y2="100" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <text x="210" y="95" text-anchor="middle" font-size="12">1. Open App</text>
+                    
+                    <!-- 2. Initialize -->
+                    <rect x="320" y="110" width="80" height="30" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="2"/>
+                    <text x="360" y="130" text-anchor="middle" font-size="11">Initialize</text>
+                    
+                    <!-- 3. Get User ID -->
+                    <rect x="320" y="150" width="100" height="30" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="2"/>
+                    <text x="370" y="170" text-anchor="middle" font-size="11">Get User ID</text>
+                    
+                    <!-- 4. Fetch Segments -->
+                    <line x1="310" y1="200" x2="510" y2="200" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <text x="410" y="195" text-anchor="middle" font-size="12">2. fetchSegments(userId)</text>
+                    
+                    <!-- 5. Return Segments -->
+                    <line x1="510" y1="240" x2="310" y2="240" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+                    <text x="410" y="235" text-anchor="middle" font-size="12">3. segments[]</text>
+                    
+                    <!-- 6. Create Context -->
+                    <rect x="320" y="260" width="120" height="30" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="2"/>
+                    <text x="380" y="280" text-anchor="middle" font-size="11">Create Context</text>
+                    
+                    <!-- 7. Decide -->
+                    <line x1="310" y1="310" x2="710" y2="310" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <text x="510" y="305" text-anchor="middle" font-size="12">4. decide("banking_carousel")</text>
+                    
+                    <!-- 8. Return Decision -->
+                    <line x1="710" y1="350" x2="310" y2="350" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+                    <text x="510" y="345" text-anchor="middle" font-size="12">5. decision + variables</text>
+                    
+                    <!-- 9. Extract Variables -->
+                    <rect x="320" y="370" width="140" height="30" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="2"/>
+                    <text x="390" y="390" text-anchor="middle" font-size="11">Extract Variables</text>
+                    
+                    <!-- 10. Build UI -->
+                    <rect x="320" y="420" width="140" height="50" fill="#90caf9" stroke="#1976d2" stroke-width="1" rx="2"/>
+                    <text x="390" y="440" text-anchor="middle" font-size="11">Build Carousel</text>
+                    <text x="390" y="455" text-anchor="middle" font-size="11">from Variables</text>
+                    
+                    <!-- 11. Display -->
+                    <line x1="310" y1="500" x2="110" y2="500" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+                    <text x="210" y="495" text-anchor="middle" font-size="12">6. Display Personalized UI</text>
+                    
+                    <!-- Note -->
+                    <rect x="50" y="550" width="720" height="60" fill="#fffacd" stroke="#ffd700" stroke-width="2" rx="4"/>
+                    <text x="410" y="575" text-anchor="middle" font-weight="bold">Key Point: No App Redeployment Required!</text>
+                    <text x="410" y="595" text-anchor="middle" font-size="12">Marketing team can update carousel content by changing variable values in Optimizely UI</text>
+                </svg>
+            </div>
+
+            <h3>Variable to UI Mapping - Exploded View</h3>
+            <div style="background: #f8f9fa; padding: 40px; border-radius: 8px; overflow-x: auto;">
+                <svg viewBox="0 0 1600 800" xmlns="http://www.w3.org/2000/svg">
+                    <!-- JSON Variable Section -->
+                    <rect x="20" y="100" width="400" height="600" fill="#2d2d2d" stroke="#333" stroke-width="2" rx="8"/>
+                    <text x="220" y="130" text-anchor="middle" fill="#fff" font-weight="bold" font-size="16">JSON Variable Configuration</text>
+                    
+                    <!-- JSON Content -->
+                    <text x="40" y="170" fill="#f8f8f2" font-family="monospace" font-size="12">{</text>
+                    <text x="60" y="190" fill="#f8f8f2" font-family="monospace" font-size="12">"carousel_config": {</text>
+                    <text x="80" y="210" fill="#f8f8f2" font-family="monospace" font-size="12">"cards": [{</text>
+                    <text x="100" y="230" fill="#66d9ef" font-family="monospace" font-size="12">"imageUrl":</text>
+                    <text x="200" y="230" fill="#e6db74" font-family="monospace" font-size="12">"https://cdn.bank.com/mortgage.jpg"</text>
+                    <text x="100" y="250" fill="#66d9ef" font-family="monospace" font-size="12">"headline":</text>
+                    <text x="200" y="250" fill="#e6db74" font-family="monospace" font-size="12">"Ready for Your Dream Home?"</text>
+                    <text x="100" y="270" fill="#66d9ef" font-family="monospace" font-size="12">"ctaText":</text>
+                    <text x="180" y="270" fill="#e6db74" font-family="monospace" font-size="12">"Check Rates"</text>
+                    <text x="100" y="290" fill="#66d9ef" font-family="monospace" font-size="12">"backgroundColor":</text>
+                    <text x="240" y="290" fill="#e6db74" font-family="monospace" font-size="12">"#1E3A5F"</text>
+                    
+                    <!-- Second card -->
+                    <text x="80" y="330" fill="#f8f8f2" font-family="monospace" font-size="12">}, {</text>
+                    <text x="100" y="350" fill="#66d9ef" font-family="monospace" font-size="12">"imageUrl":</text>
+                    <text x="200" y="350" fill="#e6db74" font-family="monospace" font-size="12">"https://cdn.bank.com/preapproval.jpg"</text>
+                    <text x="100" y="370" fill="#66d9ef" font-family="monospace" font-size="12">"headline":</text>
+                    <text x="200" y="370" fill="#e6db74" font-family="monospace" font-size="12">"Get Pre-Approved Today"</text>
+                    <text x="100" y="390" fill="#66d9ef" font-family="monospace" font-size="12">"ctaText":</text>
+                    <text x="180" y="390" fill="#e6db74" font-family="monospace" font-size="12">"Start Now"</text>
+                    <text x="100" y="410" fill="#66d9ef" font-family="monospace" font-size="12">"backgroundColor":</text>
+                    <text x="240" y="410" fill="#e6db74" font-family="monospace" font-size="12">"#2E4A6F"</text>
+                    
+                    <!-- Carousel config -->
+                    <text x="80" y="450" fill="#f8f8f2" font-family="monospace" font-size="12">}],</text>
+                    <text x="80" y="470" fill="#66d9ef" font-family="monospace" font-size="12">"maxCards":</text>
+                    <text x="170" y="470" fill="#ae81ff" font-family="monospace" font-size="12">3</text>
+                    <text x="80" y="490" fill="#66d9ef" font-family="monospace" font-size="12">"autoRotate":</text>
+                    <text x="190" y="490" fill="#ae81ff" font-family="monospace" font-size="12">true</text>
+                    
+                    <!-- Exploded Components Section -->
+                    <text x="800" y="50" text-anchor="middle" font-weight="bold" font-size="18">Exploded UI Components</text>
+                    
+                    <!-- Card 1 Components -->
+                    <g id="card1-components">
+                        <!-- Image Component -->
+                        <rect x="600" y="100" width="200" height="120" fill="#e0e0e0" stroke="#333" stroke-width="2" rx="4"/>
+                        <image href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'%3E%3Crect width='200' height='120' fill='%23ccc'/%3E%3Ctext x='100' y='60' text-anchor='middle' fill='%23666'%3EMortgage Image%3C/text%3E%3C/svg%3E" x="600" y="100" width="200" height="120"/>
+                        <text x="700" y="240" text-anchor="middle" font-size="12" font-weight="bold">Image Component</text>
+                        
+                        <!-- Headline Component -->
+                        <rect x="850" y="140" width="250" height="40" fill="#fff" stroke="#333" stroke-width="2" rx="4"/>
+                        <text x="975" y="165" text-anchor="middle" font-size="16" font-weight="bold">Ready for Your Dream Home?</text>
+                        <text x="975" y="200" text-anchor="middle" font-size="12" font-weight="bold">Headline Component</text>
+                        
+                        <!-- CTA Button Component -->
+                        <rect x="650" y="280" width="120" height="40" fill="#1E3A5F" stroke="#333" stroke-width="2" rx="4"/>
+                        <text x="710" y="305" text-anchor="middle" fill="white" font-size="14">Check Rates</text>
+                        <text x="710" y="340" text-anchor="middle" font-size="12" font-weight="bold">CTA Button</text>
+                        
+                        <!-- Background Color -->
+                        <rect x="850" y="280" width="200" height="40" fill="#1E3A5F" stroke="#333" stroke-width="2" rx="4"/>
+                        <text x="950" y="305" text-anchor="middle" fill="white" font-size="14">Background: #1E3A5F</text>
+                        <text x="950" y="340" text-anchor="middle" font-size="12" font-weight="bold">Card Background</text>
+                    </g>
+                    
+                    <!-- Card 2 Components -->
+                    <g id="card2-components" transform="translate(0, 280)">
+                        <!-- Image Component -->
+                        <rect x="600" y="100" width="200" height="120" fill="#e0e0e0" stroke="#333" stroke-width="2" rx="4"/>
+                        <image href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'%3E%3Crect width='200' height='120' fill='%23ccc'/%3E%3Ctext x='100' y='60' text-anchor='middle' fill='%23666'%3EPre-approval Image%3C/text%3E%3C/svg%3E" x="600" y="100" width="200" height="120"/>
+                        <text x="700" y="240" text-anchor="middle" font-size="12" font-weight="bold">Image Component</text>
+                        
+                        <!-- Headline Component -->
+                        <rect x="850" y="140" width="250" height="40" fill="#fff" stroke="#333" stroke-width="2" rx="4"/>
+                        <text x="975" y="165" text-anchor="middle" font-size="16" font-weight="bold">Get Pre-Approved Today</text>
+                        <text x="975" y="200" text-anchor="middle" font-size="12" font-weight="bold">Headline Component</text>
+                        
+                        <!-- CTA Button Component -->
+                        <rect x="650" y="280" width="120" height="40" fill="#2E4A6F" stroke="#333" stroke-width="2" rx="4"/>
+                        <text x="710" y="305" text-anchor="middle" fill="white" font-size="14">Start Now</text>
+                        <text x="710" y="340" text-anchor="middle" font-size="12" font-weight="bold">CTA Button</text>
+                        
+                        <!-- Background Color -->
+                        <rect x="850" y="280" width="200" height="40" fill="#2E4A6F" stroke="#333" stroke-width="2" rx="4"/>
+                        <text x="950" y="305" text-anchor="middle" fill="white" font-size="14">Background: #2E4A6F</text>
+                        <text x="950" y="340" text-anchor="middle" font-size="12" font-weight="bold">Card Background</text>
+                    </g>
+                    
+                    <!-- Carousel Config Components -->
+                    <rect x="700" y="700" width="100" height="30" fill="#f0f0f0" stroke="#333" stroke-width="2" rx="4"/>
+                    <text x="750" y="720" text-anchor="middle" font-size="12">Max: 3 cards</text>
+                    
+                    <rect x="820" y="700" width="120" height="30" fill="#f0f0f0" stroke="#333" stroke-width="2" rx="4"/>
+                    <text x="880" y="720" text-anchor="middle" font-size="12">Auto-rotate: ON</text>
+                    
+                    <!-- Assembled UI -->
+                    <rect x="1200" y="200" width="350" height="400" fill="#fff" stroke="#333" stroke-width="3" rx="20"/>
+                    <text x="1375" y="180" text-anchor="middle" font-weight="bold" font-size="18">Assembled Mobile UI</text>
+                    
+                    <!-- Phone screen -->
+                    <rect x="1220" y="230" width="310" height="340" fill="#f5f5f5" stroke="none" rx="10"/>
+                    
+                    <!-- Card 1 Assembled -->
+                    <g transform="translate(1230, 240)">
+                        <rect width="290" height="150" fill="#1E3A5F" rx="8"/>
+                        <rect y="0" width="290" height="80" fill="#ddd" rx="8"/>
+                        <text x="145" y="45" text-anchor="middle" fill="#666">Mortgage Image</text>
+                        <rect y="80" width="290" height="70" fill="white"/>
+                        <text x="145" y="105" text-anchor="middle" font-size="14" font-weight="bold">Ready for Your Dream Home?</text>
+                        <rect x="85" y="115" width="120" height="30" fill="#1E3A5F" rx="4"/>
+                        <text x="145" y="135" text-anchor="middle" fill="white" font-size="12">Check Rates</text>
+                    </g>
+                    
+                    <!-- Card 2 (partially visible) -->
+                    <g transform="translate(1230, 400)">
+                        <rect width="290" height="100" fill="#2E4A6F" rx="8" opacity="0.7"/>
+                        <rect y="0" width="290" height="50" fill="#ddd" rx="8"/>
+                        <text x="145" y="30" text-anchor="middle" fill="#666" font-size="12">Pre-approval Image</text>
+                        <rect y="50" width="290" height="50" fill="white"/>
+                        <text x="145" y="70" text-anchor="middle" font-size="12" font-weight="bold">Get Pre-Approved Today</text>
+                    </g>
+                    
+                    <!-- Carousel dots -->
+                    <circle cx="1345" cy="520" r="4" fill="#333"/>
+                    <circle cx="1365" cy="520" r="4" fill="#ddd"/>
+                    <circle cx="1385" cy="520" r="4" fill="#ddd"/>
+                    
+                    <!-- Connection Lines -->
+                    <defs>
+                        <marker id="arrowhead3" markerWidth="8" markerHeight="8" refX="8" refY="4" orient="auto">
+                            <polygon points="0 0, 8 4, 0 8" fill="#ff6b6b" />
+                        </marker>
+                    </defs>
+                    
+                    <!-- Card 1 connections -->
+                    <path d="M 420 230 L 500 230 L 500 160 L 600 160" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arrowhead3)" opacity="0.7"/>
+                    <path d="M 420 250 L 480 250 L 480 160 L 850 160" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arrowhead3)" opacity="0.7"/>
+                    <path d="M 420 270 L 460 270 L 460 300 L 650 300" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arrowhead3)" opacity="0.7"/>
+                    <path d="M 420 290 L 440 290 L 440 300 L 850 300" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arrowhead3)" opacity="0.7"/>
+                    
+                    <!-- Card 2 connections -->
+                    <path d="M 420 350 L 500 350 L 500 440 L 600 440" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arrowhead3)" opacity="0.7" stroke-dasharray="5,3"/>
+                    <path d="M 420 370 L 480 370 L 480 440 L 850 440" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arrowhead3)" opacity="0.7" stroke-dasharray="5,3"/>
+                    <path d="M 420 390 L 460 390 L 460 580 L 650 580" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arrowhead3)" opacity="0.7" stroke-dasharray="5,3"/>
+                    <path d="M 420 410 L 440 410 L 440 580 L 850 580" stroke="#ff6b6b" stroke-width="2" fill="none" marker-end="url(#arrowhead3)" opacity="0.7" stroke-dasharray="5,3"/>
+                    
+                    <!-- Assembly arrows -->
+                    <path d="M 800 160 L 1200 290" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)" opacity="0.5"/>
+                    <path d="M 1100 160 L 1200 290" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)" opacity="0.5"/>
+                    <path d="M 770 300 L 1200 320" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)" opacity="0.5"/>
+                    <path d="M 1050 300 L 1200 320" stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead)" opacity="0.5"/>
+                    
+                    <!-- Labels -->
+                    <text x="800" y="90" text-anchor="middle" font-size="14" fill="#666">Components are assembled at runtime</text>
+                    <text x="800" y="760" text-anchor="middle" font-size="14" fill="#666">Carousel configuration controls display behavior</text>
+                </svg>
+            </div>
+            
+            <div class="highlight" style="margin-top: 20px;">
+                <strong>How it works:</strong>
+                <ol>
+                    <li><strong>JSON Variables</strong> are defined in Optimizely for each targeted delivery variation</li>
+                    <li><strong>Values are extracted</strong> from the JSON and mapped to specific UI component properties</li>
+                    <li><strong>Components are created</strong> dynamically using these values (images, text, colors, actions)</li>
+                    <li><strong>UI is assembled</strong> at runtime into a complete carousel experience</li>
+                    <li><strong>No app deployment needed</strong> - just update the JSON values in Optimizely!</li>
+                </ol>
+            </div>
+
+            <h3>Implementation Code - Swift</h3>
+            <div class="code-block">
+<pre><code>// CDPSegmentBridge.swift
+class CDPSegmentBridge {
+    private let cdpAPIClient: DynamicsCDPClient
+    private let cache: SegmentCache
+    
+    func fetchSegmentsForUser(userId: String) async throws -> [String: Any] {
+        // Check cache first
+        if let cachedSegments = cache.getSegments(for: userId) {
+            return cachedSegments
+        }
+        
+        // Call Microsoft Dynamics CDP API
+        let cdpResponse = try await cdpAPIClient.getCustomerSegments(
+            customerId: userId,
+            apiKey: Configuration.cdpAPIKey
+        )
+        
+        // Transform CDP response to Optimizely-compatible format
+        let optimizelyAttributes = [
+            "segments": cdpResponse.segments,
+            "customer_tier": cdpResponse.customerTier,
+            "lifetime_value": cdpResponse.ltv,
+            "is_mortgage_interested": cdpResponse.segments.contains("mortgage_browsers"),
+            "is_credit_card_prospect": cdpResponse.segments.contains("cc_applicants")
+        ]
+        
+        // Cache for 5 minutes
+        cache.store(segments: optimizelyAttributes, for: userId, ttl: 300)
+        
+        return optimizelyAttributes
+    }
+}
+
+// PersonalizedCarouselBuilder.swift
+class PersonalizedCarouselBuilder {
+    private let optimizelyClient: OptimizelyClient
+    private let cdpBridge: CDPSegmentBridge
+    
+    func buildCarousel(for userId: String) async -> CarouselView {
+        do {
+            // 1. Fetch CDP segments
+            let segments = try await cdpBridge.fetchSegmentsForUser(userId: userId)
+            
+            // 2. Create user context with segments
+            let userContext = optimizelyClient.createUserContext(
+                userId: userId,
+                attributes: segments
+            )
+            
+            // 3. Get decision with variation
+            let decision = userContext.decide(key: "banking_carousel_personalization")
+            
+            // 4. Extract the JSON variable
+            guard let carouselConfig = decision.variables.toJSON()["carousel_config"] as? [String: Any],
+                  let cardsData = carouselConfig["cards"] as? [[String: Any]] else {
+                return createDefaultCarousel()
+            }
+            
+            // 5. Build cards from variable values
+            let cards = cardsData.compactMap { cardData -> CardView? in
+                guard let imageUrl = cardData["imageUrl"] as? String,
+                      let headline = cardData["headline"] as? String,
+                      let ctaText = cardData["ctaText"] as? String else {
+                    return nil
+                }
+                
+                return CardView(
+                    imageUrl: URL(string: imageUrl),
+                    headline: headline,
+                    ctaText: ctaText,
+                    backgroundColor: Color(hex: cardData["backgroundColor"] as? String ?? "#000"),
+                    action: {
+                        self.handleAction(cardData["ctaAction"] as? String)
+                    }
+                )
+            }
+            
+            // 6. Create carousel with configuration
+            return CarouselView(
+                cards: cards,
+                maxVisible: carouselConfig["maxCards"] as? Int ?? 3,
+                autoRotate: carouselConfig["autoRotate"] as? Bool ?? false
+            )
+            
+        } catch {
+            print("Error building personalized carousel: \(error)")
+            return createDefaultCarousel()
+        }
+    }
+    
+    private func handleAction(_ action: String?) {
+        guard let action = action else { return }
+        
+        switch action {
+        case "openMortgageCalc":
+            NavigationManager.shared.navigate(to: .mortgageCalculator)
+        case "startMortgageApp":
+            NavigationManager.shared.navigate(to: .mortgageApplication)
+        case "viewCreditCards":
+            NavigationManager.shared.navigate(to: .creditCardOffers)
+        default:
+            break
+        }
+    }
+}
+
+// Usage in View Controller
+class HomeViewController: UIViewController {
+    private let carouselBuilder = PersonalizedCarouselBuilder()
+    private var carouselView: CarouselView?
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        loadPersonalizedContent()
+    }
+    
+    private func loadPersonalizedContent() {
+        Task {
+            let userId = UserManager.shared.currentUserId
+            let carousel = await carouselBuilder.buildCarousel(for: userId)
+            
+            await MainActor.run {
+                self.carouselView = carousel
+                self.view.addSubview(carousel)
+                // Layout constraints...
+            }
+        }
+    }
+}</code></pre></div>
+
+            <div class="highlight">
+                <strong>💡 Key Benefits:</strong>
+                <ul>
+                    <li>Marketing team can update content without app release</li>
+                    <li>A/B test different messages, images, and CTAs</li>
+                    <li>Target specific customer segments with relevant offers</li>
+                    <li>Real-time personalization based on CDP segments</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Use Case 2: GraphQL/CMS-Driven Personalization -->
+        <section class="section">
+            <h2>Use Case 2: GraphQL/CMS-Driven Personalization</h2>
+            
+            <h3>Architecture Overview</h3>
+            <div class="architecture-diagram">
+                <svg viewBox="0 0 1400 700" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Arrows definition -->
+                    <defs>
+                        <marker id="arrowhead2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#333" />
+                        </marker>
+                    </defs>
+                    
+                    <!-- Mobile App -->
+                    <rect x="50" y="200" width="200" height="350" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="8"/>
+                    <text x="150" y="230" text-anchor="middle" font-weight="bold">Mobile App (iOS)</text>
+                    
+                    <!-- Components inside Mobile App -->
+                    <rect x="70" y="250" width="160" height="40" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="4"/>
+                    <text x="150" y="275" text-anchor="middle" font-size="14">CDP Bridge</text>
+                    
+                    <rect x="70" y="300" width="160" height="40" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="4"/>
+                    <text x="150" y="325" text-anchor="middle" font-size="14">Optimizely SDK</text>
+                    
+                    <rect x="70" y="350" width="160" height="40" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="4"/>
+                    <text x="150" y="375" text-anchor="middle" font-size="14">GraphQL Client</text>
+                    
+                    <rect x="70" y="400" width="160" height="40" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="4"/>
+                    <text x="150" y="425" text-anchor="middle" font-size="14">Content Assembler</text>
+                    
+                    <rect x="70" y="450" width="160" height="80" fill="#90caf9" stroke="#1976d2" stroke-width="1" rx="4"/>
+                    <text x="150" y="475" text-anchor="middle" font-size="14">Dynamic Carousel</text>
+                    <text x="150" y="495" text-anchor="middle" font-size="12">Component</text>
+                    
+                    <!-- Microsoft Dynamics CDP - Top -->
+                    <rect x="450" y="50" width="200" height="100" fill="#e8f5e9" stroke="#4caf50" stroke-width="2" rx="8"/>
+                    <text x="550" y="90" text-anchor="middle" font-weight="bold">Microsoft</text>
+                    <text x="550" y="110" text-anchor="middle" font-weight="bold">Dynamics CDP</text>
+                    
+                    <!-- Optimizely CMS - Top Right -->
+                    <rect x="850" y="50" width="200" height="100" fill="#e1f5fe" stroke="#0288d1" stroke-width="2" rx="8"/>
+                    <text x="950" y="90" text-anchor="middle" font-weight="bold">Optimizely CMS</text>
+                    <text x="950" y="115" text-anchor="middle" font-size="12">Content Repository</text>
+                    
+                    <!-- Optimizely Feature Experimentation - Middle -->
+                    <rect x="450" y="300" width="200" height="150" fill="#fff3e0" stroke="#ff9800" stroke-width="2" rx="8"/>
+                    <text x="550" y="330" text-anchor="middle" font-weight="bold">Optimizely Feature</text>
+                    <text x="550" y="350" text-anchor="middle" font-weight="bold">Experimentation</text>
+                    
+                    <rect x="470" y="380" width="160" height="50" fill="#ffe0b2" stroke="#ff9800" stroke-width="1" rx="4"/>
+                    <text x="550" y="400" text-anchor="middle" font-size="12">Returns Content IDs</text>
+                    <text x="550" y="415" text-anchor="middle" font-size="12">& Query Parameters</text>
+                    
+                    <!-- Optimizely Graph - Right -->
+                    <rect x="850" y="300" width="200" height="150" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2" rx="8"/>
+                    <text x="950" y="340" text-anchor="middle" font-weight="bold">Optimizely Graph</text>
+                    <text x="950" y="365" text-anchor="middle" font-size="12">GraphQL API</text>
+                    
+                    <rect x="870" y="390" width="160" height="40" fill="#e1bee7" stroke="#9c27b0" stroke-width="1" rx="4"/>
+                    <text x="950" y="415" text-anchor="middle" font-size="12">Query Endpoint</text>
+                    
+                    <!-- Content Types - Far Right -->
+                    <rect x="1150" y="250" width="180" height="250" fill="#fce4ec" stroke="#c2185b" stroke-width="2" rx="8"/>
+                    <text x="1240" y="280" text-anchor="middle" font-weight="bold">Content Types</text>
+                    
+                    <rect x="1170" y="300" width="140" height="35" fill="#f8bbd0" stroke="#c2185b" stroke-width="1" rx="4"/>
+                    <text x="1240" y="322" text-anchor="middle" font-size="12">Card Content</text>
+                    
+                    <rect x="1170" y="345" width="140" height="35" fill="#f8bbd0" stroke="#c2185b" stroke-width="1" rx="4"/>
+                    <text x="1240" y="367" text-anchor="middle" font-size="12">Images</text>
+                    
+                    <rect x="1170" y="390" width="140" height="35" fill="#f8bbd0" stroke="#c2185b" stroke-width="1" rx="4"/>
+                    <text x="1240" y="412" text-anchor="middle" font-size="12">CTAs</text>
+                    
+                    <rect x="1170" y="435" width="140" height="35" fill="#f8bbd0" stroke="#c2185b" stroke-width="1" rx="4"/>
+                    <text x="1240" y="457" text-anchor="middle" font-size="12">Offers</text>
+                    
+                    <!-- Connection lines with better routing -->
+                    <!-- 1. CDP Bridge to CDP -->
+                    <path d="M 230 270 L 300 270 L 300 100 L 450 100" 
+                          stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead2)"/>
+                    <text x="300" y="90" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">1. Segments</text>
+                    
+                    <!-- 2. SDK to Optimizely -->
+                    <path d="M 230 320 L 450 320" 
+                          stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead2)"/>
+                    <text x="340" y="310" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">2. Decide</text>
+                    
+                    <!-- 3. Optimizely back to Mobile App -->
+                    <path d="M 450 400 L 380 400 L 380 450 L 300 450 L 300 370 L 230 370" 
+                          stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead2)" stroke-dasharray="5,3"/>
+                    <text x="340" y="440" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">3. Content IDs</text>
+                    
+                    <!-- 4. GraphQL Client to Graph API -->
+                    <path d="M 230 375 L 750 375 L 750 375 L 850 375" 
+                          stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead2)"/>
+                    <text x="540" y="365" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">4. Query</text>
+                    
+                    <!-- 5. Graph to CMS -->
+                    <path d="M 950 300 L 950 150" 
+                          stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead2)"/>
+                    <text x="980" y="225" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">5. Fetch</text>
+                    
+                    <!-- 6. Graph back to Mobile App -->
+                    <path d="M 850 410 L 750 410 L 750 500 L 300 500 L 300 425 L 230 425" 
+                          stroke="#333" stroke-width="2" fill="none" marker-end="url(#arrowhead2)" stroke-dasharray="5,3"/>
+                    <text x="540" y="520" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">6. Content</text>
+                </svg>
+            </div>
+
+            <h3>Sequence Diagram</h3>
+            <div class="sequence-diagram">
+                <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Participants -->
+                    <rect x="50" y="20" width="100" height="40" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="4"/>
+                    <text x="100" y="45" text-anchor="middle" font-weight="bold">User</text>
+                    
+                    <rect x="200" y="20" width="120" height="40" fill="#e3f2fd" stroke="#1976d2" stroke-width="2" rx="4"/>
+                    <text x="260" y="45" text-anchor="middle" font-weight="bold">Mobile App</text>
+                    
+                    <rect x="370" y="20" width="120" height="40" fill="#e8f5e9" stroke="#4caf50" stroke-width="2" rx="4"/>
+                    <text x="430" y="45" text-anchor="middle" font-weight="bold">CDP API</text>
+                    
+                    <rect x="540" y="20" width="120" height="40" fill="#fff3e0" stroke="#ff9800" stroke-width="2" rx="4"/>
+                    <text x="600" y="45" text-anchor="middle" font-weight="bold">Optimizely</text>
+                    
+                    <rect x="710" y="20" width="120" height="40" fill="#f3e5f5" stroke="#9c27b0" stroke-width="2" rx="4"/>
+                    <text x="770" y="45" text-anchor="middle" font-weight="bold">Graph API</text>
+                    
+                    <rect x="880" y="20" width="120" height="40" fill="#e1f5fe" stroke="#0288d1" stroke-width="2" rx="4"/>
+                    <text x="940" y="45" text-anchor="middle" font-weight="bold">CMS</text>
+                    
+                    <!-- Lifelines -->
+                    <line x1="100" y1="60" x2="100" y2="750" stroke="#999" stroke-width="1" stroke-dasharray="5,5"/>
+                    <line x1="260" y1="60" x2="260" y2="750" stroke="#999" stroke-width="1" stroke-dasharray="5,5"/>
+                    <line x1="430" y1="60" x2="430" y2="750" stroke="#999" stroke-width="1" stroke-dasharray="5,5"/>
+                    <line x1="600" y1="60" x2="600" y2="750" stroke="#999" stroke-width="1" stroke-dasharray="5,5"/>
+                    <line x1="770" y1="60" x2="770" y2="750" stroke="#999" stroke-width="1" stroke-dasharray="5,5"/>
+                    <line x1="940" y1="60" x2="940" y2="750" stroke="#999" stroke-width="1" stroke-dasharray="5,5"/>
+                    
+                    <!-- Interactions -->
+                    <line x1="100" y1="100" x2="260" y2="100" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <text x="180" y="95" text-anchor="middle" font-size="12">1. Open App</text>
+                    
+                    <line x1="260" y1="140" x2="430" y2="140" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <text x="345" y="135" text-anchor="middle" font-size="12">2. Get Segments</text>
+                    
+                    <line x1="430" y1="180" x2="260" y2="180" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+                    <text x="345" y="175" text-anchor="middle" font-size="12">3. Segments</text>
+                    
+                    <line x1="260" y1="220" x2="600" y2="220" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <text x="430" y="215" text-anchor="middle" font-size="12">4. Decide</text>
+                    
+                    <line x1="600" y1="260" x2="260" y2="260" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+                    <text x="430" y="255" text-anchor="middle" font-size="12">5. Content IDs</text>
+                    
+                    <rect x="270" y="280" width="180" height="40" fill="#bbdefb" stroke="#1976d2" stroke-width="1" rx="2"/>
+                    <text x="360" y="295" text-anchor="middle" font-size="11">Build GraphQL Query</text>
+                    <text x="360" y="310" text-anchor="middle" font-size="11">with Content IDs</text>
+                    
+                    <line x1="260" y1="340" x2="770" y2="340" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <text x="515" y="335" text-anchor="middle" font-size="12">6. Query(contentIds)</text>
+                    
+                    <line x1="770" y1="380" x2="940" y2="380" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <text x="855" y="375" text-anchor="middle" font-size="12">7. Fetch Content</text>
+                    
+                    <line x1="940" y1="420" x2="770" y2="420" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+                    <text x="855" y="415" text-anchor="middle" font-size="12">8. Content Data</text>
+                    
+                    <line x1="770" y1="460" x2="260" y2="460" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+                    <text x="515" y="455" text-anchor="middle" font-size="12">9. Content Response</text>
+                    
+                    <rect x="270" y="480" width="180" height="50" fill="#90caf9" stroke="#1976d2" stroke-width="1" rx="2"/>
+                    <text x="360" y="500" text-anchor="middle" font-size="11">Assemble Carousel</text>
+                    <text x="360" y="515" text-anchor="middle" font-size="11">from CMS Content</text>
+                    
+                    <line x1="260" y1="550" x2="100" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead)"/>
+                    <text x="180" y="545" text-anchor="middle" font-size="12">10. Display UI</text>
+                    
+                    <!-- Note -->
+                    <rect x="50" y="620" width="950" height="80" fill="#fffacd" stroke="#ffd700" stroke-width="2" rx="4"/>
+                    <text x="525" y="645" text-anchor="middle" font-weight="bold">Advantage: Rich Content Management</text>
+                    <text x="525" y="665" text-anchor="middle" font-size="12">Content team can manage all content in CMS with full editing capabilities</text>
+                    <text x="525" y="685" text-anchor="middle" font-size="12">Optimizely controls which content IDs to show based on segments</text>
+                </svg>
+            </div>
+
+            <h3>Implementation Code - Swift</h3>
+            <div class="code-block">
+<pre><code>// ContentDrivenCarouselBuilder.swift
+class ContentDrivenCarouselBuilder {
+    private let optimizelyClient: OptimizelyClient
+    private let cdpBridge: CDPSegmentBridge
+    private let graphQLClient: OptimizelyGraphClient
+    
+    func buildCarousel(for userId: String) async -> CarouselView {
+        do {
+            // 1. Fetch CDP segments
+            let segments = try await cdpBridge.fetchSegmentsForUser(userId: userId)
+            
+            // 2. Create user context
+            let userContext = optimizelyClient.createUserContext(
+                userId: userId,
+                attributes: segments
+            )
+            
+            // 3. Get decision - returns content IDs instead of full content
+            let decision = userContext.decide(key: "banking_carousel_cms")
+            
+            // 4. Extract content IDs from decision variables
+            guard let contentConfig = decision.variables.toJSON()["content_config"] as? [String: Any],
+                  let contentIds = contentConfig["card_ids"] as? [String] else {
+                return createDefaultCarousel()
+            }
+            
+            // 5. Build GraphQL query for content
+            let query = buildContentQuery(contentIds: contentIds)
+            
+            // 6. Fetch content from CMS via GraphQL
+            let contentResponse = try await graphQLClient.query(query)
+            
+            // 7. Build carousel from CMS content
+            return buildCarouselFromContent(contentResponse)
+            
+        } catch {
+            print("Error building content-driven carousel: \(error)")
+            return createDefaultCarousel()
+        }
+    }
+    
+    private func buildContentQuery(contentIds: [String]) -> String {
+        return """
+        query GetCarouselContent {
+            CardContent(
+                where: { ContentLink: { Id: { in: [\(contentIds.joined(separator: ","))] } } }
+            ) {
+                items {
+                    contentLink {
+                        id
+                    }
+                    headline
+                    bodyText
+                    ctaText
+                    ctaAction
+                    backgroundHexColor
+                    heroImage {
+                        url
+                        alt
+                    }
+                    targeting {
+                        segment
+                        priority
+                    }
+                }
+            }
+        }
+        """
+    }
+    
+    private func buildCarouselFromContent(_ response: GraphQLResponse) -> CarouselView {
+        guard let items = response.data?.cardContent?.items else {
+            return createDefaultCarousel()
+        }
+        
+        let cards = items.compactMap { item -> CardView? in
+            guard let imageUrl = item.heroImage?.url,
+                  let headline = item.headline,
+                  let ctaText = item.ctaText else {
+                return nil
+            }
+            
+            return CardView(
+                imageUrl: URL(string: imageUrl),
+                headline: headline,
+                bodyText: item.bodyText,
+                ctaText: ctaText,
+                backgroundColor: Color(hex: item.backgroundHexColor ?? "#000"),
+                action: {
+                    self.handleAction(item.ctaAction)
+                }
+            )
+        }
+        
+        return CarouselView(cards: cards)
+    }
+}
+
+// GraphQL Client
+class OptimizelyGraphClient {
+    private let endpoint = "https://graph.optimizely.com/content/v2"
+    private let apiKey: String
+    
+    func query(_ graphQLQuery: String) async throws -> GraphQLResponse {
+        var request = URLRequest(url: URL(string: endpoint)!)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        
+        let body = ["query": graphQLQuery]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(GraphQLResponse.self, from: data)
+    }
+}
+
+// Example Optimizely Configuration for CMS approach
+/*
+Feature Flag: "banking_carousel_cms"
+
+Variable: content_config (JSON)
+{
+    "card_ids": ["mortgage-2024-q1", "preapproval-fast", "rates-special"],
+    "display_rules": {
+        "max_cards": 3,
+        "priority_order": true
+    }
+}
+
+Targeted Deliveries would return different card_ids based on segments
+*/</code></pre></div>
+
+            <div class="warning-box">
+                <strong>⚠️ Implementation Note:</strong>
+                The GraphQL approach requires additional setup but provides richer content management capabilities. Content editors can work directly in the CMS while marketers control which content appears via Optimizely.
+            </div>
+        </section>
+
+        <!-- Comparison and Recommendations -->
+        <section class="section">
+            <h2>Comparison and Recommendations</h2>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>Use Case 1: Direct Variables</th>
+                        <th>Use Case 2: CMS/GraphQL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Setup Complexity</strong></td>
+                        <td>Simple - Only Optimizely setup</td>
+                        <td>Complex - Requires CMS + GraphQL</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Content Management</strong></td>
+                        <td>Through Optimizely UI only</td>
+                        <td>Full CMS capabilities</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Performance</strong></td>
+                        <td>Faster - Single API call</td>
+                        <td>Slower - Multiple API calls</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Content Richness</strong></td>
+                        <td>Limited to variable types</td>
+                        <td>Unlimited - full CMS features</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Offline Support</strong></td>
+                        <td>Better - Can cache decisions</td>
+                        <td>Challenging - Needs content sync</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Team Workflow</strong></td>
+                        <td>Marketers work in Optimizely</td>
+                        <td>Content team in CMS, Marketers in Optimizely</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Best For</strong></td>
+                        <td>Simple personalization, A/B testing</td>
+                        <td>Complex content, multiple teams</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <h3>Our Recommendation</h3>
+            <div class="highlight">
+                <p><strong>Start with Use Case 1 (Direct Variables)</strong> for immediate value and simpler implementation. This approach:</p>
+                <ul>
+                    <li>Gets you to market faster</li>
+                    <li>Requires less infrastructure</li>
+                    <li>Provides excellent performance</li>
+                    <li>Enables powerful personalization</li>
+                </ul>
+                <p style="margin-top: 15px;"><strong>Migrate to Use Case 2</strong> when you need:</p>
+                <ul>
+                    <li>Rich media content management</li>
+                    <li>Multiple content editors</li>
+                    <li>Complex content workflows</li>
+                    <li>Integration with existing CMS content</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Implementation Checklist -->
+        <section class="section">
+            <h2>Implementation Checklist</h2>
+            
+            <h3>Phase 1: Foundation (Week 1-2)</h3>
+            <ul style="list-style-type: none;">
+                <li>☐ Set up Microsoft Dynamics CDP API access</li>
+                <li>☐ Create CDP Bridge service with authentication</li>
+                <li>☐ Implement segment caching strategy</li>
+                <li>☐ Install and configure Optimizely SDK</li>
+                <li>☐ Create feature flags in Optimizely</li>
+            </ul>
+            
+            <h3>Phase 2: Use Case 1 Implementation (Week 3-4)</h3>
+            <ul style="list-style-type: none;">
+                <li>☐ Define JSON variable structure</li>
+                <li>☐ Build dynamic carousel component</li>
+                <li>☐ Implement variable-to-UI mapping</li>
+                <li>☐ Create targeted delivery rules</li>
+                <li>☐ Test with sample segments</li>
+            </ul>
+            
+            <h3>Phase 3: Testing & Optimization (Week 5)</h3>
+            <ul style="list-style-type: none;">
+                <li>☐ Performance testing</li>
+                <li>☐ Offline mode handling</li>
+                <li>☐ Error scenarios</li>
+                <li>☐ A/B test setup</li>
+                <li>☐ Analytics integration</li>
+            </ul>
+            
+            <h3>Phase 4: Use Case 2 Preparation (Week 6+)</h3>
+            <ul style="list-style-type: none;">
+                <li>☐ Set up Optimizely CMS</li>
+                <li>☐ Configure GraphQL endpoint</li>
+                <li>☐ Create content models</li>
+                <li>☐ Implement GraphQL client</li>
+                <li>☐ Migrate content strategy</li>
+            </ul>
+        </section>
+
+        <!-- Success Metrics -->
+        <section class="section">
+            <h2>Success Metrics</h2>
+            
+            <div class="benefit-box">
+                <h3>Technical Metrics</h3>
+                <ul>
+                    <li>Carousel load time < 500ms</li>
+                    <li>CDP segment fetch < 200ms</li>
+                    <li>99.9% uptime for personalization</li>
+                    <li>Zero app crashes from personalization</li>
+                </ul>
+            </div>
+            
+            <div class="benefit-box">
+                <h3>Business Metrics</h3>
+                <ul>
+                    <li>20% increase in click-through rates</li>
+                    <li>15% improvement in conversion</li>
+                    <li>50% reduction in time-to-market for campaigns</li>
+                    <li>30% increase in relevant offer engagement</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Next Steps -->
+        <section class="section">
+            <h2>Next Steps</h2>
+            
+            <p>To move forward with this implementation:</p>
+            
+            <ol>
+                <li><strong>Technical Discovery Session</strong> - Review your current CDP setup and mobile architecture</li>
+                <li><strong>Proof of Concept</strong> - Build a working prototype with your team</li>
+                <li><strong>Integration Planning</strong> - Define segment mapping and content strategy</li>
+                <li><strong>Training Sessions</strong> - Enable your marketing team on Optimizely</li>
+                <li><strong>Go-Live Support</strong> - Assist with production deployment</li>
+            </ol>
+            
+            <div class="highlight" style="margin-top: 30px;">
+                <p><strong>Ready to transform your mobile banking experience?</strong></p>
+                <p>This architecture enables true dynamic personalization that will delight your customers and empower your marketing team. No more waiting for app releases to update content!</p>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
