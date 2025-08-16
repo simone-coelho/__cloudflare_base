@@ -45,9 +45,17 @@ class_name = "StateManager"
 name = "RATE_LIMITER"
 class_name = "RateLimiter"
 
+[[durable_objects.bindings]]
+name = "PERSONALIZATION_WEBSOCKET"
+class_name = "PersonalizationWebSocket"
+
 [[migrations]]
 tag = "v1"
 new_classes = ["StateManager", "RateLimiter"]
+
+[[migrations]]
+tag = "v2"
+new_classes = ["PersonalizationWebSocket"]
 
 # Analytics Engine
 [[analytics_engine_datasets]]
@@ -62,9 +70,11 @@ JWT_AUDIENCE = "edge-platform-api"
 OPTIMIZELY_SDK_KEY = "your-sdk-key-here"
 OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/your-datafile.json"
 
-# Site configuration for Cloudflare Pages
-[site]
-bucket = "./public"
+# Static assets configuration
+[assets]
+directory = "public"
+# Serve index.html for root and handle 404s
+not_found_handling = "single-page-application"
 
 # Development settings
 [dev]

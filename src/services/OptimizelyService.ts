@@ -29,26 +29,68 @@ export class OptimizelyService {
     if (this.initialized) return;
 
     try {
-      this.datafile = await this.fetchDatafile();
+      // Check if we have a real SDK key or just a placeholder
+      const isPlaceholderKey = !this.env.OPTIMIZELY_SDK_KEY || 
+                               this.env.OPTIMIZELY_SDK_KEY === 'your-sdk-key-here';
       
-      this.optimizelyClient = optimizely.createInstance({
-        datafile: this.datafile,
-        errorHandler: {
-          handleError: (error: any) => {
-            console.error('Optimizely error:', error);
+      if (isPlaceholderKey) {
+        console.log('Using mock Optimizely client (no SDK key configured)');
+        this.initializeMockClient();
+      } else {
+        this.datafile = await this.fetchDatafile();
+        
+        this.optimizelyClient = optimizely.createInstance({
+          datafile: this.datafile,
+          errorHandler: {
+            handleError: (error: any) => {
+              console.error('Optimizely error:', error);
+            },
           },
-        },
-        logger: optimizely.logging.createLogger({
-          logLevel: optimizely.enums.LOG_LEVEL.ERROR,
-        }),
-      });
-
+          logger: optimizely.logging.createLogger({
+            logLevel: optimizely.enums.LOG_LEVEL.ERROR,
+          }),
+        });
+        
+        console.log('Optimizely client initialized successfully');
+      }
+      
       this.initialized = true;
-      console.log('Optimizely client initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize Optimizely:', error);
-      throw error;
+      console.error('Failed to initialize Optimizely, falling back to mock client:', error);
+      this.initializeMockClient();
+      this.initialized = true;
     }
+  }
+  
+  private initializeMockClient(): void {
+    // Create a mock client for development without a real SDK key
+    this.optimizelyClient = {
+      getVariation: () => 'control',
+      isFeatureEnabled: () => false,
+      getFeatureVariable: () => null,
+      getAllFeatureVariables: () => ({}),
+      track: () => {},
+      onReady: () => Promise.resolve(),
+    };
+    
+    // Mock datafile for development
+    this.datafile = {
+      version: '4',
+      rollouts: [],
+      typedAudiences: [],
+      anonymizeIP: false,
+      projectId: 'mock_project',
+      variables: [],
+      featureFlags: [],
+      experiments: [],
+      audiences: [],
+      groups: [],
+      attributes: [],
+      accountId: 'mock_account',
+      layers: [],
+      events: [],
+      revision: '1',
+    };
   }
 
   private async fetchDatafile(): Promise<any> {

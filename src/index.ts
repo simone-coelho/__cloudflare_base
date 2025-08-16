@@ -17,9 +17,11 @@ import { webhookRoutes } from '@/routes/webhook';
 import { healthRoutes } from '@/routes/health';
 import { optimizelyRoutes } from '@/routes/optimizely';
 import { cdpRoutes } from '@/routes/cdp';
+import realtimeRoutes from '@/routes/realtime';
 
 import { StateManager } from '@/durable-objects/StateManager';
 import { RateLimiter } from '@/durable-objects/RateLimiter';
+import { PersonalizationWebSocket } from '@/durable-objects/PersonalizationWebSocket';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -52,13 +54,16 @@ app.route('/pixel', pixelRoutes);
 app.route('/webhook', webhookRoutes);
 app.route('/optimizely', optimizelyRoutes);
 app.route('/cdp', cdpRoutes);
+app.route('/realtime', realtimeRoutes);
 
-app.get('/', (c) => {
+// API info endpoint - moved to /api-info so root can serve static files
+app.get('/api-info', (c) => {
   return c.json({
     name: 'Edge Platform API',
     version: '1.0.0',
     environment: c.env.ENVIRONMENT,
     endpoints: {
+      demo: '/',
       health: '/health',
       auth: '/auth',
       api: '/api',
@@ -67,6 +72,7 @@ app.get('/', (c) => {
       webhook: '/webhook',
       optimizely: '/optimizely',
       cdp: '/cdp',
+      realtime: '/realtime',
     },
   });
 });
@@ -75,7 +81,7 @@ app.notFound((c) => {
   return c.json({ error: 'Not Found' }, 404);
 });
 
-export { StateManager, RateLimiter };
+export { StateManager, RateLimiter, PersonalizationWebSocket };
 
 export default {
   fetch: app.fetch,

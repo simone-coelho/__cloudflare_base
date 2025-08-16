@@ -6,6 +6,7 @@ export interface Env {
   ANALYTICS: AnalyticsEngineDataset;
   STATE_MANAGER: DurableObjectNamespace;
   RATE_LIMITER: DurableObjectNamespace;
+  PERSONALIZATION_WEBSOCKET: DurableObjectNamespace;
   
   ENVIRONMENT: string;
   JWT_SECRET: string;
