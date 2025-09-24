@@ -1329,6 +1329,9 @@
             <!-- Segments will appear here -->
         </div>
         <div class="dev-toggle">
+            <button class="btn btn-secondary" onclick="resetDemo()" style="background: #ef4444; color: white; padding: 6px 12px; font-size: 12px; margin-right: 15px;">
+                🔄 Reset Demo
+            </button>
             <span style="color: #666; font-size: 12px;">👨‍💻 Developer Mode</span>
             <div class="toggle-switch" onclick="toggleDevMode(this)">
                 <div class="toggle-slider"></div>
@@ -1353,6 +1356,11 @@
         </div>
     </div>
     
+    <!-- Optimizely Browser SDK -->
+    <script src="https://unpkg.com/@optimizely/optimizely-sdk/dist/optimizely.browser.umd.min.js"></script>
+    
+    <!-- Demo Scripts -->
+    <script src="optimizely-content.js"></script>
     <script src="visual-demo.js"></script>
 </body>
 </html>

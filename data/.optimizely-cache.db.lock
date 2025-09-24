@@ -1,0 +1,6 @@
+{
+  "pid": 4466,
+  "timestamp": 1756141530816,
+  "dbPath": "/mnt/c/Users/LAH/Documents/__Development/Optimizely/__cloudflare_base/data/optimizely-cache.db",
+  "command": "/home/simonecoelho/.nvm/versions/node/v22.15.0/bin/node /mnt/c/Users/LAH/Documents/__Development/Optimizely/__cloudflare_base/node_modules/@optimizely/mcp-server-exp/mcp-launcher.js"
+}

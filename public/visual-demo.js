@@ -1033,6 +1033,54 @@ class VisualPersonalizationDemo {
             </div>
         `;
     }
+    
+    // Track product click for Optimizely
+    trackProductClick(productTitle) {
+        if (window.optimizelyContent) {
+            window.optimizelyContent.trackConversion('product_clicked', {
+                product: productTitle,
+                timestamp: Date.now()
+            });
+        }
+    }
+    
+    // Reset demo state
+    async resetDemo() {
+        console.log('Resetting demo state...');
+        
+        // Clear all segments except new_user
+        this.currentSegments = ['new_user'];
+        this.engagementScore = 0;
+        this.eventCount = 0;
+        this.userProfile = null;
+        this.userId = null;
+        this.eventHistory = [];
+        
+        // Generate new visitor ID
+        this.visitorId = 'v-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+        this.sessionId = 's-' + Date.now().toString(36).toUpperCase();
+        
+        // Update UI
+        this.updateVisitorInfo();
+        this.updateSegments(this.currentSegments);
+        this.updateMetrics();
+        this.updateJourneyProgress();
+        
+        // Reset Optimizely
+        if (window.optimizelyContent) {
+            window.optimizelyContent.reset();
+            await this.initializeOptimizely();
+            await this.updateContentFromOptimizely();
+        }
+        
+        // Clear system responses
+        ['response-items', 'form-response-items', 'browse-response-items'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '';
+        });
+        
+        console.log('Demo reset complete');
+    }
 }
 
 // Tab Switching
