@@ -28,14 +28,14 @@ graph TB
     
     subgraph "Cloudflare Edge"
         subgraph "API Routes"
-            TRACK[/track/*<br/>Event Tracking]
-            PIXEL[/pixel/*<br/>Email Pixels]
-            OPT[/optimizely/*<br/>Feature Flags]
-            CDP[/cdp/*<br/>Customer Data]
-            AUTH[/auth/*<br/>Authentication]
-            WEBHOOK[/webhook/*<br/>Integrations]
-            API[/api/*<br/>Infrastructure]
-            HEALTH[/health<br/>Monitoring]
+            TRACK["/track/*<br/>Event Tracking"]
+            PIXEL["/pixel/*<br/>Email Pixels"]
+            OPT["/optimizely/*<br/>Feature Flags"]
+            CDP["/cdp/*<br/>Customer Data"]
+            AUTH["/auth/*<br/>Authentication"]
+            WEBHOOK["/webhook/*<br/>Integrations"]
+            API["/api/*<br/>Infrastructure"]
+            HEALTH["/health<br/>Monitoring"]
         end
         
         subgraph "Middleware"

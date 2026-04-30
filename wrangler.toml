@@ -1,7 +1,7 @@
 name = "edge-platform"
 main = "src/index.ts"
 compatibility_date = "2024-08-06"
-node_compat = true
+compatibility_flags = ["nodejs_compat"]
 
 [env.production]
 name = "edge-platform-prod"
@@ -12,13 +12,13 @@ name = "edge-platform-staging"
 # KV Namespaces
 [[kv_namespaces]]
 binding = "CACHE"
-id = "your-kv-namespace-id"
-preview_id = "your-kv-preview-id"
+id = "c1f778bad6664b638ed4138ab2e2dd5c"
+preview_id = "c35f8387e71349368b2c86e27f49961e"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "your-sessions-kv-id"
-preview_id = "your-sessions-preview-id"
+id = "5f66b8f1e47747e5a17242f385afa72e"
+preview_id = "6dfb454734464e608b9d204521e9387b"
 
 # R2 Buckets
 [[r2_buckets]]
