@@ -1,0 +1,54 @@
+{
+  "name": "cloudflare-edge-platform",
+  "version": "1.0.0",
+  "description": "Comprehensive Cloudflare Workers platform with tracking, personalization, and experimentation",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "echo 'No build required for TypeScript with Cloudflare Workers'",
+    "tail": "wrangler tail",
+    "format": "prettier --write .",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "optly": "node optly-npx-fix.cjs optly",
+    "optly-help": "node optly-npx-fix.cjs optly --help",
+    "optly-version": "node optly-npx-fix.cjs optly --version",
+    "optly-health": "node optly-npx-fix.cjs optly health",
+    "optly-setup": "node optly-npx-fix.cjs optly setup-docs",
+    "optly-sync": "node optly-npx-fix.cjs optly sync status",
+    "optly-sync-refresh": "node optly-npx-fix.cjs optly sync refresh",
+    "optly-analytics": "node optly-npx-fix.cjs optly analytics templates",
+    "optly-entity-flags": "node optly-npx-fix.cjs optly entity templates flag",
+    "optly-entity-experiments": "node optly-npx-fix.cjs optly entity templates experiment",
+    "optly-entity-audiences": "node optly-npx-fix.cjs optly entity templates audience"
+  },
+  "keywords": [
+    "cloudflare-workers",
+    "edge-computing",
+    "optimizely",
+    "tracking",
+    "personalization"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240806.0",
+    "@types/node": "^20.14.14",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4",
+    "vitest": "^1.6.0",
+    "wrangler": "^3.72.0"
+  },
+  "dependencies": {
+    "@optimizely/mcp-server-exp": "^1.0.1",
+    "@optimizely/optimizely-sdk": "^5.3.4",
+    "hono": "^4.5.5",
+    "jose": "^5.6.3",
+    "zod": "^3.23.8"
+  }
+}

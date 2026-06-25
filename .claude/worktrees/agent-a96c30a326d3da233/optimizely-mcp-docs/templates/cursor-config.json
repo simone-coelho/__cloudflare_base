@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "optimizely": {
+      "command": "node", 
+      "args": ["./node_modules/@simonecoelhosfo/optimizely-mcp-server/bin/optly"],
+      "env": {
+        "NODE_ENV": "production",
+        "MCP_MODE": "true",
+        "OPTIMIZELY_API_TOKEN": "2:your-api-token-here",
+        "OPTIMIZELY_PROJECT_IDS": "12345678901,23456789012,34567890123",
+        "STORAGE_DATABASE_PATH": "~/optimizely-mcp-cache.db",
+        "LOG_LEVEL": "info",
+        "CACHE_AUTO_SYNC": "true",
+        "CACHE_SYNC_INTERVAL_MINUTES": "60",
+        "CHANGE_HISTORY_DAYS": "7",
+        "CHANGE_HISTORY_MAX_RECORDS": "500",
+        "CHANGE_HISTORY_DISABLE": "false",
+        "WEB_ENTITIES": "experiments,campaigns,pages,audiences,events,attributes,extensions,change_history",
+        "FEATURE_ENTITIES": "flags,environments,features,audiences,events,groups,webhooks,attributes,change_history",
+        "SYNC_ENVIRONMENTS_PER_PROJECT": "12345678901:production,development",
+        "SKIP_FLAG_ENVIRONMENT_SYNC": "false",
+        "FLAG_RULESET_BATCH_SIZE": "1",
+        "FLAG_RULESET_BATCH_DELAY_MS": "1",
+        "SIMPLIFIED_LIST_RESPONSES": "true",
+        "ANALYTICS_DEFAULT_PAGE_SIZE": "20",
+        "ENABLE_UPDATE_TEMPLATES": "true",
+        "USE_ROBUST_INTENT_PARSER": "true",
+        "INCLUDE_AI_META": "false",
+        "MCP_DEBUG_MODE": "false",
+        "MCP_DEBUG_MODE_RESPONSE_PAYLOAD": "false",
+        "PAGINATION_COMPLEX_PAGE_SIZE": "25"
+      }
+    }
+  }
+} 

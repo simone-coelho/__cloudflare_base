@@ -1,26 +1,55 @@
+// src/services/RealtimeSegmentEngine.ts
+// Connector-driven, catalog-aware real-time personalization engine.
+// See docs/architecture/05-demo-build-spec.md §2.1.
+//
+// REAL SEAMS, MOCKED CALLS: this engine no longer hardcodes B2B segment rules or
+// Optimizely flag keys. Qualification is delegated to the ODP seam
+// (connectors.segments.fetchQualifiedSegments) and decisioning to the Optimizely
+// Feature Experimentation seam (connectors.decisions.decideAll). Coach launch
+// audiences are seeded idempotently into the shared AudienceStore at boot, so the
+// very first (cold) event a shopper generates is qualified against every audience —
+// and an audience Opal creates at runtime becomes qualifiable with zero redeploy.
+//
+// The public methods routes call are preserved verbatim (processActionEvent,
+// processActionEventWithSession, getOrCreateSessionFromCookies,
+// getSessionPersonalizationConfig, getUserSegments, assignSegment, …). The
+// constructor accepts an optional Connectors so existing single-arg route calls
+// (`new RealtimeSegmentEngine(env)`) keep working while the spec's two-arg form
+// (`new RealtimeSegmentEngine(env, getConnectors(env))`) is also supported.
+
 import type { Env } from '@/types/env';
-import type { Event } from '@/types/events';
-import { OptimizelyService } from './OptimizelyService';
-import { SessionManager, type SessionData, type CookieConfig } from './SessionManager';
+import { SessionManager, type SessionData } from './SessionManager';
 import { FeatureVariableManager, type FeatureVariableResult } from './FeatureVariableManager';
+import { CatalogService, priceBandOf, type Product } from './CatalogService';
+import { deriveStage } from './JourneyStage';
 import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWebSocket';
+import {
+  getConnectors,
+  KvAudienceStore,
+  type Connectors,
+  type Decision,
+  type QualificationContext,
+} from '@/connectors';
+import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
+import { SEED_AUDIENCES } from '@/data/seed-audiences';
 
 export interface ActionEvent {
-  type: 'email_open' | 'form_submit' | 'page_view' | 'button_click' | 'custom';
+  type:
+    // existing (backward compatible) B2B/event types
+    | 'email_open'
+    | 'form_submit'
+    | 'page_view'
+    | 'button_click'
+    | 'custom'
+    // retail / Coach storefront signals (shared ingestion path with realtime.ts)
+    | 'product_view'
+    | 'add_to_cart'
+    | 'wishlist_add';
   userId: string;
   anonymousId?: string;
   data: Record<string, any>;
   timestamp: number;
   source: string;
-}
-
-export interface SegmentRule {
-  id: string;
-  name: string;
-  condition: (event: ActionEvent, userProfile?: UserProfile) => boolean;
-  segment: string;
-  priority: number;
-  cooldown?: number; // Minutes before rule can fire again
 }
 
 export interface UserProfile {
@@ -41,37 +70,86 @@ export interface UserProfile {
 }
 
 export interface PersonalizationConfig {
+  /** Optimizely decisions, one per CATALOG_FLAG_KEYS slot — drives which module renders. */
+  decisions: Record<string, Decision>;
+  /** Back-compat: enabled-state per flag, derived from `decisions` (was getFeatureFlagDecisions). */
   featureFlags: Record<string, boolean>;
+  /** Back-compat: chosen variation per flag, derived from `decisions` (was getExperimentDecisions). */
+  experiments: Record<string, string>;
+  /** Flat module-variables view of `decisions` (back-compat with featureVariables consumers). */
   featureVariables: Record<string, any>;
   enhancedFeatureVariables: Record<string, FeatureVariableResult>;
   cookieUpdates: Record<string, string>;
   cookieHeaders: string[];
   segments: string[];
-  experiments: Record<string, string>;
+  /** Personalized catalog recommendations for the current session. */
+  recommendations: Product[];
+  /** Personalized PLP sort order (product ids) for the current session. */
+  sortOrder: string[];
+  journeyStage: 'early' | 'mid' | 'late';
   sessionData: SessionData;
 }
 
+/**
+ * Retail signals every QualificationContext starts with, so a cold session still
+ * evaluates the audience condition trees sensibly (e.g. a `cart_adds eq 0` predicate
+ * must be true for a brand-new shopper). Numeric counters initialize to 0.
+ */
+const RETAIL_SIGNAL_DEFAULTS: Record<string, number> = {
+  product_views: 0,
+  cart_adds: 0,
+  wishlist_adds: 0,
+  page_views: 0,
+  category_dwell_ms: 0,
+};
+
 export class RealtimeSegmentEngine {
   private env: Env;
-  private optimizelyService: OptimizelyService;
+  private connectors: Connectors;
   private sessionManager: SessionManager;
   private featureVariableManager: FeatureVariableManager;
-  private segmentRules: SegmentRule[];
+  private catalogService: CatalogService;
+  /** Audiences are seeded once per engine instance (idempotent on the store regardless). */
+  private seeded = false;
 
-  constructor(env: Env, options?: { domain?: string; secure?: boolean }) {
+  constructor(
+    env: Env,
+    connectors?: Connectors,
+    options?: { domain?: string; secure?: boolean }
+  ) {
     this.env = env;
-    this.optimizelyService = new OptimizelyService(env);
+    // Default to getConnectors(env) so existing single-arg route calls keep working
+    // while the spec's two-arg `new RealtimeSegmentEngine(env, getConnectors(env))` is honored.
+    this.connectors = connectors ?? getConnectors(env);
     this.sessionManager = new SessionManager(env, options);
     this.featureVariableManager = new FeatureVariableManager(env);
-    this.segmentRules = this.getDefaultSegmentRules();
+    this.catalogService = new CatalogService();
+  }
+
+  /**
+   * Idempotently load the Coach launch audiences into the shared AudienceStore.
+   * Called at the start of any operation that qualifies segments, so ODP (mock or
+   * live) always has the seed audiences plus any Opal-created ones to evaluate.
+   */
+  private async ensureSeeded(): Promise<void> {
+    if (this.seeded) return;
+    try {
+      await new KvAudienceStore(this.env).seed(SEED_AUDIENCES);
+      this.seeded = true;
+    } catch (error) {
+      console.error('Error seeding audiences:', error);
+    }
   }
 
   async processActionEvent(event: ActionEvent, sessionId?: string): Promise<PersonalizationUpdate | null> {
     try {
+      // 0. Seed Coach launch audiences idempotently (cold sessions qualify on first event).
+      await this.ensureSeeded();
+
       // 1. Get or create session
       const currentSessionId = sessionId || this.sessionManager.generateSessionId();
       let sessionData = await this.sessionManager.getSession(currentSessionId);
-      
+
       // If no session exists, get user profile data from legacy method
       if (!sessionData) {
         const userProfile = await this.getUserProfile(event.userId);
@@ -93,64 +171,89 @@ export class RealtimeSegmentEngine {
           }
         });
       }
-      
-      // 2. Evaluate segment rules with session data
-      const userProfile = this.sessionDataToUserProfile(sessionData, event);
-      const newSegments = await this.evaluateSegmentRules(event, userProfile);
-      
-      // 3. Check if segments changed
-      if (!this.hasSegmentChanges(sessionData.segments, newSegments)) {
-        // Update session with event but no segment changes
-        await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
-          ...sessionData,
-          metadata: {
-            ...sessionData.metadata,
-            lastSeen: Date.now()
-          }
-        });
-        return null; // No segment changes, no update needed
-      }
-      
-      // 4. Calculate new engagement score
+
+      // 2. Apply this event's retail signals to a fresh attribute snapshot.
       const newAttributes = { ...sessionData.attributes };
       this.updateAttributesWithEvent(newAttributes, event);
       const newEngagementScore = this.calculateEngagementScore(newAttributes);
-      
-      // 5. Update session with new segments and data
-      const updatedSessionData = await this.sessionManager.updateUserSegments(
-        currentSessionId,
-        newSegments,
-        newEngagementScore
+
+      // 3. Qualify segments through the ODP seam against the live context.
+      const ctx = this.buildQualificationContext(
+        event.userId,
+        event.anonymousId ?? sessionData.anonymousId,
+        newAttributes,
+        sessionData.segments
       );
-      
+      const journeyStage = deriveStage(ctx);
+      ctx.attributes.journey_stage = journeyStage; // stage is itself an audience attribute
+      const newSegments = await this.connectors.segments.fetchQualifiedSegments(event.userId, ctx);
+
+      // 4. Detect what actually changed (segments OR journey stage) — either is a trigger.
+      const segmentsChanged = this.hasSegmentChanges(sessionData.segments, newSegments);
+      const stageChanged = sessionData.metadata.journeyStage !== journeyStage;
+
+      if (!segmentsChanged && !stageChanged) {
+        // No personalization change — persist the accrued attributes/activity and stop.
+        await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
+          ...sessionData,
+          attributes: newAttributes,
+          metadata: {
+            ...sessionData.metadata,
+            lastSeen: Date.now(),
+            engagementScore: newEngagementScore,
+            journeyStage
+          }
+        });
+        return null;
+      }
+
+      // 5. Persist new attributes, segments, engagement score, and journey stage.
+      await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
+        ...sessionData,
+        attributes: newAttributes,
+        segments: newSegments,
+        metadata: {
+          ...sessionData.metadata,
+          lastSeen: Date.now(),
+          engagementScore: newEngagementScore,
+          lastSegmentUpdate: Date.now(),
+          journeyStage
+        }
+      });
+
+      const updatedSessionData = await this.sessionManager.getSession(currentSessionId);
       if (!updatedSessionData) {
         throw new Error('Failed to update session data');
       }
-      
-      // 6. Get new Optimizely decisions with enhanced session data
+
+      // 6. Decide the storefront modules through the Optimizely FX seam.
       const personalizationConfig = await this.getPersonalizationConfig(updatedSessionData, currentSessionId);
-      
-      // 7. Create personalization update with enhanced data
+
+      // 7. Create the personalization update with retail payloads.
       const update: PersonalizationUpdate = {
         type: 'personalization_update',
         userId: event.userId,
         data: {
           segments: newSegments,
+          decisions: personalizationConfig.decisions,
           featureVariables: personalizationConfig.featureVariables,
+          recommendations: personalizationConfig.recommendations,
+          sortOrder: personalizationConfig.sortOrder,
+          journeyStage,
           cookies: personalizationConfig.cookieUpdates,
           cookieHeaders: personalizationConfig.cookieHeaders,
           sessionId: currentSessionId,
           engagementScore: newEngagementScore,
           timestamp: Date.now(),
           source: event.source
-        }
+        } as PersonalizationUpdate['data']
       };
-      
+
       // 8. Broadcast update via WebSocket
       await this.broadcastUpdate(update);
-      
+
       return update;
-      
+
     } catch (error) {
       console.error('Error processing action event:', error);
       throw error;
@@ -160,15 +263,15 @@ export class RealtimeSegmentEngine {
   async getUserProfile(userId: string): Promise<UserProfile> {
     const cacheKey = `profile:${userId}`;
     const cached = await this.env.CACHE.get(cacheKey, 'json') as UserProfile;
-    
+
     if (cached) {
       return cached;
     }
-    
-    // Create new profile
+
+    // Create new profile — cold start: no segments yet (ODP qualifies on first event).
     return {
       userId,
-      segments: ['new_user'],
+      segments: [],
       attributes: {},
       lastUpdated: Date.now(),
       events: [],
@@ -191,254 +294,238 @@ export class RealtimeSegmentEngine {
   }
 
   /**
-   * Convert SessionData to UserProfile for compatibility with existing methods
+   * Build the real-time QualificationContext the SegmentProvider qualifies against.
+   * Numeric retail signals are initialized to 0 so cold sessions evaluate condition
+   * trees sensibly (e.g. `cart_adds eq 0` is true for a brand-new shopper).
    */
-  private sessionDataToUserProfile(sessionData: SessionData, event: ActionEvent): UserProfile {
+  private buildQualificationContext(
+    userId: string,
+    anonymousId: string | undefined,
+    attributes: Record<string, any>,
+    segments: string[]
+  ): QualificationContext {
     return {
-      userId: sessionData.userId,
-      anonymousId: sessionData.anonymousId,
-      segments: sessionData.segments,
-      attributes: sessionData.attributes,
-      lastUpdated: sessionData.metadata.lastSegmentUpdate,
-      events: [event], // Current event only for rule evaluation
-      metadata: {
-        firstSeen: sessionData.metadata.firstSeen,
-        lastSeen: sessionData.metadata.lastSeen,
-        sessionCount: sessionData.metadata.sessionCount,
-        emailOpens: sessionData.attributes.email_opens || 0,
-        formSubmissions: sessionData.attributes.form_submissions || 0,
-        pageViews: sessionData.attributes.page_views || 0
-      }
+      userId,
+      anonymousId,
+      attributes: { ...RETAIL_SIGNAL_DEFAULTS, ...attributes },
+      segments
     };
   }
 
   /**
-   * Update attributes based on action event
+   * Update attributes based on a retail action event. Retail intent can arrive either
+   * as a typed event or carried in `event.data.action` (the storefront posts catalog
+   * events as page_view/custom with a `line`/`productId`/`action` payload), so we
+   * inspect both. Derives the attributes the Coach audiences are written against:
+   * viewed_product_line, product_views, cart_adds, wishlist_adds, price_band_viewed,
+   * category_dwell_ms, page_views.
    */
   private updateAttributesWithEvent(attributes: Record<string, any>, event: ActionEvent): void {
-    switch (event.type) {
-      case 'email_open':
-        attributes.email_opens = (attributes.email_opens || 0) + 1;
-        if (event.data.campaignId) {
-          attributes.last_email_campaign = event.data.campaignId;
-        }
+    const data = event.data ?? {};
+    // The retail action: explicit data.action wins, else the event type.
+    const action = String(data.action ?? data.eventName ?? event.type);
+
+    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const inc = (key: string, by = 1) => {
+      attributes[key] = num(attributes[key]) + by;
+    };
+
+    // Resolve a product (if referenced) so we can enrich line / price band from the catalog.
+    const productId: string | undefined = data.productId ?? data.product_id ?? data.sku;
+    const product = productId ? this.catalogService.getProduct(productId) : undefined;
+    const line: string | undefined =
+      product?.line ?? (typeof data.line === 'string' ? data.line : undefined);
+    const priceUsd: number | undefined =
+      product?.price_usd ?? (typeof data.price_usd === 'number' ? data.price_usd : undefined);
+
+    const applyLineAndBand = () => {
+      if (line) attributes.viewed_product_line = line;
+      if (typeof priceUsd === 'number') attributes.price_band_viewed = priceBandOf(priceUsd);
+    };
+
+    switch (action) {
+      case 'product_view':
+      case 'pdp_view':
+      case 'view_product':
+        inc('product_views');
+        applyLineAndBand();
+        if (typeof data.dwellMs === 'number') inc('category_dwell_ms', data.dwellMs);
         break;
-      case 'form_submit':
-        attributes.form_submissions = (attributes.form_submissions || 0) + 1;
-        if (event.data.formType) {
-          attributes.last_form_type = event.data.formType;
-        }
+
+      case 'add_to_cart':
+      case 'cart_add':
+        inc('cart_adds');
+        applyLineAndBand();
         break;
+
+      case 'wishlist':
+      case 'wishlist_add':
+      case 'add_to_wishlist':
+      case 'save_for_later':
+        inc('wishlist_adds');
+        applyLineAndBand();
+        break;
+
+      case 'purchase':
+      case 'checkout':
+      case 'order_complete':
+        inc('purchases');
+        applyLineAndBand();
+        break;
+
       case 'page_view':
-        attributes.page_views = (attributes.page_views || 0) + 1;
-        if (event.data.path) {
-          attributes.last_page_path = event.data.path;
-        }
+        inc('page_views');
+        if (typeof data.path === 'string') attributes.last_page_path = data.path;
+        if (typeof data.dwellMs === 'number') inc('category_dwell_ms', data.dwellMs);
+        // A page_view that carries a product line/category still updates affinity.
+        applyLineAndBand();
         break;
+
       case 'button_click':
-        attributes.button_clicks = (attributes.button_clicks || 0) + 1;
-        if (event.data.buttonId) {
-          attributes.last_button_clicked = event.data.buttonId;
-        }
+        inc('button_clicks');
+        if (data.buttonId) attributes.last_button_clicked = data.buttonId;
         break;
-      case 'custom':
-        attributes.custom_events = (attributes.custom_events || 0) + 1;
-        if (event.data.eventName) {
-          attributes.last_custom_event = event.data.eventName;
-        }
+
+      default:
+        // Unknown/custom retail signal: still capture line/band if present so affinity grows.
+        applyLineAndBand();
+        if (typeof data.dwellMs === 'number') inc('category_dwell_ms', data.dwellMs);
         break;
     }
-    
+
     attributes.last_activity = Date.now();
-  }
-
-  private async evaluateSegmentRules(event: ActionEvent, userProfile: UserProfile): Promise<string[]> {
-    const segments = new Set(userProfile.segments);
-    
-    // Remove 'new_user' if user has any activity
-    if (userProfile.events.length > 0) {
-      segments.delete('new_user');
-    }
-    
-    // Evaluate rules in priority order
-    const sortedRules = this.segmentRules.sort((a, b) => b.priority - a.priority);
-    
-    for (const rule of sortedRules) {
-      try {
-        if (this.shouldEvaluateRule(rule, event, userProfile)) {
-          if (rule.condition(event, userProfile)) {
-            segments.add(rule.segment);
-            console.log(`Added segment: ${rule.segment} via rule: ${rule.name}`);
-          }
-        }
-      } catch (error) {
-        console.error(`Error evaluating rule ${rule.id}:`, error);
-      }
-    }
-    
-    return Array.from(segments);
-  }
-
-  private shouldEvaluateRule(rule: SegmentRule, event: ActionEvent, userProfile: UserProfile): boolean {
-    // Check cooldown
-    if (rule.cooldown && userProfile.segments.includes(rule.segment)) {
-      const lastEventTime = userProfile.events
-        .filter(e => e.type === event.type)
-        .map(e => e.timestamp)
-        .sort((a, b) => b - a)[0];
-      
-      if (lastEventTime && Date.now() - lastEventTime < rule.cooldown * 60 * 1000) {
-        return false; // Still in cooldown
-      }
-    }
-    
-    return true;
   }
 
   private hasSegmentChanges(oldSegments: string[], newSegments: string[]): boolean {
     if (oldSegments.length !== newSegments.length) {
       return true;
     }
-    
+
     const oldSet = new Set(oldSegments);
     return newSegments.some(segment => !oldSet.has(segment));
   }
 
-  private updateMetadata(profile: UserProfile, event: ActionEvent): void {
-    switch (event.type) {
-      case 'email_open':
-        profile.metadata.emailOpens++;
-        break;
-      case 'form_submit':
-        profile.metadata.formSubmissions++;
-        break;
-      case 'page_view':
-        profile.metadata.pageViews++;
-        break;
-    }
-  }
-
   private async getPersonalizationConfig(sessionData: SessionData, sessionId: string): Promise<PersonalizationConfig> {
-    await this.optimizelyService.initialize();
-    
+    const attributes = { ...RETAIL_SIGNAL_DEFAULTS, ...sessionData.attributes };
+
     const userAttributes = {
       segments: sessionData.segments,
-      ...sessionData.attributes,
-      email_opens: sessionData.attributes.email_opens || 0,
-      form_submissions: sessionData.attributes.form_submissions || 0,
-      page_views: sessionData.attributes.page_views || 0,
+      ...attributes,
       engagement_score: sessionData.metadata.engagementScore,
       session_count: sessionData.metadata.sessionCount,
+      journey_stage: sessionData.metadata.journeyStage,
       days_since_first_seen: Math.floor((Date.now() - sessionData.metadata.firstSeen) / (24 * 60 * 60 * 1000)),
       tracking_consent: sessionData.preferences.trackingConsent,
       personalization_enabled: sessionData.preferences.personalizationEnabled
     };
-    
-    // Get feature flag decisions
-    const experiments = await this.getExperimentDecisions(sessionData.userId, userAttributes);
-    const featureFlags = await this.getFeatureFlagDecisions(sessionData.userId, userAttributes);
-    
-    // Get enhanced feature variables using FeatureVariableManager
+
+    const journeyStage: 'early' | 'mid' | 'late' = sessionData.metadata.journeyStage ?? 'early';
+
+    // Decide the full storefront module set through the Optimizely FX seam.
+    const decisions = await this.connectors.decisions.decideAll(
+      CATALOG_FLAG_KEYS,
+      sessionData.userId,
+      sessionData.segments,
+      userAttributes
+    );
+
+    // Flat views derived from decisions (back-compat with the existing route response shape).
+    const featureVariables: Record<string, any> = {};
+    const featureFlags: Record<string, boolean> = {};
+    const experiments: Record<string, string> = {};
+    for (const [flagKey, decision] of Object.entries(decisions)) {
+      featureVariables[flagKey] = decision.variables;
+      featureFlags[flagKey] = decision.enabled;
+      if (decision.variationKey) experiments[flagKey] = decision.variationKey;
+    }
+
+    // Catalog-aware recommendations + personalized sort for this session.
+    const anchorLine =
+      typeof sessionData.attributes.viewed_product_line === 'string'
+        ? sessionData.attributes.viewed_product_line
+        : undefined;
+    const recommendations = this.catalogService.getRecommendations(
+      { line: anchorLine },
+      sessionData.segments,
+      8
+    );
+    const sortOrder = this.catalogService
+      .sortForSegments(null, sessionData.segments, sessionData.attributes)
+      .slice(0, 24)
+      .map((p) => p.id);
+
+    // Enhanced feature variables (unchanged — driven by FeatureVariableManager).
     const enhancedFeatureVariables = await this.featureVariableManager.getSessionFeatureVariables(sessionData);
-    
-    // Get legacy feature variables for backward compatibility
-    const featureVariables = await this.getFeatureVariables(sessionData.userId, userAttributes);
-    
-    // Generate legacy cookie updates for backward compatibility
-    const cookieUpdates = this.generateCookieUpdates(sessionData.segments, userAttributes);
-    
-    // Generate enhanced secure cookies using SessionManager
+
+    // Legacy cookie updates for backward compatibility.
+    const cookieUpdates = this.generateCookieUpdates(sessionData.segments, attributes, journeyStage);
+
+    // Enhanced secure cookies via SessionManager.
     const sessionCookies = this.sessionManager.generateSessionCookies(sessionData, sessionId);
     const cookieHeaders = this.sessionManager.createCookieHeaders(sessionCookies);
-    
+
     return {
+      decisions,
       featureFlags,
+      experiments,
       featureVariables,
       enhancedFeatureVariables,
       cookieUpdates,
       cookieHeaders,
       segments: sessionData.segments,
-      experiments,
+      recommendations,
+      sortOrder,
+      journeyStage,
       sessionData
     };
   }
 
-  private async getExperimentDecisions(userId: string, attributes: Record<string, any>): Promise<Record<string, string>> {
-    const experimentKeys = ['hero_cta_test', 'pricing_display_test', 'onboarding_flow_test'];
-    const decisions: Record<string, string> = {};
-    
-    for (const experimentKey of experimentKeys) {
-      try {
-        const variation = await this.optimizelyService.getVariation(experimentKey, userId, attributes);
-        if (variation) {
-          decisions[experimentKey] = variation;
-        }
-      } catch (error) {
-        console.error(`Error getting experiment decision for ${experimentKey}:`, error);
-      }
-    }
-    
-    return decisions;
-  }
-
-  private async getFeatureFlagDecisions(userId: string, attributes: Record<string, any>): Promise<Record<string, boolean>> {
-    const featureKeys = ['premium_content', 'advanced_features', 'beta_access', 'vip_support'];
-    const decisions: Record<string, boolean> = {};
-    
-    for (const featureKey of featureKeys) {
-      try {
-        const isEnabled = await this.optimizelyService.isFeatureEnabled(featureKey, userId, attributes);
-        decisions[featureKey] = isEnabled;
-      } catch (error) {
-        console.error(`Error getting feature flag decision for ${featureKey}:`, error);
-        decisions[featureKey] = false;
-      }
-    }
-    
-    return decisions;
-  }
-
-  private async getFeatureVariables(userId: string, attributes: Record<string, any>): Promise<Record<string, any>> {
-    const featureKeys = ['hero_content', 'pricing_config', 'personalization_settings'];
-    const variables: Record<string, any> = {};
-    
-    for (const featureKey of featureKeys) {
-      try {
-        const featureVariables = await this.optimizelyService.getAllFeatureVariables(featureKey, userId, attributes);
-        variables[featureKey] = featureVariables;
-      } catch (error) {
-        console.error(`Error getting feature variables for ${featureKey}:`, error);
-        variables[featureKey] = {};
-      }
-    }
-    
-    return variables;
-  }
-
-  private generateCookieUpdates(segments: string[], attributes: Record<string, any>): Record<string, string> {
+  private generateCookieUpdates(
+    segments: string[],
+    attributes: Record<string, any>,
+    journeyStage: 'early' | 'mid' | 'late'
+  ): Record<string, string> {
     return {
       'opt_segments': segments.join(','),
       'opt_last_update': Date.now().toString(),
-      'opt_email_opens': attributes.email_opens?.toString() || '0',
-      'opt_form_submissions': attributes.form_submissions?.toString() || '0',
+      'opt_product_views': (attributes.product_views ?? 0).toString(),
+      'opt_cart_adds': (attributes.cart_adds ?? 0).toString(),
+      'opt_journey_stage': journeyStage,
       'opt_engagement_score': this.calculateEngagementScore(attributes).toString()
     };
   }
 
+  /**
+   * Catalog-aware engagement score. Weights real retail intent: cart adds and
+   * wishlist saves dominate, PDP views and dwell contribute, page views are a light
+   * signal. Clamped to 0–100 so it stays a stable, comparable session score.
+   */
   private calculateEngagementScore(attributes: Record<string, any>): number {
-    const emailOpens = attributes.email_opens || 0;
-    const formSubmissions = attributes.form_submissions || 0;
-    const pageViews = attributes.page_views || 0;
-    
-    // Simple engagement scoring formula
-    return Math.min(100, (emailOpens * 10) + (formSubmissions * 25) + (pageViews * 2));
+    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+    const productViews = num(attributes.product_views);
+    const cartAdds = num(attributes.cart_adds);
+    const wishlistAdds = num(attributes.wishlist_adds);
+    const purchases = num(attributes.purchases);
+    const pageViews = num(attributes.page_views);
+    const dwellMinutes = num(attributes.category_dwell_ms) / 60000;
+
+    const score =
+      productViews * 8 +
+      cartAdds * 25 +
+      wishlistAdds * 15 +
+      purchases * 40 +
+      pageViews * 2 +
+      dwellMinutes * 5;
+
+    return Math.min(100, Math.round(score));
   }
 
   private async broadcastUpdate(update: PersonalizationUpdate): Promise<void> {
     try {
       const id = this.env.PERSONALIZATION_WEBSOCKET.idFromName(update.userId);
       const websocketObject = this.env.PERSONALIZATION_WEBSOCKET.get(id);
-      
+
       await websocketObject.fetch(new Request('http://fake/broadcast', {
         method: 'POST',
         body: JSON.stringify(update),
@@ -449,96 +536,44 @@ export class RealtimeSegmentEngine {
     }
   }
 
-  private getDefaultSegmentRules(): SegmentRule[] {
-    return [
-      {
-        id: 'email_opener',
-        name: 'Email Opener',
-        condition: (event) => event.type === 'email_open',
-        segment: 'email_engaged',
-        priority: 100,
-        cooldown: 60 // 1 hour cooldown
-      },
-      {
-        id: 'form_submitter',
-        name: 'Form Submitter',
-        condition: (event) => event.type === 'form_submit',
-        segment: 'lead_qualified',
-        priority: 200,
-        cooldown: 1440 // 24 hour cooldown
-      },
-      {
-        id: 'multiple_email_opens',
-        name: 'Multiple Email Opens',
-        condition: (event, profile) => 
-          event.type === 'email_open' && (profile?.metadata.emailOpens || 0) >= 3,
-        segment: 'highly_engaged',
-        priority: 150
-      },
-      {
-        id: 'pricing_page_visitor',
-        name: 'Pricing Page Visitor',
-        condition: (event) => 
-          event.type === 'page_view' && event.data.path?.includes('/pricing'),
-        segment: 'price_interested',
-        priority: 120
-      },
-      {
-        id: 'high_value_prospect',
-        name: 'High Value Prospect',
-        condition: (event, profile) => {
-          const emailOpens = profile?.metadata.emailOpens || 0;
-          const formSubmissions = profile?.metadata.formSubmissions || 0;
-          return emailOpens >= 2 && formSubmissions >= 1;
-        },
-        segment: 'high_value',
-        priority: 300
-      },
-      {
-        id: 'demo_request',
-        name: 'Demo Request',
-        condition: (event) => 
-          event.type === 'form_submit' && event.data.formType === 'demo_request',
-        segment: 'sales_qualified',
-        priority: 400
-      },
-      {
-        id: 'custom_event',
-        name: 'Custom Event User',
-        condition: (event) => event.type === 'custom',
-        segment: 'custom_engaged',
-        priority: 150
-      },
-      {
-        id: 'button_clicker',
-        name: 'Button Click Tracker',
-        condition: (event) => event.type === 'button_click',
-        segment: 'interactive_user',
-        priority: 150
-      }
-    ];
-  }
-
-  // Public method to add custom segment rules
-  addSegmentRule(rule: SegmentRule): void {
-    this.segmentRules.push(rule);
-  }
-
   // Get user segments for external API calls
   async getUserSegments(userId: string): Promise<string[]> {
-    const profile = await this.getUserProfile(userId);
-    return profile.segments;
+    await this.ensureSeeded();
+
+    // Prefer the live session context if one exists, so segments reflect accrued signals.
+    const sessionData = await this.sessionManager.getSessionByUserId(userId);
+    const attributes = sessionData?.attributes ?? {};
+    const segments = sessionData?.segments ?? [];
+    const ctx = this.buildQualificationContext(
+      userId,
+      sessionData?.anonymousId,
+      attributes,
+      segments
+    );
+    ctx.attributes.journey_stage = deriveStage(ctx);
+    return this.connectors.segments.fetchQualifiedSegments(userId, ctx);
   }
 
-  // Manual segment assignment
+  // Manual segment assignment (operator/admin path) — adds a segment to the profile and broadcasts.
   async assignSegment(userId: string, segment: string, source: string = 'manual'): Promise<void> {
     const profile = await this.getUserProfile(userId);
-    
+
     if (!profile.segments.includes(segment)) {
       profile.segments.push(segment);
       profile.lastUpdated = Date.now();
       await this.saveUserProfile(profile);
-      
+
+      // Mirror onto the live session if present, so subsequent decisions see it.
+      const sessionData = await this.sessionManager.getSessionByUserId(userId);
+      if (sessionData) {
+        const merged = Array.from(new Set([...sessionData.segments, segment]));
+        await this.sessionManager.updateUserSegments(
+          await this.sessionIdForUser(userId),
+          merged,
+          sessionData.metadata.engagementScore
+        );
+      }
+
       // Broadcast update
       const update: PersonalizationUpdate = {
         type: 'segment_update',
@@ -549,9 +584,15 @@ export class RealtimeSegmentEngine {
           source
         }
       };
-      
+
       await this.broadcastUpdate(update);
     }
+  }
+
+  /** Resolve the active sessionId for a user (used by manual segment assignment). */
+  private async sessionIdForUser(userId: string): Promise<string> {
+    const sid = await this.env.SESSIONS.get(`user:${userId}`);
+    return sid ?? this.sessionManager.generateSessionId();
   }
 
   // Session Management Methods for API integration
@@ -574,16 +615,28 @@ export class RealtimeSegmentEngine {
       sessionData = await this.sessionManager.getSession(sessionId);
     }
 
+    // Fallback: resolve by stable userId (anon vuid) when the cookie is absent/blocked.
+    if (!sessionData) {
+      const sid = await this.sessionManager.resolveSessionIdByUserId(userId);
+      if (sid) {
+        const existing = await this.sessionManager.getSession(sid);
+        if (existing) {
+          sessionId = sid;
+          sessionData = existing;
+        }
+      }
+    }
+
     // If no valid session, create new one
     if (!sessionData) {
       sessionId = this.sessionManager.generateSessionId();
       isNewSession = true;
-      
+
       // Get user profile for initial session creation
       const userProfile = await this.getUserProfile(userId);
       sessionData = await this.sessionManager.createOrUpdateSession(sessionId, userId, {
         anonymousId: cookies.anonymousId,
-        segments: cookies.segments ? cookies.segments.split(',') : userProfile.segments,
+        segments: cookies.segments ? cookies.segments.split(',').filter(Boolean) : userProfile.segments,
         attributes: userProfile.attributes,
         metadata: {
           firstSeen: userProfile.metadata.firstSeen,
@@ -601,7 +654,7 @@ export class RealtimeSegmentEngine {
     }
 
     return {
-      sessionId,
+      sessionId: sessionId!,
       sessionData,
       isNewSession
     };
@@ -611,6 +664,8 @@ export class RealtimeSegmentEngine {
    * Get personalization configuration for current session
    */
   async getSessionPersonalizationConfig(sessionId: string): Promise<PersonalizationConfig | null> {
+    await this.ensureSeeded();
+
     const sessionData = await this.sessionManager.getSession(sessionId);
     if (!sessionData) {
       return null;
@@ -623,7 +678,7 @@ export class RealtimeSegmentEngine {
    * Update session preferences
    */
   async updateSessionPreferences(
-    sessionId: string, 
+    sessionId: string,
     preferences: Partial<SessionData['preferences']>
   ): Promise<SessionData | null> {
     return this.sessionManager.updateUserPreferences(sessionId, preferences);
@@ -645,14 +700,14 @@ export class RealtimeSegmentEngine {
    * Process action event with session ID from request
    */
   async processActionEventWithSession(
-    event: ActionEvent, 
+    event: ActionEvent,
     cookieHeader: string | null
   ): Promise<{
     update: PersonalizationUpdate | null;
     sessionId: string;
     cookieHeaders: string[];
   }> {
-    const { sessionId, sessionData, isNewSession } = await this.getOrCreateSessionFromCookies(
+    const { sessionId } = await this.getOrCreateSessionFromCookies(
       cookieHeader,
       event.userId
     );
@@ -661,8 +716,8 @@ export class RealtimeSegmentEngine {
 
     // Get updated session for cookies
     const updatedSession = await this.sessionManager.getSession(sessionId);
-    const cookies = updatedSession ? 
-      this.sessionManager.generateSessionCookies(updatedSession, sessionId) : 
+    const cookies = updatedSession ?
+      this.sessionManager.generateSessionCookies(updatedSession, sessionId) :
       [];
     const cookieHeaders = this.sessionManager.createCookieHeaders(cookies);
 
@@ -684,11 +739,11 @@ export class RealtimeSegmentEngine {
   ): Promise<Record<string, FeatureVariableResult>> {
     // Get session data to create enhanced attributes if not provided
     const sessionData = await this.sessionManager.getSessionByUserId(userId);
-    
+
     if (sessionData && !userAttributes) {
       return this.featureVariableManager.getSessionFeatureVariables(sessionData);
     }
-    
+
     return this.featureVariableManager.getFeatureVariables(
       userId,
       userAttributes || {}
@@ -730,7 +785,7 @@ export class RealtimeSegmentEngine {
           value,
           source: 'override',
           timestamp: Date.now()
-        }
+        } as PersonalizationUpdate['data']
       };
 
       await this.broadcastUpdate(update);
@@ -758,7 +813,7 @@ export class RealtimeSegmentEngine {
           variableKey,
           source: 'override_removed',
           timestamp: Date.now()
-        }
+        } as PersonalizationUpdate['data']
       };
 
       await this.broadcastUpdate(update);
@@ -784,7 +839,7 @@ export class RealtimeSegmentEngine {
    */
   async createDemoFeatureVariableOverrides(userId: string): Promise<void> {
     await this.featureVariableManager.createDemoOverrides(userId);
-    
+
     // Broadcast update about demo overrides
     const update: PersonalizationUpdate = {
       type: 'feature_flag_update',

@@ -1,0 +1,7 @@
+# The Cloudflare Agents SDK (`agents`) declares an OPTIONAL `vite` peer (>=6 <9) for
+# its Vite plugin, which we do not use (the Opal island is bundled with esbuild and
+# the Worker runs via wrangler). That optional peer collides with the existing
+# `vitest@1` toolchain (vite@5). All REQUIRED peers (ai@6, @ai-sdk/react@3, react@19,
+# zod@4) are installed explicitly and satisfied. legacy-peer-deps lets npm install/ci
+# resolve reproducibly without auto-pulling the unused vite peer.
+legacy-peer-deps=true

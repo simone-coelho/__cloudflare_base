@@ -61,13 +61,30 @@ new_classes = ["PersonalizationWebSocket"]
 [[analytics_engine_datasets]]
 binding = "ANALYTICS"
 
+# D1 database — Coach demo dataset (ODP profiles + commerce + warehouse-export mirror).
+# Powers the Opal chat's aggregate-then-reason query surface (v_profiles / meta_attribute_catalog).
+# Apply schema + seed locally:
+#   npx wrangler d1 execute coach-demo-db --local --file=migrations/0001_d1_init.sql
+#   node scripts/seed-d1.mjs && npx wrangler d1 execute coach-demo-db --local --file=migrations/0002_seed_catalog.sql  (then 0003, 0004)
+# At deploy time, re-run the same with --remote.
+[[d1_databases]]
+binding = "DB"
+database_name = "coach-demo-db"
+database_id = "80fcd6e1-4764-4ba2-bf95-587c3debdc73"
+migrations_dir = "migrations"
+
 # Environment Variables (use wrangler secret for sensitive values)
 [vars]
 ENVIRONMENT = "development"
+CONNECTOR_MODE = "mock"
+# Mode-B decision source: 'mock' (default — current demo) | 'optimizely' (real FX SDK + datafile).
+# Independent of CONNECTOR_MODE so live decisions can be flipped on without touching segments/audiences.
+DECISION_SOURCE = "mock"
 JWT_SECRET = "development-secret-key-change-in-production"
 JWT_ISSUER = "edge-platform"
 JWT_AUDIENCE = "edge-platform-api"
-OPTIMIZELY_SDK_KEY = "your-sdk-key-here"
+# Optimizely FX SDK key — NOT secret (the datafile at cdn.optimizely.com/datafiles/<key>.json is public).
+OPTIMIZELY_SDK_KEY = "RLCQEiLW3ifgVH5fwuHoo"
 OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/your-datafile.json"
 
 # Static assets configuration

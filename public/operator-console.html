@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Operator Console — Coach Merchandising &times; Optimizely Opal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    /* ============================================================
+       Coach luxury design tokens (docs/architecture/07 §1).
+       The operator console is a back-office tool, so it reads as a
+       clean neutral admin UI but stays in the Coach palette so the
+       two screens feel like one product.
+       ============================================================ */
+    :root {
+      --coach-ink: #1a1a1a;
+      --coach-ink-soft: #4a4642;
+      --coach-paper: #faf8f5;
+      --coach-panel: #ffffff;
+      --coach-tan: #c8a063;
+      --coach-tan-deep: #8a6d3b;
+      --coach-tan-wash: #f4ecdd;
+      --coach-line: #e7e1d8;
+      --coach-line-strong: #d8cfc1;
+      --coach-sale: #7a2e2e;
+      --coach-ok: #2f6b4f;
+      --coach-ok-wash: #e7f1ec;
+      --coach-ai: #5b4b8a;
+      --coach-ai-wash: #efeaf6;
+      --font-display: 'Playfair Display', 'Tiempos', Georgia, serif;
+      --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+      --radius: 2px;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --shadow-card: 0 1px 2px rgba(26, 22, 18, 0.04), 0 8px 24px rgba(26, 22, 18, 0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: var(--font-body);
+      color: var(--coach-ink);
+      background: var(--coach-paper);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ---------- Top bar ---------- */
+    .console-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      background: var(--coach-ink);
+      color: var(--coach-paper);
+      border-bottom: 2px solid var(--coach-tan);
+    }
+    .brand-lockup { display: flex; align-items: baseline; gap: 14px; }
+    .brand-lockup .wordmark {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .brand-lockup .divider { color: var(--coach-tan); opacity: 0.7; }
+    .brand-lockup .tool {
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--coach-tan);
+    }
+    .bar-meta { display: flex; align-items: center; gap: 18px; font-size: 12px; }
+    .mode-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 11px;
+      border: 1px solid rgba(200, 160, 99, 0.45);
+      border-radius: 999px;
+      color: var(--coach-tan);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 600;
+      font-size: 11px;
+    }
+    .mode-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--coach-tan); }
+    .mode-pill[data-mode='live'] { color: #7fd1a6; border-color: rgba(127, 209, 166, 0.5); }
+    .mode-pill[data-mode='live'] .mode-dot { background: #7fd1a6; }
+    .conn-state { opacity: 0.7; }
+    .conn-state strong { color: var(--coach-paper); font-weight: 600; }
+
+    /* ---------- Layout ---------- */
+    .console-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+      gap: 0;
+      align-items: stretch;
+    }
+    .col {
+      padding: 28px 32px 40px;
+      overflow-y: auto;
+    }
+    .col-main { background: var(--coach-paper); }
+    .col-side { background: var(--coach-panel); border-left: 1px solid var(--coach-line); }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--coach-tan-deep);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 14px;
+    }
+    .section-label .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px; height: 20px;
+      border: 1px solid var(--coach-tan);
+      border-radius: 50%;
+      color: var(--coach-tan-deep);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .stack > * + * { margin-top: 26px; }
+
+    /* ---------- Prompt box ---------- */
+    .prompt-card {
+      background: var(--coach-panel);
+      border: 1px solid var(--coach-line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      padding: 20px 20px 18px;
+    }
+    .prompt-card h2 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 19px;
+      margin-bottom: 4px;
+    }
+    .prompt-card .lede { font-size: 13px; color: var(--coach-ink-soft); margin-bottom: 14px; }
+    .prompt-input {
+      width: 100%;
+      min-height: 86px;
+      resize: vertical;
+      border: 1px solid var(--coach-line-strong);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-family: var(--font-body);
+      font-size: 14.5px;
+      color: var(--coach-ink);
+      background: var(--coach-paper);
+      transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+    }
+    .prompt-input:focus {
+      outline: none;
+      border-color: var(--coach-tan);
+      box-shadow: 0 0 0 3px rgba(200, 160, 99, 0.18);
+    }
+    .prompt-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip {
+      font-size: 12px;
+      color: var(--coach-tan-deep);
+      background: var(--coach-tan-wash);
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 5px 11px;
+      cursor: pointer;
+      transition: all 0.2s var(--ease);
+      white-space: nowrap;
+    }
+    .chip:hover { border-color: var(--coach-tan); color: var(--coach-ink); }
+
+    .btn {
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 13.5px;
+      letter-spacing: 0.04em;
+      border-radius: var(--radius);
+      padding: 11px 22px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.25s var(--ease);
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--coach-ink); color: var(--coach-paper); }
+    .btn-primary:not(:disabled):hover { background: #000; }
+    .btn-gold { background: var(--coach-tan); color: var(--coach-ink); }
+    .btn-gold:not(:disabled):hover { background: var(--coach-tan-deep); color: var(--coach-paper); }
+    .btn-ghost { background: transparent; color: var(--coach-ink); border-color: var(--coach-line-strong); }
+    .btn-ghost:not(:disabled):hover { border-color: var(--coach-tan); color: var(--coach-tan-deep); }
+
+    /* ---------- Opal review card ---------- */
+    #draft-zone:empty { display: none; }
+    .review-card {
+      background: var(--coach-panel);
+      border: 1px solid var(--coach-line);
+      border-top: 3px solid var(--coach-ai);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(8px);
+      animation: rise 0.5s var(--ease) forwards;
+    }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+    .review-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px 14px;
+      background: var(--coach-ai-wash);
+      border-bottom: 1px solid var(--coach-line);
+    }
+    .opal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--coach-ai);
+    }
+    .opal-badge .spark { font-size: 13px; }
+    .review-head h3 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 21px;
+      margin-top: 6px;
+      color: var(--coach-ink);
+    }
+    .review-head .desc { font-size: 13px; color: var(--coach-ink-soft); margin-top: 4px; max-width: 52ch; }
+    .seg-key {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 11.5px;
+      color: var(--coach-ai);
+      background: #fff;
+      border: 1px solid var(--coach-line);
+      border-radius: var(--radius);
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+    .review-body { padding: 18px 20px 20px; }
+    .review-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 900px) { .review-grid { grid-template-columns: 1fr; } }
+    .panel-title {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--coach-tan-deep);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    /* condition tree */
+    .cond-tree { font-family: 'Monaco', 'Menlo', monospace; font-size: 12.5px; }
+    .cond-op {
+      display: inline-block;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--coach-ai);
+      font-size: 11px;
+      margin: 2px 0 4px;
+    }
+    .cond-children { border-left: 2px solid var(--coach-line-strong); margin-left: 6px; padding-left: 14px; }
+    .pred {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 6px;
+      padding: 4px 0;
+    }
+    .pred .attr { color: var(--coach-ink); font-weight: 600; }
+    .pred .op { color: var(--coach-tan-deep); }
+    .pred .val { color: var(--coach-sale); }
+    .pred .val.bool { color: var(--coach-ai); }
+
+    .meta-list { list-style: none; font-size: 13px; }
+    .meta-list li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px dashed var(--coach-line); }
+    .meta-list li:last-child { border-bottom: none; }
+    .meta-list .k { color: var(--coach-ink-soft); }
+    .meta-list .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .module-flag {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      background: var(--coach-tan-wash);
+      color: var(--coach-tan-deep);
+      border-radius: var(--radius);
+      padding: 4px 9px;
+      margin-top: 4px;
+    }
+
+    /* evidence strip inside the card */
+    .evidence {
+      margin-top: 18px;
+      border-top: 1px solid var(--coach-line);
+      padding-top: 16px;
+    }
+    .stat-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .stat {
+      flex: 1 1 120px;
+      background: var(--coach-paper);
+      border: 1px solid var(--coach-line);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+    .stat .n { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--coach-ink); }
+    .stat .l { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--coach-ink-soft); margin-top: 2px; }
+
+    .prod-list { list-style: none; margin-top: 12px; }
+    .prod-list li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--coach-line);
+    }
+    .prod-list li:last-child { border-bottom: none; }
+    .prod-thumb {
+      width: 38px; height: 38px;
+      flex: 0 0 38px;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, #efeae2, #e0d7c8);
+      border: 1px solid var(--coach-line);
+    }
+    .prod-name { flex: 1; font-size: 13px; color: var(--coach-ink); }
+    .prod-line { font-size: 11px; color: var(--coach-ink-soft); }
+    .prod-price { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .prod-views { font-size: 11px; color: var(--coach-tan-deep); white-space: nowrap; }
+
+    /* provenance */
+    .provenance {
+      display: flex;
+      gap: 11px;
+      align-items: flex-start;
+      margin-top: 16px;
+      padding: 12px 14px;
+      background: var(--coach-tan-wash);
+      border: 1px solid var(--coach-line-strong);
+      border-left: 3px solid var(--coach-tan);
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      color: var(--coach-ink-soft);
+    }
+    .provenance .ic { font-size: 15px; line-height: 1.2; }
+    .provenance strong { color: var(--coach-ink); }
+
+    .review-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    /* ---------- status line ---------- */
+    #status-zone:empty { display: none; }
+    .status-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      border: 1px solid var(--coach-ok);
+      background: var(--coach-ok-wash);
+      color: var(--coach-ok);
+      animation: rise 0.45s var(--ease);
+    }
+    .status-banner.err { border-color: var(--coach-sale); background: #f6eaea; color: var(--coach-sale); }
+    .status-banner .tick { font-weight: 700; font-size: 16px; }
+    .status-banner code {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      background: rgba(255,255,255,0.6);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    /* ---------- live audiences (side) ---------- */
+    .aud-list { list-style: none; }
+    .aud-item {
+      border: 1px solid var(--coach-line);
+      border-radius: var(--radius);
+      padding: 12px 13px;
+      margin-bottom: 10px;
+      background: var(--coach-paper);
+      transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+    }
+    .aud-item:hover { border-color: var(--coach-line-strong); }
+    .aud-item.fresh {
+      border-color: var(--coach-tan);
+      box-shadow: 0 0 0 3px rgba(200, 160, 99, 0.16);
+      animation: freshpulse 1.8s var(--ease);
+    }
+    @keyframes freshpulse { 0% { background: var(--coach-tan-wash); } 100% { background: var(--coach-paper); } }
+    .aud-item .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .aud-item .name { font-weight: 600; font-size: 13.5px; }
+    .aud-item .key { font-family: 'Monaco','Menlo',monospace; font-size: 10.5px; color: var(--coach-ink-soft); margin-top: 2px; }
+    .aud-item .row2 { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .tag {
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+    .tag-pub { background: var(--coach-ok-wash); color: var(--coach-ok); }
+    .tag-src-seed { background: #eef1f4; color: #50606f; }
+    .tag-src-opal_nl { background: var(--coach-ai-wash); color: var(--coach-ai); }
+    .tag-src-manual { background: var(--coach-tan-wash); color: var(--coach-tan-deep); }
+    .tag-size { background: transparent; color: var(--coach-ink-soft); font-variant-numeric: tabular-nums; }
+
+    /* ---------- insights drawer ---------- */
+    .insights-toggle {
+      width: 100%;
+      justify-content: center;
+      margin-top: 6px;
+    }
+    .insights-wrap { margin-top: 18px; }
+    .agg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .agg {
+      background: var(--coach-paper);
+      border: 1px solid var(--coach-line);
+      border-radius: var(--radius);
+      padding: 11px 12px;
+    }
+    .agg .n { font-family: var(--font-display); font-size: 19px; font-weight: 600; }
+    .agg .l { font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--coach-ink-soft); margin-top: 2px; }
+
+    .funnel { margin-top: 14px; }
+    .funnel-row { margin: 8px 0; }
+    .funnel-row .flabel { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+    .funnel-row .flabel .fk { color: var(--coach-ink-soft); text-transform: capitalize; }
+    .funnel-row .flabel .fv { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .bar { height: 9px; background: var(--coach-line); border-radius: 999px; overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--coach-tan), var(--coach-tan-deep)); border-radius: 999px; transition: width 0.7s var(--ease); }
+    .rate-note { font-size: 11.5px; color: var(--coach-tan-deep); margin-top: 4px; }
+
+    .line-bars { margin-top: 14px; }
+    .line-row { display: grid; grid-template-columns: 92px 1fr 52px; align-items: center; gap: 8px; margin: 6px 0; font-size: 12px; }
+    .line-row .lk { color: var(--coach-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .line-row .lv { text-align: right; font-variant-numeric: tabular-nums; color: var(--coach-ink-soft); }
+    .mini-bar { height: 7px; background: var(--coach-line); border-radius: 999px; overflow: hidden; }
+    .mini-bar > span { display: block; height: 100%; background: var(--coach-tan); }
+
+    .empty {
+      font-size: 12.5px;
+      color: var(--coach-ink-soft);
+      padding: 14px;
+      border: 1px dashed var(--coach-line-strong);
+      border-radius: var(--radius);
+      text-align: center;
+    }
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid rgba(255,255,255,0.45);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    .spinner.dark { border-color: rgba(26,22,18,0.25); border-top-color: var(--coach-ink); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---------- footer provenance ---------- */
+    .console-foot {
+      padding: 12px 28px;
+      background: var(--coach-ink);
+      color: rgba(250, 248, 245, 0.72);
+      font-size: 11.5px;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-top: 2px solid var(--coach-tan);
+    }
+    .console-foot .ic { color: var(--coach-tan); }
+
+    @media (max-width: 860px) {
+      .console-grid { grid-template-columns: 1fr; }
+      .col-side { border-left: none; border-top: 1px solid var(--coach-line); }
+    }
+  </style>
+</head>
+<body>
+  <header class="console-bar">
+    <div class="brand-lockup">
+      <span class="wordmark">Coach</span>
+      <span class="divider">&times;</span>
+      <span class="tool">Opal &middot; Merchandising Console</span>
+    </div>
+    <div class="bar-meta">
+      <span class="conn-state">engine&nbsp;<strong id="conn-text">connecting&hellip;</strong></span>
+      <span class="mode-pill" id="mode-pill" data-mode="mock">
+        <span class="mode-dot"></span><span id="mode-text">mock</span>
+      </span>
+    </div>
+  </header>
+
+  <main class="console-grid">
+    <!-- LEFT: talk to Opal -> review card -> status -->
+    <section class="col col-main">
+      <div class="stack">
+        <div>
+          <div class="section-label"><span class="num">1</span> Talk to Opal</div>
+          <div class="prompt-card">
+            <h2>Describe an audience</h2>
+            <p class="lede">
+              Plain language. Opal drafts an ODP real-time audience and recommends the
+              storefront module to switch on. Nothing goes live until you publish.
+            </p>
+            <textarea
+              id="prompt"
+              class="prompt-input"
+              placeholder="e.g. High-intent Tabby browsers who haven't added to cart — turn on Complete the Look."
+            ></textarea>
+            <div class="prompt-row">
+              <div class="chips" id="prompt-chips"></div>
+              <button class="btn btn-primary" id="ask-btn">
+                <span id="ask-label">Ask Opal</span>
+                <span aria-hidden="true">&#9654;</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-label"><span class="num">2</span> Opal&rsquo;s draft &mdash; review before publishing</div>
+          <div id="draft-zone"></div>
+          <div id="draft-empty" class="empty">
+            Ask Opal above to generate a draft audience. The draft shows the ODP condition
+            tree and the synthetic evidence behind the suggestion.
+          </div>
+        </div>
+
+        <div id="status-zone"></div>
+      </div>
+    </section>
+
+    <!-- RIGHT: live audiences + insights -->
+    <aside class="col col-side">
+      <div class="stack">
+        <div>
+          <div class="section-label">
+            <span class="num">&#9679;</span> Live audiences
+            <button
+              class="btn btn-ghost"
+              id="refresh-aud"
+              style="margin-left:auto;padding:4px 10px;font-size:11px;"
+            >Refresh</button>
+          </div>
+          <ul class="aud-list" id="aud-list">
+            <li class="empty">Loading published audiences&hellip;</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="section-label">Back-office insights</div>
+          <button class="btn btn-ghost insights-toggle" id="insights-btn">
+            <span id="insights-label">View synthetic-data insights</span>
+          </button>
+          <div class="insights-wrap" id="insights-wrap" hidden></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="console-foot">
+    <span class="ic" aria-hidden="true">&#9432;</span>
+    <span>
+      <strong>Synthetic Coach North America data, shaped to ODP schema.</strong>
+      Opal suggestions and qualification are mocked for this demo
+      (<code style="font-family:'Monaco','Menlo',monospace;">CONNECTOR_MODE=mock</code>).
+      In live mode these calls read from Coach&rsquo;s ODP and Optimizely Opal &mdash; swap is config-only.
+    </span>
+  </footer>
+
+  <script src="/operator-console.js"></script>
+</body>
+</html>

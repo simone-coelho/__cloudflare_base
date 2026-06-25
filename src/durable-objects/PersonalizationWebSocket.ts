@@ -1,5 +1,7 @@
+import type { Decision } from '@/connectors';
+
 export interface PersonalizationUpdate {
-  type: 'segment_update' | 'personalization_update' | 'feature_flag_update';
+  type: 'segment_update' | 'personalization_update' | 'feature_flag_update' | 'audience_published';
   userId: string;
   data: {
     segments?: string[];
@@ -7,6 +9,11 @@ export interface PersonalizationUpdate {
     cookies?: Record<string, string>;
     timestamp: number;
     source: string;
+    decisions?: Record<string, Decision>;
+    recommendations?: any[];
+    sortOrder?: string[];
+    journeyStage?: 'early' | 'mid' | 'late';
+    audienceWentLive?: { key: string; name: string };
   };
 }
 
@@ -207,7 +214,6 @@ export class PersonalizationWebSocket {
     const userConnections = this.getUserConnections(update.userId);
     
     const message = JSON.stringify({
-      type: 'personalization_update',
       ...update,
       serverTimestamp: Date.now()
     });
@@ -240,8 +246,8 @@ export class PersonalizationWebSocket {
 
   async broadcastToAll(update: Omit<PersonalizationUpdate, 'userId'>): Promise<void> {
     const message = JSON.stringify({
-      type: 'global_update',
       ...update,
+      scope: 'global',
       serverTimestamp: Date.now()
     });
 

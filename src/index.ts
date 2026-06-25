@@ -18,6 +18,7 @@ import { healthRoutes } from '@/routes/health';
 import { optimizelyRoutes } from '@/routes/optimizely';
 import { cdpRoutes } from '@/routes/cdp';
 import realtimeRoutes from '@/routes/realtime';
+import { operatorRoutes } from '@/routes/operator';
 
 import { StateManager } from '@/durable-objects/StateManager';
 import { RateLimiter } from '@/durable-objects/RateLimiter';
@@ -55,6 +56,7 @@ app.route('/webhook', webhookRoutes);
 app.route('/optimizely', optimizelyRoutes);
 app.route('/cdp', cdpRoutes);
 app.route('/realtime', realtimeRoutes);
+app.route('/operator', operatorRoutes);
 
 // API info endpoint - moved to /api-info so root can serve static files
 app.get('/api-info', (c) => {
@@ -73,6 +75,7 @@ app.get('/api-info', (c) => {
       optimizely: '/optimizely',
       cdp: '/cdp',
       realtime: '/realtime',
+      operator: '/operator',
     },
   });
 });

@@ -127,6 +127,54 @@ export class OptimizelyService {
     }
   }
 
+  /**
+   * Build a FRESH Optimizely client from an on-demand, no-store datafile fetch —
+   * doc 09 §6 option 1 ("within seconds" freshness, bypassing the SDK poll + the KV
+   * cache used by initialize()). Used by LiveDecisionProvider (Mode B). Returns the
+   * client plus the parsed datafile so callers can check flag presence / revision
+   * before deciding.
+   *
+   * The event dispatcher is a no-op: at the edge we only READ decisions here, so we
+   * skip impression-event delivery (no waitUntil dependency, no extra latency).
+   */
+  async createFreshClient(): Promise<{ client: any; datafile: any; revision: string | null }> {
+    const url = `https://cdn.optimizely.com/datafiles/${this.env.OPTIMIZELY_SDK_KEY}.json`;
+    // No-store freshness (doc 09 §6.1). NOTE: the standard `cache: 'no-store'` field
+    // is NOT implemented by workerd (it throws "'cache' field ... is not implemented"),
+    // so we use the Cloudflare-native equivalent — `cf.cacheTtl: 0` +
+    // `cacheEverything: false` + a no-cache request header — to bypass the edge cache.
+    const response = await fetch(url, {
+      headers: { 'Cache-Control': 'no-cache' },
+      cf: { cacheTtl: 0, cacheEverything: false },
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch datafile: ${response.status} ${response.statusText}`);
+    }
+    const datafile = (await response.json()) as any;
+
+    const client = optimizely.createInstance({
+      datafile,
+      eventDispatcher: { dispatchEvent: () => {} },
+      errorHandler: { handleError: () => {} },
+      logger: optimizely.logging.createLogger({
+        logLevel: optimizely.enums.LOG_LEVEL.ERROR,
+      }),
+    });
+
+    // With a static datafile this resolves immediately; guard for SDK shape drift.
+    if (client && typeof (client as any).onReady === 'function') {
+      try {
+        await (client as any).onReady({ timeout: 5000 });
+      } catch {
+        /* fall through — caller checks the datafile/flags directly */
+      }
+    }
+
+    const revision =
+      datafile && datafile.revision != null ? String(datafile.revision) : null;
+    return { client, datafile, revision };
+  }
+
   async getVariation(
     experimentKey: string,
     userId: string,

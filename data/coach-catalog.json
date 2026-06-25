@@ -1,0 +1,2840 @@
+{
+  "_meta": {
+    "brand": "Coach",
+    "parent_company": "Tapestry, Inc.",
+    "region": "North America",
+    "currency": "USD",
+    "generated_for": "Tapestry/Coach real-time personalization demo (synthetic catalog shaped to ODP)",
+    "product_count": 71,
+    "data_provenance_note": "All product names, lines, style codes, and product_urls are REAL Coach values harvested from coach.com via web search. coach.com returns HTTP 403 to automated page fetches, so exact per-SKU prices/colors are not fully scrapable; a confirmed ANCHOR set of prices is marked scraped, the remainder are realistically constructed within confirmed Coach price bands. See data_provenance per product and coach-catalog-schema.md. No non-Coach brands are present."
+  },
+  "products": [
+    {
+      "id": "COA-CH857",
+      "style_code": "CH857",
+      "name": "Tabby Shoulder Bag 26",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 475,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Deep Berry",
+        "Faded Blue",
+        "1941 Red",
+        "Light Saddle"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "shoulder",
+      "size": "26 (medium)",
+      "occasion": [
+        "work",
+        "everyday",
+        "evening"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CH857_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-shoulder-bag-26/CH857.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CY201",
+      "style_code": "CY201",
+      "name": "Tabby Shoulder Bag 20",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 375,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Deep Berry",
+        "Electric Pink",
+        "Light Saddle"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "shoulder",
+      "size": "20 (small)",
+      "occasion": [
+        "everyday",
+        "evening",
+        "date-night"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CY201_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-shoulder-bag-20/CY201.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CW620",
+      "style_code": "CW620",
+      "name": "Tabby Shoulder Bag 26 With Quilting",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 575,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Deep Berry"
+      ],
+      "material": "Quilted nappa leather",
+      "silhouette": "shoulder",
+      "size": "26 (medium)",
+      "occasion": [
+        "evening",
+        "date-night",
+        "special-occasion"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CW620_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-shoulder-bag-26-with-quilting/CW620.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-C0772",
+      "style_code": "C0772",
+      "name": "Pillow Tabby Shoulder Bag 26",
+      "line": "Pillow Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 495,
+      "currency": "USD",
+      "colors": [
+        "Ivory",
+        "Black",
+        "Grey",
+        "Pink",
+        "Red Apple",
+        "Moss"
+      ],
+      "material": "Nappa/smooth leather",
+      "silhouette": "shoulder",
+      "size": "26 (medium)",
+      "occasion": [
+        "evening",
+        "date-night",
+        "everyday"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/C0772_ivory?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/pillow-tabby-shoulder-bag-26/C0772.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CP149",
+      "style_code": "CP149",
+      "name": "Tabby Shoulder Bag 20 With Pillow Quilting",
+      "line": "Pillow Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 450,
+      "currency": "USD",
+      "colors": [
+        "Ivory",
+        "Black",
+        "Pink",
+        "Grey"
+      ],
+      "material": "Quilted nappa leather",
+      "silhouette": "shoulder",
+      "size": "20 (small)",
+      "occasion": [
+        "evening",
+        "date-night"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CP149_ivory?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-shoulder-bag-20-with-pillow-quilting/CP149.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CP150",
+      "style_code": "CP150",
+      "name": "Tabby Shoulder Bag 26 With Pillow Quilting",
+      "line": "Pillow Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 550,
+      "currency": "USD",
+      "colors": [
+        "Ivory",
+        "Black",
+        "Pink"
+      ],
+      "material": "Quilted nappa leather",
+      "silhouette": "shoulder",
+      "size": "26 (medium)",
+      "occasion": [
+        "evening",
+        "special-occasion"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CP150_ivory?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-shoulder-bag-26-with-pillow-quilting/CP150.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CI032",
+      "style_code": "CI032",
+      "name": "Tabby Shoulder Bag 26 In Signature Canvas",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 450,
+      "currency": "USD",
+      "colors": [
+        "Brown/Black",
+        "Khaki/Chalk",
+        "Brown/1941 Red"
+      ],
+      "material": "Signature coated canvas",
+      "silhouette": "shoulder",
+      "size": "26 (medium)",
+      "occasion": [
+        "everyday",
+        "travel",
+        "work"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CI032_brown-black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-shoulder-bag-26-in-signature-canvas/CI032.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CY919",
+      "style_code": "CY919",
+      "name": "Chain Tabby Shoulder Bag",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 495,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Light Saddle"
+      ],
+      "material": "Refined calf leather",
+      "silhouette": "shoulder",
+      "size": "26 (medium)",
+      "occasion": [
+        "evening",
+        "date-night",
+        "special-occasion"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CY919_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/chain-tabby-shoulder-bag/CY919.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-76197",
+      "style_code": "76197",
+      "name": "Tabby Crossbody Bag",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Deep Berry",
+        "Electric Pink"
+      ],
+      "material": "Refined pebble leather",
+      "silhouette": "crossbody",
+      "size": "17 (mini)",
+      "occasion": [
+        "everyday",
+        "travel",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/76197_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-crossbody-bag/76197.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CBH23",
+      "style_code": "CBH23",
+      "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Deep Berry"
+      ],
+      "material": "Quilted nappa leather",
+      "silhouette": "crossbody",
+      "size": "19 (mini)",
+      "occasion": [
+        "evening",
+        "date-night",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CBH23_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-chain-crossbody-bag-19-with-quilting/CBH23.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CU068",
+      "style_code": "CU068",
+      "name": "Brooklyn Shoulder Bag 28",
+      "line": "Brooklyn",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 295,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Bluebell",
+        "Walnut",
+        "1941 Red"
+      ],
+      "material": "Natural grain leather",
+      "silhouette": "shoulder",
+      "size": "28 (medium)",
+      "occasion": [
+        "work",
+        "everyday"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CU068_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/brooklyn-shoulder-bag-28/CU068.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CW614",
+      "style_code": "CW614",
+      "name": "Brooklyn Shoulder Bag 23",
+      "line": "Brooklyn",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 250,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Bluebell",
+        "Chalk"
+      ],
+      "material": "Natural grain leather",
+      "silhouette": "shoulder",
+      "size": "23 (small)",
+      "occasion": [
+        "everyday",
+        "evening"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CW614_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/brooklyn-shoulder-bag-23/CW614.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CU044",
+      "style_code": "CU044",
+      "name": "Brooklyn Shoulder Bag 39",
+      "line": "Brooklyn",
+      "category": "Handbags",
+      "subcategory": "Totes & Carryalls",
+      "price_usd": 495,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Bluebell",
+        "Walnut"
+      ],
+      "material": "Natural grain leather",
+      "silhouette": "tote",
+      "size": "39 (large)",
+      "occasion": [
+        "work",
+        "travel",
+        "everyday"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CU044_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/brooklyn-shoulder-bag-39/CU044.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCU00",
+      "style_code": "CCU00",
+      "name": "Brooklyn Shoulder Bag 34",
+      "line": "Brooklyn",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 425,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Walnut"
+      ],
+      "material": "Natural grain leather",
+      "silhouette": "hobo",
+      "size": "34 (large)",
+      "occasion": [
+        "work",
+        "everyday",
+        "travel"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCU00_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/brooklyn-shoulder-bag-34/CCU00.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCC16",
+      "style_code": "CCC16",
+      "name": "Brooklyn Shoulder Bag 28 In Shearling",
+      "line": "Brooklyn",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 595,
+      "currency": "USD",
+      "colors": [
+        "Cream Shearling",
+        "Black Shearling"
+      ],
+      "material": "Shearling and leather",
+      "silhouette": "shoulder",
+      "size": "28 (medium)",
+      "occasion": [
+        "evening",
+        "special-occasion",
+        "winter"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCC16_cream-shearling?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/brooklyn-shoulder-bag-28-in-shearling/CCC16.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CM544",
+      "style_code": "CM544",
+      "name": "Lana Shoulder Bag",
+      "line": "Lana",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "1941 Red",
+        "Light Saddle"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "shoulder",
+      "size": "Standard",
+      "occasion": [
+        "work",
+        "everyday",
+        "evening"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CM544_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/lana-shoulder-bag/CM544.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CM545",
+      "style_code": "CM545",
+      "name": "Lana Shoulder Bag 23",
+      "line": "Lana",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 375,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Deep Berry",
+        "Light Saddle"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "shoulder",
+      "size": "23 (medium)",
+      "occasion": [
+        "work",
+        "everyday",
+        "evening"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CM545_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/lana-shoulder-bag-23/CM545.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCY32",
+      "style_code": "CCY32",
+      "name": "Lana Shoulder Bag 19",
+      "line": "Lana",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 295,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Electric Pink"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "shoulder",
+      "size": "19 (small)",
+      "occasion": [
+        "everyday",
+        "evening",
+        "date-night"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCY32_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/lana-shoulder-bag-19/CCY32.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-C2621",
+      "style_code": "C2621",
+      "name": "Willow Shoulder Bag",
+      "line": "Willow",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Chalk",
+        "Moss"
+      ],
+      "material": "Soft pebble leather",
+      "silhouette": "shoulder",
+      "size": "Standard",
+      "occasion": [
+        "work",
+        "everyday"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/C2621_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/willow-shoulder-bag/C2621.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CV934",
+      "style_code": "CV934",
+      "name": "Teri Shoulder Bag",
+      "line": "Teri",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 295,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Chalk",
+        "1941 Red"
+      ],
+      "material": "Refined pebble leather",
+      "silhouette": "hobo",
+      "size": "Standard",
+      "occasion": [
+        "work",
+        "everyday"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CV934_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/teri-shoulder-bag/CV934.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CV933",
+      "style_code": "CV933",
+      "name": "Teri Shoulder Bag In Signature Canvas",
+      "line": "Teri",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 295,
+      "currency": "USD",
+      "colors": [
+        "Khaki/Brown",
+        "Brown/Black"
+      ],
+      "material": "Signature coated canvas",
+      "silhouette": "hobo",
+      "size": "Standard",
+      "occasion": [
+        "work",
+        "everyday",
+        "travel"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CV933_khaki-brown?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/teri-shoulder-bag-in-signature-canvas/CV933.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-C4084",
+      "style_code": "C4084",
+      "name": "Mollie Tote Bag 25",
+      "line": "Mollie",
+      "category": "Handbags",
+      "subcategory": "Totes & Carryalls",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Chalk",
+        "Deep Berry",
+        "Bluebell"
+      ],
+      "material": "Pebble leather",
+      "silhouette": "tote",
+      "size": "25 (medium)",
+      "occasion": [
+        "work",
+        "everyday",
+        "travel"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/C4084_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/mollie-tote-bag-25/C4084.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CV968",
+      "style_code": "CV968",
+      "name": "Mollie Tote Bag",
+      "line": "Mollie",
+      "category": "Handbags",
+      "subcategory": "Totes & Carryalls",
+      "price_usd": 395,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Chalk"
+      ],
+      "material": "Pebble leather",
+      "silhouette": "tote",
+      "size": "Large",
+      "occasion": [
+        "work",
+        "travel"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CV968_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/mollie-tote-bag/CV968.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CV965",
+      "style_code": "CV965",
+      "name": "Mollie Tote Bag 25 In Signature Canvas",
+      "line": "Mollie",
+      "category": "Handbags",
+      "subcategory": "Totes & Carryalls",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Khaki/Brown",
+        "Brown/Black",
+        "Khaki/Chalk"
+      ],
+      "material": "Signature coated canvas",
+      "silhouette": "tote",
+      "size": "25 (medium)",
+      "occasion": [
+        "work",
+        "everyday",
+        "travel"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CV965_khaki-brown?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/mollie-tote-bag-25-in-signature-canvas/CV965.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CN382",
+      "style_code": "CN382",
+      "name": "Nolita 19",
+      "line": "Nolita",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 250,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "1941 Red",
+        "Light Saddle",
+        "Chalk"
+      ],
+      "material": "Refined pebble leather",
+      "silhouette": "crossbody",
+      "size": "19 (mini)",
+      "occasion": [
+        "everyday",
+        "evening",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CN382_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/nolita-19/CN382.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-C1985",
+      "style_code": "C1985",
+      "name": "Nolita 19 In Signature Canvas",
+      "line": "Nolita",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 250,
+      "currency": "USD",
+      "colors": [
+        "Khaki/Brown",
+        "Brown/Black"
+      ],
+      "material": "Signature coated canvas",
+      "silhouette": "crossbody",
+      "size": "19 (mini)",
+      "occasion": [
+        "everyday",
+        "travel",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/C1985_khaki-brown?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/nolita-19/C1985.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CH819",
+      "style_code": "CH819",
+      "name": "Kira Crossbody Bag",
+      "line": "Kira",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 295,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Light Saddle",
+        "Electric Pink"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "crossbody",
+      "size": "Small",
+      "occasion": [
+        "everyday",
+        "travel",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CH819_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/kira-crossbody-bag/CH819.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CM531",
+      "style_code": "CM531",
+      "name": "Kira Crossbody Bag With Pillow Quilting",
+      "line": "Kira",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Ivory",
+        "Black",
+        "Pink"
+      ],
+      "material": "Quilted nappa leather",
+      "silhouette": "crossbody",
+      "size": "Small",
+      "occasion": [
+        "evening",
+        "date-night",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CM531_ivory?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/kira-crossbody-bag-with-pillow-quilting/CM531.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CW573",
+      "style_code": "CW573",
+      "name": "Kira Crossbody Bag With Quilting",
+      "line": "Kira",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 295,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Deep Berry"
+      ],
+      "material": "Quilted nappa leather",
+      "silhouette": "crossbody",
+      "size": "Small",
+      "occasion": [
+        "evening",
+        "date-night"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CW573_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/kira-crossbody-bag-with-quilting/CW573.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CC437",
+      "style_code": "CC437",
+      "name": "Cary Crossbody Bag",
+      "line": "Cary",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Walnut",
+        "Chalk"
+      ],
+      "material": "Buttery soft pebble leather",
+      "silhouette": "crossbody",
+      "size": "Small",
+      "occasion": [
+        "everyday",
+        "evening"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CC437_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/cary-crossbody-bag/CC437.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CC435",
+      "style_code": "CC435",
+      "name": "Cary Shoulder Bag",
+      "line": "Cary",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 395,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Walnut"
+      ],
+      "material": "Buttery soft pebble leather",
+      "silhouette": "shoulder",
+      "size": "Medium",
+      "occasion": [
+        "everyday",
+        "work"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CC435_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/cary-shoulder-bag/CC435.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CD724",
+      "style_code": "CD724",
+      "name": "Bandit Crossbody Bag",
+      "line": "Bandit",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "1941 Red"
+      ],
+      "material": "Refined leather with high-shine finish",
+      "silhouette": "crossbody",
+      "size": "Small",
+      "occasion": [
+        "evening",
+        "date-night",
+        "everyday"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CD724_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/bandit-crossbody-bag/CD724.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CR654",
+      "style_code": "CR654",
+      "name": "Bandit Shoulder Bag",
+      "line": "Bandit",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 395,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Chalk"
+      ],
+      "material": "Refined leather with high-shine finish",
+      "silhouette": "shoulder",
+      "size": "Medium",
+      "occasion": [
+        "evening",
+        "work"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CR654_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/bandit-shoulder-bag/CR654.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CP133",
+      "style_code": "CP133",
+      "name": "Rogue Bag 25",
+      "line": "Rogue",
+      "category": "Handbags",
+      "subcategory": "Top-Handle Bags",
+      "price_usd": 595,
+      "currency": "USD",
+      "colors": [
+        "1941 Saddle",
+        "Black",
+        "Chalk",
+        "Moss"
+      ],
+      "material": "Glovetanned leather",
+      "silhouette": "top-handle",
+      "size": "25 (medium)",
+      "occasion": [
+        "work",
+        "evening",
+        "special-occasion"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CP133_1941-saddle?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/rogue-bag/CP133.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCX23",
+      "style_code": "CCX23",
+      "name": "Rogue Bag 31",
+      "line": "Rogue",
+      "category": "Handbags",
+      "subcategory": "Top-Handle Bags",
+      "price_usd": 695,
+      "currency": "USD",
+      "colors": [
+        "1941 Saddle",
+        "Black",
+        "Walnut"
+      ],
+      "material": "Glovetanned leather",
+      "silhouette": "top-handle",
+      "size": "31 (large)",
+      "occasion": [
+        "work",
+        "travel",
+        "special-occasion"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCX23_1941-saddle?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/rogue-bag-31/CCX23.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCX21",
+      "style_code": "CCX21",
+      "name": "Rogue Bag 40",
+      "line": "Rogue",
+      "category": "Handbags",
+      "subcategory": "Totes & Carryalls",
+      "price_usd": 795,
+      "currency": "USD",
+      "colors": [
+        "1941 Saddle",
+        "Black"
+      ],
+      "material": "Glovetanned leather",
+      "silhouette": "tote",
+      "size": "40 (extra-large)",
+      "occasion": [
+        "work",
+        "travel"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCX21_1941-saddle?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/rogue-bag-40/CCX21.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCY28",
+      "style_code": "CCY28",
+      "name": "Kisslock Frame Bag 16",
+      "line": "Kisslock",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "1941 Red"
+      ],
+      "material": "Glovetanned leather",
+      "silhouette": "crossbody",
+      "size": "16 (mini)",
+      "occasion": [
+        "evening",
+        "date-night",
+        "special-occasion"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCY28_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/kisslock-frame-bag-16/CCY28.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-C1451",
+      "style_code": "C1451",
+      "name": "Nora Kisslock Crossbody",
+      "line": "Nora",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 295,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Electric Pink",
+        "Faded Blue"
+      ],
+      "material": "Refined pebble leather",
+      "silhouette": "crossbody",
+      "size": "Mini",
+      "occasion": [
+        "evening",
+        "date-night",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/C1451_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/nora-kisslock-crossbody/C1451.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-C8288",
+      "style_code": "C8288",
+      "name": "Nora Kisslock Crossbody With Strawberry",
+      "line": "Nora",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 325,
+      "currency": "USD",
+      "colors": [
+        "Chalk Multi",
+        "Pink Multi"
+      ],
+      "material": "Refined pebble leather with novelty charm",
+      "silhouette": "crossbody",
+      "size": "Mini",
+      "occasion": [
+        "evening",
+        "festival",
+        "date-night"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/C8288_chalk-multi?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/nora-kisslock-crossbody-with-strawberry/C8288.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-73549",
+      "style_code": "73549",
+      "name": "Hadley Hobo",
+      "line": "Hadley",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Light Saddle",
+        "Black",
+        "Walnut",
+        "Chalk"
+      ],
+      "material": "Luxe refined pebble leather",
+      "silhouette": "hobo",
+      "size": "Standard",
+      "occasion": [
+        "work",
+        "everyday"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/73549_light-saddle?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/hadley-hobo/73549+GMPE4.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CR552",
+      "style_code": "CR552",
+      "name": "Essential Slim Wallet",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Wallets",
+      "price_usd": 175,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Chalk",
+        "1941 Red"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "slim wallet",
+      "size": "Slim",
+      "occasion": [
+        "everyday",
+        "work"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CR552_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/essential-slim-wallet/CR552.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CR553",
+      "style_code": "CR553",
+      "name": "Essential Slim Accordion Zip Wallet",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Wallets",
+      "price_usd": 175,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Chalk"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "zip wallet",
+      "size": "Slim",
+      "occasion": [
+        "everyday",
+        "work",
+        "travel"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CR553_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/essential-slim-accordion-zip-wallet/CR553.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CR554",
+      "style_code": "CR554",
+      "name": "Essential Billfold Wallet",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Wallets",
+      "price_usd": 150,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Walnut"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "billfold",
+      "size": "Compact",
+      "occasion": [
+        "everyday",
+        "work"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CR554_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/essential-billfold-wallet/CR554.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCD82",
+      "style_code": "CCD82",
+      "name": "Essential Small Zip Around Wallet With Charms",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Wallets",
+      "price_usd": 195,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Electric Pink"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "zip-around wallet",
+      "size": "Small",
+      "occasion": [
+        "everyday",
+        "evening"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCD82_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/essential-small-zip-around-wallet-with-charms/CCD82.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CR551",
+      "style_code": "CR551",
+      "name": "Essential Small Zip Around Card Case",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Card Cases",
+      "price_usd": 95,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Chalk",
+        "Deep Berry"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "card case",
+      "size": "Small",
+      "occasion": [
+        "everyday",
+        "work"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CR551_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/essential-small-zip-around-card-case/CR551.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCD79",
+      "style_code": "CCD79",
+      "name": "Essential Chain Card Case",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Card Cases",
+      "price_usd": 95,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "1941 Red",
+        "Electric Pink"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "card case",
+      "size": "Small",
+      "occasion": [
+        "everyday",
+        "evening",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCD79_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/essential-chain-card-case/CCD79.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CZ111",
+      "style_code": "CZ111",
+      "name": "Essential Card Holder Wallet",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Card Cases",
+      "price_usd": 75,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Chalk"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "card holder",
+      "size": "Slim",
+      "occasion": [
+        "everyday",
+        "work"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CZ111_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/essential-card-holder-wallet/CZ111.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CH818",
+      "style_code": "CH818",
+      "name": "Essential Small Wristlet",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Wristlets",
+      "price_usd": 125,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "Chalk",
+        "Electric Pink"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "wristlet",
+      "size": "Small",
+      "occasion": [
+        "everyday",
+        "evening",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CH818_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/small-wristlet/CH818.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-58032",
+      "style_code": "58032",
+      "name": "Corner Zip Wristlet",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Wristlets",
+      "price_usd": 95,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "1941 Red",
+        "Bluebell"
+      ],
+      "material": "Crossgrain leather",
+      "silhouette": "wristlet",
+      "size": "Small",
+      "occasion": [
+        "everyday",
+        "evening",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/58032_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/corner-zip-wristlet/58032.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCZ00",
+      "style_code": "CCZ00",
+      "name": "Tabby Bag Charm",
+      "line": "Tabby",
+      "category": "Accessories",
+      "subcategory": "Bag Charms",
+      "price_usd": 150,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "1941 Red",
+        "Electric Pink"
+      ],
+      "material": "Refined leather",
+      "silhouette": "bag charm",
+      "size": "Mini",
+      "occasion": [
+        "everyday",
+        "evening",
+        "gift"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCZ00_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-bag-charm/CCZ00.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CA334",
+      "style_code": "CA334",
+      "name": "Mini Tabby Bag Charm With Cherry Print",
+      "line": "Tabby",
+      "category": "Accessories",
+      "subcategory": "Bag Charms",
+      "price_usd": 150,
+      "currency": "USD",
+      "colors": [
+        "Chalk Cherry",
+        "Red Cherry"
+      ],
+      "material": "Smooth leather with cherry print",
+      "silhouette": "bag charm",
+      "size": "Mini",
+      "occasion": [
+        "everyday",
+        "festival",
+        "gift"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CA334_chalk-cherry?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/mini-tabby-bag-charm-with-cherry-print/CA334.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-4416",
+      "style_code": "4416",
+      "name": "Mini Tabby Bag Charm In Signature Canvas",
+      "line": "Tabby",
+      "category": "Accessories",
+      "subcategory": "Bag Charms",
+      "price_usd": 135,
+      "currency": "USD",
+      "colors": [
+        "Khaki/Brown",
+        "Brown/Black"
+      ],
+      "material": "Signature canvas, pebble leather and suede",
+      "silhouette": "bag charm",
+      "size": "Mini",
+      "occasion": [
+        "everyday",
+        "gift"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/4416_khaki-brown?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/mini-tabby-bag-charm-in-signature-canvas/4416.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-77840",
+      "style_code": "77840",
+      "name": "Cherry Bag Charm",
+      "line": "Novelty",
+      "category": "Accessories",
+      "subcategory": "Bag Charms",
+      "price_usd": 95,
+      "currency": "USD",
+      "colors": [
+        "Red",
+        "Pink"
+      ],
+      "material": "Leather and resin",
+      "silhouette": "bag charm",
+      "size": "Mini",
+      "occasion": [
+        "everyday",
+        "festival",
+        "gift"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/77840_red?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/cherry-bag-charm/77840.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-1635",
+      "style_code": "1635",
+      "name": "Signature Bag Charm",
+      "line": "Signature",
+      "category": "Accessories",
+      "subcategory": "Bag Charms",
+      "price_usd": 95,
+      "currency": "USD",
+      "colors": [
+        "Khaki/Brown",
+        "Black"
+      ],
+      "material": "Signature coated canvas and leather",
+      "silhouette": "bag charm",
+      "size": "Mini",
+      "occasion": [
+        "everyday",
+        "gift"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/1635_khaki-brown?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/signature-bag-charm/1635.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CX204",
+      "style_code": "CX204",
+      "name": "Loop Bag Charm",
+      "line": "Novelty",
+      "category": "Accessories",
+      "subcategory": "Bag Charms",
+      "price_usd": 75,
+      "currency": "USD",
+      "colors": [
+        "Light Saddle",
+        "Black",
+        "Chalk"
+      ],
+      "material": "Refined leather",
+      "silhouette": "bag charm",
+      "size": "Mini",
+      "occasion": [
+        "everyday",
+        "gift"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CX204_light-saddle?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/loop-bag-charm/CX204.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CG654",
+      "style_code": "CG654",
+      "name": "Crossbody Strap In Signature Jacquard",
+      "line": "Signature",
+      "category": "Accessories",
+      "subcategory": "Bag Straps",
+      "price_usd": 95,
+      "currency": "USD",
+      "colors": [
+        "Khaki/Brown",
+        "Black/Grey",
+        "Chalk/Pink"
+      ],
+      "material": "Signature jacquard webbing with leather",
+      "silhouette": "strap",
+      "size": "Adjustable",
+      "occasion": [
+        "everyday",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CG654_khaki-brown?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/crossbody-strap/CG654.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "constructed",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "constructed",
+        "style_code": "constructed",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CB923",
+      "style_code": "CB923",
+      "name": "Leather Crossbody Strap",
+      "line": "Essential",
+      "category": "Accessories",
+      "subcategory": "Bag Straps",
+      "price_usd": 125,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "1941 Red"
+      ],
+      "material": "Refined pebble leather",
+      "silhouette": "strap",
+      "size": "Adjustable",
+      "occasion": [
+        "everyday",
+        "work"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CB923_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/leather-crossbody-strap/CB923.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "constructed",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "constructed",
+        "style_code": "constructed",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CB924",
+      "style_code": "CB924",
+      "name": "Signature Coin Case Charm",
+      "line": "Signature",
+      "category": "Accessories",
+      "subcategory": "Keychains",
+      "price_usd": 65,
+      "currency": "USD",
+      "colors": [
+        "Khaki/Brown",
+        "Black"
+      ],
+      "material": "Signature coated canvas",
+      "silhouette": "coin case",
+      "size": "Mini",
+      "occasion": [
+        "everyday",
+        "gift"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CB924_khaki-brown?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/signature-coin-case-charm/CB924.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "constructed",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "constructed",
+        "style_code": "constructed",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-C0773",
+      "style_code": "C0773",
+      "name": "Tabby Shoulder Bag 26 With Pillow Quilting (18)",
+      "line": "Pillow Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 450,
+      "currency": "USD",
+      "colors": [
+        "Ivory",
+        "Black",
+        "Pink"
+      ],
+      "material": "Quilted nappa leather",
+      "silhouette": "shoulder",
+      "size": "18 (small)",
+      "occasion": [
+        "evening",
+        "date-night"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/C0773_ivory?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/pillow-tabby-shoulder-bag-18/C0773.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "constructed",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "constructed",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCW45",
+      "style_code": "CCW45",
+      "name": "Tabby Shoulder Bag 26 With Repurposed Denim Patchwork",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 550,
+      "currency": "USD",
+      "colors": [
+        "Faded Blue Denim"
+      ],
+      "material": "Repurposed denim patchwork with leather",
+      "silhouette": "shoulder",
+      "size": "26 (medium)",
+      "occasion": [
+        "everyday",
+        "festival",
+        "evening"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCW45_faded-blue-denim?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-shoulder-bag-26-with-repurposed-denim-patchwork/CCW45.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "scraped",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "constructed",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCW92",
+      "style_code": "CCW92",
+      "name": "Tabby Shoulder Bag 26 With Crystal",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 750,
+      "currency": "USD",
+      "colors": [
+        "Silver Crystal",
+        "Black Crystal"
+      ],
+      "material": "Crystal embellishment with leather",
+      "silhouette": "shoulder",
+      "size": "26 (medium)",
+      "occasion": [
+        "evening",
+        "special-occasion"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCW92_silver-crystal?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-shoulder-bag-26-with-crystal/CCW92.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCX14",
+      "style_code": "CCX14",
+      "name": "Tabby Shoulder Bag 26 In Crystal Signature",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 695,
+      "currency": "USD",
+      "colors": [
+        "Crystal Signature"
+      ],
+      "material": "Crystal Signature canvas with leather",
+      "silhouette": "shoulder",
+      "size": "26 (medium)",
+      "occasion": [
+        "evening",
+        "special-occasion"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCX14_crystal-signature?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-shoulder-bag-26-in-crystal-signature/CCX14.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CCX04",
+      "style_code": "CCX04",
+      "name": "Tabby Shoulder Bag 26",
+      "line": "Tabby",
+      "category": "Handbags",
+      "subcategory": "Shoulder Bags",
+      "price_usd": 575,
+      "currency": "USD",
+      "colors": [
+        "1941 Saddle",
+        "Black",
+        "Moss",
+        "Deep Berry"
+      ],
+      "material": "Refined calf leather",
+      "silhouette": "shoulder",
+      "size": "26 (medium)",
+      "occasion": [
+        "work",
+        "evening",
+        "everyday"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CCX04_1941-saddle?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-shoulder-bag-26/CCX04.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CBH42",
+      "style_code": "CBH42",
+      "name": "Brooklyn Shoulder Bag 39 In Loved Leather",
+      "line": "Brooklyn",
+      "category": "Handbags",
+      "subcategory": "Totes & Carryalls",
+      "price_usd": 550,
+      "currency": "USD",
+      "colors": [
+        "Distressed Brown",
+        "Distressed Black"
+      ],
+      "material": "Loved (washed) leather",
+      "silhouette": "tote",
+      "size": "39 (large)",
+      "occasion": [
+        "everyday",
+        "travel",
+        "work"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CBH42_distressed-brown?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/brooklyn-shoulder-bag-39-in-loved-leather/CBH42.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-21816",
+      "style_code": "21816",
+      "name": "Kisslock Crossbody In Colorblock",
+      "line": "Kisslock",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 295,
+      "currency": "USD",
+      "colors": [
+        "Chalk Multi",
+        "Black Multi"
+      ],
+      "material": "Glovetanned leather colorblock",
+      "silhouette": "crossbody",
+      "size": "Mini",
+      "occasion": [
+        "evening",
+        "date-night",
+        "festival"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/21816_chalk-multi?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/kisslock-crossbody-in-colorblock/21816.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-F80186",
+      "style_code": "F80186",
+      "name": "Pearl Kisslock Crossbody",
+      "line": "Kisslock",
+      "category": "Handbags",
+      "subcategory": "Crossbody Bags",
+      "price_usd": 350,
+      "currency": "USD",
+      "colors": [
+        "Chalk Pearl",
+        "Black Pearl"
+      ],
+      "material": "Leather with pearl detail",
+      "silhouette": "crossbody",
+      "size": "Mini",
+      "occasion": [
+        "evening",
+        "special-occasion"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/F80186_chalk-pearl?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/pearl-kisslock-crossbody/F80186.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "scraped",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "scraped",
+        "product_url": "scraped",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CB925",
+      "style_code": "CB925",
+      "name": "Tabby Wallet With Chain",
+      "line": "Tabby",
+      "category": "Small Leather Goods",
+      "subcategory": "Wallets",
+      "price_usd": 250,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Deep Berry",
+        "Electric Pink"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "chain wallet",
+      "size": "Small",
+      "occasion": [
+        "evening",
+        "date-night",
+        "everyday"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CB925_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/tabby-wallet-with-chain/CB925.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "constructed",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "constructed",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CB926",
+      "style_code": "CB926",
+      "name": "Long Zip Around Wallet",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Wallets",
+      "price_usd": 198,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Light Saddle",
+        "1941 Red"
+      ],
+      "material": "Crossgrain leather",
+      "silhouette": "zip-around wallet",
+      "size": "Large",
+      "occasion": [
+        "everyday",
+        "work",
+        "travel"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CB926_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/long-zip-around-wallet/CB926.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "constructed",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "constructed",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CB927",
+      "style_code": "CB927",
+      "name": "Snap Card Case",
+      "line": "Essential",
+      "category": "Small Leather Goods",
+      "subcategory": "Card Cases",
+      "price_usd": 65,
+      "currency": "USD",
+      "colors": [
+        "Black",
+        "Chalk",
+        "Bluebell",
+        "Light Saddle"
+      ],
+      "material": "Polished pebble leather",
+      "silhouette": "card case",
+      "size": "Slim",
+      "occasion": [
+        "everyday",
+        "work"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CB927_black?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/snap-card-case/CB927.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "constructed",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "constructed",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CB928",
+      "style_code": "CB928",
+      "name": "Mini Brooklyn Bag Charm",
+      "line": "Brooklyn",
+      "category": "Accessories",
+      "subcategory": "Bag Charms",
+      "price_usd": 135,
+      "currency": "USD",
+      "colors": [
+        "Light Saddle",
+        "Black",
+        "Bluebell"
+      ],
+      "material": "Natural grain leather",
+      "silhouette": "bag charm",
+      "size": "Mini",
+      "occasion": [
+        "everyday",
+        "gift"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CB928_light-saddle?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/mini-brooklyn-bag-charm/CB928.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "constructed",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "constructed",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    },
+    {
+      "id": "COA-CB929",
+      "style_code": "CB929",
+      "name": "Heart Bag Charm",
+      "line": "Novelty",
+      "category": "Accessories",
+      "subcategory": "Bag Charms",
+      "price_usd": 85,
+      "currency": "USD",
+      "colors": [
+        "1941 Red",
+        "Pink",
+        "Chalk"
+      ],
+      "material": "Refined leather",
+      "silhouette": "bag charm",
+      "size": "Mini",
+      "occasion": [
+        "everyday",
+        "festival",
+        "gift"
+      ],
+      "image_url": "https://coach.scene7.com/is/image/Coach/CB929_1941-red?$desktopProduct$",
+      "product_url": "https://www.coach.com/products/heart-bag-charm/CB929.html",
+      "region": "North America",
+      "in_stock": true,
+      "data_provenance": {
+        "name": "constructed",
+        "price_usd": "constructed",
+        "colors": "constructed",
+        "material": "scraped",
+        "style_code": "constructed",
+        "product_url": "constructed",
+        "image_url": "constructed",
+        "subcategory": "constructed",
+        "silhouette": "constructed",
+        "size": "constructed",
+        "occasion": "constructed"
+      }
+    }
+  ]
+}

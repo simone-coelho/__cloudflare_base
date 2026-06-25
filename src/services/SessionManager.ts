@@ -12,6 +12,7 @@ export interface SessionData {
     sessionCount: number;
     engagementScore: number;
     lastSegmentUpdate: number;
+    journeyStage?: 'early' | 'mid' | 'late';
   };
   preferences: {
     trackingConsent: boolean;
@@ -52,7 +53,8 @@ const sessionDataSchema = z.object({
     lastSeen: z.number(),
     sessionCount: z.number(),
     engagementScore: z.number(),
-    lastSegmentUpdate: z.number()
+    lastSegmentUpdate: z.number(),
+    journeyStage: z.enum(['early', 'mid', 'late']).optional()
   }),
   preferences: z.object({
     trackingConsent: z.boolean(),
@@ -99,7 +101,8 @@ export class SessionManager {
           lastSeen: now,
           sessionCount: existingSession ? existingSession.metadata.sessionCount + 1 : 1,
           engagementScore: data.metadata?.engagementScore || existingSession?.metadata.engagementScore || 0,
-          lastSegmentUpdate: data.segments ? now : existingSession?.metadata.lastSegmentUpdate || now
+          lastSegmentUpdate: data.segments ? now : existingSession?.metadata.lastSegmentUpdate || now,
+          journeyStage: data.metadata?.journeyStage ?? existingSession?.metadata.journeyStage
         },
         preferences: {
           trackingConsent: data.preferences?.trackingConsent ?? existingSession?.preferences.trackingConsent ?? true,
@@ -163,6 +166,19 @@ export class SessionManager {
       return this.getSession(sessionId);
     } catch (error) {
       console.error('Error retrieving session by user ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Resolve the current sessionId for a stable userId (anon vuid), if any.
+   * Used as a continuity fallback when the session cookie is absent or blocked.
+   */
+  async resolveSessionIdByUserId(userId: string): Promise<string | null> {
+    try {
+      return await this.env.SESSIONS.get(`user:${userId}`);
+    } catch (error) {
+      console.error('Error resolving session id by user ID:', error);
       return null;
     }
   }

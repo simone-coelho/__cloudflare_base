@@ -90,3 +90,11 @@ jspm_packages/
 # Local secrets
 secrets.json
 config.local.json
+
+# API tokens / model keys — NEVER COMMIT
+llm-models-keys.md
+.dev.vars
+.dev.vars.*
+*-keys.md
+*.key
+*.token

@@ -1,0 +1,83 @@
+name = "edge-platform"
+main = "src/index.ts"
+compatibility_date = "2024-08-06"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "edge-platform-prod"
+
+[env.staging]
+name = "edge-platform-staging"
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "CACHE"
+id = "c1f778bad6664b638ed4138ab2e2dd5c"
+preview_id = "c35f8387e71349368b2c86e27f49961e"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "5f66b8f1e47747e5a17242f385afa72e"
+preview_id = "6dfb454734464e608b9d204521e9387b"
+
+# R2 Buckets
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "edge-platform-storage"
+preview_bucket_name = "edge-platform-storage-preview"
+
+# Queues
+[[queues.producers]]
+queue = "events"
+binding = "EVENT_QUEUE"
+
+[[queues.consumers]]
+queue = "events"
+max_batch_size = 10
+max_batch_timeout = 30
+
+# Durable Objects
+[[durable_objects.bindings]]
+name = "STATE_MANAGER"
+class_name = "StateManager"
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
+[[durable_objects.bindings]]
+name = "PERSONALIZATION_WEBSOCKET"
+class_name = "PersonalizationWebSocket"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["StateManager", "RateLimiter"]
+
+[[migrations]]
+tag = "v2"
+new_classes = ["PersonalizationWebSocket"]
+
+# Analytics Engine
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+
+# Environment Variables (use wrangler secret for sensitive values)
+[vars]
+ENVIRONMENT = "development"
+JWT_SECRET = "development-secret-key-change-in-production"
+JWT_ISSUER = "edge-platform"
+JWT_AUDIENCE = "edge-platform-api"
+OPTIMIZELY_SDK_KEY = "your-sdk-key-here"
+OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/your-datafile.json"
+
+# Static assets configuration
+[assets]
+directory = "public"
+# Serve index.html for root and handle 404s
+not_found_handling = "single-page-application"
+
+# Development settings
+[dev]
+port = 9100
+local_protocol = "http"
+ip = "localhost"

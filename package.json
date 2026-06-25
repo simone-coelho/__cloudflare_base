@@ -11,18 +11,7 @@
     "format": "prettier --write .",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest",
-    "optly": "node optly-npx-fix.cjs optly",
-    "optly-help": "node optly-npx-fix.cjs optly --help",
-    "optly-version": "node optly-npx-fix.cjs optly --version",
-    "optly-health": "node optly-npx-fix.cjs optly health",
-    "optly-setup": "node optly-npx-fix.cjs optly setup-docs",
-    "optly-sync": "node optly-npx-fix.cjs optly sync status",
-    "optly-sync-refresh": "node optly-npx-fix.cjs optly sync refresh",
-    "optly-analytics": "node optly-npx-fix.cjs optly analytics templates",
-    "optly-entity-flags": "node optly-npx-fix.cjs optly entity templates flag",
-    "optly-entity-experiments": "node optly-npx-fix.cjs optly entity templates experiment",
-    "optly-entity-audiences": "node optly-npx-fix.cjs optly entity templates audience"
+    "test": "vitest"
   },
   "keywords": [
     "cloudflare-workers",
@@ -45,7 +34,6 @@
     "wrangler": "^3.72.0"
   },
   "dependencies": {
-    "@optimizely/mcp-server-exp": "^1.0.1",
     "@optimizely/optimizely-sdk": "^5.3.4",
     "hono": "^4.5.5",
     "jose": "^5.6.3",

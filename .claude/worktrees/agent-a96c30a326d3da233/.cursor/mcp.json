@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "optimizely": {
+      "command": "wsl",
+      "args": [
+        "bash",
+        "-lc",
+        "cd /mnt/c/Users/LAH/Documents/__Development/Optimizely/__cloudflare_base && exec /home/simonecoelho/.nvm/versions/node/v22.15.0/bin/node node_modules/@optimizely/mcp-server-exp/mcp-launcher.js 2>>/tmp/optly-mcp-debug.log"
+                                                                                                         
+      ],
+      "env": {
+        "NODE_ENV": "production",
+        "MCP_MODE": "true",
+        "OPTIMIZELY_API_TOKEN": "2:K0omYPe8MYqZRDtBaozQO0d1dzTpDHf-_SRdPVHnLis2ROYd88jc",
+        "OPTIMIZELY_PROJECT_IDS": "5463296774504448",
+        "STORAGE_DATABASE_PATH": "/mnt/c/Users/LAH/Documents/__Development/Optimizely/__cloudflare_base/data/optimizely-cache.db",
+        "LOG_LEVEL": "debug",
+        "CACHE_AUTO_SYNC": "true",
+        "CACHE_SYNC_INTERVAL_MINUTES": "60",
+        "CHANGE_HISTORY_DAYS": "1",
+        "CHANGE_HISTORY_MAX_RECORDS": "500",
+        "CHANGE_HISTORY_DISABLE": "false",
+        "WEB_ENTITIES": "experiments,campaigns,pages,audiences,events,attributes,extensions,change_history",
+        "FEATURE_ENTITIES": "flags,environments,features,audiences,events,groups,webhooks,attributes,change_history",
+        "SYNC_ENVIRONMENTS_PER_PROJECT": "5463296774504448:production,development",
+        "SKIP_FLAG_ENVIRONMENT_SYNC": "false",
+        "FLAG_RULESET_BATCH_SIZE": "1",
+        "FLAG_RULESET_BATCH_DELAY_MS": "1",
+        "SIMPLIFIED_LIST_RESPONSES": "true",
+        "ANALYTICS_DEFAULT_PAGE_SIZE": "20",
+        "ENABLE_UPDATE_TEMPLATES": "true",
+        "USE_ROBUST_INTENT_PARSER": "true",
+        "INCLUDE_AI_META": "false",
+        "MCP_DEBUG_MODE": "false",
+        "MCP_DEBUG_MODE_RESPONSE_PAYLOAD": "false",
+        "PAGINATION_COMPLEX_PAGE_SIZE": "25",
+        "OPTIMIZELY_BATCH_SIZE": "100"
+      },
+      "useDotEnv": false
+    }
+  }
+}

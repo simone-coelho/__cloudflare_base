@@ -1,0 +1,1261 @@
+{
+  "_meta": {
+    "generated_for": "Tapestry/Coach real-time personalization demo (synthetic ODP-schema data)",
+    "brand": "Coach",
+    "parent_company": "Tapestry, Inc.",
+    "region": "North America",
+    "currency": "USD",
+    "schema": "optimizely_odp",
+    "seed": 20260625,
+    "generator": "scripts/generate-synthetic-data.mjs",
+    "generator_version": "1.0.0",
+    "epoch_now_iso": "2026-06-25T17:00:00.000Z",
+    "window_days": 90,
+    "catalog_source": "data/coach-catalog.json",
+    "catalog_product_count": 71,
+    "note": "REAL SEAMS, MOCKED CALLS — synthetic data shaped to ODP. No live external dependency. Product IDs are real Coach catalog IDs.",
+    "record_type": "odp_insight_views",
+    "count": 10,
+    "consumed_by": "MockAudienceAuthoring.suggestAudiences (Opal mock) + MockSegmentProvider"
+  },
+  "aggregates": {
+    "total_customers": 3200,
+    "total_events": 120041,
+    "event_counts_by_action": {
+      "email_open": 9099,
+      "page_view": 28888,
+      "product_view": 50660,
+      "add_to_cart": 24101,
+      "purchase": 7293
+    },
+    "funnel": {
+      "page_view": 28888,
+      "product_view": 50660,
+      "add_to_cart": 24101,
+      "purchase": 7293,
+      "view_to_cart_rate": 47.6,
+      "cart_to_purchase_rate": 30.3
+    },
+    "total_revenue_usd": 3291802,
+    "views_by_line": {
+      "Tabby": 23445,
+      "Kisslock": 1195,
+      "Nora": 823,
+      "Essential": 6165,
+      "Lana": 2172,
+      "Nolita": 1068,
+      "Kira": 1769,
+      "Willow": 439,
+      "Brooklyn": 5032,
+      "Rogue": 520,
+      "Bandit": 845,
+      "Teri": 879,
+      "Hadley": 343,
+      "Pillow Tabby": 2230,
+      "Mollie": 1915,
+      "Cary": 942,
+      "Novelty": 393,
+      "Signature": 485
+    },
+    "views_by_price_band": {
+      "elevated": 15389,
+      "core": 29840,
+      "entry": 5431
+    },
+    "top_products": [
+      {
+        "product_id": "COA-CBH23",
+        "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+        "line": "Tabby",
+        "price_usd": 350,
+        "views": 2622
+      },
+      {
+        "product_id": "COA-CY201",
+        "name": "Tabby Shoulder Bag 20",
+        "line": "Tabby",
+        "price_usd": 375,
+        "views": 2586
+      },
+      {
+        "product_id": "COA-76197",
+        "name": "Tabby Crossbody Bag",
+        "line": "Tabby",
+        "price_usd": 350,
+        "views": 2442
+      },
+      {
+        "product_id": "COA-CB925",
+        "name": "Tabby Wallet With Chain",
+        "line": "Tabby",
+        "price_usd": 250,
+        "views": 2122
+      },
+      {
+        "product_id": "COA-CW620",
+        "name": "Tabby Shoulder Bag 26 With Quilting",
+        "line": "Tabby",
+        "price_usd": 575,
+        "views": 1750
+      },
+      {
+        "product_id": "COA-CCX04",
+        "name": "Tabby Shoulder Bag 26",
+        "line": "Tabby",
+        "price_usd": 575,
+        "views": 1698
+      },
+      {
+        "product_id": "COA-CCW45",
+        "name": "Tabby Shoulder Bag 26 With Repurposed Denim Patchwork",
+        "line": "Tabby",
+        "price_usd": 550,
+        "views": 1662
+      },
+      {
+        "product_id": "COA-CCZ00",
+        "name": "Tabby Bag Charm",
+        "line": "Tabby",
+        "price_usd": 150,
+        "views": 1344
+      },
+      {
+        "product_id": "COA-CA334",
+        "name": "Mini Tabby Bag Charm With Cherry Print",
+        "line": "Tabby",
+        "price_usd": 150,
+        "views": 1249
+      },
+      {
+        "product_id": "COA-CY919",
+        "name": "Chain Tabby Shoulder Bag",
+        "line": "Tabby",
+        "price_usd": 495,
+        "views": 1190
+      },
+      {
+        "product_id": "COA-CH857",
+        "name": "Tabby Shoulder Bag 26",
+        "line": "Tabby",
+        "price_usd": 475,
+        "views": 1178
+      },
+      {
+        "product_id": "COA-CI032",
+        "name": "Tabby Shoulder Bag 26 In Signature Canvas",
+        "line": "Tabby",
+        "price_usd": 450,
+        "views": 1175
+      },
+      {
+        "product_id": "COA-4416",
+        "name": "Mini Tabby Bag Charm In Signature Canvas",
+        "line": "Tabby",
+        "price_usd": 135,
+        "views": 1063
+      },
+      {
+        "product_id": "COA-CU068",
+        "name": "Brooklyn Shoulder Bag 28",
+        "line": "Brooklyn",
+        "price_usd": 295,
+        "views": 1061
+      },
+      {
+        "product_id": "COA-CW614",
+        "name": "Brooklyn Shoulder Bag 23",
+        "line": "Brooklyn",
+        "price_usd": 250,
+        "views": 1015
+      }
+    ],
+    "daily_event_volume": {
+      "2026-03-27": 1,
+      "2026-03-28": 2,
+      "2026-03-29": 7,
+      "2026-03-30": 59,
+      "2026-03-31": 26,
+      "2026-04-01": 105,
+      "2026-04-02": 20,
+      "2026-04-03": 113,
+      "2026-04-04": 76,
+      "2026-04-05": 134,
+      "2026-04-06": 128,
+      "2026-04-07": 172,
+      "2026-04-08": 133,
+      "2026-04-09": 86,
+      "2026-04-10": 248,
+      "2026-04-11": 193,
+      "2026-04-12": 168,
+      "2026-04-13": 180,
+      "2026-04-14": 254,
+      "2026-04-15": 180,
+      "2026-04-16": 253,
+      "2026-04-17": 289,
+      "2026-04-18": 389,
+      "2026-04-19": 254,
+      "2026-04-20": 291,
+      "2026-04-21": 364,
+      "2026-04-22": 301,
+      "2026-04-23": 317,
+      "2026-04-24": 268,
+      "2026-04-25": 312,
+      "2026-04-26": 778,
+      "2026-04-27": 547,
+      "2026-04-28": 628,
+      "2026-04-29": 446,
+      "2026-04-30": 499,
+      "2026-05-01": 512,
+      "2026-05-02": 532,
+      "2026-05-03": 621,
+      "2026-05-04": 551,
+      "2026-05-05": 814,
+      "2026-05-06": 759,
+      "2026-05-07": 1208,
+      "2026-05-08": 1069,
+      "2026-05-09": 1055,
+      "2026-05-10": 950,
+      "2026-05-11": 843,
+      "2026-05-12": 957,
+      "2026-05-13": 1382,
+      "2026-05-14": 1137,
+      "2026-05-15": 652,
+      "2026-05-16": 1155,
+      "2026-05-17": 1088,
+      "2026-05-18": 1069,
+      "2026-05-19": 1056,
+      "2026-05-20": 973,
+      "2026-05-21": 984,
+      "2026-05-22": 1427,
+      "2026-05-23": 1240,
+      "2026-05-24": 1115,
+      "2026-05-25": 1436,
+      "2026-05-26": 1469,
+      "2026-05-27": 1339,
+      "2026-05-28": 1340,
+      "2026-05-29": 1666,
+      "2026-05-30": 1875,
+      "2026-05-31": 1877,
+      "2026-06-01": 1939,
+      "2026-06-02": 1637,
+      "2026-06-03": 1919,
+      "2026-06-04": 2187,
+      "2026-06-05": 2004,
+      "2026-06-06": 2002,
+      "2026-06-07": 2378,
+      "2026-06-08": 2654,
+      "2026-06-09": 2387,
+      "2026-06-10": 2451,
+      "2026-06-11": 2516,
+      "2026-06-12": 2724,
+      "2026-06-13": 2703,
+      "2026-06-14": 2459,
+      "2026-06-15": 2569,
+      "2026-06-16": 3090,
+      "2026-06-17": 2788,
+      "2026-06-18": 3235,
+      "2026-06-19": 3019,
+      "2026-06-20": 3704,
+      "2026-06-21": 4518,
+      "2026-06-22": 4232,
+      "2026-06-23": 4772,
+      "2026-06-24": 5951,
+      "2026-06-25": 7831
+    }
+  },
+  "insights": [
+    {
+      "key": "high_intent_tabby_browser",
+      "name": "High-Intent Tabby Browsers (no add-to-cart)",
+      "description": "Shoppers viewing Tabby 3+ times this session who have not added to cart — the hero \"complete the look\" target.",
+      "nl_prompt": "high-intent Tabby browsers who haven't added to cart",
+      "evaluation": "realtime",
+      "recommended_module": "complete_the_look",
+      "anchor_line": "Tabby",
+      "conditions": [
+        "and",
+        {
+          "attribute": "viewed_product_line",
+          "operator": "eq",
+          "value": "Tabby"
+        },
+        {
+          "attribute": "product_views",
+          "operator": "gte",
+          "value": 3
+        },
+        {
+          "attribute": "cart_adds",
+          "operator": "eq",
+          "value": 0
+        }
+      ],
+      "stats": {
+        "audience_size": 114,
+        "audience_pct_of_base": 3.6,
+        "avg_product_views": 4.5,
+        "avg_order_likelihood": 0.259,
+        "avg_order_value_usd": 320,
+        "known_identity_pct": 60.5
+      },
+      "top_products": [
+        {
+          "product_id": "COA-CY201",
+          "name": "Tabby Shoulder Bag 20",
+          "line": "Tabby",
+          "price_usd": 375,
+          "viewers": 33
+        },
+        {
+          "product_id": "COA-CBH23",
+          "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 28
+        },
+        {
+          "product_id": "COA-76197",
+          "name": "Tabby Crossbody Bag",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 26
+        },
+        {
+          "product_id": "COA-CB925",
+          "name": "Tabby Wallet With Chain",
+          "line": "Tabby",
+          "price_usd": 250,
+          "viewers": 25
+        },
+        {
+          "product_id": "COA-CY919",
+          "name": "Chain Tabby Shoulder Bag",
+          "line": "Tabby",
+          "price_usd": 495,
+          "viewers": 25
+        },
+        {
+          "product_id": "COA-CCW45",
+          "name": "Tabby Shoulder Bag 26 With Repurposed Denim Patchwork",
+          "line": "Tabby",
+          "price_usd": 550,
+          "viewers": 25
+        },
+        {
+          "product_id": "COA-CW620",
+          "name": "Tabby Shoulder Bag 26 With Quilting",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 24
+        },
+        {
+          "product_id": "COA-CH857",
+          "name": "Tabby Shoulder Bag 26",
+          "line": "Tabby",
+          "price_usd": 475,
+          "viewers": 22
+        }
+      ],
+      "complete_the_look": [
+        {
+          "product_id": "COA-CCZ00",
+          "name": "Tabby Bag Charm",
+          "price_usd": 150
+        },
+        {
+          "product_id": "COA-CB925",
+          "name": "Tabby Wallet With Chain",
+          "price_usd": 250
+        }
+      ],
+      "sample_vuids": [
+        "vuid_3edf65a154d90afc760db37aff45c067",
+        "vuid_3e6ecfadedac35fc5fc18ada9a50bbf1",
+        "vuid_4c83e546ecdebe5f18b4786a0842b7a9",
+        "vuid_6bbb445c2f534ce436297ac7f38b371f",
+        "vuid_cc2a3458fa7de73d0748d112c8d736ae"
+      ]
+    },
+    {
+      "key": "early_journey_cold_start",
+      "name": "Early-Journey Cold-Start Shoppers",
+      "description": "Anonymous or shallow sessions (few views, no cart) — bootstrap with curated/trending merchandising.",
+      "nl_prompt": "brand-new anonymous shoppers just landing",
+      "evaluation": "realtime",
+      "recommended_module": "curated_grid",
+      "anchor_line": null,
+      "conditions": [
+        "and",
+        {
+          "attribute": "journey_stage",
+          "operator": "eq",
+          "value": "early"
+        },
+        {
+          "attribute": "cart_adds",
+          "operator": "eq",
+          "value": 0
+        }
+      ],
+      "stats": {
+        "audience_size": 700,
+        "audience_pct_of_base": 21.9,
+        "avg_product_views": 0.6,
+        "avg_order_likelihood": 0.163,
+        "avg_order_value_usd": 333,
+        "known_identity_pct": 66.3
+      },
+      "top_products": [
+        {
+          "product_id": "COA-76197",
+          "name": "Tabby Crossbody Bag",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 153
+        },
+        {
+          "product_id": "COA-CBH23",
+          "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 147
+        },
+        {
+          "product_id": "COA-CY201",
+          "name": "Tabby Shoulder Bag 20",
+          "line": "Tabby",
+          "price_usd": 375,
+          "viewers": 146
+        },
+        {
+          "product_id": "COA-CB925",
+          "name": "Tabby Wallet With Chain",
+          "line": "Tabby",
+          "price_usd": 250,
+          "viewers": 131
+        },
+        {
+          "product_id": "COA-CW620",
+          "name": "Tabby Shoulder Bag 26 With Quilting",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 126
+        },
+        {
+          "product_id": "COA-CCX04",
+          "name": "Tabby Shoulder Bag 26",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 109
+        },
+        {
+          "product_id": "COA-CCW45",
+          "name": "Tabby Shoulder Bag 26 With Repurposed Denim Patchwork",
+          "line": "Tabby",
+          "price_usd": 550,
+          "viewers": 109
+        },
+        {
+          "product_id": "COA-CCZ00",
+          "name": "Tabby Bag Charm",
+          "line": "Tabby",
+          "price_usd": 150,
+          "viewers": 97
+        }
+      ],
+      "complete_the_look": [],
+      "sample_vuids": [
+        "vuid_a42f51cccb9c1de34502413386d291bb",
+        "vuid_feaae59b1f8661d4131e189025faa942",
+        "vuid_e3abc188cff609f0698d5d1930a2c019",
+        "vuid_bba81faa6911fbe74b4e646b9c460208",
+        "vuid_41d779534b7fe123d5cc09edf41f6866"
+      ]
+    },
+    {
+      "key": "mid_journey_considering",
+      "name": "Mid-Journey Considerers",
+      "description": "Engaged browsers (5+ views or deep dwell) weighing options — show social proof + complete-the-look.",
+      "nl_prompt": "shoppers actively comparing products mid-journey",
+      "evaluation": "realtime",
+      "recommended_module": "social_proof",
+      "anchor_line": null,
+      "conditions": [
+        "and",
+        {
+          "attribute": "journey_stage",
+          "operator": "eq",
+          "value": "mid"
+        },
+        {
+          "attribute": "product_views",
+          "operator": "gte",
+          "value": 5
+        }
+      ],
+      "stats": {
+        "audience_size": 132,
+        "audience_pct_of_base": 4.1,
+        "avg_product_views": 5.8,
+        "avg_order_likelihood": 0.3,
+        "avg_order_value_usd": 318,
+        "known_identity_pct": 65.2
+      },
+      "top_products": [
+        {
+          "product_id": "COA-CBH23",
+          "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 40
+        },
+        {
+          "product_id": "COA-CY201",
+          "name": "Tabby Shoulder Bag 20",
+          "line": "Tabby",
+          "price_usd": 375,
+          "viewers": 34
+        },
+        {
+          "product_id": "COA-76197",
+          "name": "Tabby Crossbody Bag",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 33
+        },
+        {
+          "product_id": "COA-CW620",
+          "name": "Tabby Shoulder Bag 26 With Quilting",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 29
+        },
+        {
+          "product_id": "COA-CCZ00",
+          "name": "Tabby Bag Charm",
+          "line": "Tabby",
+          "price_usd": 150,
+          "viewers": 29
+        },
+        {
+          "product_id": "COA-CY919",
+          "name": "Chain Tabby Shoulder Bag",
+          "line": "Tabby",
+          "price_usd": 495,
+          "viewers": 27
+        },
+        {
+          "product_id": "COA-CB925",
+          "name": "Tabby Wallet With Chain",
+          "line": "Tabby",
+          "price_usd": 250,
+          "viewers": 27
+        },
+        {
+          "product_id": "COA-4416",
+          "name": "Mini Tabby Bag Charm In Signature Canvas",
+          "line": "Tabby",
+          "price_usd": 135,
+          "viewers": 26
+        }
+      ],
+      "complete_the_look": [],
+      "sample_vuids": [
+        "vuid_e49e4d4c51aeacec12fbed565d1e7669",
+        "vuid_7282eb9f4f4c092d1987c68a05dabf5a",
+        "vuid_4aec693b73efcd25e74d2b53e9fd3555",
+        "vuid_cc2a3458fa7de73d0748d112c8d736ae",
+        "vuid_fa83086201e03500f3e3eafc108c0a0c"
+      ]
+    },
+    {
+      "key": "late_journey_ready_to_buy",
+      "name": "Late-Journey Ready-to-Buy (active cart)",
+      "description": "Items added in the CURRENT session, not yet purchased — reassure with shipping/returns + checkout nudge.",
+      "nl_prompt": "shoppers with items in their cart right now who are close to buying",
+      "evaluation": "realtime",
+      "recommended_module": "checkout_nudge",
+      "anchor_line": null,
+      "conditions": [
+        "and",
+        {
+          "attribute": "cart_adds",
+          "operator": "gte",
+          "value": 1
+        },
+        {
+          "attribute": "purchases",
+          "operator": "eq",
+          "value": 0
+        }
+      ],
+      "stats": {
+        "audience_size": 786,
+        "audience_pct_of_base": 24.6,
+        "avg_product_views": 4.8,
+        "avg_order_likelihood": 0.616,
+        "avg_order_value_usd": 336,
+        "known_identity_pct": 64.5
+      },
+      "top_products": [
+        {
+          "product_id": "COA-CBH23",
+          "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 272
+        },
+        {
+          "product_id": "COA-CY201",
+          "name": "Tabby Shoulder Bag 20",
+          "line": "Tabby",
+          "price_usd": 375,
+          "viewers": 268
+        },
+        {
+          "product_id": "COA-CB925",
+          "name": "Tabby Wallet With Chain",
+          "line": "Tabby",
+          "price_usd": 250,
+          "viewers": 268
+        },
+        {
+          "product_id": "COA-76197",
+          "name": "Tabby Crossbody Bag",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 257
+        },
+        {
+          "product_id": "COA-CW620",
+          "name": "Tabby Shoulder Bag 26 With Quilting",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 210
+        },
+        {
+          "product_id": "COA-CCZ00",
+          "name": "Tabby Bag Charm",
+          "line": "Tabby",
+          "price_usd": 150,
+          "viewers": 210
+        },
+        {
+          "product_id": "COA-CA334",
+          "name": "Mini Tabby Bag Charm With Cherry Print",
+          "line": "Tabby",
+          "price_usd": 150,
+          "viewers": 198
+        },
+        {
+          "product_id": "COA-CCX04",
+          "name": "Tabby Shoulder Bag 26",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 186
+        }
+      ],
+      "complete_the_look": [],
+      "sample_vuids": [
+        "vuid_f39a094eb2417a9ba88dd495d7e07521",
+        "vuid_3f0d13012e68b598061e7f74a56b3db4",
+        "vuid_6e9100304c5b5dfc7415b291a981f51e",
+        "vuid_f9f3f3642a48cef997a678e20a92e31a",
+        "vuid_c12fff7b920056d55ce097dcb1db2baa"
+      ]
+    },
+    {
+      "key": "cart_abandoner",
+      "name": "Cart Abandoners (returning)",
+      "description": "Added to cart in a prior/this session and left without buying — retarget with the abandoned line + urgency. Distinct from active-cart shoppers.",
+      "nl_prompt": "people who added to cart but abandoned without buying",
+      "evaluation": "realtime",
+      "recommended_module": "cart_recovery",
+      "anchor_line": null,
+      "conditions": [
+        "and",
+        {
+          "attribute": "cart_abandoned",
+          "operator": "eq",
+          "value": true
+        },
+        {
+          "attribute": "purchases",
+          "operator": "eq",
+          "value": 0
+        }
+      ],
+      "stats": {
+        "audience_size": 1106,
+        "audience_pct_of_base": 34.6,
+        "avg_product_views": 4,
+        "avg_order_likelihood": 0.514,
+        "avg_order_value_usd": 332,
+        "known_identity_pct": 63.9
+      },
+      "top_products": [
+        {
+          "product_id": "COA-CBH23",
+          "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 358
+        },
+        {
+          "product_id": "COA-CY201",
+          "name": "Tabby Shoulder Bag 20",
+          "line": "Tabby",
+          "price_usd": 375,
+          "viewers": 355
+        },
+        {
+          "product_id": "COA-CB925",
+          "name": "Tabby Wallet With Chain",
+          "line": "Tabby",
+          "price_usd": 250,
+          "viewers": 349
+        },
+        {
+          "product_id": "COA-76197",
+          "name": "Tabby Crossbody Bag",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 337
+        },
+        {
+          "product_id": "COA-CW620",
+          "name": "Tabby Shoulder Bag 26 With Quilting",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 266
+        },
+        {
+          "product_id": "COA-CCZ00",
+          "name": "Tabby Bag Charm",
+          "line": "Tabby",
+          "price_usd": 150,
+          "viewers": 266
+        },
+        {
+          "product_id": "COA-CA334",
+          "name": "Mini Tabby Bag Charm With Cherry Print",
+          "line": "Tabby",
+          "price_usd": 150,
+          "viewers": 255
+        },
+        {
+          "product_id": "COA-CCW45",
+          "name": "Tabby Shoulder Bag 26 With Repurposed Denim Patchwork",
+          "line": "Tabby",
+          "price_usd": 550,
+          "viewers": 245
+        }
+      ],
+      "complete_the_look": [],
+      "sample_vuids": [
+        "vuid_f39a094eb2417a9ba88dd495d7e07521",
+        "vuid_3edf65a154d90afc760db37aff45c067",
+        "vuid_a42f51cccb9c1de34502413386d291bb",
+        "vuid_3f0d13012e68b598061e7f74a56b3db4",
+        "vuid_6e9100304c5b5dfc7415b291a981f51e"
+      ]
+    },
+    {
+      "key": "high_aov_gifter",
+      "name": "High-AOV Gifters",
+      "description": "Gift-oriented shoppers with elevated order value — surface gift sets, charms, and gift wrap.",
+      "nl_prompt": "high-AOV gifters shopping for presents",
+      "evaluation": "realtime",
+      "recommended_module": "gift_edit",
+      "anchor_line": null,
+      "conditions": [
+        "and",
+        {
+          "attribute": "gifter",
+          "operator": "eq",
+          "value": true
+        },
+        {
+          "attribute": "average_order_value_usd",
+          "operator": "gte",
+          "value": 300
+        }
+      ],
+      "stats": {
+        "audience_size": 279,
+        "audience_pct_of_base": 8.7,
+        "avg_product_views": 5.6,
+        "avg_order_likelihood": 0.523,
+        "avg_order_value_usd": 416,
+        "known_identity_pct": 65.6
+      },
+      "top_products": [
+        {
+          "product_id": "COA-CB925",
+          "name": "Tabby Wallet With Chain",
+          "line": "Tabby",
+          "price_usd": 250,
+          "viewers": 174
+        },
+        {
+          "product_id": "COA-CCZ00",
+          "name": "Tabby Bag Charm",
+          "line": "Tabby",
+          "price_usd": 150,
+          "viewers": 119
+        },
+        {
+          "product_id": "COA-4416",
+          "name": "Mini Tabby Bag Charm In Signature Canvas",
+          "line": "Tabby",
+          "price_usd": 135,
+          "viewers": 117
+        },
+        {
+          "product_id": "COA-CA334",
+          "name": "Mini Tabby Bag Charm With Cherry Print",
+          "line": "Tabby",
+          "price_usd": 150,
+          "viewers": 107
+        },
+        {
+          "product_id": "COA-CBH23",
+          "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 79
+        },
+        {
+          "product_id": "COA-CCX04",
+          "name": "Tabby Shoulder Bag 26",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 78
+        },
+        {
+          "product_id": "COA-76197",
+          "name": "Tabby Crossbody Bag",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 73
+        },
+        {
+          "product_id": "COA-CY201",
+          "name": "Tabby Shoulder Bag 20",
+          "line": "Tabby",
+          "price_usd": 375,
+          "viewers": 73
+        }
+      ],
+      "complete_the_look": [],
+      "sample_vuids": [
+        "vuid_3edf65a154d90afc760db37aff45c067",
+        "vuid_cf78c88d46d2c0a83d95065f0bd02225",
+        "vuid_eda9d3babfee65f93ba042313821c074",
+        "vuid_c1941854e79a1e21cd59f3aabed482b1",
+        "vuid_2b78ba0bd414261f7f960537e0f343e3"
+      ]
+    },
+    {
+      "key": "luxe_affinity",
+      "name": "Luxe / Elevated-Price Affinity",
+      "description": "Shoppers browsing the elevated price band or with high AOV — promote Rogue, crystal Tabby, premium leathers.",
+      "nl_prompt": "customers who love our most premium pieces",
+      "evaluation": "realtime",
+      "recommended_module": "premium_hero",
+      "anchor_line": null,
+      "conditions": [
+        "or",
+        {
+          "attribute": "price_band_viewed",
+          "operator": "eq",
+          "value": "elevated"
+        },
+        {
+          "attribute": "average_order_value_usd",
+          "operator": "gte",
+          "value": 500
+        }
+      ],
+      "stats": {
+        "audience_size": 999,
+        "audience_pct_of_base": 31.2,
+        "avg_product_views": 5.4,
+        "avg_order_likelihood": 0.521,
+        "avg_order_value_usd": 436,
+        "known_identity_pct": 65
+      },
+      "top_products": [
+        {
+          "product_id": "COA-CW620",
+          "name": "Tabby Shoulder Bag 26 With Quilting",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 574
+        },
+        {
+          "product_id": "COA-CCX04",
+          "name": "Tabby Shoulder Bag 26",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 545
+        },
+        {
+          "product_id": "COA-CCW45",
+          "name": "Tabby Shoulder Bag 26 With Repurposed Denim Patchwork",
+          "line": "Tabby",
+          "price_usd": 550,
+          "viewers": 530
+        },
+        {
+          "product_id": "COA-CBH23",
+          "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 389
+        },
+        {
+          "product_id": "COA-CI032",
+          "name": "Tabby Shoulder Bag 26 In Signature Canvas",
+          "line": "Tabby",
+          "price_usd": 450,
+          "viewers": 382
+        },
+        {
+          "product_id": "COA-76197",
+          "name": "Tabby Crossbody Bag",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 375
+        },
+        {
+          "product_id": "COA-CY919",
+          "name": "Chain Tabby Shoulder Bag",
+          "line": "Tabby",
+          "price_usd": 495,
+          "viewers": 368
+        },
+        {
+          "product_id": "COA-CY201",
+          "name": "Tabby Shoulder Bag 20",
+          "line": "Tabby",
+          "price_usd": 375,
+          "viewers": 368
+        }
+      ],
+      "complete_the_look": [],
+      "sample_vuids": [
+        "vuid_f39a094eb2417a9ba88dd495d7e07521",
+        "vuid_3f0d13012e68b598061e7f74a56b3db4",
+        "vuid_fd837da882ecb1f4814861698dceb469",
+        "vuid_6e9100304c5b5dfc7415b291a981f51e",
+        "vuid_41d779534b7fe123d5cc09edf41f6866"
+      ]
+    },
+    {
+      "key": "vip_loyalist",
+      "name": "VIP Loyalists",
+      "description": "Gold/Platinum loyalty with high engagement — early access + concierge messaging.",
+      "nl_prompt": "our most loyal VIP customers",
+      "evaluation": "realtime",
+      "recommended_module": "vip_early_access",
+      "anchor_line": null,
+      "conditions": [
+        "and",
+        {
+          "attribute": "loyalty_tier",
+          "operator": "in",
+          "value": [
+            "gold",
+            "platinum"
+          ]
+        },
+        {
+          "attribute": "engagement_rank",
+          "operator": "in",
+          "value": [
+            "high",
+            "vip"
+          ]
+        }
+      ],
+      "stats": {
+        "audience_size": 302,
+        "audience_pct_of_base": 9.4,
+        "avg_product_views": 6.2,
+        "avg_order_likelihood": 0.679,
+        "avg_order_value_usd": 495,
+        "known_identity_pct": 100
+      },
+      "top_products": [
+        {
+          "product_id": "COA-CW620",
+          "name": "Tabby Shoulder Bag 26 With Quilting",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 220
+        },
+        {
+          "product_id": "COA-CCW45",
+          "name": "Tabby Shoulder Bag 26 With Repurposed Denim Patchwork",
+          "line": "Tabby",
+          "price_usd": 550,
+          "viewers": 219
+        },
+        {
+          "product_id": "COA-CCX04",
+          "name": "Tabby Shoulder Bag 26",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 217
+        },
+        {
+          "product_id": "COA-CP150",
+          "name": "Tabby Shoulder Bag 26 With Pillow Quilting",
+          "line": "Pillow Tabby",
+          "price_usd": 550,
+          "viewers": 181
+        },
+        {
+          "product_id": "COA-CY201",
+          "name": "Tabby Shoulder Bag 20",
+          "line": "Tabby",
+          "price_usd": 375,
+          "viewers": 171
+        },
+        {
+          "product_id": "COA-76197",
+          "name": "Tabby Crossbody Bag",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 163
+        },
+        {
+          "product_id": "COA-CBH23",
+          "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 161
+        },
+        {
+          "product_id": "COA-CCC16",
+          "name": "Brooklyn Shoulder Bag 28 In Shearling",
+          "line": "Brooklyn",
+          "price_usd": 595,
+          "viewers": 159
+        }
+      ],
+      "complete_the_look": [],
+      "sample_vuids": [
+        "vuid_21761dc977d8fce10160e9e58af2efa3",
+        "vuid_feaae59b1f8661d4131e189025faa942",
+        "vuid_f9f3f3642a48cef997a678e20a92e31a",
+        "vuid_6feeb8ed42417d405414349ea73702b9",
+        "vuid_f3cda58518ab6f74e6added24f8f8877"
+      ]
+    },
+    {
+      "key": "brooklyn_browser",
+      "name": "Brooklyn Line Affinity",
+      "description": "Shoppers gravitating to the Brooklyn line — workhorse leather; pair with straps and totes.",
+      "nl_prompt": "shoppers interested in the Brooklyn collection",
+      "evaluation": "realtime",
+      "recommended_module": "line_spotlight",
+      "anchor_line": "Brooklyn",
+      "conditions": [
+        "and",
+        {
+          "attribute": "viewed_product_line",
+          "operator": "eq",
+          "value": "Brooklyn"
+        },
+        {
+          "attribute": "product_views",
+          "operator": "gte",
+          "value": 2
+        }
+      ],
+      "stats": {
+        "audience_size": 249,
+        "audience_pct_of_base": 7.8,
+        "avg_product_views": 7.3,
+        "avg_order_likelihood": 0.575,
+        "avg_order_value_usd": 392,
+        "known_identity_pct": 61.8
+      },
+      "top_products": [
+        {
+          "product_id": "COA-CBH23",
+          "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 107
+        },
+        {
+          "product_id": "COA-CY201",
+          "name": "Tabby Shoulder Bag 20",
+          "line": "Tabby",
+          "price_usd": 375,
+          "viewers": 102
+        },
+        {
+          "product_id": "COA-76197",
+          "name": "Tabby Crossbody Bag",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 101
+        },
+        {
+          "product_id": "COA-CB925",
+          "name": "Tabby Wallet With Chain",
+          "line": "Tabby",
+          "price_usd": 250,
+          "viewers": 101
+        },
+        {
+          "product_id": "COA-CW614",
+          "name": "Brooklyn Shoulder Bag 23",
+          "line": "Brooklyn",
+          "price_usd": 250,
+          "viewers": 97
+        },
+        {
+          "product_id": "COA-CW620",
+          "name": "Tabby Shoulder Bag 26 With Quilting",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 91
+        },
+        {
+          "product_id": "COA-CU068",
+          "name": "Brooklyn Shoulder Bag 28",
+          "line": "Brooklyn",
+          "price_usd": 295,
+          "viewers": 91
+        },
+        {
+          "product_id": "COA-CCX04",
+          "name": "Tabby Shoulder Bag 26",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 86
+        }
+      ],
+      "complete_the_look": [
+        {
+          "product_id": "COA-CB928",
+          "name": "Mini Brooklyn Bag Charm",
+          "price_usd": 135
+        },
+        {
+          "product_id": "COA-CR552",
+          "name": "Essential Slim Wallet",
+          "price_usd": 175
+        }
+      ],
+      "sample_vuids": [
+        "vuid_e49e4d4c51aeacec12fbed565d1e7669",
+        "vuid_f3cda58518ab6f74e6added24f8f8877",
+        "vuid_75f7196ebb438d99c51e8d215b885440",
+        "vuid_381840be32bc66322772c71a241e5f90",
+        "vuid_981033b8327fae3a95febec6400cbac9"
+      ]
+    },
+    {
+      "key": "lapsed_reengagement",
+      "name": "Lapsed but Re-Engaging",
+      "description": "High churn-risk profiles showing fresh activity — win-back offer + bestsellers.",
+      "nl_prompt": "lapsed customers who just came back",
+      "evaluation": "realtime",
+      "recommended_module": "winback_offer",
+      "anchor_line": null,
+      "conditions": [
+        "and",
+        {
+          "attribute": "churn_risk_score",
+          "operator": "gte",
+          "value": 0.6
+        },
+        {
+          "attribute": "product_views",
+          "operator": "gte",
+          "value": 1
+        }
+      ],
+      "stats": {
+        "audience_size": 140,
+        "audience_pct_of_base": 4.4,
+        "avg_product_views": 1.8,
+        "avg_order_likelihood": 0.266,
+        "avg_order_value_usd": 313,
+        "known_identity_pct": 62.1
+      },
+      "top_products": [
+        {
+          "product_id": "COA-CY919",
+          "name": "Chain Tabby Shoulder Bag",
+          "line": "Tabby",
+          "price_usd": 495,
+          "viewers": 23
+        },
+        {
+          "product_id": "COA-CY201",
+          "name": "Tabby Shoulder Bag 20",
+          "line": "Tabby",
+          "price_usd": 375,
+          "viewers": 20
+        },
+        {
+          "product_id": "COA-CI032",
+          "name": "Tabby Shoulder Bag 26 In Signature Canvas",
+          "line": "Tabby",
+          "price_usd": 450,
+          "viewers": 19
+        },
+        {
+          "product_id": "COA-CCX04",
+          "name": "Tabby Shoulder Bag 26",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 19
+        },
+        {
+          "product_id": "COA-CBH23",
+          "name": "Tabby Chain Crossbody Bag 19 With Quilting",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 18
+        },
+        {
+          "product_id": "COA-CH857",
+          "name": "Tabby Shoulder Bag 26",
+          "line": "Tabby",
+          "price_usd": 475,
+          "viewers": 16
+        },
+        {
+          "product_id": "COA-CW620",
+          "name": "Tabby Shoulder Bag 26 With Quilting",
+          "line": "Tabby",
+          "price_usd": 575,
+          "viewers": 16
+        },
+        {
+          "product_id": "COA-76197",
+          "name": "Tabby Crossbody Bag",
+          "line": "Tabby",
+          "price_usd": 350,
+          "viewers": 16
+        }
+      ],
+      "complete_the_look": [],
+      "sample_vuids": [
+        "vuid_6e9100304c5b5dfc7415b291a981f51e",
+        "vuid_4c83e546ecdebe5f18b4786a0842b7a9",
+        "vuid_531ecf2d1143b4cdf7161754b633147e",
+        "vuid_01d88f4804750098b76f6daf4e51864d",
+        "vuid_c4cc9aee80f64cf2ab53a5a3b20266f9"
+      ]
+    }
+  ]
+}

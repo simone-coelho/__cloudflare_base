@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegmentEngine';
+import { getConnectors } from '@/connectors';
 import { z } from 'zod';
 
 const realtimeRoutes = new Hono<{ Bindings: Env }>();
@@ -30,9 +31,17 @@ realtimeRoutes.get('/ws', async (c) => {
   }
 });
 
-// Real-time action event processing
+// Real-time action event processing.
+// Retail event types ('product_view','add_to_cart','wishlist_add') are accepted
+// alongside the original B2B types so the Coach storefront and existing callers
+// share one ingestion path (REAL SEAMS, MOCKED CALLS — see docs/architecture/05-demo-build-spec.md §3).
 const actionEventSchema = z.object({
-  type: z.enum(['email_open', 'form_submit', 'page_view', 'button_click', 'custom']),
+  type: z.enum([
+    // existing (backward compatible)
+    'email_open', 'form_submit', 'page_view', 'button_click', 'custom',
+    // retail / Coach storefront signals
+    'product_view', 'add_to_cart', 'wishlist_add',
+  ]),
   userId: z.string(),
   anonymousId: z.string().optional(),
   data: z.record(z.any()),
@@ -44,23 +53,27 @@ realtimeRoutes.post('/action', async (c) => {
   try {
     const body = await c.req.json();
     const validatedEvent = actionEventSchema.parse(body);
-    
-    // Add timestamp if not provided
-    const actionEvent: ActionEvent = {
+
+    // Add timestamp if not provided.
+    // Cast: the zod schema accepts the retail event types ('product_view',
+    // 'add_to_cart','wishlist_add'); ActionEvent['type'] is widened to the same
+    // union by the catalog-aware engine refactor (build-spec §2.1/§2.2). The
+    // runtime values are always valid events, so this stays correct post-refactor.
+    const actionEvent = {
       ...validatedEvent,
       timestamp: validatedEvent.timestamp || Date.now()
-    };
+    } as ActionEvent;
 
     // Get cookie header for session management
-    const cookieHeader = c.req.header('Cookie');
+    const cookieHeader = c.req.header('Cookie') ?? null;
 
     // Process the action event with enhanced session management
-    const segmentEngine = new RealtimeSegmentEngine(c.env);
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     const result = await segmentEngine.processActionEventWithSession(actionEvent, cookieHeader);
 
     // Set updated cookies in response
     result.cookieHeaders.forEach(cookieHeader => {
-      c.header('Set-Cookie', cookieHeader);
+      c.header('Set-Cookie', cookieHeader, { append: true });
     });
 
     if (result.update) {
@@ -106,8 +119,8 @@ realtimeRoutes.get('/personalization/:userId', async (c) => {
       return c.json({ error: 'User ID is required' }, 400);
     }
 
-    const cookieHeader = c.req.header('Cookie');
-    const segmentEngine = new RealtimeSegmentEngine(c.env);
+    const cookieHeader = c.req.header('Cookie') ?? null;
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     
     // Get or create session from cookies
     const { sessionId, sessionData, isNewSession } = await segmentEngine.getOrCreateSessionFromCookies(
@@ -124,7 +137,7 @@ realtimeRoutes.get('/personalization/:userId', async (c) => {
 
     // Set cookies in response
     config.cookieHeaders.forEach(cookieHeader => {
-      c.header('Set-Cookie', cookieHeader);
+      c.header('Set-Cookie', cookieHeader, { append: true });
     });
 
     return c.json({
@@ -167,7 +180,7 @@ realtimeRoutes.post('/session/:sessionId/preferences', async (c) => {
       return c.json({ error: 'Session ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env);
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     const updatedSession = await segmentEngine.updateSessionPreferences(sessionId, preferences);
 
     if (!updatedSession) {
@@ -178,7 +191,7 @@ realtimeRoutes.post('/session/:sessionId/preferences', async (c) => {
     const cookies = await segmentEngine.getSessionPersonalizationConfig(sessionId);
     if (cookies) {
       cookies.cookieHeaders.forEach(cookieHeader => {
-        c.header('Set-Cookie', cookieHeader);
+        c.header('Set-Cookie', cookieHeader, { append: true });
       });
     }
 
@@ -216,7 +229,7 @@ realtimeRoutes.get('/session/:sessionId/analytics', async (c) => {
       return c.json({ error: 'Session ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env);
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     const analytics = await segmentEngine.getSessionAnalytics(sessionId);
 
     if (!analytics) {
@@ -247,7 +260,7 @@ realtimeRoutes.get('/segments/:userId', async (c) => {
       return c.json({ error: 'User ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env);
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     const segments = await segmentEngine.getUserSegments(userId);
 
     return c.json({
@@ -281,7 +294,7 @@ realtimeRoutes.post('/segments/:userId', async (c) => {
       return c.json({ error: 'User ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env);
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     await segmentEngine.assignSegment(userId, segment, source);
 
     return c.json({
@@ -325,7 +338,7 @@ realtimeRoutes.get('/connections/:userId', async (c) => {
     
     // Request connection info from the Durable Object
     const response = await durableObject.fetch(new Request('http://fake/connections?userId=' + userId));
-    const connectionInfo = await response.json();
+    const connectionInfo = await response.json() as Record<string, unknown>;
 
     return c.json(connectionInfo);
 
@@ -347,7 +360,7 @@ realtimeRoutes.get('/connections', async (c) => {
     
     // Request all connections info from the Durable Object
     const response = await durableObject.fetch(new Request('http://fake/connections'));
-    const connectionsInfo = await response.json();
+    const connectionsInfo = await response.json() as Record<string, unknown>;
 
     return c.json(connectionsInfo);
 
@@ -370,7 +383,7 @@ realtimeRoutes.get('/health', async (c) => {
     const wsHealthData = await wsHealth.json();
 
     // Test segment engine by creating a dummy instance
-    const segmentEngine = new RealtimeSegmentEngine(c.env);
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     const testProfile = await segmentEngine.getUserProfile('health-check-user');
     
     return c.json({
@@ -475,7 +488,7 @@ realtimeRoutes.post('/demo/trigger', async (c) => {
     }
 
     // Process the demo action event
-    const segmentEngine = new RealtimeSegmentEngine(c.env);
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     const personalizationUpdate = await segmentEngine.processActionEvent(actionEvent);
 
     return c.json({

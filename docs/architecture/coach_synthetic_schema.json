@@ -1,0 +1,3081 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tapestry-coach-demo/odp-synthetic-data.schema.json",
+  "title": "Coach Personalization Demo — Synthetic Data Schema",
+  "description": "Machine-readable JSON Schema + data dictionary derived from sample_data.xlsx. Four event/profile tables across two domains: Optimizely event-export (conversions, decisions) and ODP/Zaius profiles (ODP Events, ODP Customers). Each property carries x-dict (data dictionary) and x-generator (synthetic-data hints). Population rates reflect the source sample; preserve them for realism.",
+  "x-domains": {
+    "optimizely_event_export": [
+      "conversions",
+      "decisions"
+    ],
+    "odp_zaius_profiles": [
+      "ODP Events",
+      "ODP Customers (authenticated)"
+    ]
+  },
+  "x-conventions": {
+    "country_code": "ODP Events uses ISO-3 lowercase (usa); ODP Customers uses full name (France) — preserve per table",
+    "ip_address": "Optimizely tables anonymize (last octet .0); ODP Events stores full IP — preserve per table",
+    "nested_json": "attributes/layer_states/experiments use Optimizely BQ wrapper; keep experiment_id→variation_id internally consistent",
+    "sparsity": "Low population on PII/enrichment is signal (anonymous-first, few authenticate) — do not over-fill"
+  },
+  "type": "object",
+  "properties": {
+    "odp_events": {
+      "type": "array",
+      "description": "Rows from sheet 'ODP Events'.",
+      "x-source_sheet": "ODP Events",
+      "x-column_counts": {
+        "total": 155,
+        "populated": 58,
+        "empty_in_sample": 97
+      },
+      "x-empty_columns": [
+        "is_rage_click",
+        "event_twilio_segment_segment_user_id",
+        "html_element_classes",
+        "campaign_id",
+        "page_load_time",
+        "b2b_commerce_organization_id",
+        "reachable_update_reason",
+        "event_salesforce_crm_sync_lead_id",
+        "salesforce_crm_sync_opportunity_id",
+        "page_y",
+        "current_loyalty_tier_id",
+        "event_hubspot_id",
+        "platform",
+        "order_item_price",
+        "order_item_discount",
+        "event_b2b_commerce_id",
+        "event_salesforce_crm_sync_contact_id",
+        "click_x",
+        "loyalty_referral_code_id",
+        "form_id",
+        "category_id",
+        "funnel",
+        "viewport_width",
+        "event_marketo_token",
+        "html_element_path",
+        "action",
+        "redirect_time",
+        "loyalty_referred_customer_email",
+        "vendor",
+        "click_y",
+        "value",
+        "product_display_name",
+        "app_id",
+        "profile_score",
+        "current_loyalty_points_balance",
+        "total_load_time",
+        "event_marketo_app_lead_id",
+        "reachable_update_type",
+        "html_element_identifier",
+        "event_commerce_cloud_id",
+        "touchpoint_id",
+        "content_id",
+        "order_item_subtotal",
+        "event_marketo_app_mkto_cookie_id",
+        "event_marketo_app_form_id",
+        "html_element_selector",
+        "previous_loyalty_points_balance",
+        "product_id",
+        "coupon_code",
+        "event_phone",
+        "data_source_details",
+        "event_high_web_user_id",
+        "vendor_message_id",
+        "contentsquare_replay_link",
+        "html_element_id",
+        "event_form_id",
+        "event_jm_1_id",
+        "event_low_web_user_id",
+        "event_email",
+        "likely_machine_generated",
+        "buying_stage",
+        "event_marketo_app_form_name_id",
+        "event_customer_id",
+        "consent_update_reason",
+        "html_element_tag",
+        "event_segment_anonymous_id",
+        "rage_click_count",
+        "b2b_commerce_organization_sequence",
+        "event_web_user_id",
+        "search_term",
+        "profile_fit",
+        "zaius_mobile_sdk_version",
+        "keywords",
+        "identifier_key",
+        "event_content_intelligence_id",
+        "content",
+        "flash",
+        "campaign",
+        "campaign_schedule_run_ts",
+        "ad_engagement",
+        "event_twilio_segment_segment_anonymous_id",
+        "event_fs_user_id",
+        "test",
+        "order_id",
+        "campaign_group_id",
+        "event_segment_user_id",
+        "event_order_data",
+        "previous_loyalty_tier_id",
+        "list_id",
+        "page_x",
+        "target_address",
+        "order_item_quantity",
+        "kg_test",
+        "b2b_commerce_organization_number",
+        "ad_id",
+        "loyalty_change_in_points",
+        "intent_score"
+      ],
+      "x-note": "Wide superset schema; ~63% of columns empty in sample. Generate populated columns; treat empty as schema-present null.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "_fivetran_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "247ff904d5f484ae510d192a4ad112e3",
+                "40336116f1fef88365717563235ec556",
+                "4f03ab823d9ec180317b68fe9d90cb7f"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "hex32",
+              "generator": "hex_string",
+              "length": 32
+            },
+            "type": "string"
+          },
+          "zaius_ts_received_ms": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "1779330579811",
+                "1779332014911",
+                "1779332009165"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "format": "epoch_millis",
+              "generator": "epoch_millis"
+            },
+            "type": "integer"
+          },
+          "scroll_depth_pixels": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.6,
+              "nullable": true,
+              "sample_values": [
+                "1466.7059",
+                "2040.0",
+                "1976.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 1466.7059,
+              "max": 3505.6667
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "resolution": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "3456x2234",
+                "1081x2412",
+                "3360x2100"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "3456x2234",
+                "1081x2412",
+                "3360x2100",
+                "800x600"
+              ]
+            },
+            "type": "string"
+          },
+          "ip": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "103.124.113.50",
+                "103.141.132.188",
+                "103.175.214.187"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "ipv4",
+              "generator": "ipv4",
+              "note": "full address"
+            },
+            "type": "string"
+          },
+          "viewport_height": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.6,
+              "nullable": true,
+              "sample_values": [
+                "802.0",
+                "846.0",
+                "859.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 802.0,
+              "max": 859.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "data_source_instance": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "www.optimizely.com"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "www.optimizely.com"
+              ]
+            },
+            "type": "string"
+          },
+          "referral_path": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.9,
+              "nullable": true,
+              "sample_values": [
+                "/"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "/"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "viewport": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "3456x1692",
+                "1079x2045",
+                "1079x2190"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "3456x1692",
+                "1079x2045",
+                "1079x2190",
+                "3204x1838",
+                "1366x768"
+              ]
+            },
+            "type": "string"
+          },
+          "is_final_depth": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.6,
+              "nullable": true,
+              "sample_values": [
+                "0.0",
+                "1.0"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "generator": "categorical",
+              "note": "0/1 flag stored as float (nullable)"
+            },
+            "type": [
+              "integer",
+              "null"
+            ],
+            "enum": [
+              0,
+              1,
+              null
+            ]
+          },
+          "region": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "jakarta raya",
+                "dhaka",
+                "bali"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "jakarta raya",
+                "dhaka",
+                "bali",
+                "virginia"
+              ]
+            },
+            "type": "string"
+          },
+          "referral_host": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.9,
+              "nullable": true,
+              "sample_values": [
+                "www.google.com",
+                "com.linkedin.android"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "www.google.com",
+                "com.linkedin.android"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "browser": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "Chrome"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "Chrome"
+              ]
+            },
+            "type": "string"
+          },
+          "interaction": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "1",
+                "4",
+                "3"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 1,
+              "max": 7
+            },
+            "type": "integer"
+          },
+          "data_source_type": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "sdk"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "sdk"
+              ]
+            },
+            "type": "string"
+          },
+          "server_response_time": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.4,
+              "nullable": true,
+              "sample_values": [
+                "738.0",
+                "1023.0",
+                "22.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 22.0,
+              "max": 1023.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "session_id": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "3821083322866590208",
+                "3821086393768010240",
+                "3821086432420490240"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 3821083322866590208,
+              "max": 3821086432420490240
+            },
+            "type": "integer"
+          },
+          "country": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "idn",
+                "bgd",
+                "usa"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "idn",
+                "bgd",
+                "usa"
+              ]
+            },
+            "type": "string"
+          },
+          "event_type": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "pageview",
+                "scroll_depth"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "pageview",
+                "scroll_depth"
+              ]
+            },
+            "type": "string"
+          },
+          "landing": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.3,
+              "nullable": true,
+              "sample_values": [
+                "1.0"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "generator": "categorical",
+              "note": "0/1 flag stored as float (nullable)"
+            },
+            "type": [
+              "integer",
+              "null"
+            ],
+            "enum": [
+              0,
+              1,
+              null
+            ]
+          },
+          "character_set": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "utf-8"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "utf-8"
+              ]
+            },
+            "type": "string"
+          },
+          "document_height": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.6,
+              "nullable": true,
+              "sample_values": [
+                "3506.0",
+                "5339.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 3506.0,
+              "max": 5339.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "event_id": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "3821083322791949824",
+                "3821086404431309824",
+                "3821086393693890048"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 3821083322791949824,
+              "max": 3821086432348469760
+            },
+            "type": "integer"
+          },
+          "model": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.5,
+              "nullable": true,
+              "sample_values": [
+                "K"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "K"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "domain_lookup_time": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.2,
+              "nullable": true,
+              "sample_values": [
+                "100.0",
+                "4.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 4.0,
+              "max": 100.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "title": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "What is an A/A test? - Optimizely",
+                "Newscred is now Content Marketing Platform - Optimizely",
+                "How to Build an AI-Driven Personalization Playbook - Optimizely"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "What is an A/A test? - Optimizely",
+                "Newscred is now Content Marketing Platform - Optimizely",
+                "How to Build an AI-Driven Personalization Playbook - Optimizely",
+                "Optimizely Digital Asset Management (DAM) - Optimizely"
+              ]
+            },
+            "type": "string"
+          },
+          "server_connect_time": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.2,
+              "nullable": true,
+              "sample_values": [
+                "130.0",
+                "8.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 8.0,
+              "max": 130.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "java": {
+            "x-dict": {
+              "source_dtype": "bool",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "False"
+              ]
+            },
+            "x-generator": {
+              "type": "boolean",
+              "generator": "boolean"
+            },
+            "type": "boolean"
+          },
+          "medium": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "organic",
+                "referral",
+                "none"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "organic",
+                "referral",
+                "none"
+              ]
+            },
+            "type": "string"
+          },
+          "days_since_last_visit": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "2.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 2.0,
+              "max": 2.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "browser_dnt": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "1.0"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "generator": "categorical",
+              "note": "0/1 flag stored as float (nullable)"
+            },
+            "type": [
+              "integer",
+              "null"
+            ],
+            "enum": [
+              0,
+              1,
+              null
+            ]
+          },
+          "zaius_id": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "3821083322794699776",
+                "3821086393706999808",
+                "3820022616213749760"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 3820022616213749760,
+              "max": 3821086393706999808
+            },
+            "type": "integer"
+          },
+          "page_download_time": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.4,
+              "nullable": true,
+              "sample_values": [
+                "83.0",
+                "21.0",
+                "6.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 3.0,
+              "max": 83.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "source": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "google",
+                "com.linkedin.android",
+                "direct"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "google",
+                "com.linkedin.android",
+                "direct"
+              ]
+            },
+            "type": "string"
+          },
+          "browser_version": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "148.0.0.0",
+                "124.0.0.0"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "148.0.0.0",
+                "124.0.0.0"
+              ]
+            },
+            "type": "string"
+          },
+          "language": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "en-us"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "en-us"
+              ]
+            },
+            "type": "string"
+          },
+          "scroll_depth_percentage": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.6,
+              "nullable": true,
+              "sample_values": [
+                "25.0",
+                "27.0",
+                "50.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 25.0,
+              "max": 100.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "new_user": {
+            "x-dict": {
+              "source_dtype": "bool",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "True",
+                "False"
+              ]
+            },
+            "x-generator": {
+              "type": "boolean",
+              "generator": "boolean"
+            },
+            "type": "boolean"
+          },
+          "postal_code": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "14350",
+                "1000",
+                "80352"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 1000,
+              "max": 80352
+            },
+            "type": "integer"
+          },
+          "mobile": {
+            "x-dict": {
+              "source_dtype": "bool",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "False",
+                "True"
+              ]
+            },
+            "x-generator": {
+              "type": "boolean",
+              "generator": "boolean"
+            },
+            "type": "boolean"
+          },
+          "isp": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "pt. sutmarindo jaya mandiri",
+                "cyber planet",
+                "pt youcom elysia abadi"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "pt. sutmarindo jaya mandiri",
+                "cyber planet",
+                "pt youcom elysia abadi",
+                "amazon.com inc."
+              ]
+            },
+            "type": "string"
+          },
+          "page": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "/optimization-glossary/aa-testing/",
+                "/newscred",
+                "/insights/masterclass-how-to-build-ai-driven-personalization-playbook/"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "/optimization-glossary/aa-testing/",
+                "/newscred",
+                "/insights/masterclass-how-to-build-ai-driven-personalization-playbook/",
+                "/products/asset-management/"
+              ]
+            },
+            "type": "string"
+          },
+          "active_event": {
+            "x-dict": {
+              "source_dtype": "bool",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "True"
+              ]
+            },
+            "x-generator": {
+              "type": "boolean",
+              "generator": "boolean"
+            },
+            "type": "boolean"
+          },
+          "vuid": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "35ba7378939e4e4e827235241feafeb5",
+                "6a7854e49f454259bef62b30af8db870",
+                "73c09c83de2241f19b268a51ad5d5a7e"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "hex32",
+              "generator": "hex_string",
+              "length": 32
+            },
+            "type": "string"
+          },
+          "hostname": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "www.optimizely.com"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "www.optimizely.com"
+              ]
+            },
+            "type": "string"
+          },
+          "device_type": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "PC",
+                "Phone"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "PC",
+                "Phone"
+              ]
+            },
+            "type": "string"
+          },
+          "event_sixsense_vuid_hash_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.4,
+              "nullable": true,
+              "sample_values": [
+                "35ba7378-939e-4e4e-8272-35241feafeb5",
+                "6a7854e4-9f45-4259-bef6-2b30af8db870",
+                "73c09c83-de22-41f1-9b26-8a51ad5d5a7e"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "uuid",
+              "generator": "uuid4"
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ts": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "1779330579",
+                "1779332014",
+                "1779332009"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "format": "epoch_seconds",
+              "generator": "epoch_seconds"
+            },
+            "type": "integer"
+          },
+          "color_depth": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "30-bit",
+                "24-bit"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "30-bit",
+                "24-bit"
+              ]
+            },
+            "type": "string"
+          },
+          "data_source_version": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "2.4.2"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "2.4.2"
+              ]
+            },
+            "type": "string"
+          },
+          "event_opti_exp_cookie_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.4,
+              "nullable": true,
+              "sample_values": [
+                "oeu1779330577379r0.1171080954473862",
+                "oeu1779332007060r0.32894549699874254",
+                "oeu1778836642329r0.588672344082302"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "optimizely_visitor_id",
+              "generator": "pattern",
+              "pattern": "oeu{epoch_ms}r{random_float_0_1}"
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "os": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "Mac OS",
+                "Android",
+                "Linux"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "Mac OS",
+                "Android",
+                "Linux"
+              ]
+            },
+            "type": "string"
+          },
+          "data_source": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "JavaScript"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "JavaScript"
+              ]
+            },
+            "type": "string"
+          },
+          "referrer": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.9,
+              "nullable": true,
+              "sample_values": [
+                "https://www.google.com/",
+                "android-app://com.linkedin.android/"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "https://www.google.com/",
+                "android-app://com.linkedin.android/"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "os_version": {
+            "x-dict": {
+              "source_dtype": "object",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "10.15.7",
+                "10",
+                "x86_64"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "enum": [
+                "10",
+                "10.15.7",
+                "x86_64"
+              ],
+              "generator": "categorical"
+            },
+            "type": "string",
+            "enum": [
+              "10",
+              "10.15.7",
+              "x86_64"
+            ]
+          },
+          "_fivetran_deleted": {
+            "x-dict": {
+              "source_dtype": "bool",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "False"
+              ]
+            },
+            "x-generator": {
+              "type": "boolean",
+              "generator": "boolean"
+            },
+            "type": "boolean"
+          },
+          "_fivetran_synced": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "May 20, 8:03PM"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "datetime_display",
+              "generator": "datetime",
+              "display_format": "%b %d, %-I:%M%p",
+              "note": "source is display-formatted; recommend ISO 8601 in DB"
+            },
+            "type": "string"
+          },
+          "zaius_ts_received": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "May 20, 7:29PM",
+                "May 20, 7:53PM",
+                "May 20, 7:35PM"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "datetime_display",
+              "generator": "datetime",
+              "display_format": "%b %d, %-I:%M%p",
+              "note": "source is display-formatted; recommend ISO 8601 in DB"
+            },
+            "type": "string"
+          }
+        }
+      }
+    },
+    "odp_customers_authenticated": {
+      "type": "array",
+      "description": "Rows from sheet 'ODP Customers (authenticated)'.",
+      "x-source_sheet": "ODP Customers (authenticated)",
+      "x-column_counts": {
+        "total": 136,
+        "populated": 36,
+        "empty_in_sample": 100
+      },
+      "x-empty_columns": [
+        "sixsense_country",
+        "marketo_app_form_id",
+        "employee_range",
+        "salesforce_crm_sync_phone",
+        "marketo_token",
+        "b2b_commerce_user_name",
+        "delighted_nps_score",
+        "country_iso_code",
+        "content_intelligence_ai_generated_topic_interests",
+        "klaviyo_sync_data_hash",
+        "web_user_id",
+        "active_territory_segment",
+        "zip",
+        "sf_lead_source",
+        "marketo_industry",
+        "content_intelligence_first_topic",
+        "revenue_cycle_stage",
+        "sixsense_state",
+        "twilio_segment_segment_user_id",
+        "loyalty_profile_updated_at",
+        "content_intelligence_second_topic",
+        "wistia_video",
+        "sixsense_job_title",
+        "twilio_segment_segment_anonymous_id",
+        "revenue_range",
+        "annual_revenue",
+        "loyaltylion_loyalty_tier_started_at",
+        "ts_gdpr_opted_out",
+        "targeting_cookie",
+        "state",
+        "gated_form_page_ids",
+        "loyalty_is_enrolled_member",
+        "region",
+        "ccpa_opted_out",
+        "lead_score",
+        "industry",
+        "naics_description",
+        "sixsense_job_function",
+        "segment_anonymous_id",
+        "company_phone",
+        "city",
+        "last_observed_timezone",
+        "person_status",
+        "street2",
+        "b2b_commerce_id",
+        "sic",
+        "sixsense_first_name",
+        "lead_score_number",
+        "image_url",
+        "low_web_user_id",
+        "sic_description",
+        "marketo_app_form_name_id",
+        "high_web_user_id",
+        "loyalty_tier_id",
+        "loyalty_referral_code_id",
+        "job_level",
+        "sixsense_domain",
+        "employee_count",
+        "sixsense_segments",
+        "sixsense_company",
+        "person_score",
+        "b2b_commerce_default_organization_id",
+        "marketo_app_mkto_cookie_id",
+        "salesforce_crm_sync_contact_id",
+        "timezone",
+        "street1",
+        "sixsense_work_phone",
+        "domain",
+        "commerce_cloud_id",
+        "wistia_watched_videos",
+        "dob_day",
+        "persona",
+        "sixsense_employee_range",
+        "form_id",
+        "b2b_commerce_activation_status",
+        "lead_score_nr",
+        "dob_month",
+        "doc_test",
+        "b2b_commerce_is_guest",
+        "sixsense_city",
+        "content_intelligence_third_topic",
+        "sixsense_phone",
+        "jm_1_id",
+        "phone",
+        "state_code",
+        "salesforce_crm_sync_account_id",
+        "loyalty_profile_created_at",
+        "product_familiarity",
+        "marketing_funnel_stage",
+        "dob_year",
+        "performance_cookie",
+        "fs_user_id",
+        "marketo_app_lead_id",
+        "salesforce_contact_status",
+        "segment_user_id",
+        "sixsense_last_name",
+        "hubspot_id",
+        "loyalty_points_balance",
+        "naics",
+        "functional_cookie"
+      ],
+      "x-note": "Wide superset schema; ~74% of columns empty in sample. Generate populated columns; treat empty as schema-present null.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "_fivetran_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "0d19c5b7ca02b1a4df5386ef1dba93ec",
+                "1a32c8530825066d7a03473c06aac758",
+                "4e9028770210d7518a1ebced4b12a121"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "hex32",
+              "generator": "hex_string",
+              "length": 32
+            },
+            "type": "string"
+          },
+          "sixsense_company_region": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.3,
+              "nullable": true,
+              "sample_values": [
+                "Northern America",
+                "Southern Asia",
+                "Eastern Asia"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "Northern America",
+                "Southern Asia",
+                "Eastern Asia"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data_source_version": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "2.3.1",
+                "2.4.2",
+                "2.4.1"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "2.3.1",
+                "2.4.2",
+                "2.4.1",
+                "4.2.0"
+              ]
+            },
+            "type": "string"
+          },
+          "sixsense_vuid_hash_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.8,
+              "nullable": true,
+              "sample_values": [
+                "db946c0f-7681-4023-8851-5be47677aca8",
+                "5acd8f64-3717-4492-a030-f06c77f04da0",
+                "f569d66e-3077-4c50-9bf0-40e4908ed5fb"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "uuid",
+              "generator": "uuid4"
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sixsense_industry": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.3,
+              "nullable": true,
+              "sample_values": [
+                "Real Estate",
+                "Financial Services",
+                "Hardware"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "Real Estate",
+                "Financial Services",
+                "Hardware"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_name": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "J"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "J"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "salesforce_crm_sync_lead_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "00QTu00000bE6t3MAC"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "00QTu00000bE6t3MAC"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sixsense_company_state": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.3,
+              "nullable": true,
+              "sample_values": [
+                "North Carolina",
+                "Tamil Nadu",
+                "Beijing"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "North Carolina",
+                "Tamil Nadu",
+                "Beijing"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "zaius_id": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "3630035216769350144",
+                "3823900054706059776",
+                "3823894754719819776"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 3630035216769350144,
+              "max": 3823911311812190208
+            },
+            "type": "integer"
+          },
+          "sixsense_confidence": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "Low"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "Low"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vuid": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.9,
+              "nullable": true,
+              "sample_values": [
+                "f9f9ffe829234b4ca5a9c69966c46ef8",
+                "db946c0f7681402388515be47677aca8",
+                "5acd8f6437174492a030f06c77f04da0"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "hex32",
+              "generator": "hex_string",
+              "length": 32
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "France"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "France"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "content_intelligence_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.3,
+              "nullable": true,
+              "sample_values": [
+                "3913460e-ad7a-415e-938f-6cdad54ce468",
+                "a0ca0f1a-4f2c-44b5-aabd-e444287363ae",
+                "d6ba5d83-e523-4b09-bd4c-b3abaf19e8ed"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "uuid",
+              "generator": "uuid4"
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sixsense_naics": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.3,
+              "nullable": true,
+              "sample_values": [
+                "531.0",
+                "5242.0",
+                "5416.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 531.0,
+              "max": 5416.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "sixsense_annual_revenue": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "1000000.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 1000000.0,
+              "max": 1000000.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "first_name": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "L-TechCrunch"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "L-TechCrunch"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "salesforce_crm_sync_is_converted": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "0.0"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "generator": "categorical",
+              "note": "0/1 flag stored as float (nullable)"
+            },
+            "type": [
+              "integer",
+              "null"
+            ],
+            "enum": [
+              0,
+              1,
+              null
+            ]
+          },
+          "opti_exp_cookie_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.8,
+              "nullable": true,
+              "sample_values": [
+                "oeu1780642221513r0.9067587513705072",
+                "oeu1780639751368r0.44602398858215375",
+                "oeu1751062333005r0.8790908468305578"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "optimizely_visitor_id",
+              "generator": "pattern",
+              "pattern": "oeu{epoch_ms}r{random_float_0_1}"
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "salesforce_crm_sync_is_lead": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "1.0"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "generator": "categorical",
+              "note": "0/1 flag stored as float (nullable)"
+            },
+            "type": [
+              "integer",
+              "null"
+            ],
+            "enum": [
+              0,
+              1,
+              null
+            ]
+          },
+          "name": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "L-TechCrunch J"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "L-TechCrunch J"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "job_title": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "mkt"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "mkt"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data_source_instance": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "www.optimizely.com",
+                "api"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "www.optimizely.com",
+                "api"
+              ]
+            },
+            "type": "string"
+          },
+          "salesforce_crm_sync_lead_status": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "New"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "New"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "company_name": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "jc"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "jc"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data_source": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "JavaScript",
+                "profiles"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "JavaScript",
+                "profiles"
+              ]
+            },
+            "type": "string"
+          },
+          "sixsense_company_name": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.3,
+              "nullable": true,
+              "sample_values": [
+                "Sundog Realty",
+                "UNITED INDIA INSURANCE COMPANY LIMITED",
+                "Digital China"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "Sundog Realty",
+                "UNITED INDIA INSURANCE COMPANY LIMITED",
+                "Digital China"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data_source_type": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "sdk",
+                "api"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "sdk",
+                "api"
+              ]
+            },
+            "type": "string"
+          },
+          "email": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "lindsey.jenkins@jumpcloud.com"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "lindsey.jenkins@jumpcloud.com"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sixsense_sic": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.3,
+              "nullable": true,
+              "sample_values": [
+                "6531.0",
+                "6411.0",
+                "7372.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 6411.0,
+              "max": 7372.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "sixsense_annual_company_revenue": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.2,
+              "nullable": true,
+              "sample_values": [
+                "2097048000.0",
+                "10000000000.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 2097048000.0,
+              "max": 10000000000.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "sixsense_employee_count": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "5.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 5.0,
+              "max": 5.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "data_source_details": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "/v3/profiles"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "/v3/profiles"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_modified_at": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "1690366887",
+                "1780642222",
+                "1780639754"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "format": "epoch_seconds",
+              "generator": "epoch_seconds"
+            },
+            "type": "integer"
+          },
+          "gender": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.1,
+              "nullable": true,
+              "sample_values": [
+                "F"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "F"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "_fivetran_deleted": {
+            "x-dict": {
+              "source_dtype": "bool",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "False"
+              ]
+            },
+            "x-generator": {
+              "type": "boolean",
+              "generator": "boolean"
+            },
+            "type": "boolean"
+          },
+          "_fivetran_synced": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "Feb 26, 8:31AM",
+                "Jun 5, 1:27AM",
+                "Feb 26, 8:32AM"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "datetime_display",
+              "generator": "datetime",
+              "display_format": "%b %d, %-I:%M%p",
+              "note": "source is display-formatted; recommend ISO 8601 in DB"
+            },
+            "type": "string"
+          }
+        }
+      }
+    },
+    "conversions": {
+      "type": "array",
+      "description": "Rows from sheet 'conversions'.",
+      "x-source_sheet": "conversions",
+      "x-column_counts": {
+        "total": 26,
+        "populated": 22,
+        "empty_in_sample": 4
+      },
+      "x-empty_columns": [
+        "revenue",
+        "value",
+        "quantity",
+        "referer"
+      ],
+      "x-note": "Wide superset schema; ~15% of columns empty in sample. Generate populated columns; treat empty as schema-present null.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "233e1e0f-809a-4512-ae4e-e2c627b5d7b5",
+                "5a6aa91f-bf7f-4259-b66e-ac173e95b54f",
+                "5b26441e-52c5-46c3-808e-0a6270a4830a"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "uuid",
+              "generator": "uuid4"
+            },
+            "type": "string"
+          },
+          "timestamp": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "Jun 10, 10:30AM",
+                "Jun 10, 7:34AM",
+                "May 10, 6:49PM"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "datetime_display",
+              "generator": "datetime",
+              "display_format": "%b %d, %-I:%M%p",
+              "note": "source is display-formatted; recommend ISO 8601 in DB"
+            },
+            "type": "string"
+          },
+          "account_id": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "26942930964"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 26942930964,
+              "max": 26942930964
+            },
+            "type": "integer"
+          },
+          "visitor_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "oeu1777568515544r0.5037900735546484",
+                "oeu1779374046461r0.4339881427516773",
+                "appuid1774879826463r0.5052049257783553"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "optimizely_visitor_id",
+              "generator": "pattern",
+              "pattern": "oeu{epoch_ms}r{random_float_0_1}"
+            },
+            "type": "string"
+          },
+          "activation_id": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "1781274345411",
+                "1781102057882",
+                "1781276947254"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 1781102057882,
+              "max": 1781276947254
+            },
+            "type": "integer"
+          },
+          "session_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "AUTO"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "AUTO"
+              ]
+            },
+            "type": "string"
+          },
+          "entity_id": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.5,
+              "nullable": true,
+              "sample_values": [
+                "5559117419380730.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 5559117419380730.0,
+              "max": 5559117419380730.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "event_type": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "view_activated",
+                "client_activation"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "view_activated",
+                "client_activation"
+              ]
+            },
+            "type": "string"
+          },
+          "event_name": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.5,
+              "nullable": true,
+              "sample_values": [
+                "26942930964_url_targeting_for_inproduct_promo_test"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "26942930964_url_targeting_for_inproduct_promo_test"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "project_id": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "26942930964"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 26942930964,
+              "max": 26942930964
+            },
+            "type": "integer"
+          },
+          "user_ip": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "73.87.243.0",
+                "71.59.24.0",
+                "73.135.186.0"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "ipv4",
+              "generator": "ipv4_anonymized",
+              "note": "last octet zeroed"
+            },
+            "type": "string"
+          },
+          "user_agent": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like ",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:151.0) Gecko/20100101 Firefox/1"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "user_agent",
+              "generator": "user_agent"
+            },
+            "type": "string"
+          },
+          "anonymize_ip": {
+            "x-dict": {
+              "source_dtype": "bool",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "True"
+              ]
+            },
+            "x-generator": {
+              "type": "boolean",
+              "generator": "boolean"
+            },
+            "type": "boolean"
+          },
+          "client_engine": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "js"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "js"
+              ]
+            },
+            "type": "string"
+          },
+          "client_version": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "0.248.0",
+                "0.246.0"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "0.248.0",
+                "0.246.0"
+              ]
+            },
+            "type": "string"
+          },
+          "revision": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "16158",
+                "16132"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 16132,
+              "max": 16158
+            },
+            "type": "integer"
+          },
+          "attributes": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":null},{\"v\":\"\"},{\"v\":\"browserId\"},{\"v\":\"gc\"}]}},{\"v\":{\"f\":[",
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":null},{\"v\":\"\"},{\"v\":\"first_session\"},{\"v\":\"true\"}]}},{\"v\":",
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":null},{\"v\":\"\"},{\"v\":\"browserId\"},{\"v\":\"gc\"}]}},{\"v\":{\"f\":["
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "json_nested",
+              "generator": "nested_json",
+              "note": "Optimizely BigQuery array-of-records wrapper {\"v\":[{\"v\":{\"f\":[...]}}]}"
+            },
+            "type": "string"
+          },
+          "tags": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "{\"v\":[]}"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "json_nested",
+              "generator": "nested_json",
+              "note": "Optimizely BigQuery array-of-records wrapper {\"v\":[{\"v\":{\"f\":[...]}}]}"
+            },
+            "type": "string"
+          },
+          "properties": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "{\"v\":[]}"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "json_nested",
+              "generator": "nested_json",
+              "note": "Optimizely BigQuery array-of-records wrapper {\"v\":[{\"v\":{\"f\":[...]}}]}"
+            },
+            "type": "string"
+          },
+          "layer_states": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":\"4964319343935488\"},{\"v\":\"5263981024116736\"},{\"v\":\"5468665",
+                "{\"v\":[]}"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "json_nested",
+              "generator": "nested_json",
+              "note": "Optimizely BigQuery array-of-records wrapper {\"v\":[{\"v\":{\"f\":[...]}}]}"
+            },
+            "type": "string"
+          },
+          "experiments": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":\"4964319343935488\"},{\"v\":\"5263981024116736\"},{\"v\":\"5468665",
+                "{\"v\":[]}"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "json_nested",
+              "generator": "nested_json",
+              "note": "Optimizely BigQuery array-of-records wrapper {\"v\":[{\"v\":{\"f\":[...]}}]}"
+            },
+            "type": "string"
+          },
+          "process_timestamp": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "Jun 12, 7:25AM",
+                "Jun 12, 7:19AM",
+                "Jun 12, 8:09AM"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "datetime_display",
+              "generator": "datetime",
+              "display_format": "%b %d, %-I:%M%p",
+              "note": "source is display-formatted; recommend ISO 8601 in DB"
+            },
+            "type": "string"
+          }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "description": "Rows from sheet 'decisions'.",
+      "x-source_sheet": "decisions",
+      "x-column_counts": {
+        "total": 26,
+        "populated": 22,
+        "empty_in_sample": 4
+      },
+      "x-empty_columns": [
+        "revenue",
+        "value",
+        "quantity",
+        "referer"
+      ],
+      "x-note": "Wide superset schema; ~15% of columns empty in sample. Generate populated columns; treat empty as schema-present null.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "2464d93f-2de8-44de-9a2f-65231de1f390",
+                "2a25b200-a597-4217-a2cc-1ac2a6888cc2",
+                "37304944-67eb-413a-90bb-9f114face62a"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "uuid",
+              "generator": "uuid4"
+            },
+            "type": "string"
+          },
+          "timestamp": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "Jun 11, 9:21AM",
+                "Jun 4, 5:43AM",
+                "Jun 11, 10:42AM"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "datetime_display",
+              "generator": "datetime",
+              "display_format": "%b %d, %-I:%M%p",
+              "note": "source is display-formatted; recommend ISO 8601 in DB"
+            },
+            "type": "string"
+          },
+          "account_id": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "26942930964"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 26942930964,
+              "max": 26942930964
+            },
+            "type": "integer"
+          },
+          "visitor_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "oeu1756720547488r0.6079594810379221",
+                "oeu1744308518344r0.17228634918800445",
+                "oeu1780998531306r0.5562603921494671"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "optimizely_visitor_id",
+              "generator": "pattern",
+              "pattern": "oeu{epoch_ms}r{random_float_0_1}"
+            },
+            "type": "string"
+          },
+          "activation_id": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "1781194860003",
+                "1781272081400",
+                "1781254948848"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 1781194860003,
+              "max": 1781276947254
+            },
+            "type": "integer"
+          },
+          "session_id": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "AUTO"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "AUTO"
+              ]
+            },
+            "type": "string"
+          },
+          "entity_id": {
+            "x-dict": {
+              "source_dtype": "float64",
+              "population_rate": 0.3,
+              "nullable": true,
+              "sample_values": [
+                "5559117419380730.0"
+              ]
+            },
+            "x-generator": {
+              "type": "number",
+              "generator": "float",
+              "min": 5559117419380730.0,
+              "max": 5559117419380730.0
+            },
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "event_type": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "client_activation",
+                "view_activated"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "client_activation",
+                "view_activated"
+              ]
+            },
+            "type": "string"
+          },
+          "event_name": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 0.3,
+              "nullable": true,
+              "sample_values": [
+                "26942930964_url_targeting_for_inproduct_promo_test"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "26942930964_url_targeting_for_inproduct_promo_test"
+              ]
+            },
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "project_id": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "26942930964"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 26942930964,
+              "max": 26942930964
+            },
+            "type": "integer"
+          },
+          "user_ip": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "194.39.218.0",
+                "69.156.91.0",
+                "45.149.73.0"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "ipv4",
+              "generator": "ipv4_anonymized",
+              "note": "last octet zeroed"
+            },
+            "type": "string"
+          },
+          "user_agent": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like "
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "user_agent",
+              "generator": "user_agent"
+            },
+            "type": "string"
+          },
+          "anonymize_ip": {
+            "x-dict": {
+              "source_dtype": "bool",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "True"
+              ]
+            },
+            "x-generator": {
+              "type": "boolean",
+              "generator": "boolean"
+            },
+            "type": "boolean"
+          },
+          "client_engine": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "js"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "js"
+              ]
+            },
+            "type": "string"
+          },
+          "client_version": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "0.248.0",
+                "0.246.0",
+                "0.228.0"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "generator": "string",
+              "examples": [
+                "0.248.0",
+                "0.246.0",
+                "0.228.0"
+              ]
+            },
+            "type": "string"
+          },
+          "revision": {
+            "x-dict": {
+              "source_dtype": "int64",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "16158",
+                "16148",
+                "36883"
+              ]
+            },
+            "x-generator": {
+              "type": "integer",
+              "generator": "integer",
+              "min": 16132,
+              "max": 120603
+            },
+            "type": "integer"
+          },
+          "attributes": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":null},{\"v\":\"\"},{\"v\":\"browserId\"},{\"v\":\"edge\"}]}},{\"v\":{\"f\"",
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":null},{\"v\":\"\"},{\"v\":\"browserId\"},{\"v\":\"gc\"}]}},{\"v\":{\"f\":[",
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":null},{\"v\":\"\"},{\"v\":\"browserId\"},{\"v\":\"gc\"}]}},{\"v\":{\"f\":["
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "json_nested",
+              "generator": "nested_json",
+              "note": "Optimizely BigQuery array-of-records wrapper {\"v\":[{\"v\":{\"f\":[...]}}]}"
+            },
+            "type": "string"
+          },
+          "tags": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "{\"v\":[]}"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "json_nested",
+              "generator": "nested_json",
+              "note": "Optimizely BigQuery array-of-records wrapper {\"v\":[{\"v\":{\"f\":[...]}}]}"
+            },
+            "type": "string"
+          },
+          "properties": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "{\"v\":[]}"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "json_nested",
+              "generator": "nested_json",
+              "note": "Optimizely BigQuery array-of-records wrapper {\"v\":[{\"v\":{\"f\":[...]}}]}"
+            },
+            "type": "string"
+          },
+          "layer_states": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":\"4964319343935488\"},{\"v\":\"5263981024116736\"},{\"v\":\"5468665",
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":\"28382811143\"},{\"v\":\"28362321116\"},{\"v\":\"28373311029\"},{\"v",
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":\"6351793467162624\"},{\"v\":\"5121682336120832\"},{\"v\":\"6001254"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "json_nested",
+              "generator": "nested_json",
+              "note": "Optimizely BigQuery array-of-records wrapper {\"v\":[{\"v\":{\"f\":[...]}}]}"
+            },
+            "type": "string"
+          },
+          "experiments": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":\"4964319343935488\"},{\"v\":\"5263981024116736\"},{\"v\":\"5468665",
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":\"28382811143\"},{\"v\":\"28362321116\"},{\"v\":\"28373311029\"},{\"v",
+                "{\"v\":[{\"v\":{\"f\":[{\"v\":\"6351793467162624\"},{\"v\":\"5121682336120832\"},{\"v\":\"6001254"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "json_nested",
+              "generator": "nested_json",
+              "note": "Optimizely BigQuery array-of-records wrapper {\"v\":[{\"v\":{\"f\":[...]}}]}"
+            },
+            "type": "string"
+          },
+          "process_timestamp": {
+            "x-dict": {
+              "source_dtype": "str",
+              "population_rate": 1.0,
+              "nullable": false,
+              "sample_values": [
+                "Jun 12, 4:14AM",
+                "Jun 12, 6:47AM",
+                "Jun 12, 2:02AM"
+              ]
+            },
+            "x-generator": {
+              "type": "string",
+              "format": "datetime_display",
+              "generator": "datetime",
+              "display_format": "%b %d, %-I:%M%p",
+              "note": "source is display-formatted; recommend ISO 8601 in DB"
+            },
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
