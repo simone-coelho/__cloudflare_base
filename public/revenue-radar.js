@@ -349,7 +349,7 @@
         <button class="rr-ctrl live ${store._rrLive ? 'on' : ''}" id="rr-live-btn" onclick="store.rrToggleLive()"><span class="dot"></span>Live traffic</button>
         <button class="rr-ctrl warn" onclick="store.rrBurst(false)">Simulate drop-off</button>
         <button class="rr-ctrl" onclick="store.rrBurst(true)">Recover</button>
-        <button class="rr-ctrl" onclick="store.rrReset()">Reset</button>
+        <button class="rr-ctrl" id="rr-reset-btn" onclick="store.rrReset()">↺ Reset demo</button>
         <button class="rr-ctrl" onclick="store.rrPlay()">▶ Play story</button>
         <button class="rr-ctrl" onclick="store.rrContrast()">◑ DY vs us</button>
       </div>
@@ -459,7 +459,18 @@
     };
     store.rrReset = function () {
       const { brand, cohort } = viewOf(this);
-      post('/funnel/sim/reset', {}).then(() => updateFunnel(brand, cohort)).catch(() => {});
+      const btn = document.getElementById('rr-reset-btn');
+      if (btn) btn.textContent = 'Resetting…';
+      // FULL one-click reset to the clean seed baseline: wipe captured events AND the sim
+      // overlay, and revert the in-session BNPL save to its "before" state. No curl needed.
+      Promise.all([
+        post('/operator/events/reset', { scope: 'all' }).catch(() => {}),
+        post('/funnel/sim/reset', {}).catch(() => {}),
+      ]).then(() => {
+        this._rrBnplLive = false;
+        if (btn) btn.textContent = '↺ Reset demo';
+        updateFunnel(brand, cohort);
+      });
     };
 
     // ▶ Play story — a self-driving narrated walk of the loop (diagnose → simulate → launch → recover).
@@ -532,6 +543,16 @@
       window.addEventListener('rr:launched', () => {
         if (window.store) window.store._rrBnplLive = true;
         setTimeout(() => { if (window.store && window.store.rrBurst) window.store.rrBurst(true); }, 1200);
+      });
+    }
+    // The storefront's ↻ Restart (fires opal:reset) ALSO cleans the funnel back to baseline,
+    // so kicking off a fresh demo run resets everything automatically — no curl, no manual step.
+    if (!store._rrResetHook) {
+      store._rrResetHook = true;
+      window.addEventListener('opal:reset', () => {
+        post('/operator/events/reset', { scope: 'all' }).catch(() => {});
+        post('/funnel/sim/reset', {}).catch(() => {});
+        if (window.store) window.store._rrBnplLive = false;
       });
     }
   }
