@@ -9,7 +9,7 @@
  */
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
-import { BRANDS, COHORTS, type Brand, type Cohort } from '@/services/funnel/contract';
+import { BRANDS, COHORTS, CHECKOUT_EVENT_TYPES, type Brand, type Cohort } from '@/services/funnel/contract';
 import { computeFunnel } from '@/services/funnel/compute';
 import { buildFunnelDiagnosis } from '@/services/funnel/diagnose';
 
@@ -36,6 +36,37 @@ funnel.get('/', async (c) => {
       500
     );
   }
+});
+
+// POST /funnel/event — record a REAL checkout-funnel event from the storefront checkout into
+// demo_events (the /realtime/action schema enum doesn't allow the checkout event types, so the
+// checkout flow posts here). Best-effort: never throws, never blocks checkout. Counts as Coach.
+funnel.post('/event', async (c) => {
+  const body = await c.req.json().catch(() => ({} as any));
+  const et = String(body?.event_type ?? '');
+  const allowed = ['add_to_cart', ...CHECKOUT_EVENT_TYPES];
+  if (!allowed.includes(et)) return c.json({ error: `bad event_type '${et}'`, allowed }, 400);
+  if (c.env.DB && body?.vuid) {
+    try {
+      await c.env.DB.prepare(
+        `INSERT INTO demo_events (ts, vuid, session_id, demo_run_id, event_type, line, price_usd, source)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'demo')`
+      )
+        .bind(
+          Date.now(),
+          String(body.vuid),
+          body.sessionId ?? null,
+          body.sessionId ?? null,
+          et,
+          typeof body.line === 'string' ? body.line : null,
+          typeof body.price_usd === 'number' ? Math.round(body.price_usd) : null
+        )
+        .run();
+    } catch {
+      /* a D1 hiccup must never break the checkout */
+    }
+  }
+  return c.json({ ok: true });
 });
 
 // GET /funnel/diagnose?brand=&cohort= → ranked recommendations (same logic as the Opal diagnoseFunnel tool)

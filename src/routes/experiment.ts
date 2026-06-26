@@ -16,6 +16,7 @@ import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { runLaunch, normalizeInput, getExperiment, listExperiments } from '@/services/experimentRun';
 import { decideCmab, cmabMatrix, type CmabContext } from '@/services/cmab';
+import { fxConfig } from '@/services/fxEnv';
 
 const experiment = new Hono<{ Bindings: Env }>();
 
@@ -42,6 +43,16 @@ experiment.get('/cmab/decide', (c) => {
   return c.json(decideCmab(ctx));
 });
 experiment.get('/cmab/matrix', (c) => c.json({ contexts: cmabMatrix(), representative: true }));
+
+// TEMP diagnostic (internal) — read back a flag's live ruleset to verify rule type / metric shape.
+experiment.get('/_diag/ruleset/:key', async (c) => {
+  const cfg = fxConfig(c.env);
+  const env = c.env.OPTIMIZELY_ENVIRONMENT || 'development';
+  const r = await fetch(`https://api.optimizely.com/flags/v1/projects/${cfg.projectId}/flags/${c.req.param('key')}/environments/${env}/ruleset`, {
+    headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/json' },
+  });
+  return c.json({ status: r.status, ruleset: await r.json() });
+});
 
 // ── readout + list ────────────────────────────────────────────────────────────
 experiment.get('/:key/readout', async (c) => {

@@ -125,12 +125,10 @@ Then the fix fires on the **person**. _(Decision [!]: explicit head-to-head vs s
 - [x] `diagnoseFunnel` Opal tool — `src/agents/tools/diagnoseFunnel.ts`, registered in `OpalAgent.ts` (+ system-prompt section).
 - [x] **INTEGRATION + DEPLOY** — `/funnel`, `/funnel/sim` mounted; migration applied to remote D1 (72 rows); tsc-clean; deployed. **Opal end-to-end VERIFIED on prod via `/__shot`:** asked "where are we losing Gen-Z checkout revenue?" → Opal called `diagnoseFunnel` → returned the payment→purchase leak (44.3%, 1.5× skew, **$7,623 recoverable**) + the **Gen-Z BNPL Hesitators** audience + BNPL remedy + experiment. 🎉 Phase 1 COMPLETE.
 
-**Phase 2 — Checkout funnel UI**
-- [ ] `begin_checkout` step
-- [ ] Shipping step (+ event)
-- [ ] Payment step (+ BNPL option, + event)
-- [ ] Review / place-order step (+ `purchase` event)
-- [ ] Abandonment wiring → funnel reacts live
+**Phase 2 — Checkout funnel UI** — ✅ done (real multi-step checkout in `revenue-radar.js`, overrides `beginCheckout`)
+- [x] `begin_checkout` (on open) · Shipping step (+`add_shipping_info`) · Payment step (+`add_payment_info`) · Place order (+`purchase`)
+- [x] Events written to `demo_events` via new `POST /funnel/event` (the `/realtime/action` enum doesn't allow checkout types). **Verified on prod:** begin_checkout/add_shipping_info/add_payment_info captured (distinct sessions); funnel counts them for Coach.
+- [x] Abandonment = close overlay → no further events → the session stays at its last stage in the funnel.
 
 **Phase 3 — Opal diagnosis + viz**
 - [x] `diagnoseFunnel` Opal tool (done in Phase 1)
@@ -138,15 +136,20 @@ Then the fix fires on the **person**. _(Decision [!]: explicit head-to-head vs s
 - [x] Recommendation cards + **Launch** → `GET /funnel/diagnose` (shared `src/services/funnel/diagnose.ts`, also feeds the Opal tool) + `POST /experiment/launch`. **Verified on prod:** BNPL card → Launch → **real Optimizely experiment 563864** · +48% lift · 96% conf. 🎉 Closed loop works in the panel (and in Opal chat).
 
 **Phase 4 — Hero fix + contrast**
-- [~] Gen-Z BNPL hesitation save (in-session, edge) — checkout build in progress (Phase 2)
+- [x] Gen-Z BNPL hesitation save (in-session) — the checkout payment step shows "Pay in 4 with Tabby · $143.75 × 4 · 0% APR" + social proof, gated on `_rrBnplLive` (set by Launch). **Verified on prod:** before = plain card form (hesitation); after Launch = the BNPL save. The visible in-session fix.
 - [x] "Neighborhood vs Shopper" contrast — full-viewport modal (◑ DY vs us in the Radar panel). Verified on prod: the anti-DY centerpiece ("Mastercard geo · ZIP avg $420" vs "this shopper: Tabby ×3, $575 added, 40s payment stall, Gen-Z BNPL cohort").
 - [x] Experiment lift readout — Launch returns +48% lift / 96% conf inline (panel) + `readoutUrl` → Engine tab (A/B+CMAB zone).
 
 **Phase 5 — Choreography & verification**
 - [x] Live-funnel-reacts mechanic verified end-to-end — "Simulate drop-off" swelled Coach·gen_z payment 44%→81% / $7.6k→$61.7k, "Recover" + auto-recover-on-launch shrink it; in-place animated bars/numbers/headline.
 - [x] Guided beat — **▶ Play story** in the Radar panel (self-driving reset→all→gen_z→simulate→Opal fix→Launch→recover, narrated). Verified on prod. _(Standalone in the Radar panel, not inserted into the 15-beat array — avoids count surgery; presenter can also drive manually via the controls.)_
-- [~] `/__shot` screenshot verification of every new surface (funnel viz, recos, Launch, live motion, Play story ✓; contrast + checkout pending)
-- [ ] `PROJECT_LEDGER.md` updated + this ledger marked complete
+- [x] `/__shot` screenshot verification of every new surface — funnel viz, recos, Launch (real exp 563864), live motion, Play story, contrast modal, checkout (both BNPL states). ALL verified on prod.
+- [~] `PROJECT_LEDGER.md` updated + this ledger marked complete
+
+---
+
+## ✅ STATUS: Revenue Radar COMPLETE (all phases) — built + screenshot-verified on prod, 2026-06-26.
+Closed loop end-to-end (panel + Opal chat): diagnose funnel → recommend fix → Launch real Optimizely experiment → in-session BNPL save + funnel recovers. Anti-DY "Neighborhood vs Shopper" + self-driving "Play story" + real multi-brand funnel. Cross-team seam (`launchExperiment`) integrated. **Uncommitted** (per "commit only when asked").
 
 ---
 

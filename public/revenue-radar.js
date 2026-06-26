@@ -113,6 +113,43 @@
     .rrx-foot.dim b { color: #B9AE9A; }
     .rrx-cta { padding: 15px 20px; background: #1A1610; border-top: 1px solid #2C2620; font-size: 13.5px; color: #E8E0D2; line-height: 1.5; }
     .rrx-cta b { color: var(--tan, #C9A86B); }
+    /* Checkout overlay — shopper-facing, LIGHT luxe theme (appended to <body>) */
+    .rrco-overlay { position: fixed; inset: 0; background: rgba(20,16,12,.5); z-index: 96; opacity: 0; pointer-events: none; transition: opacity .25s; }
+    .rrco-overlay.open { opacity: 1; pointer-events: auto; }
+    .rrco { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-46%) scale(.98); width: 94vw; max-width: 560px; max-height: 90vh; overflow-y: auto; z-index: 97; background: #FBF8F2; color: #1A1610; border-radius: 12px; box-shadow: 0 30px 90px rgba(0,0,0,.4); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+    .rrco.open { opacity: 1; pointer-events: auto; transform: translate(-50%,-50%) scale(1); }
+    .rrco-head { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid #E8E0D2; }
+    .rrco-head-t { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: #1A1610; flex: 1; font-weight: 600; }
+    .rrco-head-s { font-size: 10px; color: #9A8F7C; letter-spacing: .16em; }
+    .rrco-x { background: none; border: none; color: #9A8F7C; font-size: 22px; cursor: pointer; line-height: 1; }
+    .rrco-x:hover { color: #1A1610; }
+    .rrco-steps { display: flex; align-items: center; gap: 7px; padding: 12px 20px 0; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #C2B9A8; }
+    .rrco-st.on { color: var(--tan, #B8860B); font-weight: 600; }
+    .rrco-body { padding: 15px 20px 20px; }
+    .rrco-sec { display: none; }
+    .rrco-sec.on { display: block; }
+    .rrco-field { margin-bottom: 10px; }
+    .rrco-field label { display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: #9A8F7C; margin-bottom: 4px; }
+    .rrco-field input { width: 100%; padding: 9px 11px; border: 1px solid #D8CFC0; border-radius: 6px; background: #fff; font-size: 13px; color: #1A1610; box-sizing: border-box; }
+    .rrco-row2 { display: flex; gap: 10px; }
+    .rrco-row2 .rrco-field { flex: 1; }
+    .rrco-btn { width: 100%; background: #1A1610; color: #FBF8F2; border: none; padding: 13px; border-radius: 7px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; margin-top: 8px; transition: background .15s; }
+    .rrco-btn:hover { background: #2C2620; }
+    .rrco-summary { background: #F3EEE3; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+    .rrco-sum-name { font-size: 13px; color: #1A1610; }
+    .rrco-sum-total { font-size: 17px; font-weight: 600; color: #1A1610; }
+    .rrco-bnpl { border: 1.5px solid var(--tan, #B8860B); background: linear-gradient(180deg, #FBF6EA, #F6EEDB); border-radius: 9px; padding: 14px 15px 13px; margin-bottom: 12px; position: relative; animation: rrcoPop .4s var(--ease, ease); }
+    @keyframes rrcoPop { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+    .rrco-bnpl-tag { position: absolute; top: -9px; left: 14px; background: var(--tan, #B8860B); color: #fff; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; padding: 2px 9px; border-radius: 8px; }
+    .rrco-bnpl-t { font-size: 14.5px; font-weight: 600; color: #1A1610; margin-bottom: 3px; }
+    .rrco-bnpl-sub { font-size: 12px; color: #6E6557; margin-bottom: 8px; }
+    .rrco-bnpl-proof { font-size: 11px; color: #8A7A52; }
+    .rrco-bnpl-proof .stars { color: var(--tan, #B8860B); letter-spacing: 1px; }
+    .rrco-alt { font-size: 12px; color: #9A8F7C; margin-bottom: 8px; }
+    .rrco-done { text-align: center; padding: 22px 0 10px; }
+    .rrco-done-i { font-size: 38px; color: #6FB36A; }
+    .rrco-done-t { font-size: 17px; font-weight: 600; color: #1A1610; margin: 8px 0 4px; }
+    .rrco-done-s { font-size: 12px; color: #6E6557; }
   `;
 
   function buildContrast() {
@@ -157,6 +194,67 @@
     const close = () => { if (window.store && window.store.rrCloseContrast) window.store.rrCloseContrast(); };
     document.getElementById('rrx-overlay').addEventListener('click', close);
     document.getElementById('rrx-x').addEventListener('click', close);
+  }
+
+  // ── checkout overlay (Full #4) — real multi-step checkout that emits every funnel event ───────
+  function rrcoTotal(store) {
+    try {
+      const t = (store.cart || []).reduce((s, ci) => { const p = store.byId && store.byId.get(ci.id); return s + ((p && p.price_usd) || 0); }, 0);
+      return t > 0 ? t : 575;
+    } catch (e) { return 575; }
+  }
+  function rrcoShowStep(step) {
+    document.querySelectorAll('#rrco .rrco-sec').forEach((s) => s.classList.toggle('on', s.dataset.step === step));
+    const order = { shipping: 0, payment: 1, done: 2 };
+    const idx = order[step] == null ? 0 : order[step];
+    document.querySelectorAll('#rrco .rrco-st').forEach((s, i) => s.classList.toggle('on', i <= idx));
+  }
+  function rrcoRenderPayment(store) {
+    const sec = document.querySelector('#rrco .rrco-sec[data-step="payment"]');
+    if (!sec) return;
+    const total = rrcoTotal(store);
+    const live = !!store._rrBnplLive;
+    const inst = (total / 4).toFixed(2);
+    const bnpl = live
+      ? `<div class="rrco-bnpl">
+           <span class="rrco-bnpl-tag">New · for you</span>
+           <div class="rrco-bnpl-t">Pay in 4 — interest-free with Tabby</div>
+           <div class="rrco-bnpl-sub">4 payments of $${inst} · 0% APR · nothing extra</div>
+           <div class="rrco-bnpl-proof"><span class="stars">★★★★★</span> 4,200 Gen-Z shoppers chose installments this month</div>
+         </div>
+         <div class="rrco-alt">○ Pay $${total.toLocaleString()} in full</div>`
+      : `<div class="rrco-field"><label>Card number</label><input value="•••• •••• •••• 4242" readonly></div>
+         <div class="rrco-row2"><div class="rrco-field"><label>Expiry</label><input value="04/28" readonly></div><div class="rrco-field"><label>CVC</label><input value="•••" readonly></div></div>`;
+    sec.innerHTML = `
+      <div class="rrco-summary"><span class="rrco-sum-name">Your bag · Tabby Shoulder Bag</span><span class="rrco-sum-total">$${total.toLocaleString()}</span></div>
+      ${bnpl}
+      <button class="rrco-btn" onclick="store.rrcoPlace()">${live ? 'Pay in 4 — place order' : 'Place order'}</button>`;
+  }
+  function buildCheckout() {
+    if (document.getElementById('rrco')) return;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="rrco-overlay" id="rrco-overlay"></div>
+      <div class="rrco" id="rrco" role="dialog" aria-label="Checkout">
+        <div class="rrco-head"><span class="rrco-head-t">Secure checkout</span><span class="rrco-head-s">COACH</span><button class="rrco-x" id="rrco-x" aria-label="Close">&times;</button></div>
+        <div class="rrco-steps"><span class="rrco-st on">Shipping</span> › <span class="rrco-st">Payment</span> › <span class="rrco-st">Done</span></div>
+        <div class="rrco-body">
+          <section class="rrco-sec on" data-step="shipping">
+            <div class="rrco-field"><label>Email</label><input value="shopper@example.com"></div>
+            <div class="rrco-field"><label>Address</label><input value="1100 Lincoln Rd"></div>
+            <div class="rrco-row2"><div class="rrco-field"><label>City</label><input value="Miami Beach"></div><div class="rrco-field"><label>State</label><input value="FL"></div><div class="rrco-field"><label>ZIP</label><input value="33139"></div></div>
+            <button class="rrco-btn" onclick="store.rrcoToPayment()">Continue to payment</button>
+          </section>
+          <section class="rrco-sec" data-step="payment"></section>
+          <section class="rrco-sec" data-step="done">
+            <div class="rrco-done"><div class="rrco-done-i">✓</div><div class="rrco-done-t">Order confirmed</div><div class="rrco-done-s">Thank you — your Tabby is on its way.</div></div>
+          </section>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const close = () => { if (window.store && window.store.rrcoClose) window.store.rrcoClose(); };
+    document.getElementById('rrco-x').addEventListener('click', close);
+    document.getElementById('rrco-overlay').addEventListener('click', close);
   }
 
   function leakContent(leak) {
@@ -397,10 +495,42 @@
       if (m) m.classList.remove('open');
     };
 
-    // After a Launch the treatment cohort converts → the leak recovers on the funnel (closes the loop visually).
+    // ── checkout flow ────────────────────────────────────────────────────────
+    store.rrcoEmit = function (et) {
+      post('/funnel/event', { event_type: et, vuid: this.anonId, sessionId: this.sessionId, line: 'Tabby', price_usd: rrcoTotal(this) }).catch(() => {});
+    };
+    store.rrCheckout = function () {
+      buildCheckout();
+      if (this.closeCart) { try { this.closeCart(); } catch (e) {} }
+      rrcoShowStep('shipping');
+      document.getElementById('rrco-overlay').classList.add('open');
+      document.getElementById('rrco').classList.add('open');
+      this.rrcoEmit('begin_checkout');
+    };
+    store.rrcoToPayment = function () {
+      this.rrcoEmit('add_shipping_info');
+      rrcoRenderPayment(this);
+      rrcoShowStep('payment');
+      this.rrcoEmit('add_payment_info');
+    };
+    store.rrcoPlace = function () {
+      this.rrcoEmit('purchase');
+      rrcoShowStep('done');
+    };
+    store.rrcoClose = function () {
+      const o = document.getElementById('rrco-overlay'), m = document.getElementById('rrco');
+      if (o) o.classList.remove('open');
+      if (m) m.classList.remove('open');
+    };
+    // Replace the storefront's fire-and-forget beginCheckout with the real multi-step flow.
+    store.beginCheckout = function () { this.rrCheckout(); };
+
+    // After a Launch the BNPL fix goes live for the segment → the checkout reshapes (BNPL save
+    // appears at payment) AND the treatment cohort converts → the funnel leak recovers (loop closes).
     if (!store._rrLaunchHook) {
       store._rrLaunchHook = true;
       window.addEventListener('rr:launched', () => {
+        if (window.store) window.store._rrBnplLive = true;
         setTimeout(() => { if (window.store && window.store.rrBurst) window.store.rrBurst(true); }, 1200);
       });
     }
