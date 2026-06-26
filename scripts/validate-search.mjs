@@ -81,7 +81,7 @@ function sceneFor(manifest, gridByOcc, query, intent, type, heroId) {
   return null;
 }
 const search = (query) => fetch(`${BASE}/ai/search`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, limit: 9, affinity: {} }) }).then((r) => r.json());
-const genScene = (p) => fetch(`${BASE}/ai/scene`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }).then((r) => r.json());
+const genScene = (p) => fetch(`${BASE}/ai/scene`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...p, sync: true }) }).then((r) => r.json());
 
 // ── CURATED query sets (see docs/search-query-catalog.md) ──
 const TIER_A_SEARCH = [

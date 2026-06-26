@@ -2051,12 +2051,23 @@ class CoachStorefront {
         }
         wrap.innerHTML = '';                                      // 3) graceful — grid only
     }
-    /** POST /ai/scene; resolves to a served scene URL or null (never throws). */
+    /** POST /ai/scene (async queue), then poll the GET url until the background job caches it.
+        Never blocks the page — resolves to a served scene URL, or null so the ranked grid simply stays. */
     async _liveScene(payload) {
         try {
             const res = await fetch('/ai/scene', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const j = await res.json();
-            return j && j.ok && j.url ? j.url : null;
+            if (!j || !j.ok || !j.url) return null;
+            if (j.status === 'ready' || j.cached) return j.url;             // already cached → instant
+            const deadline = Date.now() + 22000;                            // queued → poll while the shimmer shows
+            while (Date.now() < deadline) {
+                await this.sleep(1300);
+                try {
+                    const r = await fetch(j.url, { method: 'GET', cache: 'no-store' });
+                    if (r.ok && (r.headers.get('content-type') || '').startsWith('image/')) return j.url;
+                } catch { /* keep polling */ }
+            }
+            return null;        // not ready in the window → grid stays; the job still finishes + caches for next time
         } catch { return null; }
     }
     /** Style Concierge "look" — a 4:5 styled scene of the anchor pick, in the chat thread. */

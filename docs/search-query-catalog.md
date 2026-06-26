@@ -72,17 +72,22 @@ occasions instantly — opera/gallery/yacht/cocktail/gala are Tier A now). Genui
 |---|---|
 | `a bag for my college graduation ceremony` | live-generates a graduation scene (~8–10s), then cached |
 | `a whimsical bag for a garden tea party` | live-generates a garden-tea-party scene, then cached |
-| `something for a medieval-themed costume gala` | live (no stock scene fits) |
+
+Both rows above were confirmed LIVE by `validate-search.mjs` on 2026-06-26. Note: any query containing a grid
+keyword (gala, opera, gallery, cocktail, beach/yacht, brunch, work, travel, festival, winter wedding, gift…) is
+Tier A (instant), even in an unusual phrasing — so to *demonstrate* live gen, avoid those words.
 
 Earlier proof scenes (rooftop engagement / opera / gallery / yacht) were all generated live and visually approved
 before being promoted into the grid — they're now **instant** (Tier A).
 
 **Presenter guidance for Tier B:**
-- It takes **~8–10s** to generate. Two ways to play it:
-  - **Pre-warm** (safest): run the exact query once before the session (e.g. `node scripts/validate-search.mjs --live`
-    or just type it in the demo build) — it caches in R2, so on stage it's **instant**.
-  - **Lean in**: type it live and narrate "watch our AI style this exact bag for your occasion, in real time" —
-    the shimmer → reveal is a feature. The ranked product grid appears instantly underneath regardless.
+- The request **never blocks**. The ranked grid/cards are instant; the hero scene is generated as a **background
+  job** (Cloudflare Queue) and fades in when ready (~10–20s for a first-ever novel query), then it's **cached
+  forever** so every later ask (re-type / next shopper) is instant. Two ways to play it:
+  - **Pre-warm** (safest): run the exact query once before the session (`node scripts/validate-search.mjs --live`
+    uses the synchronous path) — it caches in R2, so on stage it's **instant**.
+  - **Lean in**: type it live and narrate "the page is instant — our AI is styling a custom scene in the
+    background" — the grid is fully interactive while the hero fades in.
 - It is **not** 100%-guaranteed per arbitrary query the way Tier A is — that's the trade for "type anything."
   For the scripted, must-land beats, use **Tier A**.
 

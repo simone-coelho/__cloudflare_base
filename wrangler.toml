@@ -34,7 +34,9 @@ binding = "EVENT_QUEUE"
 [[queues.consumers]]
 queue = "events"
 max_batch_size = 10
-max_batch_timeout = 30
+max_batch_timeout = 2     # process promptly (scene-gen jobs shouldn't wait to fill a batch)
+max_concurrency = 6       # generate several novel scenes in parallel under load
+max_retries = 2
 
 # Durable Objects
 [[durable_objects.bindings]]

@@ -21,6 +21,7 @@ import { operatorRoutes } from '@/routes/operator';
 import realtimeRoutes from '@/routes/realtime';
 import { aiRoutes } from '@/routes/ai';
 import { aiSceneRoutes } from '@/routes/aiScene';
+import { generateSceneToR2 } from '@/services/sceneGen';
 
 import { routeAgentRequest } from 'agents';
 
@@ -115,12 +116,19 @@ export default {
   queue: async (batch: MessageBatch, env: Env, ctx: ExecutionContext) => {
     for (const message of batch.messages) {
       try {
-        const event = message.body;
-        console.log('Processing queued event:', event);
-        message.ack();
+        const event = message.body as any;
+        if (event && event.kind === 'scene') {
+          // Background styled-scene generation → R2 (so the request path never blocks on ~8s gen).
+          const res = await generateSceneToR2(env, event);
+          console.log(`queue scene ${event.productId}/${event.sceneId}: ${res.ok ? (res.cached ? 'already cached' : `generated ${res.tookMs}ms`) : 'failed: ' + res.error}`);
+          message.ack(); // ack even on a handled failure — no poison loop; client falls back to the grid
+        } else {
+          console.log('Processing queued event:', event);
+          message.ack();
+        }
       } catch (error) {
         console.error('Error processing message:', error);
-        message.retry();
+        message.retry(); // transient/unexpected → retry
       }
     }
   },
