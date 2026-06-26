@@ -110,7 +110,7 @@
             transition: opacity 0.8s var(--ease), background-image 0.1s;
         }
         #hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(20,16,11,0.78) 0%, rgba(20,16,11,0.34) 55%, rgba(20,16,11,0.08) 100%); }
-        .hero-content { position: relative; z-index: 2; max-width: 660px; padding: 72px 80px; transition: opacity 0.5s var(--ease); }
+        .hero-content { position: relative; z-index: 2; max-width: 660px; padding: 72px 80px; transition: opacity 0.5s var(--ease); view-transition-name: hero-content; }
         .hero-content.fading { opacity: 0; }
         .hero-eyebrow { font-size: 12px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--tan); margin-bottom: 20px; }
         .hero-title { font-size: 58px; line-height: 1.04; font-weight: 600; margin-bottom: 22px; }
@@ -592,7 +592,7 @@
         .lux-overlay.open { opacity: 1; pointer-events: auto; }
         .lux-modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -46%) scale(0.98);
-            width: 640px; max-width: 94vw; max-height: 84vh; overflow-y: auto;
+            width: 720px; max-width: 94vw; max-height: 92vh; overflow-y: auto;
             background: var(--paper); border-radius: 4px; border: 1px solid var(--line-2);
             box-shadow: 0 30px 90px rgba(20, 14, 6, 0.4); z-index: 85;
             opacity: 0; pointer-events: none; transition: opacity 0.45s var(--ease), transform 0.45s var(--ease);
@@ -613,7 +613,7 @@
         #search-results .tile-name { font-size: 13px; }
 
         /* Style Concierge chat */
-        .cc-thread { display: flex; flex-direction: column; gap: 14px; max-height: 46vh; overflow-y: auto; padding: 4px 2px; }
+        .cc-thread { display: flex; flex-direction: column; gap: 14px; max-height: 62vh; overflow-y: auto; padding: 4px 2px; }
         .cc-msg { max-width: 88%; padding: 12px 16px; border-radius: 15px; font-size: 14px; line-height: 1.55; animation: chipIn 0.35s var(--ease); }
         .cc-msg.user { align-self: flex-end; background: var(--ink); color: var(--paper); border-bottom-right-radius: 4px; }
         .cc-msg.bot { align-self: flex-start; background: #fff; border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 4px; }
@@ -722,7 +722,7 @@
 
         /* ── Collapse / expand handle (always visible) ── */
         #sb-handle {
-            position: fixed; top: 92px; right: var(--sb-w); z-index: 61;
+            position: fixed; top: 140px; right: var(--sb-w); z-index: 61;
             display: flex; align-items: center; gap: 7px;
             background: var(--ink); color: var(--paper); border: none;
             border-radius: 6px 0 0 6px; padding: 13px 11px;
@@ -744,14 +744,22 @@
         }
         body.sb-open #sidebar { transform: none; }
 
-        .sb-top { display: flex; align-items: center; justify-content: space-between; padding: 15px 18px; border-bottom: 1px solid #2C2620; flex-shrink: 0; }
-        .sb-top .sbt-ey { font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--tan); display: block; }
-        .sb-top .sbt-ti { font-family: var(--font-display); font-size: 16px; color: #F4EEE2; }
-        .sb-collapse { background: none; border: 1px solid #3A332A; color: #C9BFAC; width: 30px; height: 30px; border-radius: 4px; font-size: 18px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s var(--ease); }
+        /* One-line header: eyebrow + title + collapse all on a single row */
+        .sb-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px; border-bottom: 1px solid #2C2620; flex-shrink: 0; }
+        .sb-top .sbt-l { display: flex; align-items: baseline; gap: 9px; min-width: 0; overflow: hidden; }
+        .sb-top .sbt-ey { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--tan); white-space: nowrap; flex-shrink: 0; }
+        .sb-top .sbt-ti { font-family: var(--font-display); font-size: 15px; color: #F4EEE2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sb-collapse { background: none; border: 1px solid #3A332A; color: #C9BFAC; width: 26px; height: 26px; border-radius: 4px; font-size: 16px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s var(--ease); }
         .sb-collapse:hover { border-color: var(--tan); color: #fff; }
 
         /* ── Director section (controls + narration) inside the sidebar ── */
-        .sb-director { padding: 16px 18px; border-bottom: 1px solid #2C2620; flex-shrink: 0; }
+        /* Resizable: --director-max (set by the drag handle) caps its height; it then scrolls. */
+        .sb-director { padding: 13px 16px; border-bottom: 1px solid #2C2620; flex-shrink: 0; max-height: var(--director-max, none); overflow-y: auto; }
+        #sidebar.maximized .sb-director { max-height: none; overflow: visible; }
+        /* maximize → shrink the step to its one-line progress (STAYS visible), so the Opal chat grows ~75% */
+        #sidebar.maximized .sb-step .sb-watch,
+        #sidebar.maximized .sb-step .sb-caption,
+        #sidebar.maximized .sb-step .sb-callout { display: none; }
         #sidebar[data-state="intro"] .sb-running { display: none; }
         #sidebar[data-state="running"] .sb-intro { display: none; }
         .sb-intro .sbi-cap { font-family: var(--font-display); font-size: 16px; color: #F4EEE2; line-height: 1.32; margin-bottom: 10px; }
@@ -760,7 +768,13 @@
         .sb-start:hover { background: #C9A368; }
 
         .sb-progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .sb-step-label { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sb-step-label { flex: 1; min-width: 0; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tan); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* Collapsible SIGNAL/DECISION/WHY — toggle keeps step label + progress + caption visible */
+        .sb-co-toggle { flex-shrink: 0; background: none; border: none; color: #9A8F7C; font-size: 11px; line-height: 1; cursor: pointer; padding: 2px 3px; transition: transform 0.25s var(--ease), color 0.2s var(--ease); }
+        .sb-co-toggle:hover { color: var(--tan); }
+        #sb-step.co-collapsed .sb-co-toggle { transform: rotate(-90deg); }
+        #sb-step.co-collapsed #dir-callout { display: none; }
+        #sb-step.preview #dir-callout { display: none; }   /* hide the empty callout until the beat runs */
         .sb-bar { flex: 1; height: 3px; background: #3A332A; border-radius: 2px; overflow: hidden; }
         .sb-bar > i { display: block; height: 100%; width: 0; background: var(--tan); transition: width 0.5s var(--ease); }
         .sb-watch { font-size: 11px; color: #B9AF9C; margin-bottom: 10px; }
@@ -780,7 +794,10 @@
         .sb-callout .co-v strong { color: #fff; }
         .sb-callout .co-v code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--tan); }
 
-        .sb-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .sb-controls { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; }
+        .sb-controls .sb-btn.primary { flex: 0 1 auto; padding: 9px 18px; }   /* Next: content width, not stretched */
+        .sb-controls .sb-icon-btn { width: 34px; height: 34px; font-size: 13px; }
+        .sb-controls .sb-autoplay + .sb-icon-btn { margin-left: auto; }       /* push Restart + Clear to the right */
         .sb-btn { background: transparent; color: #EDE6D8; border: 1px solid #4A4236; padding: 10px 12px; font-size: 12px; letter-spacing: 0.04em; border-radius: 4px; transition: all 0.2s var(--ease); white-space: nowrap; }
         .sb-btn:hover:not(:disabled) { border-color: var(--tan); color: #fff; }
         .sb-btn:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -789,10 +806,22 @@
         .sb-icon-btn { background: transparent; border: 1px solid #4A4236; color: #C9BFAC; width: 38px; height: 38px; border-radius: 4px; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s var(--ease); }
         .sb-icon-btn:hover:not(:disabled) { border-color: var(--tan); color: #fff; }
         .sb-icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-        .sb-autoplay { display: flex; align-items: center; gap: 9px; font-size: 11px; letter-spacing: 0.04em; color: #B9AF9C; }
+        .sb-autoplay { display: flex; align-items: center; gap: 6px; font-size: 10.5px; letter-spacing: 0.04em; color: #B9AF9C; flex-shrink: 0; }
+        .sb-autoplay .sb-ap-label { white-space: nowrap; }
+
+        /* ── Drag-to-resize handle (between director and tabs) ── */
+        .sb-resize { flex-shrink: 0; height: 9px; cursor: ns-resize; display: flex; align-items: center; justify-content: center; background: #120F0C; border-bottom: 1px solid #2C2620; }
+        .sb-resize:hover { background: #1A1612; }
+        .sb-resize-grip { width: 34px; height: 3px; border-radius: 2px; background: #3A332A; transition: background 0.2s var(--ease); }
+        .sb-resize:hover .sb-resize-grip { background: var(--tan); }
+        #sidebar.sb-resizing { user-select: none; }
+        #sidebar.maximized .sb-resize { display: none; }
 
         /* ── Tab bar ── */
-        .sb-tabbar { display: flex; flex-shrink: 0; border-bottom: 1px solid #2C2620; background: #120F0C; }
+        .sb-tabbar { display: flex; align-items: stretch; flex-shrink: 0; border-bottom: 1px solid #2C2620; background: #120F0C; }
+        .sb-maximize { flex: 0 0 auto; width: 40px; background: transparent; border: none; border-left: 1px solid #2C2620; color: #9A8F7C; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: color 0.2s var(--ease), background 0.2s var(--ease); }
+        .sb-maximize:hover { color: var(--tan); }
+        #sidebar.maximized .sb-maximize { color: var(--tan); background: #1E1A15; }
         .sb-tab { flex: 1; background: transparent; border: none; border-bottom: 2px solid transparent; color: #9A8F7C; padding: 12px 4px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 6px; transition: color 0.2s var(--ease), border-color 0.2s var(--ease); }
         .sb-tab:hover { color: #E8E0D2; }
         .sb-tab.active { color: var(--tan); border-bottom-color: var(--tan); }
@@ -834,20 +863,25 @@
         #sidebar #ab-readout.show, #sidebar #mab-readout.show, #sidebar #cmab-readout.show { display: block; opacity: 1; }
 
         /* Opal tab — dark-surround overrides for the reused builder */
-        #tab-opal .opal-head { padding: 0 0 14px; border-color: #2C2620; }
+        #tab-opal .opal-head { padding: 0 0 11px; border-color: #2C2620; }
         #tab-opal .oh-title { color: #F4EEE2; }
         #tab-opal .oh-sub, #tab-opal .opal-prompt-label { color: #9A8F7C; }
-        #tab-opal .opal-body { padding: 16px 0 0; }
+        #tab-opal .opal-body { padding: 12px 0 0; }
         #tab-opal .opal-thinking { color: #9A8F7C; }
+        #tab-opal .opal-prompt-label { margin-bottom: 7px; }
+        #tab-opal .opal-prompt { min-height: 0; padding: 10px 12px; font-size: 14px; }   /* no big empty box when idle */
         #opal-tab .opal-future { margin-top: 18px; padding-top: 16px; border-top: 1px solid #2C2620; font-size: 11.5px; color: #6B6258; line-height: 1.5; }
+        /* Opal tab fills its height so the REAL chat gets room (and ~75% when maximized) */
+        .sb-panel#tab-opal.active { display: flex; flex-direction: column; }
+        #tab-opal #opal-tab { display: flex; flex-direction: column; flex: 1; min-height: 0; }
         /* Real Opal chat island (React + Agents SDK), mounted into #opal-chat-root. */
-        .opal-chat-mount { margin-top: 16px; }
-        .opal-chat { display: flex; flex-direction: column; border-top: 1px solid #2C2620; padding-top: 14px; }
+        .opal-chat-mount { margin-top: 0; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+        .opal-chat { display: flex; flex-direction: column; flex: 1; min-height: 0; }
         .opal-chat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
         .opal-chat-title { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tan); }
         .opal-chat-clear { background: none; border: none; color: #6B6258; font-size: 11px; cursor: pointer; }
         .opal-chat-clear:hover { color: #C9BFAC; }
-        .opal-chat-thread { display: flex; flex-direction: column; gap: 10px; max-height: 340px; overflow-y: auto; padding: 4px 2px 10px; }
+        .opal-chat-thread { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; max-height: none; overflow-y: auto; padding: 4px 2px 10px; }
         .opal-chat-empty { font-size: 12px; color: #8C8275; line-height: 1.5; display: flex; flex-direction: column; gap: 10px; }
         .opal-suggest { text-align: left; background: #201C17; border: 1px solid #3A332A; color: #C9BFAC; font-size: 12px; line-height: 1.4; padding: 9px 11px; border-radius: 10px; cursor: pointer; }
         .opal-suggest:hover { border-color: var(--tan); color: #F4EEE2; }
@@ -921,18 +955,161 @@
             display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px 7px;
             background: #1C1A17; color: #F4EEE2; border: 1px solid var(--tan);
             font-family: var(--font-body); font-size: 11px; line-height: 1.35;
-            padding: 6px 12px; border-radius: 13px; box-shadow: 0 8px 24px rgba(28, 22, 12, 0.34);
-            opacity: 0; transform: translateY(-6px); pointer-events: auto;
-            transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+            padding: 8px 30px 8px 13px;   /* reserve the top-right corner for the sticky × */
+            border-radius: 13px; box-shadow: 0 8px 24px rgba(28, 22, 12, 0.34);
+            pointer-events: auto; animation: toastIn 0.35s var(--ease) both;   /* visible on append — no rAF/.show needed */
         }
-        .change-pill.show { opacity: 1; transform: none; }
-        .change-pill.out { opacity: 0; transform: translateY(-6px); }
+        @keyframes toastIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+        @keyframes toastOut { to { opacity: 0; transform: translateY(-6px); } }
+        .change-pill.out { animation: toastOut 0.4s var(--ease) forwards; }
         .change-pill .cp-k { font-size: 8.5px; letter-spacing: 0.11em; text-transform: uppercase; color: #9A8F7C; }
         .change-pill .cp-k.now { color: var(--tan); }
         .change-pill .cp-v { color: #F4EEE2; }
         .change-pill .cp-arrow { color: var(--tan); font-size: 13px; }
-        .change-pill .cp-x { margin-left: 8px; background: none; border: none; color: #9A8F7C; font-size: 17px; line-height: 1; cursor: pointer; padding: 0 2px; align-self: center; }
+        /* × always sticky in the top-right corner — out of the flex/wrap flow */
+        .change-pill .cp-x { position: absolute; top: 5px; right: 7px; margin: 0; padding: 0 2px; background: none; border: none; color: #9A8F7C; font-size: 16px; line-height: 1; cursor: pointer; }
         .change-pill .cp-x:hover { color: #F4EEE2; }
+
+        /* ── Command palette (⌘K / search icon) — force experiences; extensible via tabs/modes ── */
+        .sb-cmdk-btn { flex: 0 0 auto; width: 38px; background: transparent; border: none; border-left: 1px solid #2C2620; color: #9A8F7C; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: color 0.2s var(--ease); }
+        .sb-cmdk-btn:hover { color: var(--tan); }
+        .cmdk-overlay { position: fixed; inset: 0; background: rgba(12,9,6,0.55); backdrop-filter: blur(2px); z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.2s var(--ease); }
+        .cmdk-overlay.open { opacity: 1; pointer-events: auto; }
+        .cmdk { position: fixed; top: 14%; left: 50%; transform: translateX(-50%) scale(0.98); width: min(560px, 92vw); z-index: 91;
+            background: #1A1612; color: #EDE6D8; border: 1px solid #3A332A; border-radius: 12px; box-shadow: 0 30px 90px rgba(0,0,0,0.5);
+            opacity: 0; pointer-events: none; transition: opacity 0.2s var(--ease), transform 0.2s var(--ease); overflow: hidden; }
+        .cmdk.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1); }
+        .cmdk-tabs { display: flex; gap: 4px; padding: 10px 12px 0; }
+        .cmdk-tab { background: transparent; border: none; color: #9A8F7C; font-size: 11px; letter-spacing: 0.04em; padding: 6px 11px; border-radius: 8px 8px 0 0; cursor: pointer; }
+        .cmdk-tab.active { color: var(--tan); background: #221E18; }
+        .cmdk-search { display: flex; align-items: center; gap: 9px; padding: 13px 15px; border-bottom: 1px solid #2C2620; color: #9A8F7C; }
+        .cmdk-input { flex: 1; background: transparent; border: none; outline: none; color: #F4EEE2; font-size: 15px; font-family: var(--font-body); }
+        .cmdk-list { max-height: 48vh; overflow-y: auto; padding: 6px; }
+        .cmdk-item { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+        .cmdk-item.sel, .cmdk-item:hover { background: #2A241D; }
+        .cmdk-item .ci-label { font-size: 13.5px; color: #F4EEE2; display: flex; align-items: center; gap: 8px; }
+        .cmdk-item .ci-sub { font-size: 11.5px; color: #9A8F7C; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cmdk-item .ci-tag { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tan); border: 1px solid #3A332A; border-radius: 8px; padding: 1px 6px; }
+        .cmdk-empty { padding: 18px 14px; color: #6B6258; font-size: 12.5px; line-height: 1.5; }
+        .cmdk-foot { display: flex; justify-content: space-between; padding: 9px 15px; border-top: 1px solid #2C2620; font-size: 10.5px; color: #6B6258; }
+        .cmdk-spin { display: inline-block; width: 11px; height: 11px; border: 2px solid #3A332A; border-top-color: var(--tan); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -1px; margin-right: 5px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Opal tool-result card (island renders this for tool outputs; toggle to raw JSON) ── */
+        .opal-card2 { background: #201C17; border: 1px solid #2C2620; border-left: 3px solid var(--tan); border-radius: 10px; padding: 11px 13px; margin: 6px 0; }
+        .opal-card2 .oc2-head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+        .opal-card2 .oc2-name { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tan); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .opal-card2 .oc2-badge { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: #1C1A17; background: var(--tan); border-radius: 8px; padding: 2px 7px; font-weight: 600; }
+        .opal-card2 .oc2-run { font-size: 11px; color: #9A8F7C; font-style: italic; }
+        .opal-card2 .oc2-rows { display: flex; flex-direction: column; gap: 6px; }
+        .opal-card2 .oc2-row { display: flex; gap: 9px; align-items: baseline; }
+        .opal-card2 .oc2-k { flex: 0 0 84px; font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #8C8275; }
+        .opal-card2 .oc2-v { flex: 1; min-width: 0; font-size: 12.5px; color: #EDE6D8; line-height: 1.4; overflow-wrap: anywhere; }
+        .opal-card2 .oc2-v.msg { color: #F4EEE2; }
+        .opal-card2 .oc2-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .opal-card2 .oc2-btn { background: transparent; border: 1px solid #3A332A; color: #C9BFAC; font-size: 10.5px; padding: 4px 10px; border-radius: 7px; cursor: pointer; transition: border-color 0.2s var(--ease), color 0.2s var(--ease); }
+        .opal-card2 .oc2-btn:hover { border-color: var(--tan); color: #F4EEE2; }
+        .opal-card2 .opal-tool-out { margin-top: 9px; }
+
+        /* ── Personalization Activity panel (provenance + before→now) ── */
+        /* Bottom-RIGHT, clearing the Director sidebar; bottom-anchored so it grows upward as cards arrive. */
+        .pz-panel { position: fixed; right: calc(var(--sb-w) + 20px); bottom: 20px; width: 372px; max-width: 92vw; max-height: 66vh; z-index: 64;
+            background: #16130F; color: #E8E0D2; border: 1px solid #2C2620; border-radius: 12px; box-shadow: 0 22px 64px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; overflow: hidden; opacity: 0; transform: translateY(12px); pointer-events: none;
+            transition: opacity 0.3s var(--ease), transform 0.3s var(--ease), right 0.45s var(--ease); }
+        .pz-panel.show { opacity: 1; transform: none; pointer-events: auto; }
+        .pzp-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid #2C2620; background: #120F0C; cursor: grab; user-select: none; }
+        .pzp-head:active { cursor: grabbing; }
+        .pzp-dot { width: 7px; height: 7px; border-radius: 50%; background: #5FCF80; animation: pzPulse 2s infinite; flex-shrink: 0; }
+        @keyframes pzPulse { 0% { box-shadow: 0 0 0 0 rgba(95,207,128,0.5); } 70% { box-shadow: 0 0 0 6px rgba(95,207,128,0); } 100% { box-shadow: 0 0 0 0 rgba(95,207,128,0); } }
+        .pzp-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #F4EEE2; flex: 1; }
+        .pzp-live { font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase; color: #10231A; background: #5FCF80; border-radius: 8px; padding: 2px 6px; font-weight: 700; }
+        .pzp-min { background: none; border: none; color: #9A8F7C; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
+        .pzp-min:hover { color: var(--tan); }
+        .pzp-feed { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .pzp-empty { color: #6B6258; font-size: 12px; line-height: 1.55; padding: 8px 4px; }
+        .pzp-empty b { color: #9A8F7C; }
+        .pz-card { background: #1E1A15; border: 1px solid #2C2620; border-left: 3px solid var(--tan); border-radius: 9px; padding: 11px 13px; animation: pzCardIn 0.4s var(--ease); }
+        @keyframes pzCardIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+        .pzc-eyebrow { display: flex; align-items: center; gap: 7px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tan); margin-bottom: 7px; }
+        .pzc-match { margin-left: auto; color: #5FCF80; border: 1px solid #2F5238; border-radius: 7px; padding: 1px 6px; font-size: 8px; letter-spacing: 0.08em; }
+        .pzc-headline { font-family: var(--font-display); font-size: 14.5px; color: #F4EEE2; line-height: 1.28; margin-bottom: 9px; }
+        .pzc-chain { display: flex; align-items: stretch; gap: 6px; margin-bottom: 9px; }
+        .pzc-node { flex: 1; background: #16130F; border: 1px solid #2C2620; border-radius: 7px; padding: 6px 8px; min-width: 0; }
+        .pzc-node-k { display: block; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; color: #8C8275; margin-bottom: 2px; }
+        .pzc-node-v { display: block; font-size: 11px; color: #E8E0D2; line-height: 1.3; }
+        .pzc-node-v strong { color: #fff; }
+        .pzc-node-v code { font-family: ui-monospace, Menlo, monospace; font-size: 10px; color: var(--tan); }
+        .pzc-arrow { align-self: center; color: var(--tan); font-size: 12px; flex-shrink: 0; }
+        .pzc-evidence { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px; }
+        .pzc-chip { font-size: 9.5px; color: #C9BFAC; background: #221E18; border: 1px solid #3A332A; border-radius: 8px; padding: 2px 7px; }
+        .pzc-ba { font-size: 11px; color: #C9BFAC; line-height: 1.45; padding-top: 8px; border-top: 1px dashed #2C2620; }
+        .pzc-ba-k { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: #8C8275; }
+        .pzc-ba-k.now { color: var(--tan); }
+        .pzc-ba .pzc-ba-v { color: #F4EEE2; }
+        .pzc-foot { margin-top: 8px; font-size: 9.5px; color: #6B6258; }
+        .pz-pill { position: fixed; right: calc(var(--sb-w) + 20px); bottom: 20px; z-index: 64; display: none; align-items: center; gap: 7px;
+            background: var(--ink); color: var(--paper); border: 1px solid var(--tan); border-radius: 20px; padding: 9px 14px;
+            font-size: 11px; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: right 0.45s var(--ease); }
+        .pz-pill.show { display: inline-flex; }
+        .pz-pill-dot { width: 7px; height: 7px; border-radius: 50%; background: #5FCF80; }
+        .pz-pill.flash { animation: pillFlash 0.5s var(--ease); }
+        @keyframes pillFlash { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.09); } }
+        .pz-pill-count { background: var(--tan); color: #1C1A17; border-radius: 9px; padding: 0 6px; font-weight: 600; font-size: 10px; }
+
+        /* ── Cold-start style quiz (Act 2) ── */
+        .quiz-overlay { position: fixed; inset: 0; background: rgba(12,9,6,0.5); backdrop-filter: blur(2px); z-index: 92; opacity: 0; pointer-events: none; transition: opacity 0.25s var(--ease); }
+        .quiz-overlay.open { opacity: 1; pointer-events: auto; }
+        .quiz { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -46%) scale(0.98); width: 560px; max-width: 94vw; max-height: 90vh; overflow-y: auto; z-index: 93;
+            background: var(--paper); border-radius: 8px; border: 1px solid var(--line-2); box-shadow: 0 30px 90px rgba(20,14,6,0.4);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s var(--ease), transform 0.3s var(--ease); }
+        .quiz.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+        .quiz-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 24px 28px 6px; }
+        .quiz-eyebrow { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--tan-deep); margin-bottom: 6px; }
+        .quiz-title { font-family: var(--font-display); font-size: 24px; color: var(--ink); }
+        .quiz-skip { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; }
+        .quiz-skip:hover { color: var(--ink); }
+        .quiz-body { padding: 12px 28px 6px; }
+        .quiz-q { margin-bottom: 18px; }
+        .quiz-q-label { font-size: 12px; letter-spacing: 0.04em; color: var(--ink-soft); margin-bottom: 9px; }
+        .quiz-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+        .quiz-opt { background: var(--paper-2); border: 1px solid var(--line); color: var(--ink); font-size: 13px; padding: 9px 15px; border-radius: 18px; cursor: pointer; transition: border-color 0.18s var(--ease), background 0.18s var(--ease), color 0.18s var(--ease); }
+        .quiz-opt:hover { border-color: var(--tan); }
+        .quiz-opt.sel { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+        .quiz-foot { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px 24px; gap: 12px; }
+        .quiz-hint { font-size: 11.5px; color: var(--muted); }
+        .quiz-go { background: var(--tan); color: #1C1A17; border: none; padding: 12px 22px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; border-radius: 4px; cursor: pointer; transition: background 0.2s var(--ease); }
+        .quiz-go:hover { background: #C9A368; }
+
+        /* ── Before / Now split-slider ── */
+        .cmp-overlay { position: fixed; inset: 0; background: rgba(12,9,6,0.62); backdrop-filter: blur(3px); z-index: 94; opacity: 0; pointer-events: none; transition: opacity 0.25s var(--ease); }
+        .cmp-overlay.open { opacity: 1; pointer-events: auto; }
+        .cmp { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -46%) scale(0.98); width: auto; max-width: 94vw; z-index: 95;
+            background: #16130F; border: 1px solid #2C2620; border-radius: 10px; box-shadow: 0 30px 90px rgba(0,0,0,0.55); overflow: hidden;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s var(--ease), transform 0.3s var(--ease); }
+        .cmp.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+        .cmp-head { display: flex; align-items: center; gap: 14px; padding: 11px 16px; border-bottom: 1px solid #2C2620; }
+        .cmp-title { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tan); flex: 1; min-width: 0; }
+        .cmp-zoom { display: flex; align-items: center; gap: 8px; }
+        .cmp-zbtn { width: 26px; height: 26px; border-radius: 6px; background: transparent; border: 1px solid #3A332A; color: #C9BFAC; font-size: 15px; line-height: 1; cursor: pointer; }
+        .cmp-zbtn:hover { border-color: var(--tan); color: #fff; }
+        .cmp-zlabel { font-size: 10.5px; color: #9A8F7C; min-width: 30px; text-align: center; }
+        .cmp-x { background: none; border: none; color: #9A8F7C; font-size: 22px; line-height: 1; cursor: pointer; }
+        .cmp-x:hover { color: #F4EEE2; }
+        /* Stage is sized to the image's aspect (so the WHOLE component is shown — contain, crisp, never cover-zoomed) and capped to the viewport. */
+        /* width/height are set in JS (openCompare) to hug the image's aspect within the viewport, so any page shape — portrait full-page or landscape — fills the modal with no side-bars. */
+        .cmp-stage { position: relative; width: 600px; height: 70vh; background: #0F0D0A; overflow: hidden; touch-action: none; user-select: none; cursor: ew-resize; }
+        .cmp-img { position: absolute; inset: 0; background-repeat: no-repeat; background-position: center; background-size: var(--cmp-bgsize, contain); }
+        .cmp-before { clip-path: inset(0 calc(100% - var(--cmp-seam, 50%)) 0 0); }
+        .cmp-divider { position: absolute; top: 0; bottom: 0; left: var(--cmp-seam, 50%); width: 2px; background: var(--paper); transform: translateX(-1px); pointer-events: none; }
+        .cmp-handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; border-radius: 50%; background: var(--paper); color: var(--ink); display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
+        .cmp-tag { position: absolute; top: 12px; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; background: rgba(20,18,15,0.72); padding: 3px 9px; border-radius: 10px; pointer-events: none; }
+        .cmp-tag-before { left: 12px; color: #C9BFAC; }
+        .cmp-tag-now { right: 12px; color: var(--tan); }
+        .cmp-hint { padding: 9px 16px; font-size: 10.5px; color: #6B6258; text-align: center; }
+        /* the [Compare] button on a provenance card */
+        .pzc-compare { margin-top: 8px; background: transparent; border: 1px solid #3A332A; color: #C9BFAC; font-size: 10px; letter-spacing: 0.04em; padding: 4px 10px; border-radius: 7px; cursor: pointer; transition: border-color 0.2s var(--ease), color 0.2s var(--ease); }
+        .pzc-compare:hover { border-color: var(--tan); color: #F4EEE2; }
         /* Opal-personalized banner (Mode-B · personalized_banner flag) — top ribbon below the header. */
         #pz-banner.pz-banner {
             display: flex; align-items: center; gap: 14px; padding: 0 28px;
@@ -969,7 +1146,9 @@
         #welcome-ribbon .wr-emoji { font-size: 20px; flex-shrink: 0; }
         #welcome-ribbon .wr-text { font-size: 13.5px; line-height: 1.4; }
         #welcome-ribbon .wr-text b { color: #fff; }
-        #welcome-ribbon .wr-close { margin-left: auto; background: none; border: none; color: #C9BFAC; font-size: 22px; line-height: 1; flex-shrink: 0; }
+        #welcome-ribbon .wr-quiz { margin-left: auto; flex-shrink: 0; background: var(--tan); color: #1C1A17; border: none; border-radius: 16px; padding: 7px 14px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em; cursor: pointer; transition: background 0.2s var(--ease); }
+        #welcome-ribbon .wr-quiz:hover { background: #C9A368; }
+        #welcome-ribbon .wr-close { margin-left: 12px; background: none; border: none; color: #C9BFAC; font-size: 22px; line-height: 1; flex-shrink: 0; }
         #welcome-ribbon .wr-close:hover { color: #fff; }
 
         /* Anonymous-profile chip minted on beat 1 (Engine tab). */
@@ -1022,6 +1201,7 @@
     <div id="welcome-ribbon" role="status">
         <span class="wr-emoji">&#128075;</span>
         <span class="wr-text"><b>Welcome — looks like your first time here.</b> No account needed; we'll tailor the store as you browse.</span>
+        <button class="wr-quiz" onclick="store.openQuiz()">&#10022; Personalize in 30s</button>
         <button class="wr-close" onclick="store.dismissWelcome()" aria-label="Dismiss welcome">&times;</button>
     </div>
 
@@ -1208,100 +1388,142 @@
         </div>
     </div>
 
+    <!-- ═══════════ Command palette (⌘K) — force experiences (audience preview · extensible) ═══════════ -->
+    <div class="cmdk-overlay" id="cmdk-overlay" onclick="store.closeCmdk()"></div>
+    <div class="cmdk" id="cmdk" role="dialog" aria-label="Force experience">
+        <div class="cmdk-tabs" id="cmdk-tabs"></div>
+        <div class="cmdk-search">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="6.8" cy="6.8" r="4.3"/><path d="M13.5 13.5L10 10"/></svg>
+            <input id="cmdk-input" class="cmdk-input" type="text" autocomplete="off" placeholder="Search…"
+                   oninput="store.cmdkFilter(this.value)" onkeydown="store.cmdkKey(event)" />
+        </div>
+        <div class="cmdk-list" id="cmdk-list"></div>
+        <div class="cmdk-foot"><span>↑ ↓ navigate · ↵ select · esc close</span><span class="cmdk-hint" id="cmdk-hint"></span></div>
+    </div>
+
+    <!-- ═══════════ Personalization Activity panel — provenance + before→now history (movable · minimize-not-close) ═══════════ -->
+    <div id="pz-panel" class="pz-panel" role="dialog" aria-label="Personalization activity" aria-modal="false">
+        <div class="pzp-head" id="pzp-head">
+            <span class="pzp-dot"></span>
+            <span class="pzp-title">Personalization activity</span>
+            <span class="pzp-live">live</span>
+            <button class="pzp-min" id="pzp-min" onclick="store.minimizePzPanel()" title="Minimize (it never closes)">&#8211;</button>
+        </div>
+        <div class="pzp-feed" id="pzp-feed">
+            <div class="pzp-empty">As the store personalizes, each decision lands here — the <b>signal</b>, the <b>segment</b>, the <b>decision</b>, and exactly what changed <b>before → now</b>.</div>
+        </div>
+    </div>
+    <button id="pz-pill" class="pz-pill" onclick="store.restorePzPanel()" title="Open personalization activity">
+        <span class="pz-pill-dot"></span> Personalization <span class="pz-pill-count" id="pz-pill-count"></span>
+    </button>
+
+    <!-- ═══════════ Cold-start style quiz (Act 2 · zero-party → instant re-personalization) ═══════════ -->
+    <div class="quiz-overlay" id="quiz-overlay" onclick="store.closeQuiz()"></div>
+    <div class="quiz" id="style-quiz" role="dialog" aria-label="Style quiz">
+        <div class="quiz-head">
+            <div><div class="quiz-eyebrow">&#10022; 30-second style quiz</div><div class="quiz-title">Let's find your edit</div></div>
+            <button class="quiz-skip" onclick="store.closeQuiz()">Skip</button>
+        </div>
+        <div class="quiz-body" id="quiz-body"></div>
+        <div class="quiz-foot">
+            <span class="quiz-hint">No account, no cookie — just your taste.</span>
+            <button class="quiz-go" id="quiz-go" onclick="store.quizApply()">See my edit &#9656;</button>
+        </div>
+    </div>
+
+    <!-- ═══════════ Before / Now split-slider (drag the seam) ═══════════ -->
+    <div class="cmp-overlay" id="cmp-overlay" onclick="store.closeCompare()"></div>
+    <div class="cmp" id="cmp" role="dialog" aria-label="Before and after">
+        <div class="cmp-head">
+            <span class="cmp-title" id="cmp-title">Before → Now</span>
+            <div class="cmp-zoom">
+                <button class="cmp-zbtn" onclick="store.zoomCompare(-1)" title="Zoom out">&minus;</button>
+                <span class="cmp-zlabel" id="cmp-zlabel">Fit</span>
+                <button class="cmp-zbtn" onclick="store.zoomCompare(1)" title="Zoom in">+</button>
+            </div>
+            <button class="cmp-x" onclick="store.closeCompare()" aria-label="Close">&times;</button>
+        </div>
+        <div class="cmp-stage" id="cmp-stage">
+            <div class="cmp-img cmp-after" id="cmp-after"></div>
+            <div class="cmp-img cmp-before" id="cmp-before"></div>
+            <div class="cmp-divider" id="cmp-divider"><span class="cmp-handle">&#8596;</span></div>
+            <span class="cmp-tag cmp-tag-before">Before</span>
+            <span class="cmp-tag cmp-tag-now">Now</span>
+        </div>
+        <div class="cmp-hint">Drag the seam to compare · &minus; / + to zoom</div>
+    </div>
+
     <!-- ═══════════ Right-docked tabbed sidebar — the Demo Director ═══════════ -->
     <aside id="sidebar" data-state="intro">
         <div class="sb-top">
             <div class="sbt-l">
-                <span class="sbt-ey">Optimizely · Coach</span>
                 <span class="sbt-ti">Demo Director</span>
+                <span class="sbt-ey">Optimizely · Coach</span>
             </div>
             <button class="sb-collapse" onclick="store.toggleSidebar(false)" title="Collapse">&rsaquo;</button>
         </div>
 
         <!-- Director controls + narration -->
-        <div class="sb-director">
+        <div class="sb-director" id="sb-director">
             <div class="sb-intro">
                 <div class="sbi-cap">Real-time personalization for Coach — a guided walkthrough.</div>
                 <div class="sbi-sub">Press Start. Each beat drives the store automatically — you just click <b>Next</b>. The store stays fully visible beside this panel.</div>
                 <button class="sb-start" onclick="store.startDemo()">&#9658; Start Guided Demo</button>
             </div>
             <div class="sb-running">
-                <div class="sb-progress-row">
-                    <span class="sb-step-label" id="dir-step-label">Step 1</span>
-                </div>
-                <div class="sb-progress-row"><div class="sb-bar"><i id="dir-bar-fill"></i></div></div>
-                <div class="sb-watch" id="dir-watch">Watch: <b>—</b></div>
-                <div class="sb-caption" id="dir-caption">—</div>
-                <div class="sb-callout">
-                    <span class="co-usecase" id="co-usecase">Use case</span>
-                    <div class="co-title" id="co-title">Title</div>
-                    <div class="co-reason" id="co-reason">
-                        <div class="co-row"><span class="co-k">Signal</span><span class="co-v" id="co-signal">—</span></div>
-                        <div class="co-row"><span class="co-k">Decision</span><span class="co-v" id="co-decision">—</span></div>
-                        <div class="co-row"><span class="co-k">Why</span><span class="co-v" id="co-impact">—</span></div>
-                    </div>
-                    <div class="co-body" id="co-body" style="display:none">Body</div>
-                </div>
+                <!-- Controls FIRST — right under the title, always visible, compact, auto-play inline -->
                 <div class="sb-controls">
                     <button class="sb-icon-btn" id="dir-back" onclick="store.prevStep()" title="Back">&#9664;</button>
                     <button class="sb-btn primary" id="dir-next" onclick="store.nextStep()">Next &#9658;</button>
+                    <div class="sb-autoplay" title="Auto-play"><span class="sb-ap-label">Auto</span><div class="switch" id="autoplay-switch" onclick="store.toggleAutoplay()"><div class="knob"></div></div></div>
                     <button class="sb-icon-btn" onclick="store.restartDemo()" title="Restart">&#8635;</button>
                     <button class="sb-icon-btn" id="dir-clear-demo" onclick="store.resetDemoData()" title="Clear demo-captured events (keeps the historical dataset)">&#128465;&#65038;</button>
                 </div>
-                <div class="sb-autoplay">Auto-play
-                    <div class="switch" id="autoplay-switch" onclick="store.toggleAutoplay()"><div class="knob"></div></div>
+                <!-- Step: progress + narration always visible; the SIGNAL/DECISION/WHY callout is collapsible -->
+                <div class="sb-step" id="sb-step">
+                    <div class="sb-progress-row">
+                        <span class="sb-step-label" id="dir-step-label">Step 1</span>
+                        <button class="sb-co-toggle" id="dir-co-toggle" onclick="store.toggleCallout()" title="Show / hide the reasoning" aria-label="Toggle reasoning">&#9662;</button>
+                    </div>
+                    <div class="sb-progress-row"><div class="sb-bar"><i id="dir-bar-fill"></i></div></div>
+                    <div class="sb-watch" id="dir-watch">Watch: <b>—</b></div>
+                    <div class="sb-caption" id="dir-caption">—</div>
+                    <div class="sb-callout" id="dir-callout">
+                        <span class="co-usecase" id="co-usecase">Use case</span>
+                        <div class="co-title" id="co-title">Title</div>
+                        <div class="co-reason" id="co-reason">
+                            <div class="co-row"><span class="co-k">Signal</span><span class="co-v" id="co-signal">—</span></div>
+                            <div class="co-row"><span class="co-k">Decision</span><span class="co-v" id="co-decision">—</span></div>
+                            <div class="co-row"><span class="co-k">Why</span><span class="co-v" id="co-impact">—</span></div>
+                        </div>
+                        <div class="co-body" id="co-body" style="display:none">Body</div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Drag to give the tabs / Opal chat more or less room -->
+        <div class="sb-resize" id="sb-resize" title="Drag to resize"><span class="sb-resize-grip"></span></div>
 
         <!-- Tabs -->
         <div class="sb-tabbar">
             <button class="sb-tab active" data-tab="opal" onclick="store.setTab('opal')">Opal</button>
             <button class="sb-tab" data-tab="capabilities" onclick="store.setTab('capabilities')">Capabilities <span class="tab-badge" id="req-count-tab">0/15</span></button>
             <button class="sb-tab" data-tab="engine" onclick="store.setTab('engine')">Engine</button>
+            <button class="sb-tab" data-tab="radar" onclick="store.setTab('radar');store.renderRadar()">Radar</button>
+            <button class="sb-cmdk-btn" id="sb-cmdk-btn" onclick="store.openCmdk()" title="Force experience (⌘K / Ctrl-K)" aria-label="Force experience">
+                <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="6.8" cy="6.8" r="4.3"/><path d="M13.5 13.5L10 10"/></svg>
+            </button>
+            <button class="sb-maximize" id="sb-maximize" onclick="store.toggleMaximize()" title="Maximize Opal — more chat room" aria-label="Maximize Opal">
+                <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2.5H13.5V6.5M13.5 2.5L8.5 7.5M6.5 13.5H2.5V9.5M2.5 13.5L7.5 8.5"/></svg>
+            </button>
         </div>
 
         <div class="sb-panels">
-            <!-- ── OPAL tab (clean mount point for the real chat that lands later) ── -->
+            <!-- ── OPAL tab — a SINGLE real chat (Gemini · Cloudflare Agents SDK), bundle: public/opal-chat.js.
+                 The old scripted "audience builder" prop was removed; beat 10 now drives this chat. ── -->
             <section class="sb-panel active" id="tab-opal">
                 <div id="opal-tab">
-                    <div class="opal-head">
-                        <div class="opal-logo">O</div>
-                        <div>
-                            <div class="oh-title">Opal · Audience Builder</div>
-                            <div class="oh-sub">Describe an audience in plain language</div>
-                        </div>
-                    </div>
-                    <div class="opal-body">
-                        <div class="opal-prompt-label">Your request</div>
-                        <div class="opal-prompt" id="opal-prompt"><span class="caret"></span></div>
-
-                        <div class="opal-thinking" id="opal-thinking">
-                            <span class="opal-dots"><span></span><span></span><span></span></span>
-                            Opal is building the audience from live behavioral data…
-                        </div>
-
-                        <div class="opal-result" id="opal-result">
-                            <div class="opal-card">
-                                <div class="oc-found">Opal found a matching audience</div>
-                                <div class="oc-name" id="opal-aud-name">—</div>
-                                <div class="oc-desc" id="opal-aud-desc">—</div>
-                                <div class="opal-stats">
-                                    <div class="opal-stat"><div class="os-val" id="opal-stat-size">—</div><div class="os-label">Shoppers right now</div></div>
-                                    <div class="opal-stat"><div class="os-val" id="opal-stat-aov">—</div><div class="os-label">Avg order value</div></div>
-                                    <div class="opal-stat"><div class="os-val" id="opal-stat-pct">—</div><div class="os-label">Of all traffic</div></div>
-                                </div>
-                                <div class="opal-action" id="opal-action"></div>
-                                <div class="opal-buttons">
-                                    <button class="opal-publish" id="opal-publish" onclick="store.publishOpalAudience()">Publish audience</button>
-                                    <span class="opal-detail-toggle" onclick="store.toggleOpalConditions()">View targeting logic</span>
-                                </div>
-                                <div class="opal-conditions" id="opal-conditions"></div>
-                                <div class="opal-published" id="opal-published"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Real Opal chat (Gemini · Cloudflare Agents SDK) — bundle: public/opal-chat.js -->
                     <div id="opal-chat-root" class="opal-chat-mount"></div>
                 </div>
             </section>
@@ -1321,7 +1543,7 @@
                 <div class="eng-block" id="eng-block-profile">
                     <div class="eng-row"><span class="eng-key">Decision latency</span><span class="latency-badge" id="latency-badge">decision <span id="latency-ms">—</span>ms</span></div>
                     <div class="eng-row"><span class="eng-key">Journey stage</span><span class="eng-val" id="eng-stage">early</span></div>
-                    <div class="eng-row"><span class="eng-key">Connector</span><span class="eng-val">mock</span></div>
+                    <div class="eng-row"><span class="eng-key">Edge runtime</span><span class="eng-val">Cloudflare Workers</span></div>
                     <div class="eng-row"><span class="eng-key">WebSocket</span><span class="eng-val" id="eng-ws">connecting…</span></div>
                     <div class="eng-row"><span class="eng-key">Anon id</span><span class="eng-val" id="eng-anon">—</span></div>
                     <div class="eng-anon-chip" id="eng-anon-chip"></div>
@@ -1370,6 +1592,7 @@
                     <div class="ab-demo-note">Representative · contextual bandit (CMAB)</div>
                 </div>
             </section>
+            <section class="sb-panel" id="tab-radar"></section>
         </div>
     </aside>
 
@@ -1377,5 +1600,9 @@
     <script>document.write('<scr' + 'ipt src="storefront.js?t=' + Date.now() + '"></scr' + 'ipt>');</script>
     <!-- Opal chat island (React + Agents SDK), cache-busted -->
     <script>document.write('<scr' + 'ipt src="opal-chat.js?t=' + Date.now() + '"></scr' + 'ipt>');</script>
+    <!-- ===== REVENUE RADAR (owner: revenue-radar) — funnel viz + checkout + BNPL ===== -->
+    <script>document.write('<scr' + 'ipt src="revenue-radar.js?t=' + Date.now() + '"></scr' + 'ipt>');</script>
+    <!-- ===== A/B + CMAB (owner: ab-cmab) — Engine readouts + launchExperiment seam ===== -->
+    <script>document.write('<scr' + 'ipt src="ab-cmab.js?t=' + Date.now() + '"></scr' + 'ipt>');</script>
 </body>
 </html>

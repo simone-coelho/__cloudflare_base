@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Env } from '@/types/env';
 import { OptimizelyService } from '@/services/OptimizelyService';
+import { listBannerRules } from '@/services/optimizelyFx';
 import { jwt } from '@/middleware/auth';
 
 const optimizely = new Hono<{ Bindings: Env }>();
@@ -115,6 +116,21 @@ optimizely.post('/preview', async (c) => {
   } catch (error) {
     console.error('Optimizely preview error:', error);
     return c.json({ error: 'Failed to preview decision' }, 500);
+  }
+});
+
+// List the live personalized_banner rules (audiences/experiences we created) so the command palette
+// can let you force the session into any of them. Read-only; returns [] if FX isn't configured.
+optimizely.get('/banner-rules', async (c) => {
+  try {
+    const token = c.env.OPTIMIZELY_API_TOKEN;
+    const projectId = c.env.OPTIMIZELY_PROJECT_ID;
+    if (!token || !projectId) return c.json({ ok: true, rules: [], note: 'FX token/project not configured' });
+    const out = await listBannerRules({ token, projectId, environment: c.env.OPTIMIZELY_ENVIRONMENT || 'development', sdkKey: c.env.OPTIMIZELY_SDK_KEY });
+    return c.json({ ok: true, ...out });
+  } catch (e) {
+    console.error('banner-rules error:', e);
+    return c.json({ ok: false, rules: [], error: e instanceof Error ? e.message : String(e) });
   }
 });
 

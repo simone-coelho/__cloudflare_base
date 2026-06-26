@@ -52,6 +52,7 @@
     "@ai-sdk/google": "^3.0.84",
     "@ai-sdk/react": "^3.0.213",
     "@cloudflare/ai-chat": "^0.8.6",
+    "@cloudflare/puppeteer": "^1.1.0",
     "@optimizely/optimizely-sdk": "^5.3.4",
     "agents": "^0.16.2",
     "ai": "^6.0.211",

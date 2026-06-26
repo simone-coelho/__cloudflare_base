@@ -28,6 +28,7 @@ class CoachStorefront {
         this.products = [];
         this.byId = new Map();
         this.byLine = new Map();
+        this._reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
         // Bulletproof image fallback — a self-contained, on-brand placeholder (data URI: no network,
         // can NEVER 404) shown whenever a product image is absent or fails to load. Guarantees no
@@ -101,6 +102,14 @@ class CoachStorefront {
         this.connectWebSocket();
         this.buildSteps();
         this.buildChecklist();
+        this.previewStep(0);   // step-progress visible on load — never gated behind clicking Next
+        this.initSidebarResize();
+        this.initPzDrag();
+        this.applyGeoColdStart();   // edge-geo cold-start: adapt the first paint to where they are
+        this.initCompareDrag();
+        window.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); this.openCmdk(); }
+        });
     }
 
     /* ── Catalog ─────────────────────────────────────────────────────────── */
@@ -262,6 +271,13 @@ class CoachStorefront {
         const msgEl = document.getElementById('pz-banner-msg');
         const tagEl = document.getElementById('pz-banner-tag');
         const attrs = (detail && detail.previewAttributes) || {};
+        // Remember every audience we create this session so the ⌘K palette can force any of them.
+        if (detail && detail.audienceName) {
+            this.bannerExperiences = this.bannerExperiences || [];
+            const k = detail.audienceName.toLowerCase();
+            if (!this.bannerExperiences.some((x) => (x.audienceName || '').toLowerCase() === k))
+                this.bannerExperiences.push({ audienceName: detail.audienceName, attributes: attrs, message: detail.message || '' });
+        }
         if (el && msgEl) {
             msgEl.textContent = 'Publishing your personalized message to the edge…';
             if (tagEl) tagEl.textContent = 'Opal · publishing';
@@ -352,8 +368,14 @@ class CoachStorefront {
             this.renderMarkers();   // re-assert hero marker after content swap
         };
         if (el.dataset.title === content.title) return;
+        const first = !el.innerHTML.trim();
         el.dataset.title = content.title;
-        if (!el.innerHTML.trim()) { fill(); return; }
+        if (first) { fill(); return; }
+        // Morph the reshape via the View Transitions API (Keynote "Magic Move"); the
+        // view-transition-name on .hero-content scopes it to the hero. Falls back to the cross-fade.
+        if (document.startViewTransition && !this._reduceMotion) {
+            try { document.startViewTransition(() => fill()); return; } catch (e) { /* fall through to fade */ }
+        }
         el.classList.add('fading');
         setTimeout(() => { fill(); el.classList.remove('fading'); }, 320);
     }
@@ -802,6 +824,342 @@ class CoachStorefront {
         document.querySelectorAll('.sb-panel').forEach((p) => p.classList.toggle('active', p.id === 'tab-' + name));
         if (!document.body.classList.contains('sb-open')) this.toggleSidebar(true);
     }
+    /* Collapse / expand the SIGNAL·DECISION·WHY callout (step label + progress + caption stay). */
+    toggleCallout() { const s = document.getElementById('sb-step'); if (s) s.classList.toggle('co-collapsed'); }
+    /* Maximize the Opal panel (hide the step block → chat gets ~75% of the height). */
+    toggleMaximize() {
+        const sb = document.getElementById('sidebar'); if (!sb) return;
+        const on = sb.classList.toggle('maximized');
+        if (on) { sb.style.removeProperty('--director-max'); this.setTab('opal'); }   // focus the chat
+        const btn = document.getElementById('sb-maximize');
+        if (btn) btn.title = on ? 'Restore panel' : 'Maximize Opal — more chat room';
+    }
+    /* Drag the handle to resize the director vs the tab panels; the director then scrolls. */
+    initSidebarResize() {
+        const handle = document.getElementById('sb-resize');
+        const sb = document.getElementById('sidebar');
+        const dir = document.getElementById('sb-director');
+        if (!handle || !sb || !dir) return;
+        let dragging = false;
+        const onMove = (e) => {
+            if (!dragging) return;
+            const top = dir.getBoundingClientRect().top;
+            const h = Math.max(70, Math.min(window.innerHeight * 0.7, e.clientY - top));
+            sb.style.setProperty('--director-max', h + 'px');
+        };
+        handle.addEventListener('pointerdown', (e) => { if (sb.classList.contains('maximized')) return; dragging = true; sb.classList.add('sb-resizing'); e.preventDefault(); });
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', () => { if (!dragging) return; dragging = false; sb.classList.remove('sb-resizing'); });
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+     * COMMAND PALETTE (⌘K) — force experiences. Built on a modes registry so new
+     * "force behaviors" (flag variation, persona, device/context…) plug in as tabs.
+     * ════════════════════════════════════════════════════════════════════════ */
+    cmdkModes() {
+        return [{
+            id: 'audience',
+            label: 'Preview as audience',
+            placeholder: 'Force the session into an audience’s banner experience…',
+            load: async () => {
+                const items = [{ id: '__default', label: 'Default — clear forced audience', sub: 'Show the shopper’s natural banner', tag: 'reset', _clear: true }];
+                const seen = new Set();
+                const add = (name, attrs, msg) => {
+                    const k = (name || '').toLowerCase().trim(); if (!name || seen.has(k)) return; seen.add(k);
+                    items.push({ id: k, label: name, sub: msg || '(no message)', tag: 'audience', attributes: attrs || {}, message: msg || '' });
+                };
+                (this.bannerExperiences || []).forEach((e) => add(e.audienceName, e.attributes, e.message));
+                try { const r = await fetch('/optimizely/banner-rules'); const j = await r.json(); (j.rules || []).forEach((rule) => add(rule.audienceName, rule.attributes, rule.message)); } catch (e) { /* offline → session list only */ }
+                return items;
+            },
+            onSelect: (it) => {
+                if (it._clear) { this.clearForcedAudience(); return; }
+                this.setTab('opal');
+                this.previewAudience({ previewAttributes: it.attributes, message: it.message, audienceName: it.label });
+            },
+        }, {
+            id: 'location',
+            label: 'Preview as location',
+            placeholder: 'Force the shopper’s location (geo cold-start)…',
+            load: async () => ([
+                { id: 'auto', label: 'Auto — your real location', sub: 'Use the live edge geo for this request', _auto: true },
+                { id: 'miami', label: 'Miami, FL · United States', sub: 'Summer · coral & natural straw', geo: { city: 'Miami', region: 'Florida', regionCode: 'FL', country: 'US', timezone: 'America/New_York', hemisphere: 'N', colo: 'MIA', season: 'summer' } },
+                { id: 'sydney', label: 'Sydney · Australia', sub: 'Winter (same date!) · burgundy & leather', geo: { city: 'Sydney', region: 'New South Wales', regionCode: 'NSW', country: 'AU', timezone: 'Australia/Sydney', hemisphere: 'S', colo: 'SYD', season: 'winter' } },
+                { id: 'chicago', label: 'Chicago, IL · United States', sub: 'Winter · structured leather', geo: { city: 'Chicago', region: 'Illinois', regionCode: 'IL', country: 'US', timezone: 'America/Chicago', hemisphere: 'N', colo: 'ORD', season: 'winter' } },
+                { id: 'singapore', label: 'Singapore', sub: 'Tropical · brights & straw', geo: { city: 'Singapore', region: 'Singapore', country: 'SG', timezone: 'Asia/Singapore', hemisphere: 'N', colo: 'SIN', season: 'summer' } },
+            ]),
+            onSelect: (it) => { if (it._auto) this.applyGeoColdStart(); else this.forceGeo(it.geo); },
+        }];
+        // ↑ add more force-behavior modes here (each: { id, label, placeholder, load(), onSelect(item) })
+    }
+    openCmdk() {
+        this._cmdkModes = this.cmdkModes(); this._cmdkMode = 0;
+        document.getElementById('cmdk-overlay').classList.add('open');
+        document.getElementById('cmdk').classList.add('open');
+        this._cmdkRenderTabs();
+        const input = document.getElementById('cmdk-input'); if (input) input.value = '';
+        this.cmdkLoad();
+        setTimeout(() => { const i = document.getElementById('cmdk-input'); if (i) i.focus(); }, 40);
+    }
+    closeCmdk() {
+        document.getElementById('cmdk-overlay').classList.remove('open');
+        document.getElementById('cmdk').classList.remove('open');
+    }
+    _cmdkRenderTabs() {
+        const wrap = document.getElementById('cmdk-tabs');
+        if (wrap) wrap.innerHTML = this._cmdkModes.map((m, i) => `<button class="cmdk-tab ${i === this._cmdkMode ? 'active' : ''}" onclick="store.cmdkSetMode(${i})">${this.escapeHtml(m.label)}</button>`).join('');
+        const input = document.getElementById('cmdk-input'); if (input) input.placeholder = this._cmdkModes[this._cmdkMode].placeholder || 'Search…';
+    }
+    cmdkSetMode(i) { this._cmdkMode = i; this._cmdkRenderTabs(); const inp = document.getElementById('cmdk-input'); if (inp) inp.value = ''; this.cmdkLoad(); }
+    async cmdkLoad() {
+        const list = document.getElementById('cmdk-list'); if (list) list.innerHTML = '<div class="cmdk-empty"><span class="cmdk-spin"></span> Loading audiences…</div>';
+        try { this._cmdkItems = await this._cmdkModes[this._cmdkMode].load(); } catch (e) { this._cmdkItems = []; }
+        this.cmdkFilter('');
+    }
+    cmdkFilter(q) {
+        const query = (q || '').toLowerCase().trim();
+        this._cmdkView = (this._cmdkItems || []).filter((it) => !query || (it.label + ' ' + (it.sub || '')).toLowerCase().includes(query));
+        this._cmdkSel = 0; this._cmdkRenderList();
+    }
+    _cmdkRenderList() {
+        const list = document.getElementById('cmdk-list'); if (!list) return;
+        const items = this._cmdkView || [];
+        if (!items.length) { list.innerHTML = '<div class="cmdk-empty">No audiences yet — create one in the Opal chat (e.g. “create an audience for Tabby viewers and set their banner to …”), then it appears here.</div>'; return; }
+        list.innerHTML = items.map((it, i) => `<div class="cmdk-item ${i === this._cmdkSel ? 'sel' : ''}" onclick="store.cmdkSelect(${i})" onmousemove="store.cmdkHover(${i})"><div class="ci-label">${this.escapeHtml(it.label)}${it.tag ? `<span class="ci-tag">${this.escapeHtml(it.tag)}</span>` : ''}</div><div class="ci-sub">${this.escapeHtml(it.sub || '')}</div></div>`).join('');
+    }
+    cmdkHover(i) { if (this._cmdkSel !== i) { this._cmdkSel = i; this._cmdkRenderList(); } }
+    cmdkKey(e) {
+        const n = (this._cmdkView || []).length;
+        if (e.key === 'Escape') { this.closeCmdk(); }
+        else if (e.key === 'ArrowDown') { e.preventDefault(); this._cmdkSel = Math.min(n - 1, (this._cmdkSel || 0) + 1); this._cmdkRenderList(); this._cmdkScrollSel(); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); this._cmdkSel = Math.max(0, (this._cmdkSel || 0) - 1); this._cmdkRenderList(); this._cmdkScrollSel(); }
+        else if (e.key === 'Enter') { e.preventDefault(); this.cmdkSelect(this._cmdkSel || 0); }
+    }
+    _cmdkScrollSel() { const el = document.querySelector('.cmdk-item.sel'); if (el) el.scrollIntoView({ block: 'nearest' }); }
+    cmdkSelect(i) {
+        const it = (this._cmdkView || [])[i]; if (!it) return;
+        this.closeCmdk();
+        try { this._cmdkModes[this._cmdkMode].onSelect(it); } catch (e) { console.error('cmdk select', e); }
+    }
+    clearForcedAudience() { this.decisions['personalized_banner'] = { enabled: false, variables: {} }; this.renderBanner(); }
+
+    /* ════════════════════════════════════════════════════════════════════════
+     * PERSONALIZATION ACTIVITY PANEL — a movable, minimize-not-close provenance log.
+     * Every change posts a card: signal → segment → decision, the evidence used, and
+     * the literal Before → Now. This is the "how did I get here, and what was before?"
+     * surface (replaces the old toast).
+     * ════════════════════════════════════════════════════════════════════════ */
+    showPzPanel() { if (this._pzMin) return; const p = document.getElementById('pz-panel'); if (p) p.classList.add('show'); }
+    minimizePzPanel() {
+        this._pzMin = true;
+        const p = document.getElementById('pz-panel'); if (p) p.classList.remove('show');
+        const pill = document.getElementById('pz-pill'); if (pill) pill.classList.add('show');
+    }
+    restorePzPanel() {
+        this._pzMin = false;
+        const p = document.getElementById('pz-panel'); if (p) p.classList.add('show');
+        const pill = document.getElementById('pz-pill'); if (pill) pill.classList.remove('show');
+    }
+    activitySegment() {
+        if (this.segments && this.segments.length) return this.segments[0];
+        if (this.dominantLine) return `${this.dominantLine} affinity`;
+        return null;
+    }
+    activityEvidence() {
+        const ev = [];
+        if (this.productViews) ev.push(`viewed ${this.productViews} product${this.productViews === 1 ? '' : 's'}`);
+        if (this.dominantLine) { const n = this.viewedLineCounts && this.viewedLineCounts[this.dominantLine]; ev.push(n ? `${this.dominantLine} ×${n}` : `${this.dominantLine} affinity`); }
+        if (this.segments && this.segments.length) this.segments.slice(0, 2).forEach((s) => ev.push(s));
+        if (this.eventCount) ev.push(`${this.eventCount} events`);
+        return [...new Set(ev)].slice(0, 4);
+    }
+    /* card.headline/signal/decision are trusted callout strings (carry <strong>/<code>) → inserted raw;
+       usecase/segment/evidence/before/after are plain → escaped. */
+    logActivity(card) {
+        const feed = document.getElementById('pzp-feed'); if (!feed) return;
+        const empty = feed.querySelector('.pzp-empty'); if (empty) empty.remove();
+        this._pzCount = (this._pzCount || 0) + 1;
+        const chips = (card.evidence || []).map((t) => `<span class="pzc-chip">${this.escapeHtml(t)}</span>`).join('');
+        const seg = card.segment ? `<span class="pzc-arrow">&#8594;</span><div class="pzc-node"><span class="pzc-node-k">Segment</span><span class="pzc-node-v">${this.escapeHtml(card.segment)}</span></div>` : '';
+        const el = document.createElement('div');
+        el.className = 'pz-card';
+        el.innerHTML =
+            `<div class="pzc-eyebrow">${this.escapeHtml(card.usecase || 'Personalization')}<span class="pzc-match">live</span></div>` +
+            (card.headline ? `<div class="pzc-headline">${card.headline}</div>` : '') +
+            `<div class="pzc-chain"><div class="pzc-node"><span class="pzc-node-k">Signal</span><span class="pzc-node-v">${card.signal || '—'}</span></div>${seg}<span class="pzc-arrow">&#8594;</span><div class="pzc-node"><span class="pzc-node-k">Decision</span><span class="pzc-node-v">${card.decision || '—'}</span></div></div>` +
+            (chips ? `<div class="pzc-evidence">${chips}</div>` : '') +
+            ((card.before || card.after) ? `<div class="pzc-ba"><span class="pzc-ba-k">Before</span> <span class="pzc-ba-v">${this.escapeHtml(card.before || '—')}</span> &nbsp; <span class="pzc-ba-k now">Now</span> <span class="pzc-ba-v">${this.escapeHtml(card.after || '—')}</span></div>` : '') +
+            ((card.beforeImg && card.afterImg) ? `<button class="pzc-compare" onclick="store.openCompare('${card.beforeImg}','${card.afterImg}','${(card.usecase || 'Before → Now').replace(/'/g, '')}')">&#11020; Compare before / now</button>` : '') +
+            `<div class="pzc-foot">&#9889; decided live at the edge</div>`;
+        feed.insertBefore(el, feed.firstChild);   // newest on top
+        const cnt = document.getElementById('pz-pill-count'); if (cnt) cnt.textContent = this._pzCount;
+        if (this._pzMin) { const pill = document.getElementById('pz-pill'); if (pill) { pill.classList.add('flash'); setTimeout(() => pill.classList.remove('flash'), 500); } }
+        else this.showPzPanel();
+    }
+    initPzDrag() {
+        const head = document.getElementById('pzp-head'); const panel = document.getElementById('pz-panel');
+        if (!head || !panel) return;
+        let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+        head.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.pzp-min')) return;
+            dragging = true;
+            const r = panel.getBoundingClientRect();
+            panel.style.left = r.left + 'px'; panel.style.top = r.top + 'px'; panel.style.right = 'auto'; panel.style.bottom = 'auto';
+            sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top; e.preventDefault();
+        });
+        window.addEventListener('pointermove', (e) => {
+            if (!dragging) return;
+            panel.style.left = Math.max(6, Math.min(window.innerWidth - 130, ox + (e.clientX - sx))) + 'px';
+            panel.style.top = Math.max(6, Math.min(window.innerHeight - 60, oy + (e.clientY - sy))) + 'px';
+        });
+        window.addEventListener('pointerup', () => { dragging = false; });
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+     * COLD-START — edge-geo personalization. With zero history we adapt the first
+     * paint to WHERE the visitor is and the LOCAL season (Cloudflare request.cf via
+     * /geo). The command palette can force a location (Miami ↔ Sydney) for the
+     * hemisphere-flip showstopper. Color is anchored on SEASON (robust), not climate.
+     * ════════════════════════════════════════════════════════════════════════ */
+    _seasonPalette(season) {
+        return ({ summer: 'coral & natural straw', winter: 'burgundy & chocolate leather', spring: 'soft pastels & chalk', autumn: 'camel & olive' })[season] || 'signature neutrals';
+    }
+    async applyGeoColdStart(forced) {
+        let geo = forced;
+        if (!geo) { try { const r = await fetch('/geo'); geo = await r.json(); } catch (e) { geo = null; } }
+        if (!geo) return;
+        this.geo = geo;
+        const place = geo.city || geo.region || geo.country || 'your area';
+        const season = geo.season || 'this season';
+        const palette = this._seasonPalette(season);
+        // Visible cold-start cue — geo-aware welcome ribbon (replaces the generic "you're new").
+        const wr = document.querySelector('#welcome-ribbon .wr-text');
+        if (wr) wr.innerHTML = `<b>Welcome${geo.city ? ' from ' + this.escapeHtml(geo.city) : ''}.</b> It's ${this.escapeHtml(season)} where you are — we've opened on the ${this.escapeHtml(palette)} edit. No account, no cookie needed.`;
+        this.showWelcome();
+        // Swap the hero by SEASON (reliable; hemisphere+month) so the cold-start is visible in-store and
+        // MORPHS (View Transitions) when the location is switched. City stays in the ribbon/card (lower-stakes).
+        if (!this.personalized) {
+            const cap = season.charAt(0).toUpperCase() + season.slice(1);
+            this.renderHero({ eyebrow: `Your ${season} edit`, title: `The ${cap} Edit`, sub: `No history yet — so we're leading with ${palette}, right for the season where you are.`, cta: 'Shop the edit', art: (this.heroFallback() || {}).art });
+        }
+        // Provenance — the cold-start decision, as beat-0 of the Activity panel.
+        this.logActivity({
+            usecase: 'Cold-start · location',
+            headline: `Opened on the ${this.escapeHtml(place)} ${this.escapeHtml(season)} edit`,
+            signal: `First touch — <strong>${this.escapeHtml(place)}</strong>${geo.regionCode ? ', ' + this.escapeHtml(geo.regionCode) : ''} · local season <strong>${this.escapeHtml(season)}</strong>${geo.colo ? ' · served from edge <strong>' + this.escapeHtml(geo.colo) + '</strong>' : ''}.`,
+            segment: `geo · ${this.escapeHtml(geo.country || '—')} · ${this.escapeHtml(season)}`,
+            decision: `No history yet → lead with the <strong>${this.escapeHtml(palette)}</strong> ${this.escapeHtml(season)} edit.`,
+            evidence: [place, season, geo.timezone].filter(Boolean),
+            before: 'Generic “New Arrivals”',
+            after: `${place} · ${season} edit`,
+        });
+    }
+    forceGeo(geo) { this.applyGeoColdStart(geo); }
+
+    /* ── Cold-start Act 2: the 30-second style quiz (zero-party → instant re-personalization) ── */
+    openQuiz() {
+        if (!this._quizDef) this._quizDef = [
+            { key: 'occasion', q: "What's it mostly for?", opts: ['Everyday', 'Work', 'Evening', 'Travel'] },
+            { key: 'silhouette', q: 'Your shape', opts: ['Tote', 'Shoulder', 'Crossbody', 'Top-handle'] },
+            { key: 'color', q: 'Your palette', opts: ['Neutrals', 'Bold', 'Pastel', 'Black'] },
+            { key: 'size', q: 'Your size', opts: ['Compact', 'Medium', 'Roomy'] },
+        ];
+        this._quiz = {};
+        const body = document.getElementById('quiz-body');
+        if (body) body.innerHTML = this._quizDef.map((g) =>
+            `<div class="quiz-q"><div class="quiz-q-label">${g.q}</div><div class="quiz-opts">` +
+            g.opts.map((o) => `<button class="quiz-opt" data-k="${g.key}" onclick="store.quizPick('${g.key}','${o.toLowerCase()}',this)">${o}</button>`).join('') +
+            `</div></div>`).join('');
+        document.getElementById('quiz-overlay').classList.add('open');
+        document.getElementById('style-quiz').classList.add('open');
+    }
+    quizPick(key, val, el) {
+        this._quiz = this._quiz || {}; this._quiz[key] = val;
+        document.querySelectorAll(`.quiz-opt[data-k="${key}"]`).forEach((o) => o.classList.toggle('sel', o === el));
+    }
+    closeQuiz() {
+        document.getElementById('quiz-overlay').classList.remove('open');
+        document.getElementById('style-quiz').classList.remove('open');
+    }
+    quizApply() {
+        const p = this._quiz || {};
+        if (!Object.keys(p).length) { this.closeQuiz(); return; }
+        const colorMap = { neutrals: ['chalk', 'tan', 'beige', 'natural', 'cream', 'taupe', 'khaki', 'ivory'], bold: ['red', 'berry', 'pink', 'blue', 'green', 'orange', 'electric', 'cherry'], pastel: ['pink', 'blue', 'lilac', 'mint', 'powder', 'pastel', 'bluebell'], black: ['black', 'graphite'] };
+        const wantColors = colorMap[p.color] || [];
+        const score = (b) => {
+            let s = 0;
+            if (p.occasion && (b.occasion || []).includes(p.occasion)) s += 2;
+            if (p.silhouette && (b.silhouette || '').toLowerCase().includes(p.silhouette)) s += 2;
+            if (wantColors.length) { const c = (b.colors || []).join(' ').toLowerCase(); if (wantColors.some((w) => c.includes(w))) s += 1.5; }
+            return s;
+        };
+        const ranked = this.bagsCatalog().map((b) => ({ b, s: score(b) })).sort((a, b) => b.s - a.s);
+        let picks = ranked.filter((x) => x.s > 0).map((x) => x.b);
+        if (picks.length < 4) picks = ranked.map((x) => x.b);
+        this.recommendations = picks.slice(0, 8);
+        this.personalized = true;
+        const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+        const sel = this._quizDef.map((g) => p[g.key]).filter(Boolean).map(cap);
+        this.closeQuiz();
+        this.go('home', { silent: true });
+        this.renderHero({ eyebrow: 'Your edit', title: 'Your Edit', sub: `Built from your picks — ${sel.join(' · ')}.`, cta: 'Shop your edit', art: (this.heroFallback() || {}).art });
+        this.renderCurated();
+        this.logActivity({
+            usecase: 'Style quiz · zero-party',
+            headline: 'Re-personalized from what she told us',
+            signal: `She answered the 30-second quiz: <strong>${this.escapeHtml(sel.join(' · '))}</strong>.`,
+            segment: 'declared preferences',
+            decision: 'Re-rank the edit to her <strong>declared taste</strong> — consented, zero-party data.',
+            evidence: sel,
+            before: 'Season / geo edit',
+            after: 'Your Edit (declared prefs)',
+        });
+    }
+
+    /* ── Before / Now split-slider (drag the seam) — opened from a provenance card's [Compare] ── */
+    openCompare(beforeUrl, afterUrl, title) {
+        const stage = document.getElementById('cmp-stage'), after = document.getElementById('cmp-after'), before = document.getElementById('cmp-before');
+        if (!stage || !after || !before) return;
+        after.style.backgroundImage = `url("${afterUrl}")`;
+        before.style.backgroundImage = `url("${beforeUrl}")`;
+        const t = document.getElementById('cmp-title'); if (t) t.textContent = title || 'Before → Now';
+        stage.style.setProperty('--cmp-seam', '50%');
+        this._cmpZoom = 0; stage.style.setProperty('--cmp-bgsize', 'contain');
+        const zl = document.getElementById('cmp-zlabel'); if (zl) zl.textContent = 'Fit';
+        // Size the stage to the image's aspect within the viewport so the WHOLE page shows (contain, crisp,
+        // never cover-zoomed) AND the modal hugs it — works for portrait full-page shots and landscape alike.
+        const probe = new Image();
+        probe.onload = () => {
+            if (!probe.naturalWidth) return;
+            const aspect = probe.naturalWidth / probe.naturalHeight;
+            const maxH = window.innerHeight * 0.80, maxW = window.innerWidth * 0.92;
+            let h = maxH, w = h * aspect;
+            if (w > maxW) { w = maxW; h = w / aspect; }
+            stage.style.width = Math.round(w) + 'px';
+            stage.style.height = Math.round(h) + 'px';
+        };
+        probe.src = afterUrl;
+        document.getElementById('cmp-overlay').classList.add('open');
+        document.getElementById('cmp').classList.add('open');
+    }
+    zoomCompare(dir) {
+        const levels = ['contain', '150%', '220%', '320%'], labels = ['Fit', '1.5×', '2.2×', '3.2×'];
+        this._cmpZoom = Math.max(0, Math.min(levels.length - 1, (this._cmpZoom || 0) + dir));
+        const stage = document.getElementById('cmp-stage'); if (stage) stage.style.setProperty('--cmp-bgsize', levels[this._cmpZoom]);
+        const zl = document.getElementById('cmp-zlabel'); if (zl) zl.textContent = labels[this._cmpZoom];
+    }
+    closeCompare() {
+        document.getElementById('cmp-overlay').classList.remove('open');
+        document.getElementById('cmp').classList.remove('open');
+    }
+    initCompareDrag() {
+        const stage = document.getElementById('cmp-stage'); if (!stage) return;
+        let dragging = false;
+        const setSeam = (x) => { const r = stage.getBoundingClientRect(); const pct = Math.max(2, Math.min(98, ((x - r.left) / r.width) * 100)); stage.style.setProperty('--cmp-seam', pct + '%'); };
+        stage.addEventListener('pointerdown', (e) => { dragging = true; setSeam(e.clientX); e.preventDefault(); });
+        window.addEventListener('pointermove', (e) => { if (dragging) setSeam(e.clientX); });
+        window.addEventListener('pointerup', () => { dragging = false; });
+    }
 
     /* ════════════════════════════════════════════════════════════════════════
      * PERSISTENT, SCROLL-SAFE MARKERS  (replaces the full-page dim spotlight)
@@ -1043,23 +1401,9 @@ class CoachStorefront {
      * the callout body AFTER the beat's run()), so it survives the body swap.
      * ════════════════════════════════════════════════════════════════════════ */
     annotateChange(zoneSel, before, after) {
+        // Records this beat's Before→Now. The Personalization Activity panel renders it as a rich
+        // provenance card (this replaces the old floating toast — see logActivity / applyStepCallout).
         this._ba = { before, after };
-        this.ensureOverlays();
-        this.positionToastStack();
-        const key = `${before}|${after}`;
-        if ([...this._pzToasts.children].some((c) => c.dataset.key === key)) return;  // de-dupe on beat re-run
-        const toast = document.createElement('div');
-        toast.className = 'change-pill'; toast.dataset.key = key;
-        toast.innerHTML = `<span class="cp-k">Before</span><span class="cp-v">${before}</span>` +
-                          `<span class="cp-arrow">&#8594;</span>` +
-                          `<span class="cp-k now">Now</span><span class="cp-v">${after}</span>` +
-                          `<button class="cp-x" title="Dismiss" aria-label="Dismiss">&times;</button>`;
-        this._pzToasts.appendChild(toast);
-        toast.querySelector('.cp-x').addEventListener('click', () => {
-            toast.classList.add('out'); setTimeout(() => { if (toast.parentNode) toast.remove(); }, 450);
-        });
-        requestAnimationFrame(() => toast.classList.add('show'));
-        // Fixed stack below the header — fully visible, no auto-dismiss; stays until × (or Restart).
     }
     appendBeforeAfter(before, after) {
         const body = document.getElementById('co-body');
@@ -1070,7 +1414,16 @@ class CoachStorefront {
         line.innerHTML = `<span class="co-ba-k">Before</span> ${before} <span class="co-ba-arrow">&#8594;</span> <span class="co-ba-k now">Now</span> ${after}`;
         body.appendChild(line);
     }
-    clearChangePills() { if (this._pzToasts) this._pzToasts.innerHTML = ''; document.querySelectorAll('.change-pill').forEach((p) => p.remove()); this._ba = null; }
+    clearChangePills() {
+        if (this._pzToasts) this._pzToasts.innerHTML = '';
+        document.querySelectorAll('.change-pill').forEach((p) => p.remove());
+        this._ba = null;
+        // Also reset the Personalization Activity panel (clean slate on Restart / reset).
+        const feed = document.getElementById('pzp-feed');
+        if (feed) feed.innerHTML = '<div class="pzp-empty">As the store personalizes, each decision lands here — the <b>signal</b>, the <b>segment</b>, the <b>decision</b>, and exactly what changed <b>before → now</b>.</div>';
+        this._pzCount = 0;
+        const cnt = document.getElementById('pz-pill-count'); if (cnt) cnt.textContent = '';
+    }
     heroTitleNow() { const el = document.querySelector('#hero-content .hero-title'); return el ? el.textContent.trim() : ''; }
     topNames(gridSel, n) {
         return Array.from(document.querySelectorAll(`${gridSel} .tile .tile-name`)).slice(0, n).map((e) => e.textContent.trim()).join(', ');
@@ -1182,7 +1535,8 @@ class CoachStorefront {
                     title: 'A profile, before a login',
                     signal: 'First visit — <strong>no cookie, no login, no history</strong>. We have never seen this person.',
                     decision: 'Mint an <strong>anonymous profile</strong> + first segment <strong>new_visitor</strong> — no PII.',
-                    impact: 'Personalization can start at <strong>hello</strong>, with zero sign-in friction.' },
+                    impact: 'Personalization can start at <strong>hello</strong>, with zero sign-in friction.',
+                    compare: { before: '/images/demo/before-welcome.png', after: '/images/demo/after-welcome.png' } },
             },
             /* 2 ── Cold-start data ──────────────────────────────────────────── */
             {
@@ -1198,7 +1552,8 @@ class CoachStorefront {
                     title: 'Curated from the first second',
                     signal: 'Zero behavioural history (brand-new visitor).',
                     decision: 'Fall back to <strong>catalog affinity + best-sellers</strong> for the opening edit.',
-                    impact: 'A confident, on-brand first impression — not a generic grid — while the engine starts learning.' },
+                    impact: 'A confident, on-brand first impression — not a generic grid — while the engine starts learning.',
+                    compare: { before: '/images/demo/before-coldstart.png', after: '/images/demo/after-coldstart.png' } },
             },
             /* 3 ── Real-time updates (live reshape, no reload) ──────────────── */
             {
@@ -1220,7 +1575,8 @@ class CoachStorefront {
                     title: 'The store adapts to her, instantly',
                     signal: 'Viewed <strong>Tabby ×3</strong> this session, no add-to-cart.',
                     decision: 'Affinity shifts to <strong>Tabby</strong> → reshape hero + grid, in-session.',
-                    impact: 'Relevant within seconds at the edge (&lt;50ms) — <strong>no reload, no waiting for a segment build</strong>.' },
+                    impact: 'Relevant within seconds at the edge (&lt;50ms) — <strong>no reload, no waiting for a segment build</strong>.',
+                    compare: { before: '/images/demo/before-hero.png', after: '/images/demo/after-hero.png' } },
             },
             /* 4 ── Recommendations (which PRODUCTS) ─────────────────────────── */
             {
@@ -1240,7 +1596,8 @@ class CoachStorefront {
                     title: 'Recommended for her, by product',
                     signal: 'Live <strong>Tabby</strong> affinity + item-to-item similarity.',
                     decision: 'Pick the <strong>individual products</strong> she is most likely to love.',
-                    impact: 'Recommendations answer <strong>"which products"</strong> — distinct from how the page adapts (next).' },
+                    impact: 'Recommendations answer <strong>"which products"</strong> — distinct from how the page adapts (next).',
+                    compare: { before: '/images/demo/before-curated.png', after: '/images/demo/after-curated.png' } },
             },
             /* 5 ── Sort rules · BASELINE (the "before") ─────────────────────── */
             {
@@ -1284,7 +1641,8 @@ class CoachStorefront {
                     title: 'Her favorites rise to the top',
                     signal: 'Her <strong>Tabby</strong> affinity (from this session).',
                     decision: 'Re-rank the same grid via the engine\'s real <code>sortOrder</code> — Tabby to the top.',
-                    impact: 'Same products, <strong>her order</strong> → higher relevance & conversion. Before vs Now is marked on the grid.' },
+                    impact: 'Same products, <strong>her order</strong> → higher relevance & conversion. Before vs Now is marked on the grid.',
+                    compare: { before: '/images/demo/before-grid.png', after: '/images/demo/after-grid.png' } },
             },
             /* 7 ── Personalized page STRUCTURE (layout adapts) ──────────────── */
             {
@@ -1307,7 +1665,8 @@ class CoachStorefront {
                     title: 'The page rearranges for her',
                     signal: 'Qualified <strong>high-intent Tabby browser</strong>.',
                     decision: 'Insert a <strong>"Complete the Look"</strong> module + promote her Tabby section.',
-                    impact: 'The <strong>layout itself</strong> adapts — not just the products — toward bigger baskets.' },
+                    impact: 'The <strong>layout itself</strong> adapts — not just the products — toward bigger baskets.',
+                    compare: { before: '/images/demo/before-pdp.png', after: '/images/demo/after-pdp.png' } },
             },
             /* 8 ── Personalized page CONTENT (copy/imagery adapts) ──────────── */
             {
@@ -1324,7 +1683,8 @@ class CoachStorefront {
                     title: 'The words & imagery change too',
                     signal: 'Her dominant taste is <strong>Tabby</strong>.',
                     decision: 'Swap the hero\'s <strong>headline, image & message</strong> to match (same layout).',
-                    impact: 'Structure decides the <strong>"where"</strong>; content decides the <strong>"what."</strong>' },
+                    impact: 'Structure decides the <strong>"where"</strong>; content decides the <strong>"what."</strong>',
+                    compare: { before: '/images/demo/before-hero.png', after: '/images/demo/after-hero.png' } },
             },
             /* 9 ── Journey-stage detection ──────────────────────────────────── */
             {
@@ -1342,7 +1702,8 @@ class CoachStorefront {
                     title: 'Discovery → Consideration → Ready-to-buy',
                     signal: 'She just <strong>added a bag to cart</strong>.',
                     decision: 'Advance journey stage to <strong>ready-to-buy</strong>; shift tone to urgency + service.',
-                    impact: 'The right message for <strong>where she is in the funnel</strong> — not a generic promo.' },
+                    impact: 'The right message for <strong>where she is in the funnel</strong> — not a generic promo.',
+                    compare: { before: '/images/demo/before-journey.png', after: '/images/demo/after-journey.png' } },
             },
             /* 10 ── Opal · AI audience builder (no developer) ───────────────── */
             {
@@ -1357,7 +1718,8 @@ class CoachStorefront {
                     title: 'From a sentence to a live audience',
                     signal: 'A merchandiser types a request in <strong>plain English</strong>.',
                     decision: 'Opal builds a real audience from live behaviour; a human clicks <strong>Publish</strong>.',
-                    impact: '<strong>Live in seconds — no developer, no release.</strong> The operator-side wedge vs DY.' },
+                    impact: '<strong>Live in seconds — no developer, no release.</strong> The operator-side wedge vs DY.',
+                    compare: { before: '/images/demo/before-banner.png', after: '/images/demo/after-banner.png' } },
             },
             /* 11 ── A/B testing (representative figures) ────────────────────── */
             {
@@ -1376,7 +1738,8 @@ class CoachStorefront {
                     title: 'Every change is an experiment',
                     signal: 'The personalized modules are live to shoppers.',
                     decision: 'Run them as <strong>A/B tests</strong> so each earns its place on measured lift.',
-                    impact: 'Personalize boldly, <strong>prove the impact</strong>. Figures <strong>illustrative</strong>; the platform is GA.' },
+                    impact: 'Personalize boldly, <strong>prove the impact</strong>. Figures <strong>illustrative</strong>; the platform is GA.',
+                    compare: { before: '/images/demo/before-hero.png', after: '/images/demo/after-hero.png' } },
             },
             /* 12 ── MAB · multi-armed bandit (representative) ───────────────── */
             {
@@ -1393,7 +1756,8 @@ class CoachStorefront {
                     title: 'Traffic finds the winner automatically',
                     signal: 'Live variation performance (no fixed 50/50 split).',
                     decision: 'A <strong>multi-armed bandit</strong> shifts traffic to the best performer as it learns.',
-                    impact: 'Capture lift sooner, no manual ramp. <strong>Representative figures; Optimizely MAB is GA.</strong>' },
+                    impact: 'Capture lift sooner, no manual ramp. <strong>Representative figures; Optimizely MAB is GA.</strong>',
+                    compare: { before: '/images/demo/before-grid.png', after: '/images/demo/after-grid.png' } },
             },
             /* 13 ── CMAB · contextual bandit (representative) ───────────────── */
             {
@@ -1410,7 +1774,8 @@ class CoachStorefront {
                     title: 'A different winner per shopper-context',
                     signal: 'Each shopper\'s <strong>context</strong> — device, segment, intent.',
                     decision: 'A <strong>contextual bandit</strong> serves the variation that wins <em>for that context</em>.',
-                    impact: 'Mobile Tabby-lovers & desktop gifters each get their own winner. <strong>Representative.</strong>' },
+                    impact: 'Mobile Tabby-lovers & desktop gifters each get their own winner. <strong>Representative.</strong>',
+                    compare: { before: '/images/demo/before-pdp.png', after: '/images/demo/after-pdp.png' } },
             },
             /* 14 ── AI search (real affinity ranking over real catalog) ────── */
             {
@@ -1431,7 +1796,8 @@ class CoachStorefront {
                     title: 'Search that understands intent — and styles it',
                     signal: 'A natural-language query — <em>"bags for a winter wedding"</em> (intent, not keywords).',
                     decision: 'Rank the real catalog by <strong>occasion, style & her live affinity</strong> — then render an <strong>AI-styled Edit</strong> of the real product.',
-                    impact: 'She doesn\'t just see results — <strong>she sees herself there</strong>. Relevance from the first result.' },
+                    impact: 'She doesn\'t just see results — <strong>she sees herself there</strong>. Relevance from the first result.',
+                    compare: { before: '/images/demo/before-curated.png', after: '/images/demo/after-curated.png' } },
             },
             /* 15 ── AI chat · Style Concierge (real-feeling, scripted) ──────── */
             {
@@ -1452,7 +1818,8 @@ class CoachStorefront {
                     title: 'A stylist in the chat',
                     signal: 'A styling question in <strong>plain language</strong>.',
                     decision: 'The concierge replies with on-brand rationale, an <strong>AI-styled look</strong>, and <strong>real catalog pieces</strong>.',
-                    impact: '<strong>Conversational commerce that shows the vision</strong> — taps straight to product.' },
+                    impact: '<strong>Conversational commerce that shows the vision</strong> — taps straight to product.',
+                    compare: { before: '/images/demo/before-hero.png', after: '/images/demo/after-hero.png' } },
             },
         ];
     }
@@ -1484,6 +1851,21 @@ class CoachStorefront {
     }
 
     /* — Director control flow — */
+    /* Show the step-progress component immediately (Step 1, ready) WITHOUT running the beat, so the
+     * progress bar / label / caption are ALWAYS visible — never gated behind clicking Next. */
+    previewStep(idx) {
+        const step = this.steps && this.steps[idx]; if (!step) return;
+        const sb = document.getElementById('sidebar'); if (sb) sb.dataset.state = 'running';
+        const set = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
+        set('dir-step-label', (el) => el.textContent = `Step ${idx + 1} of ${this.steps.length} · ${step.label}`);
+        set('dir-bar-fill', (el) => el.style.width = `${((idx + 1) / this.steps.length) * 100}%`);
+        set('dir-watch', (el) => el.innerHTML = `Watch: <b>${step.watch}</b>`);
+        set('dir-caption', (el) => el.textContent = step.caption);
+        const st = document.getElementById('sb-step'); if (st) st.classList.add('preview');  // hides the empty Signal/Decision/Why until the beat runs
+        set('dir-back', (el) => el.disabled = true);
+        set('dir-next', (el) => { el.disabled = false; el.innerHTML = 'Start &#9658;'; });
+        this.showPzPanel();   // the activity panel is visible from load (empty state advertises it)
+    }
     startDemo() {
         this.demoActive = true;
         document.getElementById('sidebar').dataset.state = 'running';
@@ -1500,7 +1882,7 @@ class CoachStorefront {
         this.ticked.clear(); this.renderChecklist(-1);   // Restart resets the checklist
         this.resetShopper();
         this.stepIndex = -1;
-        this.nextStep();
+        this.previewStep(0);   // restart → step 1 ready (click Next/Start to begin); step stays visible
     }
     /* Clear ONLY the demo-captured events in D1 (POST /operator/events/reset).
      * Companion to the client-only Restart (↻) above: Restart resets this browser's
@@ -1560,13 +1942,15 @@ class CoachStorefront {
     async gotoStep(idx, opts) {
         const fast = opts && opts.fast;
         this.busy = true;
+        this.demoActive = true;
+        const st = document.getElementById('sb-step'); if (st) st.classList.remove('preview');  // beat runs → real callout shows
         this.stepIndex = idx;
         const step = this.steps[idx];
         this.stopAutoplayTimerOnly();
 
         // chrome
         this.hideCallout(); this.clearSpotlight(); this.hideTransientPanels();
-        this.clearChangePills();                 // drop the previous beat's Before→Now pill
+        // Before→Now toasts PERSIST across beats now (stored until × or Restart) — not cleared per step.
         if (idx !== 0) this.dismissWelcome();    // first-visit ribbon only belongs on beat 1
         this.tickFeature(idx);   // mark this requirement on the live checklist
         document.getElementById('dir-step-label').textContent = `Step ${idx + 1} of ${this.steps.length} · ${step.label}`;
@@ -1575,6 +1959,7 @@ class CoachStorefront {
         document.getElementById('dir-caption').textContent = step.caption;
         document.getElementById('dir-back').disabled = idx === 0;
         const nextBtn = document.getElementById('dir-next');
+        nextBtn.innerHTML = 'Next &#9658;';   // (preview shows "Start"; once running it's "Next")
         nextBtn.disabled = true;
 
         try {
@@ -1598,8 +1983,22 @@ class CoachStorefront {
         if (stageSpan) stageSpan.textContent = this.journeyStage;
         const anonSpan = document.getElementById('co-anon');
         if (anonSpan) anonSpan.textContent = this.anonId;
-        // Inject the runtime "Before → Now" line captured by this beat's annotateChange.
-        if (this._ba) { this.appendBeforeAfter(this._ba.before, this._ba.after); this._ba = null; }
+        // Inject the runtime "Before → Now" line + log a rich provenance card to the Activity panel.
+        const ba = this._ba;
+        if (ba) this.appendBeforeAfter(ba.before, ba.after);
+        this.logActivity({
+            usecase: step.callout.usecase,
+            headline: step.callout.title,
+            signal: step.callout.signal,
+            segment: this.activitySegment(),
+            decision: step.callout.decision,
+            evidence: this.activityEvidence(),
+            before: ba && ba.before,
+            after: ba && ba.after,
+            beforeImg: step.callout.compare && step.callout.compare.before,
+            afterImg: step.callout.compare && step.callout.compare.after,
+        });
+        this._ba = null;
     }
 
     // Replay a beat's *effects* without animation (used when stepping backward).
@@ -1639,26 +2038,12 @@ class CoachStorefront {
      * STEP 6 — OPAL inline audience builder (real /operator endpoints)
      * ════════════════════════════════════════════════════════════════════════ */
     async runOpalStep() {
-        this.openOpal();
+        this.setTab('opal');
         await this.sleep(500);
-        const prompt = "high-intent Tabby browsers who haven't added to cart — show them complete-the-look";
-        await this.typeInto('opal-prompt', prompt);
-        await this.sleep(400);
-        document.getElementById('opal-thinking').classList.add('show');
-        // REAL CALL: Opal NL -> audience drafts.
-        let draft = null;
-        try {
-            const res = await fetch('/operator/audiences/suggest', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nlPrompt: prompt }),
-            });
-            const json = await res.json();
-            draft = (json.drafts && json.drafts[0]) || null;
-            this.logEvent('post', 'opal:suggest', draft ? draft.key : 'no match', null, null);
-        } catch (e) { console.error('opal suggest failed', e); }
-        await this.sleep(900);
-        document.getElementById('opal-thinking').classList.remove('show');
-        if (draft) this.renderOpalResult(draft);
+        // Drive the REAL Opal chat (no scripted prop): plain-English → a real audience + flag, live.
+        const prompt = "Create a Luxe Collectors audience for customers whose persona is luxe_collector, then launch a complete-the-look flag live to them.";
+        window.dispatchEvent(new CustomEvent('opal:ask', { detail: { text: prompt } }));
+        this.logEvent('post', 'opal:ask', 'luxe-collectors', null, null);
     }
     renderOpalResult(draft) {
         this.opalAudience = draft;
@@ -1698,9 +2083,9 @@ class CoachStorefront {
     }
     openOpal() {
         this.setTab('opal');   // Opal lives in a sidebar tab now (no modal overlay)
-        document.getElementById('opal-prompt').innerHTML = '<span class="caret"></span>';
-        document.getElementById('opal-result').classList.remove('show');
-        document.getElementById('opal-published').classList.remove('show');
+        const p = document.getElementById('opal-prompt'); if (p) p.innerHTML = '<span class="caret"></span>';
+        const r = document.getElementById('opal-result'); if (r) r.classList.remove('show');
+        const pub = document.getElementById('opal-published'); if (pub) pub.classList.remove('show');
     }
     closeOpal() {
         // Tab-resident: just reset the transient result state so the next run is clean.

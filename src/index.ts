@@ -22,6 +22,11 @@ import realtimeRoutes from '@/routes/realtime';
 import { aiRoutes } from '@/routes/ai';
 import { aiSceneRoutes } from '@/routes/aiScene';
 import { generateSceneToR2 } from '@/services/sceneGen';
+import { shotRoutes } from '@/routes/shot';
+import { geoRoutes } from '@/routes/geo';
+import { funnelRoutes } from '@/routes/funnel';
+import { funnelSimRoutes } from '@/routes/funnelSim';
+import { experimentRoutes } from '@/routes/experiment'; // A/B + CMAB workstream (owner: ab-cmab)
 
 import { routeAgentRequest } from 'agents';
 
@@ -65,6 +70,11 @@ app.route('/operator', operatorRoutes);
 app.route('/realtime', realtimeRoutes);
 app.route('/ai', aiRoutes);
 app.route('/ai/scene', aiSceneRoutes);
+app.route('/__shot', shotRoutes);
+app.route('/geo', geoRoutes);
+app.route('/funnel', funnelRoutes);
+app.route('/funnel/sim', funnelSimRoutes);
+app.route('/experiment', experimentRoutes); // A/B + CMAB (owner: ab-cmab)
 
 // API info endpoint - moved to /api-info so root can serve static files
 app.get('/api-info', (c) => {

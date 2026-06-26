@@ -2,6 +2,7 @@ import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import type { Env } from '@/types/env';
 import { createAudienceLive, launchTargetedFlag, addMessageRule, type FxConfig } from '@/services/optimizelyFx';
+import { getExperimentTools } from '@/agents/tools/experimentTools'; // A/B + CMAB (owner: ab-cmab)
 
 /**
  * Opal agent tool surface.
@@ -158,6 +159,9 @@ export function getOpalTools(env: Env): ToolSet {
         }
       },
     }),
+
+    /* ===== A/B + CMAB (owner: ab-cmab) — additive register ===== */
+    ...getExperimentTools(env),
   };
 }
 

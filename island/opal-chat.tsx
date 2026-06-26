@@ -9,20 +9,52 @@ import { createRoot } from 'react-dom/client';
 import { useAgent } from 'agents/react';
 import { useAgentChat } from '@cloudflare/ai-chat/react';
 
+// Pertinent fields to surface as a tidy card (in this order); everything else lives behind "Show JSON".
+const PRETTY: [string, string][] = [
+  ['audienceName', 'Audience'], ['message', 'Message'], ['flagKey', 'Flag'], ['ruleKey', 'Rule'],
+  ['variationKey', 'Variation'], ['audienceId', 'Audience id'], ['flagId', 'Flag id'],
+  ['audience_size', 'Audience size'], ['avg_order_value_usd', 'Avg order value'],
+  ['environment', 'Environment'], ['revision', 'Revision'],
+];
+
+function ToolCard({ name, output, state }: { name: string; output: any; state: string }) {
+  const [showJson, setShowJson] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const done = state === 'output-available';
+  const err = state === 'output-error';
+  const o = output && typeof output === 'object' && !Array.isArray(output) ? output : null;
+  const copy = () => { try { navigator.clipboard.writeText(JSON.stringify(output, null, 2)); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch (e) {} };
+  const rows = o ? PRETTY.filter(([k]) => o[k] != null && o[k] !== '').map(([k, label]) => [label, String(o[k]), k]) as [string, string, string][] : [];
+  const status = o ? (o.status || (o.live ? 'live' : null)) : null;
+  return (
+    <div className="opal-card2">
+      <div className="oc2-head">
+        <span className="oc2-name">⚙ {name}</span>
+        {!done && !err && <span className="oc2-run">running…</span>}
+        {err && <span className="oc2-run">error</span>}
+        {done && status && <span className="oc2-badge">{String(status)}</span>}
+      </div>
+      {done && (
+        (showJson || rows.length === 0)
+          ? <pre className="opal-tool-out">{JSON.stringify(output, null, 2)}</pre>
+          : <div className="oc2-rows">{rows.map(([label, val, key], i) => (
+              <div className="oc2-row" key={i}><span className="oc2-k">{label}</span><span className={'oc2-v' + (key === 'message' ? ' msg' : '')}>{val}</span></div>
+            ))}</div>
+      )}
+      {done && (
+        <div className="oc2-actions">
+          {rows.length > 0 && <button className="oc2-btn" onClick={() => setShowJson((s) => !s)}>{showJson ? 'Hide JSON' : 'Show JSON'}</button>}
+          <button className="oc2-btn" onClick={copy}>{copied ? 'Copied ✓' : 'Copy JSON'}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Part({ part }: { part: any }) {
   if (part?.type === 'text') return <>{part.text}</>;
   if (typeof part?.type === 'string' && part.type.startsWith('tool-')) {
-    const name = part.type.slice(5);
-    const done = part.state === 'output-available';
-    const err = part.state === 'output-error';
-    return (
-      <div className="opal-tool">
-        <span className="opal-tool-name">⚙ {name}{done ? '' : err ? ' · error' : ' · running…'}</span>
-        {done && part.output != null && (
-          <pre className="opal-tool-out">{JSON.stringify(part.output, null, 2)}</pre>
-        )}
-      </div>
-    );
+    return <ToolCard name={part.type.slice(5)} output={part.output} state={part.state} />;
   }
   return null;
 }
@@ -47,6 +79,12 @@ function OpalChat() {
     window.addEventListener('opal:reset', reset);
     return () => window.removeEventListener('opal:reset', reset);
   }, [clearHistory]);
+  // The guided demo (beat 10) drives THIS real chat from outside via an event — no separate scripted UI.
+  useEffect(() => {
+    const onAsk = (e: any) => { const t = (e?.detail?.text || '').trim(); if (t) sendMessage({ text: t }); };
+    window.addEventListener('opal:ask', onAsk);
+    return () => window.removeEventListener('opal:ask', onAsk);
+  }, [sendMessage]);
   // When Opal creates a banner rule, tell the storefront to preview it as that audience.
   useEffect(() => {
     for (const m of (messages as any[])) {
@@ -81,7 +119,7 @@ function OpalChat() {
       <div className="opal-chat-thread">
         {messages.length === 0 && (
           <div className="opal-chat-empty">
-            <div>Ask anything about your customers — I'll query the live data — or create a real audience. Try:</div>
+            <div>I'm <b>Opal</b>, your Optimizely AI. Ask anything about your customers (I query the live data), or tell me to build a real <b>audience</b>, <b>banner message</b>, or <b>flag</b>. Try:</div>
             {SUGGESTIONS.map((s, i) => (
               <button key={i} className="opal-suggest" onClick={() => send(s)}>{s}</button>
             ))}

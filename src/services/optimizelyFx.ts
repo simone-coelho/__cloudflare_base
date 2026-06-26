@@ -292,3 +292,47 @@ export async function addMessageRule(
     revision: fin?.revision, datafileUrl: cfg.sdkKey ? `https://cdn.optimizely.com/datafiles/${cfg.sdkKey}.json` : undefined,
   };
 }
+
+export interface BannerRule {
+  ruleKey: string; enabled: boolean; audienceId: number | null; audienceName: string | null;
+  variationKey: string | null; message: string | null;
+  attributes: Record<string, string | number | boolean>; // satisfies the audience → "force into this rule"
+}
+
+/** Read the live personalized_banner flag's cascading rules so the UI can list every audience/experience
+ *  we created and force the session into any of them. One ruleset GET + one variations GET + one GET per audience. */
+export async function listBannerRules(cfg: FxConfig, flagKey: string = BANNER_FLAG): Promise<{
+  flagKey: string; environment: string; enabled: boolean; rules: BannerRule[];
+}> {
+  const env = cfg.environment || 'development';
+  const rs = await api(cfg, 'GET', `${FLAGS}/projects/${cfg.projectId}/flags/${flagKey}/environments/${env}/ruleset`);
+  const rulesObj: Record<string, any> = rs.json?.rules || {};
+
+  // message per variation key (the banner copy lives in the variation's `message` variable)
+  const msgByVar: Record<string, string> = {};
+  try {
+    const vr = await api(cfg, 'GET', `${FLAGS}/projects/${cfg.projectId}/flags/${flagKey}/variations`);
+    const vs: any[] = vr.json?.items || (Array.isArray(vr.json) ? vr.json : []);
+    for (const v of vs) { const m = v?.variables?.message?.value; if (v?.key && m != null) msgByVar[v.key] = String(m); }
+  } catch { /* messages optional */ }
+
+  const order: string[] = Array.isArray(rs.json?.rule_priorities) && rs.json.rule_priorities.length ? rs.json.rule_priorities : Object.keys(rulesObj);
+  const rules: BannerRule[] = [];
+  for (const ruleKey of order) {
+    const r = rulesObj[ruleKey]; if (!r) continue;
+    const audienceId = (Array.isArray(r.audience_ids) && r.audience_ids[0]) || null;
+    const variationKey = r.variations ? Object.keys(r.variations)[0] : null;
+    let audienceName: string | null = null;
+    let attributes: Record<string, string | number | boolean> = {};
+    if (audienceId) {
+      try {
+        const a = await api(cfg, 'GET', `${ADMIN}/audiences/${audienceId}`);
+        audienceName = a.json?.name || null;
+        const cond = typeof a.json?.conditions === 'string' ? JSON.parse(a.json.conditions) : a.json?.conditions;
+        attributes = satisfyingAttributes(cond);
+      } catch { /* audience read optional */ }
+    }
+    rules.push({ ruleKey, enabled: r.enabled !== false, audienceId, audienceName, variationKey, message: variationKey ? (msgByVar[variationKey] ?? null) : null, attributes });
+  }
+  return { flagKey, environment: env, enabled: rs.json?.enabled === true, rules };
+}

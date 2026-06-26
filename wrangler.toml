@@ -38,6 +38,10 @@ max_batch_timeout = 2     # process promptly (scene-gen jobs shouldn't wait to f
 max_concurrency = 6       # generate several novel scenes in parallel under load
 max_retries = 2
 
+# Browser Rendering — headless Chromium on Cloudflare, for visual verification (the /__shot route)
+[browser]
+binding = "BROWSER"
+
 # Durable Objects
 [[durable_objects.bindings]]
 name = "STATE_MANAGER"

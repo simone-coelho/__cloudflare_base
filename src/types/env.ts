@@ -1,5 +1,6 @@
 export interface Env {
   ASSETS: Fetcher;   // static-assets binding (public/) for server-side reads — see wrangler.toml [assets]
+  BROWSER?: Fetcher; // Browser Rendering (headless Chromium) for the /__shot verification route
   CACHE: KVNamespace;
   SESSIONS: KVNamespace;
   STORAGE: R2Bucket;

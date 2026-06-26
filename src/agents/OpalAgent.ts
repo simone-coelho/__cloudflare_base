@@ -12,6 +12,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
 import type { Env } from '@/types/env';
 import { getOpalTools } from '@/agents/tools';
+import { diagnoseFunnel } from '@/agents/tools/diagnoseFunnel';
 
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 
@@ -55,6 +56,13 @@ precomputed orders_90d / spend_90d_usd / aov_90d_usd columns on v_audience_base.
 queryData rules: ONE statement, SELECT only, only the tables/views above, results capped at 200 rows.
 If a query errors, read the message and fix the SQL (usually a column name). Prefer aggregates over row dumps.
 
+DIAGNOSING THE CHECKOUT FUNNEL — when the user asks where they are losing checkout/conversion revenue, where
+the funnel leaks, or for a funnel analysis (optionally by brand Coach|Kate Spade|Stuart Weitzman and cohort
+gen_z|millennial|gen_x|boomer), call **diagnoseFunnel**. It returns the stage-by-stage funnel, the top
+ANOMALOUS leak(s) with recoverable dollars, and a ready-to-launch audience + remedy (e.g. installments/BNPL
+for Gen-Z payment-stage hesitation). Lead with the leak, the recoverable $, and the recommended fix; if the
+user then says to launch it, use the activation tools below with the returned audience conditions.
+
 CREATING / ACTIVATING — only when the user explicitly asks to create or launch something:
 - To **personalize the storefront banner** for an audience ("show/target a message or banner to [audience]",
   "if this audience is met, change their messaging to …", "personalize the banner for …"), use
@@ -83,7 +91,7 @@ export class OpalAgent extends AIChatAgent<Env> {
 
     const google = createGoogleGenerativeAI({ apiKey });
     const modelId = this.env.GEMINI_MODEL || DEFAULT_MODEL;
-    const tools = getOpalTools(this.env);
+    const tools: ToolSet = { ...getOpalTools(this.env), diagnoseFunnel: diagnoseFunnel(this.env) };
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
