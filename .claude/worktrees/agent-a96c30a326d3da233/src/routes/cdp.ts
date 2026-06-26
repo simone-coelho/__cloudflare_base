@@ -14,15 +14,15 @@ const ProfileRequestSchema = z.object({
 
 const SegmentRequestSchema = z.object({
   userId: z.string(),
-  traits: z.record(z.any()).optional(),
+  traits: z.record(z.string(), z.any()).optional(),
 });
 
 const EventRequestSchema = z.object({
   userId: z.string().optional(),
   anonymousId: z.string().optional(),
   event: z.string(),
-  properties: z.record(z.any()).optional(),
-  traits: z.record(z.any()).optional(),
+  properties: z.record(z.string(), z.any()).optional(),
+  traits: z.record(z.string(), z.any()).optional(),
 });
 
 cdp.use('/*', jwt({ required: false }));

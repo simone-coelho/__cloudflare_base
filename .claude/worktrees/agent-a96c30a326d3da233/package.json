@@ -7,6 +7,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "build": "echo 'No build required for TypeScript with Cloudflare Workers'",
+    "build:island": "node scripts/build-island.mjs",
     "tail": "wrangler tail",
     "format": "prettier --write .",
     "lint": "eslint src --ext .ts",
@@ -36,19 +37,28 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240806.0",
     "@types/node": "^20.14.14",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
+    "esbuild": "^0.28.1",
     "eslint": "^8.57.0",
     "prettier": "^3.3.3",
     "typescript": "^5.5.4",
     "vitest": "^1.6.0",
-    "wrangler": "^3.72.0"
+    "wrangler": "^4.105.0"
   },
   "dependencies": {
-    "@optimizely/mcp-server-exp": "^1.0.1",
+    "@ai-sdk/google": "^3.0.84",
+    "@ai-sdk/react": "^3.0.213",
+    "@cloudflare/ai-chat": "^0.8.6",
     "@optimizely/optimizely-sdk": "^5.3.4",
+    "agents": "^0.16.2",
+    "ai": "^6.0.211",
     "hono": "^4.5.5",
     "jose": "^5.6.3",
-    "zod": "^3.23.8"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
   }
 }

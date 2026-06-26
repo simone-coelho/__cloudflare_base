@@ -9,7 +9,7 @@ const WebhookEventSchema = z.object({
   source: z.string(),
   event_type: z.string(),
   timestamp: z.number(),
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
   signature: z.string().optional(),
 });
 

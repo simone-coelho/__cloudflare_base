@@ -35,7 +35,7 @@ const actionEventSchema = z.object({
   type: z.enum(['email_open', 'form_submit', 'page_view', 'button_click', 'custom']),
   userId: z.string(),
   anonymousId: z.string().optional(),
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
   source: z.string(),
   timestamp: z.number().optional()
 });
@@ -56,7 +56,7 @@ realtimeRoutes.post('/action', async (c) => {
 
     // Process the action event with enhanced session management
     const segmentEngine = new RealtimeSegmentEngine(c.env);
-    const result = await segmentEngine.processActionEventWithSession(actionEvent, cookieHeader);
+    const result = await segmentEngine.processActionEventWithSession(actionEvent, cookieHeader ?? null);
 
     // Set updated cookies in response
     result.cookieHeaders.forEach(cookieHeader => {
@@ -86,7 +86,7 @@ realtimeRoutes.post('/action', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({
         error: 'Invalid action event format',
-        details: error.errors
+        details: error.issues
       }, 400);
     }
 
@@ -111,7 +111,7 @@ realtimeRoutes.get('/personalization/:userId', async (c) => {
     
     // Get or create session from cookies
     const { sessionId, sessionData, isNewSession } = await segmentEngine.getOrCreateSessionFromCookies(
-      cookieHeader,
+      cookieHeader ?? null,
       userId
     );
 
@@ -196,7 +196,7 @@ realtimeRoutes.post('/session/:sessionId/preferences', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({
         error: 'Invalid preferences format',
-        details: error.errors
+        details: error.issues
       }, 400);
     }
 
@@ -299,7 +299,7 @@ realtimeRoutes.post('/segments/:userId', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({
         error: 'Invalid segment assignment format',
-        details: error.errors
+        details: error.issues
       }, 400);
     }
 
@@ -401,7 +401,7 @@ realtimeRoutes.get('/health', async (c) => {
 const demoEventSchema = z.object({
   scenario: z.enum(['email_campaign', 'form_submission', 'pricing_page', 'demo_request']),
   userId: z.string(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 });
 
 realtimeRoutes.post('/demo/trigger', async (c) => {
@@ -492,7 +492,7 @@ realtimeRoutes.post('/demo/trigger', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({
         error: 'Invalid demo trigger format',
-        details: error.errors
+        details: error.issues
       }, 400);
     }
 

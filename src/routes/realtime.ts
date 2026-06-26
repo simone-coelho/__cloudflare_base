@@ -44,7 +44,7 @@ const actionEventSchema = z.object({
   ]),
   userId: z.string(),
   anonymousId: z.string().optional(),
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
   source: z.string(),
   timestamp: z.number().optional()
 });
@@ -63,6 +63,14 @@ realtimeRoutes.post('/action', async (c) => {
       ...validatedEvent,
       timestamp: validatedEvent.timestamp || Date.now()
     } as ActionEvent;
+
+    // Capture this demo-run event into D1 `demo_events` (source='demo'), kept
+    // SEPARATE from the historical synthetic data so POST /operator/events/reset
+    // can wipe ONLY these rows. Off the response path (waitUntil) so it adds zero
+    // latency, and self-guarding so a D1 hiccup can never break the demo.
+    const sessionId = typeof body.sessionId === 'string' ? body.sessionId : undefined;
+    const capture = captureDemoEvent(c.env, actionEvent, sessionId);
+    try { c.executionCtx.waitUntil(capture); } catch { void capture; /* no execCtx (e.g. tests) */ }
 
     // Get cookie header for session management
     const cookieHeader = c.req.header('Cookie') ?? null;
@@ -99,7 +107,7 @@ realtimeRoutes.post('/action', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({
         error: 'Invalid action event format',
-        details: error.errors
+        details: error.issues
       }, 400);
     }
 
@@ -209,7 +217,7 @@ realtimeRoutes.post('/session/:sessionId/preferences', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({
         error: 'Invalid preferences format',
-        details: error.errors
+        details: error.issues
       }, 400);
     }
 
@@ -312,7 +320,7 @@ realtimeRoutes.post('/segments/:userId', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({
         error: 'Invalid segment assignment format',
-        details: error.errors
+        details: error.issues
       }, 400);
     }
 
@@ -414,7 +422,7 @@ realtimeRoutes.get('/health', async (c) => {
 const demoEventSchema = z.object({
   scenario: z.enum(['email_campaign', 'form_submission', 'pricing_page', 'demo_request']),
   userId: z.string(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional()
 });
 
 realtimeRoutes.post('/demo/trigger', async (c) => {
@@ -505,7 +513,7 @@ realtimeRoutes.post('/demo/trigger', async (c) => {
     if (error instanceof z.ZodError) {
       return c.json({
         error: 'Invalid demo trigger format',
-        details: error.errors
+        details: error.issues
       }, 400);
     }
 
@@ -515,5 +523,54 @@ realtimeRoutes.post('/demo/trigger', async (c) => {
     }, 500);
   }
 });
+
+/**
+ * Persist one demo-run shopper action into D1 `demo_events` (source='demo').
+ *
+ * This is the SINGLE demo-event write path. Rows here are isolated from the
+ * historical synthetic dataset (coach_odp_profiles / coach_transactions /
+ * coach_purchase_items), so POST /operator/events/reset can delete ONLY these and
+ * never touch history. Opal aggregates these via v_demo_profiles into
+ * v_audience_base — the UNION (historical + demo) surface it builds audiences over
+ * — so demo shoppers grow audience sizes meaningfully. line/category/price_band
+ * are enriched authoritatively from coach_catalog inside v_demo_profiles, so we
+ * only store what the click carried. Best-effort: never throws into the request.
+ */
+async function captureDemoEvent(
+  env: Env,
+  event: ActionEvent,
+  sessionId?: string
+): Promise<void> {
+  try {
+    if (!env.DB) return; // D1 not bound (e.g. some test envs) — skip silently
+    const d = event.data ?? {};
+    const vuid = event.anonymousId ?? event.userId;
+    const productId = d.product_id ?? d.productId ?? d.sku ?? null;
+    await env.DB.prepare(
+      `INSERT INTO demo_events
+         (ts, vuid, session_id, demo_run_id, event_type,
+          product_id, product_name, line, price_usd, path, label, dwell_ms, raw_json, source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'demo')`
+    )
+      .bind(
+        event.timestamp ?? Date.now(),
+        vuid,
+        sessionId ?? null,
+        sessionId ?? null, // demo_run_id defaults to the session — enables per-run reset
+        event.type,
+        productId,
+        d.product_name ?? d.name ?? null,
+        typeof d.line === 'string' ? d.line : null,
+        typeof d.price_usd === 'number' ? Math.round(d.price_usd) : null,
+        typeof d.path === 'string' ? d.path : null,
+        d.label ?? d.query ?? null,
+        typeof d.dwellMs === 'number' ? Math.round(d.dwellMs) : null,
+        JSON.stringify({ source: event.source, data: d }) // full payload (provenance incl. original source)
+      )
+      .run();
+  } catch (err) {
+    console.error('captureDemoEvent failed (non-fatal):', err);
+  }
+}
 
 export default realtimeRoutes;

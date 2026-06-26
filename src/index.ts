@@ -17,12 +17,17 @@ import { webhookRoutes } from '@/routes/webhook';
 import { healthRoutes } from '@/routes/health';
 import { optimizelyRoutes } from '@/routes/optimizely';
 import { cdpRoutes } from '@/routes/cdp';
-import realtimeRoutes from '@/routes/realtime';
 import { operatorRoutes } from '@/routes/operator';
+import realtimeRoutes from '@/routes/realtime';
+import { aiRoutes } from '@/routes/ai';
+import { aiSceneRoutes } from '@/routes/aiScene';
+
+import { routeAgentRequest } from 'agents';
 
 import { StateManager } from '@/durable-objects/StateManager';
 import { RateLimiter } from '@/durable-objects/RateLimiter';
 import { PersonalizationWebSocket } from '@/durable-objects/PersonalizationWebSocket';
+import { OpalAgent } from '@/agents/OpalAgent';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -55,8 +60,10 @@ app.route('/pixel', pixelRoutes);
 app.route('/webhook', webhookRoutes);
 app.route('/optimizely', optimizelyRoutes);
 app.route('/cdp', cdpRoutes);
-app.route('/realtime', realtimeRoutes);
 app.route('/operator', operatorRoutes);
+app.route('/realtime', realtimeRoutes);
+app.route('/ai', aiRoutes);
+app.route('/ai/scene', aiSceneRoutes);
 
 // API info endpoint - moved to /api-info so root can serve static files
 app.get('/api-info', (c) => {
@@ -75,7 +82,6 @@ app.get('/api-info', (c) => {
       optimizely: '/optimizely',
       cdp: '/cdp',
       realtime: '/realtime',
-      operator: '/operator',
     },
   });
 });
@@ -84,10 +90,16 @@ app.notFound((c) => {
   return c.json({ error: 'Not Found' }, 404);
 });
 
-export { StateManager, RateLimiter, PersonalizationWebSocket };
+export { StateManager, RateLimiter, PersonalizationWebSocket, OpalAgent };
 
 export default {
-  fetch: app.fetch,
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // Route /agents/* to the Cloudflare Agents SDK (Opal chat). Returns null for
+    // every other path, so all existing Hono routes are untouched.
+    const agentResponse = await routeAgentRequest(request, env);
+    if (agentResponse) return agentResponse;
+    return app.fetch(request, env, ctx);
+  },
   scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
     switch (event.cron) {
       case '*/5 * * * *':

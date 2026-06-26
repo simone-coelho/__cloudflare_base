@@ -7,6 +7,13 @@ export interface PersonalizationUpdate {
     cookies?: Record<string, string>;
     timestamp: number;
     source: string;
+    // Optional fields emitted by RealtimeSegmentEngine for specific update types.
+    cookieHeaders?: string[];
+    sessionId?: string;
+    engagementScore?: number;
+    featureKey?: string;
+    variableKey?: string;
+    value?: unknown;
   };
 }
 
@@ -207,7 +214,6 @@ export class PersonalizationWebSocket {
     const userConnections = this.getUserConnections(update.userId);
     
     const message = JSON.stringify({
-      type: 'personalization_update',
       ...update,
       serverTimestamp: Date.now()
     });
@@ -240,7 +246,6 @@ export class PersonalizationWebSocket {
 
   async broadcastToAll(update: Omit<PersonalizationUpdate, 'userId'>): Promise<void> {
     const message = JSON.stringify({
-      type: 'global_update',
       ...update,
       serverTimestamp: Date.now()
     });

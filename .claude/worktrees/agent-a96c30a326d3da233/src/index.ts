@@ -19,9 +19,12 @@ import { optimizelyRoutes } from '@/routes/optimizely';
 import { cdpRoutes } from '@/routes/cdp';
 import realtimeRoutes from '@/routes/realtime';
 
+import { routeAgentRequest } from 'agents';
+
 import { StateManager } from '@/durable-objects/StateManager';
 import { RateLimiter } from '@/durable-objects/RateLimiter';
 import { PersonalizationWebSocket } from '@/durable-objects/PersonalizationWebSocket';
+import { OpalAgent } from '@/agents/OpalAgent';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -81,10 +84,16 @@ app.notFound((c) => {
   return c.json({ error: 'Not Found' }, 404);
 });
 
-export { StateManager, RateLimiter, PersonalizationWebSocket };
+export { StateManager, RateLimiter, PersonalizationWebSocket, OpalAgent };
 
 export default {
-  fetch: app.fetch,
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // Route /agents/* to the Cloudflare Agents SDK (Opal chat). Returns null for
+    // every other path, so all existing Hono routes are untouched.
+    const agentResponse = await routeAgentRequest(request, env);
+    if (agentResponse) return agentResponse;
+    return app.fetch(request, env, ctx);
+  },
   scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
     switch (event.cron) {
       case '*/5 * * * *':

@@ -601,7 +601,7 @@ export class RealtimeSegmentEngine {
     }
 
     return {
-      sessionId,
+      sessionId: sessionId!,
       sessionData,
       isNewSession
     };

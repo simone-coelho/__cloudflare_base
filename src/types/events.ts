@@ -12,7 +12,7 @@ export const UserContextSchema = z.object({
   userId: z.string().optional(),
   anonymousId: z.string(),
   email: z.string().email().optional(),
-  traits: z.record(z.any()).optional(),
+  traits: z.record(z.string(), z.any()).optional(),
   segments: z.array(z.string()).optional(),
 });
 
@@ -29,7 +29,7 @@ export const PageContextSchema = z.object({
 export const TrackEventSchema = BaseEventSchema.extend({
   eventType: z.literal('track'),
   event: z.string(),
-  properties: z.record(z.any()).optional(),
+  properties: z.record(z.string(), z.any()).optional(),
   user: UserContextSchema,
   page: PageContextSchema.optional(),
 });
@@ -38,7 +38,7 @@ export const PageEventSchema = BaseEventSchema.extend({
   eventType: z.literal('page'),
   name: z.string().optional(),
   category: z.string().optional(),
-  properties: z.record(z.any()).optional(),
+  properties: z.record(z.string(), z.any()).optional(),
   user: UserContextSchema,
   page: PageContextSchema,
 });
@@ -46,7 +46,7 @@ export const PageEventSchema = BaseEventSchema.extend({
 export const IdentifyEventSchema = BaseEventSchema.extend({
   eventType: z.literal('identify'),
   user: UserContextSchema,
-  traits: z.record(z.any()),
+  traits: z.record(z.string(), z.any()),
 });
 
 export const PixelEventSchema = BaseEventSchema.extend({
@@ -55,7 +55,7 @@ export const PixelEventSchema = BaseEventSchema.extend({
   campaignId: z.string().optional(),
   emailId: z.string().optional(),
   recipientId: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   user: UserContextSchema.optional(),
   page: PageContextSchema.optional(),
 });

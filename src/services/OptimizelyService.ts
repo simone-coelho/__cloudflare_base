@@ -175,6 +175,24 @@ export class OptimizelyService {
     return { client, datafile, revision };
   }
 
+  /**
+   * Fetch the datafile no-store and (re)write the KV cache that initialize()/fetchDatafile read.
+   * Called by the datafile webhook (POST /webhook/optimizely-datafile) when Optimizely signals a
+   * change — so steady-state edge decisions stay KV-FAST (<50ms, no per-decision CDN fetch) AND
+   * fresh-on-change. The 24h TTL is just a safety floor; the webhook keeps it current.
+   */
+  async refreshDatafileCache(): Promise<{ revision: string | null; flags: number }> {
+    const url = `https://cdn.optimizely.com/datafiles/${this.env.OPTIMIZELY_SDK_KEY}.json`;
+    const res = await fetch(url, { headers: { 'Cache-Control': 'no-cache' }, cf: { cacheTtl: 0, cacheEverything: false } });
+    if (!res.ok) throw new Error(`datafile fetch failed: ${res.status} ${res.statusText}`);
+    const datafile = (await res.json()) as any;
+    await this.env.CACHE.put(`optimizely-datafile-${this.env.OPTIMIZELY_SDK_KEY}`, JSON.stringify(datafile), { expirationTtl: 86400 });
+    return {
+      revision: datafile?.revision != null ? String(datafile.revision) : null,
+      flags: Array.isArray(datafile?.featureFlags) ? datafile.featureFlags.length : 0,
+    };
+  }
+
   async getVariation(
     experimentKey: string,
     userId: string,

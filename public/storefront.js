@@ -29,6 +29,19 @@ class CoachStorefront {
         this.byId = new Map();
         this.byLine = new Map();
 
+        // Bulletproof image fallback — a self-contained, on-brand placeholder (data URI: no network,
+        // can NEVER 404) shown whenever a product image is absent or fails to load. Guarantees no
+        // broken tile / hero / card can ever appear on stage, regardless of catalog data.
+        this.PH_IMG = 'data:image/svg+xml,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500">' +
+            '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+            '<stop offset="0" stop-color="#F0EBE2"/><stop offset="1" stop-color="#E2D8C8"/></linearGradient></defs>' +
+            '<rect width="400" height="500" fill="url(#g)"/>' +
+            '<text x="200" y="236" font-family="Georgia,serif" font-size="150" fill="#B8915A" fill-opacity="0.42" text-anchor="middle" dominant-baseline="central">C</text>' +
+            '<text x="200" y="356" font-family="Georgia,serif" font-size="22" letter-spacing="7" fill="#8A6A38" fill-opacity="0.6" text-anchor="middle">COACH</text>' +
+            '</svg>'
+        );
+
         // personalization state (mirrors the engine response)
         this.segments = [];
         this.decisions = {};
@@ -36,6 +49,9 @@ class CoachStorefront {
         this.recommendations = null;   // Product[] from engine
         this.sortOrder = null;         // string[] product ids from engine
         this.personalized = false;
+
+        // Opal (chat island) → governed "preview as this audience" trigger for the live banner.
+        window.addEventListener('opal:experience', (e) => { try { this.previewAudience(e.detail || {}); } catch (err) { console.error('previewAudience', err); } });
 
         // local browsing signals (drive copy + derivations between engine fields)
         this.eventCount = 0;
@@ -102,6 +118,23 @@ class CoachStorefront {
             if (!this.byLine.has(p.line)) this.byLine.set(p.line, []);
             this.byLine.get(p.line).push(p);
         }
+        // Pre-generated styled-scene manifest (instant heroes for the headline queries).
+        // Non-fatal: novel queries fall back to live /ai/scene, then to the ranked grid.
+        try {
+            const r = await fetch('/images/generated/manifest.json');
+            this.sceneManifest = r.ok ? await r.json() : {};
+        } catch { this.sceneManifest = {}; }
+        // Occasion × SKU scene grid — instant, PRODUCT-ACCURATE heroes across many occasions
+        // (so the Edit/look can match the shopper's personalized #1, and far more queries skip live gen).
+        this.gridByOcc = { search: {}, concierge: {} };
+        try {
+            const rg = await fetch('/images/generated/scene-grid.json');
+            const grid = rg.ok ? await rg.json() : {};
+            for (const k in grid) {
+                const e = grid[k]; const t = e.type === 'concierge' ? 'concierge' : 'search';
+                (this.gridByOcc[t][e.occ] = this.gridByOcc[t][e.occ] || []).push({ productId: e.productId, asset: e.asset, productName: e.productName });
+            }
+        } catch { /* grid optional */ }
     }
     lineItems(line) { return this.byLine.get(line) || []; }
     isBag(p) { return p.category === 'Handbags'; }
@@ -173,6 +206,7 @@ class CoachStorefront {
     applyUpdate(data, decisionMs, fromPush) {
         if (Array.isArray(data.segments) && data.segments.length) this.segments = data.segments;
         if (data.decisions && typeof data.decisions === 'object') this.decisions = data.decisions;
+        this.renderBanner();
         if (data.journeyStage) this.journeyStage = data.journeyStage; else this.journeyStage = this.deriveStage();
         if (Array.isArray(data.recommendations) && data.recommendations.length) this.recommendations = data.recommendations;
         if (Array.isArray(data.sortOrder) && data.sortOrder.length) this.sortOrder = data.sortOrder;
@@ -210,6 +244,50 @@ class CoachStorefront {
 
     decVars(flag) { const d = this.decisions[flag]; return d && d.enabled ? (d.variables || {}) : null; }
     decReason(flag) { const d = this.decisions[flag]; return d ? d.reason : null; }
+    /* Opal-personalized banner (Mode-B): render personalized_banner.message as a top ribbon. */
+    renderBanner() {
+        const el = document.getElementById('pz-banner');
+        const msgEl = document.getElementById('pz-banner-msg');
+        if (!el || !msgEl) return;
+        const v = this.decVars('personalized_banner');
+        const msg = v && typeof v.message === 'string' ? v.message.trim() : '';
+        if (msg) { msgEl.textContent = msg; el.classList.add('show'); el.classList.remove('publishing'); }
+        else if (!el.classList.contains('publishing')) { el.classList.remove('show'); }
+    }
+    /* Governed trigger: after Opal creates a banner rule, "preview as that audience" — poll the live
+     * Optimizely decision (handles datafile propagation) with the audience's attributes, then render the
+     * real flag's message. Falls back to Opal's message if the CDN is still catching up. */
+    async previewAudience(detail) {
+        const el = document.getElementById('pz-banner');
+        const msgEl = document.getElementById('pz-banner-msg');
+        const tagEl = document.getElementById('pz-banner-tag');
+        const attrs = (detail && detail.previewAttributes) || {};
+        if (el && msgEl) {
+            msgEl.textContent = 'Publishing your personalized message to the edge…';
+            if (tagEl) tagEl.textContent = 'Opal · publishing';
+            el.classList.add('show', 'publishing');
+        }
+        let got = null;
+        for (let i = 0; i < 12; i++) {
+            try {
+                const res = await fetch('/optimizely/preview', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: this.anonId, userAttributes: attrs, flag: 'personalized_banner' }),
+                });
+                const json = await res.json();
+                if (json && json.enabled && json.variables && json.variables.message) { got = json; break; }
+            } catch (e) { /* retry through propagation */ }
+            await this.sleep(2500);
+        }
+        if (tagEl) tagEl.textContent = 'Personalized live by Opal';
+        if (el) el.classList.remove('publishing');
+        if (got) {
+            this.decisions['personalized_banner'] = { enabled: true, variables: got.variables, reason: 'Optimizely flag (created by Opal)' };
+        } else if (detail && detail.message) {
+            this.decisions['personalized_banner'] = { enabled: true, variables: { message: detail.message }, reason: 'Optimizely flag (created by Opal)' };
+        }
+        this.renderBanner();
+    }
 
     resolveHero() {
         const v = this.decVars('hero_module');
@@ -628,9 +706,12 @@ class CoachStorefront {
         </div>`;
     }
     img(p) {
-        if (!p.image_url) return '';
-        return `<img src="${p.image_url}" alt="${p.name}" loading="lazy" onerror="this.parentElement.classList.add('noimg'); this.remove();">`;
+        const src = (p && p.image_url) ? p.image_url : this.PH_IMG;
+        const alt = this.escapeHtml((p && p.name) || '');
+        return `<img src="${src}" alt="${alt}" loading="lazy" onerror="store._imgFail(this)">`;
     }
+    /* Guaranteed image fallback — swap any failed product image to the branded placeholder (idempotent). */
+    _imgFail(el) { if (el) { el.onerror = null; el.src = this.PH_IMG; el.classList.add('img-ph'); } }
     price(p) { return '$' + (p.price_usd || 0).toLocaleString(); }
     priceBand(p) { return p.price_usd < 150 ? 'entry' : p.price_usd < 400 ? 'core' : 'elevated'; }
     swatch(c) {
@@ -1334,29 +1415,29 @@ class CoachStorefront {
             /* 14 ── AI search (real affinity ranking over real catalog) ────── */
             {
                 label: 'AI search',
-                watch: 'affinity-ranked results',
-                caption: 'A shopper searches in plain language — results are AI-ranked and personalized to her.',
+                watch: 'a styled Edit + affinity-ranked results',
+                caption: 'A shopper searches in plain language — AI ranks the real catalog and styles an Edit on her actual bag.',
                 run: async () => {
                     this.hideCmab(); this.hideCursor();
                     this.openSearch();
                     await this.sleep(500);
                     await this.typeIntoInput('search-input', 'bags for a winter wedding');
-                    this.runSearch(document.getElementById('search-input').value);
+                    await this.runSearch(document.getElementById('search-input').value, { live: true });
                     this.logEvent('search', 'search', 'bags for a winter wedding');
-                    await this.sleep(450);
-                    this.pulse('#search-results');
+                    await this.sleep(600);
+                    this.pulse('#search-edit');
                 },
                 callout: { anchor: '#search', usecase: 'AI / personalized search',
-                    title: 'Search that understands intent',
+                    title: 'Search that understands intent — and styles it',
                     signal: 'A natural-language query — <em>"bags for a winter wedding"</em> (intent, not keywords).',
-                    decision: 'Rank the real catalog by <strong>occasion, style & her live affinity</strong>.',
-                    impact: '<strong>Every shopper\'s search is personalized</strong> — relevance from the first result.' },
+                    decision: 'Rank the real catalog by <strong>occasion, style & her live affinity</strong> — then render an <strong>AI-styled Edit</strong> of the real product.',
+                    impact: 'She doesn\'t just see results — <strong>she sees herself there</strong>. Relevance from the first result.' },
             },
             /* 15 ── AI chat · Style Concierge (real-feeling, scripted) ──────── */
             {
                 label: 'AI chat · Style Concierge',
-                watch: 'styled product picks',
-                caption: 'A conversational Style Concierge replies in natural language with real product picks.',
+                watch: 'a styled look + product picks',
+                caption: 'A conversational Style Concierge replies in plain language, styles the look, and pulls the real pieces.',
                 run: async () => {
                     this.closeSearch(); this.hideCursor();
                     this.openConcierge();
@@ -1370,8 +1451,8 @@ class CoachStorefront {
                 callout: { anchor: '#concierge', usecase: 'AI chat (Style Concierge)',
                     title: 'A stylist in the chat',
                     signal: 'A styling question in <strong>plain language</strong>.',
-                    decision: 'The concierge replies with a short on-brand rationale + <strong>real catalog pieces</strong>.',
-                    impact: '<strong>Conversational commerce, on-brand</strong> — taps straight to product.' },
+                    decision: 'The concierge replies with on-brand rationale, an <strong>AI-styled look</strong>, and <strong>real catalog pieces</strong>.',
+                    impact: '<strong>Conversational commerce that shows the vision</strong> — taps straight to product.' },
             },
         ];
     }
@@ -1415,10 +1496,34 @@ class CoachStorefront {
         this.hideCallout(); this.clearSpotlight(); this.hideCursor();
         this.hideTransientPanels(); this.closeCart();
         this.clearChangePills(); this.clearMarkers();    // clean slate on restart
+        try { window.dispatchEvent(new Event('opal:reset')); } catch (e) {}   // fresh Opal chat per demo run
         this.ticked.clear(); this.renderChecklist(-1);   // Restart resets the checklist
         this.resetShopper();
         this.stepIndex = -1;
         this.nextStep();
+    }
+    /* Clear ONLY the demo-captured events in D1 (POST /operator/events/reset).
+     * Companion to the client-only Restart (↻) above: Restart resets this browser's
+     * demo UI; this clears the SERVER-side events captured during demo runs. The
+     * historical Coach dataset (profiles, orders, payment history) is kept, so Opal
+     * still builds meaningful audiences over the historical+demo union afterwards. */
+    async resetDemoData() {
+        const btn = document.getElementById('dir-clear-demo');
+        if (btn && btn.disabled) return;
+        if (!window.confirm('Clear demo-captured events?\n\nThis deletes only events captured during demo runs. The historical Coach dataset (3,200 profiles, orders, payment history) is kept.')) return;
+        if (btn) btn.disabled = true;
+        let out = null;
+        try {
+            const r = await fetch('/operator/events/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scope: 'all' }),
+            });
+            out = await r.json();
+        } catch (e) { console.error('reset demo data failed', e); }
+        if (btn) btn.disabled = false;
+        const n = (out && typeof out.deletedDemoEvents === 'number') ? out.deletedDemoEvents : 0;
+        this.logEvent('post', 'demo:reset', `cleared ${n} demo event${n === 1 ? '' : 's'} · historical kept`, null, null);
     }
     async nextStep() {
         if (this.busy) return;
@@ -1808,17 +1913,183 @@ class CoachStorefront {
         const o = document.getElementById('search-overlay'); if (o) o.classList.remove('open');
         const s = document.getElementById('search'); if (s) s.classList.remove('open');
     }
-    searchChip(q) { document.getElementById('search-input').value = q; this.runSearch(q); }
-    runSearch(q) {
+    searchChip(q) { document.getElementById('search-input').value = q; this.runSearch(q, { live: true }); }
+    async runSearch(q, opts) {
         const grid = document.getElementById('search-results');
         const meta = document.getElementById('search-meta');
+        const edit = document.getElementById('search-edit');
         const query = (q || '').trim();
-        if (!query) { grid.innerHTML = ''; meta.textContent = 'Type a request to see AI-ranked, personalized results.'; return; }
-        const results = this.searchCatalog(query, 9);
+        if (!query) { grid.innerHTML = ''; if (edit) edit.innerHTML = ''; meta.textContent = 'Type a request to see AI-ranked, personalized results.'; return; }
+        meta.innerHTML = `<span class="live-dot"></span>Reading your request…`;
+        let results = null, intent = null, hero = null, src = 'fallback';
+        try {
+            const res = await fetch('/ai/search', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query, limit: 9, affinity: { dominantLine: this.dominantLine, segments: this.segments, recommendationIds: (this.recommendations || []).map((p) => p.id) } }),
+            });
+            const json = await res.json();
+            if (json && json.ok && Array.isArray(json.productIds)) {
+                results = json.productIds.map((id) => this.byId.get(id)).filter(Boolean);
+                intent = json.intent || null; hero = json.hero || null; src = 'gemini';
+            }
+        } catch (e) { /* fall back to the client heuristic */ }
+        if (!results || !results.length) { results = this.searchCatalog(query, 9); src = 'fallback'; }
+        // The Edit — a Gemini-styled editorial scene of the REAL hero bag (instant if pre-genned;
+        // live-generated for novel queries when committed; else gracefully no hero, just the grid).
+        this._renderSearchEdit(query, intent, hero, results, src, !!(opts && opts.live));
         this.paintGrid(grid, results, { recommended: this.personalized });
         const n = results.length;
         const affNote = this.dominantLine ? ` & your ${this.dominantLine} affinity` : ' & your live affinity';
-        meta.innerHTML = `<span class="live-dot"></span>${n} result${n === 1 ? '' : 's'} · ranked by occasion, style${affNote}`;
+        const summary = intent && intent.summary;
+        const understood = src === 'gemini' && summary ? `understood “${summary}” · ` : '';
+        meta.innerHTML = `<span class="live-dot"></span>${n} result${n === 1 ? '' : 's'} · ${understood}ranked by occasion, style${affNote}`;
+    }
+    /* ── Styled-scene matching + rendering (shared by Search "Edit" + Concierge "look") ── */
+    _normQ(s) { return (s || '').toLowerCase().trim().replace(/[?!.…]+$/g, '').trim(); }
+    _slug(s) { return (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40); }
+    sceneFor(query, intent, type, heroId) {
+        const m = this.sceneManifest || {};
+        const nq = this._normQ(query);
+        for (const k in m) { if (m[k] && m[k].type === type && this._normQ(m[k].query) === nq) return m[k]; }  // (1) exact chip
+        const occ = this._deriveOccasion(query, intent, type);
+        if (occ) {
+            const list = (this.gridByOcc && this.gridByOcc[type] && this.gridByOcc[type][occ]) || null;
+            if (list && list.length) return (heroId && list.find((e) => e.productId === heroId)) || list[0];  // (2) grid: product-accurate, instant
+            const ak = this._anchorKey(occ, type);
+            if (ak && m[ak] && m[ak].type === type) return m[ak];                                              // (3) original curated anchor
+        }
+        return null;                                                                                          // (4) → live, then ranked grid
+    }
+    /* Maps a canonical occasion → the original (non-uniform) curated manifest key. */
+    _anchorKey(occ, type) {
+        const S = { 'winter-wedding': 'search-winter-wedding', gift: 'search-gift-150', work: 'search-work-tote', travel: 'search-travel-crossbody', investment: 'search-investment', 'date-night': 'search-date-night', festival: 'search-festival', everyday: 'search-everyday' };
+        const L = { 'winter-wedding': 'look-winter-wedding', gift: 'look-gift-200', work: 'look-work', travel: 'look-travel', capsule: 'look-capsule-tabby', brooklyn: 'look-brooklyn' };
+        return (type === 'concierge' ? L : S)[occ] || null;
+    }
+    /* Canonical occasion for a query (keyword-first → deterministic for curated queries; Gemini
+       occasion tags as a fallback). Returns one occasion name shared by the grid + the anchor map,
+       or null → the query is genuinely off-script and should generate a LIVE vibe-matched scene. */
+    _deriveOccasion(query, intent, type) {
+        const q = (query || '').toLowerCase();
+        const occ = new Set((intent && intent.occasions) || []);
+        const gift = (intent && intent.giftMode) || /\b(gift|present|for (her|him|mom|dad|a friend))\b/.test(q);
+        const band = intent && intent.priceBand;
+        const cc = type === 'concierge';
+        const has = (re) => re.test(q);
+        // (1) literal keywords — deterministic, highest priority
+        if (has(/winter wedding/)) return 'winter-wedding';
+        if (gift) return 'gift';
+        if (cc && has(/\bcapsule\b/)) return 'capsule';
+        if (cc && has(/\bbrooklyn\b/)) return 'brooklyn';
+        if (has(/\bcocktail\b/)) return 'cocktail';
+        if (has(/\b(gala|black.?tie)\b/)) return 'gala';
+        if (has(/\b(opera|theat(er|re)|symphony|ballet|philharmonic)\b/)) return 'opera';
+        if (has(/\b(gallery|exhibition|art (opening|show|fair)|museum|vernissage)\b/)) return 'gallery';
+        if (has(/\b(beach|resort|poolside|tropical|honeymoon|yacht|seaside|cruise)\b/)) return 'beach-resort';
+        if (has(/\bbrunch\b/)) return 'brunch';
+        if (has(/\b(work|office|commute|desk|laptop|9 ?to ?5)\b/)) return 'work';
+        if (has(/\b(travel|trip|vacation|carry.?on|getaway|weekend away)\b/)) return 'travel';
+        if (has(/\b(investment|splurge|heirloom|timeless|quiet luxury|high[- ]end)\b/)) return 'investment';
+        if (has(/\b(festival|concert)\b/)) return 'festival';
+        if (has(/\b(date night|date-night|night out)\b/)) return 'date-night';
+        if (has(/\b(everyday|daily|casual)\b/)) return 'everyday';
+        // (2) Gemini occasion-tag fallback — only for occasions we have a verified scene for
+        if (occ.has('winter') && (occ.has('special-occasion') || occ.has('evening'))) return 'winter-wedding';
+        if (occ.has('work')) return 'work';
+        if (occ.has('travel')) return 'travel';
+        if (occ.has('festival')) return 'festival';
+        if (occ.has('date-night')) return 'date-night';
+        if (band === 'elevated') return 'investment';
+        if (occ.has('everyday')) return 'everyday';
+        if (cc && (occ.has('special-occasion') || occ.has('evening'))) return 'winter-wedding';
+        return null; // → LIVE, vibe-matched generation (never a mismatched stock scene)
+    }
+    /* Stable scene id for the LIVE path (so a repeat of the same off-script query hits the R2 cache). */
+    _deriveSceneKey(query, intent, type) {
+        const occ = this._deriveOccasion(query, intent, type);
+        return occ ? `${type === 'concierge' ? 'look' : 'search'}-${occ}` : null;
+    }
+    _editHeroHtml(asset, headline, subhead, productName, loading) {
+        const cap = productName ? `Styled with AI · the ${this.escapeHtml(productName)} shown is the real product` : 'Styled with AI · real product';
+        const img = asset ? `<img class="eh-img" src="${asset}" alt="" onload="this.classList.add('in')" onerror="this.closest('.edit-hero-wrap').innerHTML=''">` : '';
+        const kicker = loading ? `<span class="live-dot"></span>Styling your edit…` : `<span class="live-dot"></span>The Edit`;
+        return `<div class="edit-hero${loading ? ' loading' : ''}">${img}<div class="eh-scrim"></div>
+            <div class="eh-copy"><div class="eh-kicker">${kicker}</div>
+            <div class="eh-headline">${this.escapeHtml(headline || '')}</div>
+            ${subhead ? `<div class="eh-subhead">${this.escapeHtml(subhead)}</div>` : ''}</div>
+            ${asset ? `<div class="eh-caption">${cap}</div>` : ''}</div>`;
+    }
+    _fallbackHeadline(query, intent) {
+        const s = (intent && intent.summary) || query || '';
+        return s ? s.replace(/\b\w/g, (c) => c.toUpperCase()) : 'Your Edit';
+    }
+    _renderSearchEdit(query, intent, hero, results, src, allowLive) {
+        const wrap = document.getElementById('search-edit');
+        if (!wrap) return;
+        const headline = (intent && intent.headline) || this._fallbackHeadline(query, intent);
+        const subhead = (intent && intent.subhead) || '';
+        const heroId = (hero && hero.productId) || (results && results[0] && results[0].id) || null;
+        const scene = this.sceneFor(query, intent, 'search', heroId);
+        if (scene && scene.asset) {                              // 1) pre-genned → instant
+            wrap.innerHTML = this._editHeroHtml(scene.asset, headline, subhead, scene.productName);
+            return;
+        }
+        const anchor = (hero && hero.productId && this.byId.get(hero.productId)) || results[0];
+        const ctx = intent && intent.sceneContext;
+        if (allowLive && anchor && ctx && src === 'gemini') {     // 2) live-generate for a novel query
+            wrap.innerHTML = this._editHeroHtml('', headline, subhead, anchor.name, true);
+            const sceneId = this._deriveSceneKey(query, intent, 'search') || ('q-' + this._slug(query));
+            this._liveScene({ productId: anchor.id, sceneId, type: 'search', sceneContext: ctx, aspect: '16:9' })
+                .then((url) => {
+                    if (!url) { wrap.innerHTML = ''; return; }
+                    const cur = document.getElementById('search-input');
+                    if (cur && this._normQ(cur.value) !== this._normQ(query)) { wrap.innerHTML = ''; return; }  // stale
+                    wrap.innerHTML = this._editHeroHtml(url, headline, subhead, anchor.name);
+                })
+                .catch(() => { wrap.innerHTML = ''; });
+            return;
+        }
+        wrap.innerHTML = '';                                      // 3) graceful — grid only
+    }
+    /** POST /ai/scene; resolves to a served scene URL or null (never throws). */
+    async _liveScene(payload) {
+        try {
+            const res = await fetch('/ai/scene', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const j = await res.json();
+            return j && j.ok && j.url ? j.url : null;
+        } catch { return null; }
+    }
+    /** Style Concierge "look" — a 4:5 styled scene of the anchor pick, in the chat thread. */
+    _renderConciergeLook(anchorId, query) {
+        const thread = document.getElementById('cc-thread');
+        if (!thread) return;
+        const mk = (asset, productName, loading) => {
+            const el = document.createElement('div');
+            el.className = 'cc-look' + (loading ? ' loading' : '');
+            const cap = productName ? `Styled with AI · the ${this.escapeHtml(productName)} is the real product` : '';
+            el.innerHTML = (asset ? `<img class="ccl-img" src="${asset}" alt="" onload="this.classList.add('in')" onerror="this.closest('.cc-look').remove()">` : '')
+                + (cap ? `<div class="ccl-cap">${cap}</div>` : '');
+            thread.appendChild(el); thread.scrollTop = thread.scrollHeight;
+            return el;
+        };
+        const scene = this.sceneFor(query, null, 'concierge', anchorId);
+        if (scene && scene.asset) { mk(scene.asset, scene.productName); return; }      // pre-genned → instant
+        const anchor = anchorId && this.byId.get(anchorId);
+        const visual = /wedding|gala|formal|cocktail|party|date|night|evening|work|office|commute|travel|trip|vacation|festival|gift|present|winter|holiday|brunch|dinner|interview|weekend|capsule|outfit|look|wear|carry|occasion/i.test(query || '');
+        if (!anchor || !visual) return;                                                // generic ask → cards only
+        const el = mk('', anchor.name, true);                                          // live → shimmer then swap
+        const sceneId = this._deriveSceneKey(query, null, 'concierge') || ('cc-' + this._slug(query));
+        const ctx = `an aspirational, editorial styled look inspired by: "${(query || '').slice(0, 120)}"`;
+        this._liveScene({ productId: anchor.id, sceneId, type: 'concierge', sceneContext: ctx, aspect: '4:5' })
+            .then((url) => {
+                if (!url) { el.remove(); return; }
+                el.classList.remove('loading');
+                const img = document.createElement('img');
+                img.className = 'ccl-img'; img.src = url;
+                img.onload = () => img.classList.add('in'); img.onerror = () => el.remove();
+                el.insertBefore(img, el.firstChild);
+            })
+            .catch(() => el.remove());
     }
     /* CatalogService-style affinity ranking, client-side over the real catalog. */
     searchCatalog(query, limit = 9) {
@@ -1908,23 +2179,57 @@ class CoachStorefront {
         if (!prompt || !prompt.trim()) return;
         this.appendCcMsg('user', this.escapeHtml(prompt));
         document.getElementById('cc-input').value = '';
+        this.ccMessages = (this.ccMessages || []).concat([{ role: 'user', content: prompt }]);
         const thinking = this.appendCcThinking();
-        await this.sleep(950);
-        thinking.remove();
-        const reply = this.conciergeReply(prompt);
-        this.appendCcMsg('bot', reply.text);
-        const cards = reply.ids.map((id) => this.byId.get(id)).filter(Boolean);
-        if (cards.length) {
-            const thread = document.getElementById('cc-thread');
-            const row = document.createElement('div');
-            row.className = 'cc-recs';
-            row.innerHTML = cards.map((p) =>
-                `<div class="cc-rec" onclick="store.fromConcierge('${p.id}')"><div class="ccr-img">${this.img(p)}</div><div class="ccr-name">${p.name}</div><div class="ccr-price">${this.price(p)}</div></div>`
-            ).join('');
-            thread.appendChild(row);
-            thread.scrollTop = thread.scrollHeight;
+        let full = '', bot = null;
+        try {
+            const res = await fetch('/ai/concierge', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: this.ccMessages, affinity: { dominantLine: this.dominantLine, currentProductId: this.currentPdpId || null } }),
+            });
+            if (res.ok && res.body) {
+                thinking.remove();
+                bot = this.appendCcMsg('bot', '');
+                const reader = res.body.getReader(), dec = new TextDecoder();
+                for (;;) {
+                    const { value, done } = await reader.read(); if (done) break;
+                    full += dec.decode(value, { stream: true });
+                    bot.innerHTML = this.escapeHtml(full.replace(/\n?PICKS:.*$/is, '').trim());
+                    const th = document.getElementById('cc-thread'); if (th) th.scrollTop = th.scrollHeight;
+                }
+            }
+        } catch (e) { /* fall through to the scripted fallback */ }
+        if (thinking && thinking.parentNode) thinking.remove();
+        if (!full.trim()) {                                  // no key / timeout / empty → graceful fallback
+            if (bot && bot.parentNode) bot.remove();
+            const reply = this.conciergeReply(prompt);
+            this.appendCcMsg('bot', reply.text);
+            this._renderConciergeLook(reply.ids[0], prompt);
+            this._renderCcCards(reply.ids);
+            this.logEvent('chat', 'concierge', prompt.slice(0, 42));
+            return;
         }
+        bot.innerHTML = this.escapeHtml(full.replace(/\n?PICKS:.*$/is, '').trim());
+        const m = full.match(/PICKS:\s*([A-Za-z0-9\-,\s]+)/i);
+        let ids = m ? m[1].split(',').map((s) => s.trim()).filter(Boolean) : [];
+        ids = ids.filter((id) => this.byId.has(id));         // resolve → drop any hallucinated SKU
+        if (ids.length < 2) { const recs = (this.recommendations || []).map((p) => p.id); ids = (recs.length ? recs : this.products.slice(0, 3).map((p) => p.id)).slice(0, 3); }
+        this.ccMessages.push({ role: 'assistant', content: full });
+        this._renderConciergeLook(ids[0], prompt);
+        this._renderCcCards(ids);
         this.logEvent('chat', 'concierge', prompt.slice(0, 42));
+    }
+    _renderCcCards(ids) {
+        const cards = (ids || []).map((id) => this.byId.get(id)).filter(Boolean);
+        if (!cards.length) return;
+        const thread = document.getElementById('cc-thread');
+        const row = document.createElement('div');
+        row.className = 'cc-recs';
+        row.innerHTML = cards.map((p) =>
+            `<div class="cc-rec" onclick="store.fromConcierge('${p.id}')"><div class="ccr-img">${this.img(p)}</div><div class="ccr-name">${p.name}</div><div class="ccr-price">${this.price(p)}</div></div>`
+        ).join('');
+        thread.appendChild(row);
+        thread.scrollTop = thread.scrollHeight;
     }
     conciergeReply(prompt) {
         const q = (prompt || '').toLowerCase();

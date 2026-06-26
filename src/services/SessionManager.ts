@@ -47,7 +47,7 @@ const sessionDataSchema = z.object({
   userId: z.string(),
   anonymousId: z.string().optional(),
   segments: z.array(z.string()),
-  attributes: z.record(z.any()),
+  attributes: z.record(z.string(), z.any()),
   metadata: z.object({
     firstSeen: z.number(),
     lastSeen: z.number(),

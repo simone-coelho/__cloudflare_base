@@ -20,7 +20,7 @@ export const errorHandler = (err: Error, c: Context) => {
     return c.json(
       {
         error: 'Validation error',
-        details: err.errors,
+        details: err.issues,
         requestId: c.get('requestId'),
       },
       400

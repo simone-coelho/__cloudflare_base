@@ -8,7 +8,7 @@ const optimizely = new Hono<{ Bindings: Env }>();
 
 const DecisionRequestSchema = z.object({
   userId: z.string(),
-  userAttributes: z.record(z.any()).optional(),
+  userAttributes: z.record(z.string(), z.any()).optional(),
   experiments: z.array(z.string()).optional(),
   features: z.array(z.string()).optional(),
 });
@@ -16,8 +16,8 @@ const DecisionRequestSchema = z.object({
 const TrackEventSchema = z.object({
   userId: z.string(),
   eventKey: z.string(),
-  userAttributes: z.record(z.any()).optional(),
-  eventTags: z.record(z.any()).optional(),
+  userAttributes: z.record(z.string(), z.any()).optional(),
+  eventTags: z.record(z.string(), z.any()).optional(),
 });
 
 optimizely.use('/decisions', jwt({ required: false }));

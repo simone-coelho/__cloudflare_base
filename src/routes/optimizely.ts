@@ -8,7 +8,7 @@ const optimizely = new Hono<{ Bindings: Env }>();
 
 const DecisionRequestSchema = z.object({
   userId: z.string(),
-  userAttributes: z.record(z.any()).optional(),
+  userAttributes: z.record(z.string(), z.any()).optional(),
   experiments: z.array(z.string()).optional(),
   features: z.array(z.string()).optional(),
 });
@@ -16,8 +16,8 @@ const DecisionRequestSchema = z.object({
 const TrackEventSchema = z.object({
   userId: z.string(),
   eventKey: z.string(),
-  userAttributes: z.record(z.any()).optional(),
-  eventTags: z.record(z.any()).optional(),
+  userAttributes: z.record(z.string(), z.any()).optional(),
+  eventTags: z.record(z.string(), z.any()).optional(),
 });
 
 optimizely.use('/decisions', jwt({ required: false }));
@@ -87,6 +87,34 @@ optimizely.post('/decisions', async (c) => {
   } catch (error) {
     console.error('Optimizely decision error:', error);
     return c.json({ error: 'Failed to get decisions' }, 500);
+  }
+});
+
+// FRESH, no-store decision for "preview as this audience" — reads the LIVE datafile each call
+// (bypasses the cached initialize path), so a rule Opal just created is reflected within seconds.
+optimizely.post('/preview', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const userId = typeof body.userId === 'string' ? body.userId : 'preview';
+    const userAttributes = body.userAttributes && typeof body.userAttributes === 'object' ? body.userAttributes : {};
+    const flag = typeof body.flag === 'string' ? body.flag : 'personalized_banner';
+    const svc = new OptimizelyService(c.env);
+    const { client, revision } = await svc.createFreshClient();
+    if (!client || typeof (client as any).createUserContext !== 'function') {
+      return c.json({ flag, enabled: false, variables: {}, error: 'SDK client unavailable' });
+    }
+    const ctx = (client as any).createUserContext(userId, userAttributes);
+    const decision = ctx.decide(flag);
+    return c.json({
+      flag,
+      enabled: !!decision?.enabled,
+      variables: decision?.variables || {},
+      ruleKey: decision?.ruleKey || null,
+      revision,
+    });
+  } catch (error) {
+    console.error('Optimizely preview error:', error);
+    return c.json({ error: 'Failed to preview decision' }, 500);
   }
 });
 

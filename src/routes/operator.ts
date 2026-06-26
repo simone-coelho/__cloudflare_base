@@ -61,7 +61,7 @@ const audienceSchema = z.object({
   audienceId: z.string().optional(),
   recommendedModule: z.string().optional(),
   anchorLine: z.string().optional(),
-  stats: z.record(z.number()).optional(),
+  stats: z.record(z.string(), z.number()).optional(),
 });
 
 const publishSchema = z.object({
@@ -93,7 +93,7 @@ operatorRoutes.post('/audiences/suggest', async (c) => {
     console.error('Error suggesting audiences:', error);
 
     if (error instanceof z.ZodError) {
-      return c.json({ error: 'Invalid suggest request', details: error.errors }, 400);
+      return c.json({ error: 'Invalid suggest request', details: error.issues }, 400);
     }
     return c.json({
       error: 'Failed to suggest audiences',
@@ -136,7 +136,7 @@ operatorRoutes.post('/audiences/publish', async (c) => {
     console.error('Error publishing audience:', error);
 
     if (error instanceof z.ZodError) {
-      return c.json({ error: 'Invalid publish request', details: error.errors }, 400);
+      return c.json({ error: 'Invalid publish request', details: error.issues }, 400);
     }
     return c.json({
       error: 'Failed to publish audience',
@@ -299,6 +299,93 @@ async function sendUpdate(env: Env, userId: string, update: PersonalizationUpdat
     })
   );
 }
+
+// ---------------------------------------------------------------------------
+// POST /operator/events/reset — wipe ONLY demo-captured events (demo_events).
+//
+// The companion to the storefront's client-only Restart (↻) control: this clears
+// the SERVER-side demo data. The historical synthetic dataset (coach_odp_profiles
+// / coach_transactions / coach_purchase_items / coach_catalog) is NEVER touched —
+// every statement below addresses only `demo_events`, which can physically hold
+// nothing but demo rows (CHECK(source='demo') in migration 0002). Optional body
+// { scope:'all'|'run'|'session'|'vuid', value } narrows the wipe to one demo run.
+// ---------------------------------------------------------------------------
+const resetEventsSchema = z.object({
+  scope: z.enum(['all', 'run', 'session', 'vuid']).default('all'),
+  value: z.string().optional(),
+});
+
+operatorRoutes.post('/events/reset', async (c) => {
+  try {
+    if (!c.env.DB) {
+      return c.json({ error: 'D1 not configured (DB binding missing)' }, 503);
+    }
+    const body = await c.req.json().catch(() => ({}));
+    const { scope, value } = resetEventsSchema.parse(body ?? {});
+
+    // NOTE: every branch is scoped to demo_events AND source='demo'. There is no
+    // code path here that can reference a historical table — isolation by design.
+    let stmt: D1PreparedStatement;
+    if (scope === 'run' && value) {
+      stmt = c.env.DB.prepare(`DELETE FROM demo_events WHERE source = 'demo' AND demo_run_id = ?`).bind(value);
+    } else if (scope === 'session' && value) {
+      stmt = c.env.DB.prepare(`DELETE FROM demo_events WHERE source = 'demo' AND session_id = ?`).bind(value);
+    } else if (scope === 'vuid' && value) {
+      stmt = c.env.DB.prepare(`DELETE FROM demo_events WHERE source = 'demo' AND vuid = ?`).bind(value);
+    } else {
+      stmt = c.env.DB.prepare(`DELETE FROM demo_events WHERE source = 'demo'`);
+    }
+    const res = await stmt.run();
+    const deleted = res.meta?.changes ?? 0;
+
+    return c.json({
+      success: true,
+      scope,
+      value: value ?? null,
+      deletedDemoEvents: deleted,
+      message: `Cleared ${deleted} demo-captured event(s). Historical data untouched.`,
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    console.error('Error resetting demo events:', error);
+    if (error instanceof z.ZodError) {
+      return c.json({ error: 'Invalid reset request', details: error.issues }, 400);
+    }
+    return c.json({
+      error: 'Failed to reset demo events',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, 500);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /operator/events/stats — quick demo-vs-historical counts (for the console
+// and to label the storefront's "Clear demo data" control). Read-only.
+// ---------------------------------------------------------------------------
+operatorRoutes.get('/events/stats', async (c) => {
+  try {
+    if (!c.env.DB) {
+      return c.json({ success: true, dbBound: false, demoEvents: 0, demoVisitors: 0 });
+    }
+    const row = await c.env.DB.prepare(
+      `SELECT COUNT(*) AS demo_events, COUNT(DISTINCT vuid) AS demo_visitors
+         FROM demo_events WHERE source = 'demo'`
+    ).first<{ demo_events: number; demo_visitors: number }>();
+    return c.json({
+      success: true,
+      dbBound: true,
+      demoEvents: row?.demo_events ?? 0,
+      demoVisitors: row?.demo_visitors ?? 0,
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    console.error('Error reading demo event stats:', error);
+    return c.json({
+      error: 'Failed to read demo event stats',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, 500);
+  }
+});
 
 export default operatorRoutes;
 export { operatorRoutes };

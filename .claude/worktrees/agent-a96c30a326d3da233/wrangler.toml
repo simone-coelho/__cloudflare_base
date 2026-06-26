@@ -1,6 +1,6 @@
 name = "edge-platform"
 main = "src/index.ts"
-compatibility_date = "2024-08-06"
+compatibility_date = "2025-06-01"
 compatibility_flags = ["nodejs_compat"]
 
 [env.production]
@@ -49,6 +49,12 @@ class_name = "RateLimiter"
 name = "PERSONALIZATION_WEBSOCKET"
 class_name = "PersonalizationWebSocket"
 
+# Opal conversational agent (Cloudflare Agents SDK). Binding name MUST match the
+# class name; the client/URL uses the kebab-case form ("opal-agent").
+[[durable_objects.bindings]]
+name = "OpalAgent"
+class_name = "OpalAgent"
+
 [[migrations]]
 tag = "v1"
 new_classes = ["StateManager", "RateLimiter"]
@@ -56,6 +62,11 @@ new_classes = ["StateManager", "RateLimiter"]
 [[migrations]]
 tag = "v2"
 new_classes = ["PersonalizationWebSocket"]
+
+# Agents SDK stores chat history in SQLite, so OpalAgent must be a SQLite-backed DO.
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["OpalAgent"]
 
 # Analytics Engine
 [[analytics_engine_datasets]]
@@ -69,6 +80,9 @@ JWT_ISSUER = "edge-platform"
 JWT_AUDIENCE = "edge-platform-api"
 OPTIMIZELY_SDK_KEY = "your-sdk-key-here"
 OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/your-datafile.json"
+# Opal chat model (Gemini). The API key is a SECRET — set via `wrangler secret put
+# GEMINI_API_KEY` (prod) or a local .dev.vars file (dev). Never commit the key.
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # Static assets configuration
 [assets]

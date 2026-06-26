@@ -1,4 +1,5 @@
 export interface Env {
+  ASSETS: Fetcher;   // static-assets binding (public/) for server-side reads — see wrangler.toml [assets]
   CACHE: KVNamespace;
   SESSIONS: KVNamespace;
   STORAGE: R2Bucket;
@@ -36,4 +37,14 @@ export interface Env {
   ODP_PUBLIC_KEY?: string;
   OPAL_MCP_ENDPOINT?: string;
   OPTI_ID_TOKEN?: string;
+
+  // Opal chat (Gemini) + FX write-tools — provide via wrangler secret / .dev.vars.
+  GEMINI_API_KEY: string;
+  GEMINI_MODEL?: string;
+  GEMINI_IMAGE_MODEL?: string;   // "nano banana" image model for /ai/scene (default gemini-3.1-flash-image)
+  OPTIMIZELY_API_TOKEN?: string;
+  OPTIMIZELY_PROJECT_ID?: string;
+  OPTIMIZELY_ENVIRONMENT?: string;
+  OPTIMIZELY_WRITE_ENABLED?: string;
+  OPTIMIZELY_WEBHOOK_SECRET?: string;   // HMAC secret for the datafile webhook (X-Hub-Signature)
 }
