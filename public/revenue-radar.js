@@ -351,9 +351,11 @@
         <button class="rr-ctrl" onclick="store.rrBurst(true)">Recover</button>
         <button class="rr-ctrl" id="rr-reset-btn" onclick="store.rrReset()">↺ Reset demo</button>
         <button class="rr-ctrl" onclick="store.rrPlay()">▶ Play story</button>
-        <button class="rr-ctrl" onclick="store.rrContrast()">◑ DY vs us</button>
       </div>
       <div class="rr-narrate" id="rr-narrate"></div>`;
+    // NOTE: "◑ DY vs us" (Neighborhood-vs-Shopper) button temporarily hidden pending messaging.
+    // Re-enable by adding back: <button class="rr-ctrl" onclick="store.rrContrast()">◑ DY vs us</button>
+    // (store.rrContrast() + the modal are left intact.)
     const shell = (inner) => `
       <div class="rr">
         <div class="rr-top"><div class="rr-ttl">Revenue Radar</div><div class="rr-sub">Where checkout revenue leaks — diagnosed live at the edge</div></div>
