@@ -22,14 +22,22 @@ import {
   ensureFlag,
   ensureVariations,
   ensureRule,
+  ensureAttributes,
   enableLive,
 } from '@/services/optimizelyFx';
 
 const FLAGS = 'https://api.optimizely.com/flags/v1';
 const ADMIN = 'https://api.optimizely.com/v2';
 
-/** Maps the seam's experiment flavour → the FX ruleset rule.type. CMAB is a MAB + contextual attrs. */
-const RULE_TYPE: Record<string, 'a/b' | 'multi_armed_bandit'> = { ab: 'a/b', mab: 'multi_armed_bandit', cmab: 'multi_armed_bandit' };
+type FxRuleType = 'a/b' | 'multi_armed_bandit' | 'contextual_multi_armed_bandit' | 'targeted_delivery';
+
+/** Maps the seam's experiment flavour → the FX ruleset rule.type (verified live against the real API). */
+const RULE_TYPE: Record<string, 'a/b' | 'multi_armed_bandit' | 'contextual_multi_armed_bandit'> = {
+  ab: 'a/b', mab: 'multi_armed_bandit', cmab: 'contextual_multi_armed_bandit',
+};
+
+/** Contextual attributes a CMAB rule personalizes on (created/reused via ensureAttributes → attribute_ids). */
+const CMAB_CONTEXT_ATTRS = ['device', 'persona', 'journey_stage'];
 
 /** Tiny REST helper (optimizelyFx's `api` is module-private; this mirrors it). */
 async function api(cfg: FxConfig, method: string, path: string, body?: unknown): Promise<{ status: number; ok: boolean; json: any }> {
@@ -84,13 +92,14 @@ export interface LaunchExperimentResult {
   ruleKey: string;
   environment: string;
   type: 'ab' | 'mab' | 'cmab';
-  ruleType: 'a/b' | 'multi_armed_bandit' | 'targeted_delivery';
+  ruleType: FxRuleType;
   metricKind: 'event' | 'revenue';
   variations: { key: string; name: string; percentage: number; isControl: boolean; id?: number }[];
   audienceId?: number;
   metric: ExperimentMetric;
   readoutUrl: string;
   status: 'live';
+  enabled: boolean;                // false → real rule created but left as draft (e.g. CMAB pending review)
   representative: true;
   fellBack: boolean;               // true → typed rule rejected, used targeted-delivery instead
   diagnostics?: unknown;
@@ -120,22 +129,30 @@ function normalizeVariations(vars: ExperimentVariation[]): NormVar[] {
  */
 async function ensureMetricEvent(cfg: FxConfig, key: string, name?: string): Promise<{ id: number | null; diag: any }> {
   const k = slug(key);
-  const base = `${ADMIN}/projects/${cfg.projectId}/custom_events`;
-  const list = await api(cfg, 'GET', `${base}?per_page=100`);
+  // 1) Reuse via the events LIST (custom events surface on /v2/events; GET on /custom_events is 405 — POST-only).
+  const list = await api(cfg, 'GET', `${ADMIN}/events?project_id=${cfg.projectId}&per_page=200`);
   const items: any[] = Array.isArray(list.json) ? list.json : (list.json?.items || []);
-  const found = items.find((e) => e && e.key === k);
-  if (found) return { id: found.id ?? null, diag: { listStatus: list.status, reused: true, id: found.id } };
-  const r = await api(cfg, 'POST', base, { key: k, name: name || k, description: `Experiment metric event (ab-cmab): ${k}`, archived: false });
-  return { id: r.ok ? (r.json?.id ?? null) : null, diag: { listStatus: list.status, createStatus: r.status, createBody: r.ok ? { id: r.json?.id } : r.json } };
+  const found = items.find((e) => e && (e.key === k || e.api_name === k));
+  if (found?.id) return { id: found.id, diag: { reused: true, listStatus: list.status } };
+  // 2) CREATE via the custom_events endpoint.
+  const r = await api(cfg, 'POST', `${ADMIN}/projects/${cfg.projectId}/custom_events`, { key: k, name: name || k, description: `Experiment metric event (ab-cmab): ${k}`, archived: false });
+  if (r.ok && r.json?.id) return { id: r.json.id, diag: { created: true, createStatus: r.status } };
+  // 3) Duplicate key → the 400 carries the existing id ("...already in use ... (id: NNNN)"). Bulletproof reuse.
+  const m = JSON.stringify(r.json || '').match(/id:\s*(\d+)/);
+  if (m) return { id: Number(m[1]), diag: { reusedFromDup: true, createStatus: r.status } };
+  return { id: null, diag: { listStatus: list.status, createStatus: r.status, createBody: r.json } };
 }
 
-/** Build a typed ruleset rule (a/b or multi_armed_bandit) with a split + a metric. */
+/** Build a typed ruleset rule (a/b · multi_armed_bandit · contextual_multi_armed_bandit) + a metric. */
 function ruleValue(
-  ruleKey: string, name: string, ruleType: 'a/b' | 'multi_armed_bandit', vars: NormVar[],
+  ruleKey: string, name: string, ruleType: 'a/b' | 'multi_armed_bandit' | 'contextual_multi_armed_bandit', vars: NormVar[],
   audienceId: number | undefined, metric: { eventId: number | null; displayTitle: string },
+  contextAttributeIds?: number[],
 ): Record<string, unknown> {
+  const isCmab = ruleType === 'contextual_multi_armed_bandit';
   const variations: Record<string, unknown> = {};
-  for (const v of vars) variations[v.key] = { key: v.key, name: v.name, percentage_included: v.percentage };
+  // CMAB variations carry NO manual split (the bandit auto-allocates); a/b + mab carry percentage_included.
+  for (const v of vars) variations[v.key] = isCmab ? { key: v.key, name: v.name } : { key: v.key, name: v.name, percentage_included: v.percentage };
   // EVENT metric (preferred) or REVENUE metric (no event) — FX requires ≥1 metric on an experiment rule.
   const m: Record<string, unknown> = metric.eventId
     ? { event_id: Number(metric.eventId), event_type: 'custom', scope: 'visitor', aggregator: 'unique', winning_direction: 'increasing', display_title: metric.displayTitle }
@@ -143,8 +160,11 @@ function ruleValue(
   const value: Record<string, unknown> = {
     key: ruleKey, name, type: ruleType, percentage_included: 10000, variations, metrics: [m],
   };
-  // A/B carries a baseline + manual distribution; MAB has neither (the bandit allocates).
-  if (ruleType === 'a/b') value.distribution_mode = 'manual';
+  if (ruleType === 'a/b') value.distribution_mode = 'manual';          // a/b: manual split + baseline
+  if (isCmab) {                                                         // cmab: auto-allocated + contextual attrs
+    value.distribution_goal = 'automated';
+    if (contextAttributeIds && contextAttributeIds.length) value.attribute_ids = contextAttributeIds.map(Number);
+  }
   if (audienceId) {
     value.audience_conditions = ['or', { audience_id: Number(audienceId) }];
     value.audience_ids = [Number(audienceId)];
@@ -193,9 +213,20 @@ export async function launchExperiment(cfg: FxConfig, input: LaunchExperimentInp
   try { const ev = await ensureMetricEvent(cfg, metricKey, displayTitle); metricEventId = ev.id; metricDiag = ev.diag; }
   catch (e) { metricDiag = { error: e instanceof Error ? e.message : String(e) }; }
 
-  // 4) Rule — typed (a/b | multi_armed_bandit); fall back to targeted-delivery on rejection.
+  // 4) CMAB personalizes on contextual attributes → ensure them, pass their ids (attribute_ids).
+  let contextAttributeIds: number[] | undefined;
+  let attrDiag: unknown;
+  if (ruleType === 'contextual_multi_armed_bandit') {
+    try {
+      const ids = await ensureAttributes(cfg, CMAB_CONTEXT_ATTRS);
+      contextAttributeIds = CMAB_CONTEXT_ATTRS.map((k) => ids[k]).filter((n): n is number => typeof n === 'number');
+      attrDiag = { attributeIds: contextAttributeIds };
+    } catch (e) { attrDiag = { error: e instanceof Error ? e.message : String(e) }; }
+  }
+
+  // 5) Rule — typed (a/b · multi_armed_bandit · contextual_multi_armed_bandit); fall back to targeted-delivery on rejection.
   const ruleKey = `${key}_exp`;
-  let finalRuleType: 'a/b' | 'multi_armed_bandit' | 'targeted_delivery' = ruleType;
+  let finalRuleType: FxRuleType = ruleType;
   let fellBack = false;
   let diagnostics: unknown;
 
@@ -203,7 +234,7 @@ export async function launchExperiment(cfg: FxConfig, input: LaunchExperimentInp
   const existing = rs.json?.rules?.[ruleKey];
   if (!existing) {
     const patch = [
-      { op: 'add', path: `/rules/${ruleKey}`, value: ruleValue(ruleKey, name, ruleType, vars, input.audienceId, { eventId: metricEventId, displayTitle }) },
+      { op: 'add', path: `/rules/${ruleKey}`, value: ruleValue(ruleKey, name, ruleType, vars, input.audienceId, { eventId: metricEventId, displayTitle }, contextAttributeIds) },
       { op: 'add', path: '/rule_priorities/-', value: ruleKey },
     ];
     const r = await api(cfg, 'PATCH', rulesetUrl(cfg, key, env), patch);
@@ -212,7 +243,7 @@ export async function launchExperiment(cfg: FxConfig, input: LaunchExperimentInp
     } else {
       fellBack = true;
       finalRuleType = 'targeted_delivery';
-      diagnostics = { ruleType, ruleStatus: r.status, ruleError: r.json, metricEvent: metricDiag };
+      diagnostics = { ruleType, ruleStatus: r.status, ruleError: r.json, metricEvent: metricDiag, contextAttrs: attrDiag };
       const treatment = vars.find((v) => !v.isControl) || vars[vars.length - 1];
       await ensureRule(cfg, key, env, { key: ruleKey, name, type: 'targeted_delivery', variationKey: treatment.key, percentage_included: 10000 }, input.audienceId);
     }
@@ -220,8 +251,11 @@ export async function launchExperiment(cfg: FxConfig, input: LaunchExperimentInp
     finalRuleType = existing.type || ruleType;
   }
 
-  // 5) Take it live (flag-on in env + rule enabled).
-  await enableLive(cfg, key, env, ruleKey);
+  // 6) Take it live (flag-on in env + rule enabled). A CMAB may require review before it can enable —
+  // don't fail the launch if so; the REAL rule still exists (as a draft) and is pullable in the UI.
+  let enabled = true;
+  try { await enableLive(cfg, key, env, ruleKey); }
+  catch (e) { enabled = false; diagnostics = Object.assign({}, diagnostics || {}, { enableError: e instanceof Error ? e.message : String(e) }); }
 
   const readoutUrl = `${input.baseUrl || ''}/storefront?experiment=${encodeURIComponent(key)}#engine`;
   return {
@@ -238,6 +272,7 @@ export async function launchExperiment(cfg: FxConfig, input: LaunchExperimentInp
     metric: input.metric,
     readoutUrl,
     status: 'live',
+    enabled,
     representative: true,
     fellBack,
     diagnostics,

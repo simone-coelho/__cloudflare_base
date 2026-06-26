@@ -19,7 +19,7 @@ Two independent axes; don't conflate them:
 |---|---|---|---|
 | **A/B test** (`a/b`) | ✅ GA | **REAL** — verified live (flag 563892, 50/50, event metric `checkout_complete`, no fallback) | Real experiment artifact; **lift figures representative** (real stats need real traffic) |
 | **MAB** (`multi_armed_bandit`) | ✅ GA | **REAL** — verified live (flag 563891, even 3-way split, event metric `add_to_cart`, `baseline:null`) | Real bandit artifact; allocation/lift numbers representative |
-| **CMAB** (contextual) | ✅ **GA in FX** — rule `type: "multi_armed_bandit"` + contextual **user attributes** (we have full access; **not** gated) | **REAL (in progress)** — decision service `cmab.ts` done; needs the exact contextual-attributes REST field to create the live rule | Real artifact; per-context lift numbers representative |
+| **CMAB** (contextual) | ✅ **GA in FX** — rule `type: "contextual_multi_armed_bandit"` + `attribute_ids` + `distribution_goal:"automated"` (full access; **not** gated) | **REAL** — verified live (flag 563903, contextual attrs device/persona/journey_stage, event metric, enabled) | Real artifact; per-context lift numbers representative |
 | **Targeted delivery** (`targeted_delivery`) | ✅ GA | **REAL** (optimizelyFx) | Real delivery rule (rollout/kill-switch); not an experiment |
 
 ## 2. The decision framework — WHEN to use which (the "valid use case" test)
@@ -46,7 +46,7 @@ The four form a **lifecycle arc** worth narrating: **A/B (prove) → MAB (auto-o
 ### CMAB — "One experiment, many winners — the thing DY structurally cannot do"
 - **Scenario (valid for CMAB, NOT MAB):** the **anti-DY centerpiece**. The best experience differs by shopper-context, decided in-session at the edge: Mobile Tabby-lover → Complete-the-Look (+22% ATC); Desktop gifter → Gift edit (+16% conv); Returning luxe → Premium edit (+12% rev/visitor); **Gen-Z at payment → BNPL save** (+9% checkout completion). MAB finds *one* global winner; CMAB finds the **best winner per context**.
 - **Awe moment:** "Dynamic Yield knows the **neighborhood** (postal-code averages). Optimizely knows the **shopper** — and serves a **different winning experience to each context, automatically, in real time, at the edge.** One experiment, many winners." This is the competitive kill-shot.
-- **Status:** decision service `src/services/cmab.ts` done (real, explainable). CMAB **is GA in Feature Experimentation** — rule `type: "multi_armed_bandit"` + contextual **user attributes** (we have full access, not gated). **Making it a real live rule** is in progress, pending the exact contextual-attributes REST field (the public docs + our swagger don't expose it). Lift numbers stay representative.
+- **Status:** ✅ **REAL + verified.** `launchExperiment` type `cmab` creates a live `contextual_multi_armed_bandit` rule (`distribution_goal:"automated"`, `attribute_ids` for device/persona/journey_stage via `ensureAttributes`, event metric — CMAB rejects revenue metrics). The `cmab.ts` decision service powers the per-context Engine readout (representative numbers). Verified flag 563903.
 
 ### Targeted delivery / rollout — "Graduate the winner" (supporting beat)
 - **Scenario:** after the A/B proves BNPL, **roll it out to 100% of the Gen-Z BNPL audience** (or kill-switch instantly). Completes the lifecycle.
@@ -60,11 +60,11 @@ The four form a **lifecycle arc** worth narrating: **A/B (prove) → MAB (auto-o
 4. **Narrate the lifecycle arc** (A/B → MAB → CMAB → rollout) — one coherent platform story, each type with a distinct, valid reason to exist.
 5. **Never** claim proven lift on Tapestry production traffic; every bandit/A-B number is labeled representative.
 
-## 5. Open item
-- **CMAB live rule** — the only blocker is the exact **contextual-attributes REST field** on a `multi_armed_bandit` rule (not in the public docs or our swagger). Fastest resolution: create a CMAB rule once in the UI (**Add Rule → Contextual Bandit**) and read the ruleset back via `GET /experiment/_diag/ruleset/{flagKey}`, or paste the ruleset JSON. Then `launchExperiment` type `cmab` is fully real.
+## 5. Status — all three real
+A/B, MAB, and CMAB all create real, verified Optimizely rules via `launchExperiment({type: ab|mab|cmab})`. Lift/allocation numbers in the Engine readout stay representative (real stats need real traffic). Nothing blocked.
 
 ## 6. Verified FX facts (live, 2026-06-26)
-- Rule types: `a/b` · `multi_armed_bandit` · `targeted_delivery`. CMAB = `multi_armed_bandit` + contextual user attributes.
-- Experiment rule needs ≥1 metric: **event metric** `{event_id, event_type:"custom", scope:"visitor", aggregator:"unique", winning_direction:"increasing", display_title}` or **revenue metric** `{aggregator:"sum", field:"revenue", scope:"visitor", winning_direction:"increasing"}`.
-- Create a custom event: `POST /v2/projects/{projectId}/custom_events` `{key, name, description}` → `id` (the `event_id`). (Not `/v2/events` — that 404s.)
-- MAB rule: `baseline_variation_id:null`, no `distribution_mode`, even split. A/B rule: has `distribution_mode`, a baseline.
+- **Rule types:** `a/b` · `multi_armed_bandit` · `contextual_multi_armed_bandit` (CMAB) · `targeted_delivery`.
+- **Metric:** **event** `{event_id, event_type:"custom", scope:"visitor", aggregator:"unique", winning_direction:"increasing", display_title}` or **revenue** `{aggregator:"sum", field:"revenue", scope:"visitor", winning_direction:"increasing"}`. **CMAB requires an EVENT metric** (revenue not supported).
+- **Events:** CREATE `POST /v2/projects/{pid}/custom_events` `{key,name,description}` → `id`; LIST `GET /v2/events?project_id={pid}` (GET on `/custom_events` is 405). A duplicate create returns the existing id in the 400 message.
+- **A/B:** `distribution_mode:"manual"` + baseline. **MAB:** `baseline:null`, no `distribution_mode`, even split, event metric. **CMAB:** `distribution_goal:"automated"` + `attribute_ids:[…]` + event metric; variations carry **no** `percentage_included`.
