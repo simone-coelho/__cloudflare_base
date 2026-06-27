@@ -46,7 +46,7 @@ experiment.get('/cmab/matrix', (c) => c.json({ contexts: cmabMatrix(), represent
 
 // Preset scenarios (creatives) so the storefront can render a variation instantly while the datafile propagates.
 experiment.get('/scenarios', (c) => c.json({
-  scenarios: Object.values(SCENARIOS).map((s) => ({ id: s.id, key: `xsurf_${s.id}`, label: s.label, type: s.type, creatives: s.creatives })),
+  scenarios: Object.values(SCENARIOS).map((s) => ({ id: s.id, key: `xsurf_${s.id}`, name: s.name, label: s.label, type: s.type, metric: s.metric, creatives: s.creatives })),
 }));
 
 // ── readout + list ────────────────────────────────────────────────────────────

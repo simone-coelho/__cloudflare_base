@@ -1017,16 +1017,24 @@ class CoachStorefront {
             onSelect: (it) => { if (it._auto) this.applyGeoColdStart(); else this.forceGeo(it.geo); },
         }, {
             id: 'experiment',
-            label: 'Preview as experiment variation',
-            placeholder: 'Force the session into an experiment arm…',
+            label: 'Show experiment variation',
+            placeholder: 'Pick any A/B · MAB · CMAB variation to show on the store…',
             load: async () => {
-                const items = [{ id: '__clearx', label: 'Default — clear forced experiment', sub: 'Hide the experiment surface', tag: 'reset', _clear: true }];
-                const add = (expKey, variations) => (variations || []).forEach((vv) => items.push({ id: expKey + ':' + vv.key, label: vv.name || vv.key, sub: expKey, tag: vv.isControl ? 'control' : 'variation', experimentKey: expKey, variationKey: vv.key }));
-                (this.experiments || []).forEach((e) => add(e.experimentKey, e.variations));
-                try { const r = await fetch('/experiment'); const j = await r.json(); (j.experiments || []).forEach((e) => { if (!(this.experiments || []).some((x) => x.experimentKey === e.experimentKey)) add(e.experimentKey, e.variations); }); } catch (e) { /* session list only */ }
+                const items = [{ id: '__clearx', label: 'Default — clear the experiment surface', sub: 'Hide the experiment banner', tag: 'reset', _clear: true }];
+                try {
+                    const r = await fetch('/experiment/scenarios'); const j = await r.json();
+                    (j.scenarios || []).forEach((s) => {
+                        const group = `${(s.type || '').toUpperCase()} · ${s.name || s.label} · ${s.key}`;
+                        (s.creatives || []).forEach((c) => items.push({
+                            id: s.key + ':' + c.key, group,
+                            label: c.name || c.key, sub: c.headline || c.subcopy || '', tag: c.key,
+                            experimentKey: s.key, variationKey: c.key, creative: c,
+                        }));
+                    });
+                } catch (e) { /* offline → none */ }
                 return items;
             },
-            onSelect: (it) => { if (it._clear) { this.clearForcedExperiment(); return; } this.previewExperiment({ experimentKey: it.experimentKey, variationKey: it.variationKey }); },
+            onSelect: (it) => { if (it._clear) { this.clearForcedExperiment(); return; } this.previewExperiment({ experimentKey: it.experimentKey, variationKey: it.variationKey, creative: it.creative }); },
         }];
         // ↑ add more force-behavior modes here (each: { id, label, placeholder, load(), onSelect(item) })
     }
@@ -1050,8 +1058,12 @@ class CoachStorefront {
     }
     cmdkSetMode(i) { this._cmdkMode = i; this._cmdkRenderTabs(); const inp = document.getElementById('cmdk-input'); if (inp) inp.value = ''; this.cmdkLoad(); }
     async cmdkLoad() {
-        const list = document.getElementById('cmdk-list'); if (list) list.innerHTML = '<div class="cmdk-empty"><span class="cmdk-spin"></span> Loading audiences…</div>';
-        try { this._cmdkItems = await this._cmdkModes[this._cmdkMode].load(); } catch (e) { this._cmdkItems = []; }
+        const mode = this._cmdkMode;
+        const list = document.getElementById('cmdk-list'); if (list) list.innerHTML = '<div class="cmdk-empty"><span class="cmdk-spin"></span> Loading…</div>';
+        let items = [];
+        try { items = await this._cmdkModes[mode].load(); } catch (e) { items = []; }
+        if (this._cmdkMode !== mode) return;   // a newer tab switch superseded this load
+        this._cmdkItems = items;
         this.cmdkFilter('');
     }
     cmdkFilter(q) {
@@ -1063,7 +1075,12 @@ class CoachStorefront {
         const list = document.getElementById('cmdk-list'); if (!list) return;
         const items = this._cmdkView || [];
         if (!items.length) { list.innerHTML = '<div class="cmdk-empty">No audiences yet — create one in the Opal chat (e.g. “create an audience for Tabby viewers and set their banner to …”), then it appears here.</div>'; return; }
-        list.innerHTML = items.map((it, i) => `<div class="cmdk-item ${i === this._cmdkSel ? 'sel' : ''}" onclick="store.cmdkSelect(${i})" onmousemove="store.cmdkHover(${i})"><div class="ci-label">${this.escapeHtml(it.label)}${it.tag ? `<span class="ci-tag">${this.escapeHtml(it.tag)}</span>` : ''}</div><div class="ci-sub">${this.escapeHtml(it.sub || '')}</div></div>`).join('');
+        let lastGroup = null; let html = '';
+        items.forEach((it, i) => {
+            if (it.group && it.group !== lastGroup) { lastGroup = it.group; html += `<div class="cmdk-group">${this.escapeHtml(it.group)}</div>`; }
+            html += `<div class="cmdk-item${it.group ? ' ci-indent' : ''}${i === this._cmdkSel ? ' sel' : ''}" onclick="store.cmdkSelect(${i})" onmousemove="store.cmdkHover(${i})"><div class="ci-label">${this.escapeHtml(it.label)}${it.tag ? `<span class="ci-tag">${this.escapeHtml(it.tag)}</span>` : ''}</div><div class="ci-sub">${this.escapeHtml(it.sub || '')}</div></div>`;
+        });
+        list.innerHTML = html;
     }
     cmdkHover(i) { if (this._cmdkSel !== i) { this._cmdkSel = i; this._cmdkRenderList(); } }
     cmdkKey(e) {
