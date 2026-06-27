@@ -328,7 +328,7 @@ class CoachStorefront {
         const creative = detail.creative || await this._xsurfCreative(expKey, variationKey);
         if (creative) {
             this.decisions[expKey] = { enabled: true, variables: { payload: JSON.stringify(creative), variant: creative.key }, variationKey: creative.key, reason: 'experiment' };
-            try { this.go('home', { silent: true }); } catch (e) {}
+            if (!detail.noNav) { try { this.go('home', { silent: true }); } catch (e) {} }
             this.renderExperimentSurface(expKey);
         }
         // 2) Confirm via the REAL Optimizely decision in the background (proves the decide once propagated).
@@ -429,6 +429,40 @@ class CoachStorefront {
         const root = document.getElementById('xsurf'); if (root) root.hidden = true;
         const vh = document.getElementById('view-home'); if (vh) vh.classList.remove('xsurf-hero');
         this._xsurfActive = null;
+    }
+
+    /* Beat helper: render the experiment surface for a scenario AND create the real Optimizely flag. */
+    async runExperimentScenario(scenarioId, variationKey, opts) {
+        opts = opts || {};
+        const expKey = 'xsurf_' + scenarioId;
+        // 1) Render the surface instantly (the "comes to life" moment); opts.noNav keeps the current view.
+        await this.previewExperiment({ experimentKey: expKey, variationKey, noNav: opts.noNav });
+        // 2) Create the REAL flag in the background (so the Optimizely artifact exists for "not a mockup").
+        try {
+            const res = await fetch('/experiment/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scenario: scenarioId }) });
+            const exp = await res.json();
+            this._lastExperiment = exp;
+            if (exp && exp.variations) {
+                this.experiments = this.experiments || [];
+                if (!this.experiments.some((e) => e.experimentKey === exp.experimentKey)) this.experiments.push({ experimentKey: exp.experimentKey, variations: exp.variations, metricEventKey: exp.metricEventKey });
+            }
+        } catch (e) { /* surface already rendered from the scenario; the real flag is best-effort */ }
+        return expKey;
+    }
+
+    /* Buy-signal handler: ready-to-buy detected → log it + launch a pay-over-time experiment surface. */
+    async onReadyToBuy() {
+        try {
+            this.logActivity({
+                usecase: 'Buy signal · ready-to-buy',
+                headline: 'She added to cart — acting on the intent',
+                signal: 'Cart add → journey stage <strong>ready-to-buy</strong>.',
+                decision: 'Launch a <strong>pay-over-time</strong> experiment to convert the basket.',
+                segment: this.activitySegment(),
+                evidence: this.activityEvidence(),
+            });
+        } catch (e) {}
+        try { await this.runExperimentScenario('bnpl_rogue', 'pay_in_4', { noNav: true }); } catch (e) {}
     }
 
     resolveHero() {
@@ -781,6 +815,8 @@ class CoachStorefront {
             this.renderCart(); this.openCart();
             this.sendAction('add_to_cart', { product_id: id, productId: id, line: p.line, value: p.price_usd }, { label: p.name });
         }
+        // Buy signal: first add-to-cart = ready-to-buy → act on it (launch a pay-over-time experiment).
+        if (!this._buySignalFired && this.cart.length >= 1) { this._buySignalFired = true; this.onReadyToBuy(); }
     }
     addAnchorToCart() {
         const id = this.currentPdpId || this.lineItems('Tabby')[0]?.id || this.bagsCatalog()[0]?.id;
@@ -1879,12 +1915,12 @@ class CoachStorefront {
             /* 11 ── A/B testing (representative figures) ────────────────────── */
             {
                 label: 'A/B testing',
-                watch: 'the measured A/B result',
-                caption: 'The experience she saw is a running A/B test — and it is measured.',
+                watch: 'a welcome A/B test go live on the banner',
+                caption: 'An A/B test runs on the welcome banner — email-for-15% vs phone-for-10% — live and measured.',
                 run: async () => {
-                    this.closeOpal(); this.hideCursor(); this.setTab('engine');
-                    await this.driveOpenPdp(TABBY1);
-                    await this.sleep(800);
+                    this.closeOpal(); this.hideCursor();
+                    await this.runExperimentScenario('welcome_email_phone', 'email_15');
+                    this.setTab('engine');
                     this.showAbReadout();
                     await this.sleep(300);
                     this.scrollEngineTo('ab-readout'); this.pulse('#ab-readout');
@@ -1899,10 +1935,12 @@ class CoachStorefront {
             /* 12 ── MAB · multi-armed bandit (representative) ───────────────── */
             {
                 label: 'Multi-armed bandit (MAB)',
-                watch: 'traffic shift to the winner',
-                caption: 'A multi-armed bandit auto-shifts traffic to the winning variation — no manual ramp.',
+                watch: 'four hero creatives auto-optimize',
+                caption: 'A multi-armed bandit runs four hero creatives and auto-shifts traffic to the winner — no manual ramp.',
                 run: async () => {
-                    this.hideCursor(); this.setTab('engine');
+                    this.hideCursor();
+                    await this.runExperimentScenario('hero_creative_bandit', 'editorial');
+                    this.setTab('engine');
                     this.showMab();
                     await this.sleep(400);
                     this.scrollEngineTo('mab-readout'); this.pulse('#mab-readout');
@@ -1917,10 +1955,12 @@ class CoachStorefront {
             /* 13 ── CMAB · contextual bandit (representative) ───────────────── */
             {
                 label: 'Contextual bandit (CMAB)',
-                watch: 'a different winner per context',
-                caption: 'A contextual bandit picks a different winning variation for each context or segment.',
+                watch: 'a different offer per shopper-context',
+                caption: 'A contextual bandit serves a different winning offer per shopper-context — the thing DY structurally cannot do.',
                 run: async () => {
-                    this.hideMab(); this.hideCursor(); this.setTab('engine');
+                    this.hideMab(); this.hideCursor();
+                    await this.runExperimentScenario('context_welcome', 'new_value');
+                    this.setTab('engine');
                     this.showCmab();
                     await this.sleep(400);
                     this.scrollEngineTo('cmab-readout'); this.pulse('#cmab-readout');
@@ -2842,6 +2882,7 @@ class CoachStorefront {
         this.hideTransientPanels();
         this.clearMarkers();                       // drop all persistent personalization markers
         this.clearChangePills(); this.dismissWelcome();   // and the Before→Now pills + first-visit ribbon
+        this._buySignalFired = false; if (this.clearForcedExperiment) this.clearForcedExperiment();   // reset buy-signal + experiment surface
         const anonChip = document.getElementById('eng-anon-chip'); if (anonChip) anonChip.classList.remove('show');
         this.changeLog = []; this.changeIdx.clear(); this.renderChanges();   // and the session changelog
         const si = document.getElementById('search-input'); if (si) si.value = '';

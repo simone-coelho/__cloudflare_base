@@ -14,12 +14,12 @@ There's a **prominent banner/hero at the top of the store** (the "experiment sur
 | **move_brooklyn** | **MAB** | sell a slow line with NO markdown | Craft story ⇄ "Quiet alternative to Tabby" ⇄ Scarcity |
 | **bnpl_rogue** | **A/B** | pay-in-4 on the $595 Rogue | "$595" ⇄ "Pay in 4 · $148.75 ×4" |
 
-## Is it automatic, or do I do something?
-**You trigger it** — that IS the story ("the operator dictates the experiment"). Two ways:
-- **Opal (the wow):** type a request in the Opal chat → it creates the real flag → the banner comes to life on its own.
-- **⌘K (the reliable one):** press **⌘K / Ctrl-K → "Show experiment variation"** → pick any A/B/MAB/CMAB variation → the banner shows it immediately. All 5 experiments' variations are always in this list — no launch required to *show* one.
+## Is it automatic, or do I do something? — BOTH now
+- **Hands-free on beats 11–13:** clicking **Next** to **beat 11 (A/B), 12 (MAB), or 13 (CMAB)** now **auto-launches the real experiment, renders the banner live on the store, AND shows the Engine readout** — no extra steps. (Beat 11 → email-vs-phone · 12 → hero-creative bandit · 13 → context-welcome.)
+- **On-demand anytime:** **Opal** ("launch the email-vs-phone welcome test") creates the flag and the banner comes to life; or **⌘K → "Show experiment variation"** to flip to any A/B/MAB/CMAB arm (all 5 are always in the list).
+- **Buy-signal (acts on intent we used to ignore):** the moment a shopper **adds to cart** (ready-to-buy), the store **auto-fires the Pay-over-time (BNPL) experiment surface** and logs a **"BUY SIGNAL · READY-TO-BUY → pay-over-time experiment"** card in the Activity panel. (Beat 9 adds to cart, so this fires naturally there too.)
 
-Separately, the **guided beats 11–13** (click Next) auto-show the **Engine-tab readouts** (the A/B bars, MAB traffic shifting, CMAB per-context winners table). Those are the *measurement* view; the banner above is the *shopper* view. They complement each other.
+The **Engine-tab readouts** are the *measurement* view; the **banner** is the *shopper* view — beats 11–13 now show both at once.
 
 > If "they say in the demo: we want to create a flag" → you do the **Opal** path (below). That's exactly the create-a-real-flag moment.
 
@@ -53,5 +53,5 @@ After an Opal launch, open **app.optimizely.com → the project → the flag** (
 ## 30-second warm-up (do this before you present)
 So the real flags already exist (and Opal's first launch is instant), launch each once beforehand — ask Opal, or hit the launch endpoint once per scenario id (`welcome_email_phone`, `hero_creative_bandit`, `context_welcome`, `move_brooklyn`, `bnpl_rogue`). The ⌘K "Show experiment variation" list works regardless (it always has all five).
 
-## Optional: fully hands-free
-Right now you trigger the banner (Opal/⌘K). If you'd rather it **auto-launch + auto-render when you reach beats 11/12/13** (so clicking Next does everything), say the word and I'll wire that.
+## Status
+Hands-free beats (11/12/13) and the add-to-cart buy-signal trigger are **implemented + verified on prod**. The payment-stall trigger inside the Revenue Radar checkout is the other team's file — a coordination item, not done here.

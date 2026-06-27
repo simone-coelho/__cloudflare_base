@@ -605,6 +605,17 @@
             padding: 15px 16px; border: 1px solid var(--line-2); background: #fff; border-radius: var(--radius);
         }
         .search-input:focus { outline: none; border-color: var(--tan); }
+        .search-input-row { display: flex; gap: 10px; }
+        .search-input-row .search-input { flex: 1; }
+        .search-go { background: var(--ink); color: var(--paper); border: none; padding: 0 24px; border-radius: var(--radius); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+        .search-go:hover { background: var(--tan-deep); }
+        /* Active "generating the scene" indicator — concierge look + search edit, so the 8–22s wait looks alive. */
+        .ccl-load { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; color: #6E6557; }
+        .ccl-load-txt { font-size: 12px; letter-spacing: 0.04em; }
+        .ccl-spin, .eh-spin { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(184,134,11,0.25); border-top-color: var(--tan); border-radius: 50%; animation: rrspin 0.8s linear infinite; vertical-align: middle; }
+        .eh-spin { width: 11px; height: 11px; margin-right: 7px; }
+        @keyframes rrspin { to { transform: rotate(360deg); } }
+        .cc-think-msg { margin-right: 7px; color: #6E6557; font-size: 13px; }
         .search-meta { display: flex; align-items: center; font-size: 12px; color: var(--tan-deep); margin: 18px 0 14px; min-height: 16px; }
         .search-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
         .search-chip { font-size: 12px; color: var(--ink-soft); background: var(--paper-2); border: 1px solid var(--line); padding: 7px 13px; border-radius: 14px; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
@@ -1411,9 +1422,12 @@
             <button class="opal-close" onclick="store.closeSearch()">&times;</button>
         </div>
         <div class="opal-body">
-            <input id="search-input" class="search-input" type="text" autocomplete="off"
-                   placeholder="Try: bags for a winter wedding" oninput="store.runSearch(this.value)"
-                   onkeydown="if(event.key==='Enter')store.runSearch(this.value,{live:true})" />
+            <div class="search-input-row">
+                <input id="search-input" class="search-input" type="text" autocomplete="off"
+                       placeholder="Try: bags for a winter wedding"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();store.runSearch(this.value,{live:true});}" />
+                <button class="search-go" onclick="store.runSearch(document.getElementById('search-input').value,{live:true})">Search</button>
+            </div>
             <div class="search-chips">
                 <span class="search-chip" onclick="store.searchChip('bags for a winter wedding')">bags for a winter wedding</span>
                 <span class="search-chip" onclick="store.searchChip('a gift under $150')">a gift under $150</span>
