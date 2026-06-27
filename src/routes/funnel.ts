@@ -12,6 +12,8 @@ import type { Env } from '@/types/env';
 import { BRANDS, COHORTS, CHECKOUT_EVENT_TYPES, type Brand, type Cohort } from '@/services/funnel/contract';
 import { computeFunnel } from '@/services/funnel/compute';
 import { buildFunnelDiagnosis } from '@/services/funnel/diagnose';
+import { fxConfig, gateWrite } from '@/services/fxEnv';
+import { createAudienceLive } from '@/services/optimizelyFx';
 
 const funnel = new Hono<{ Bindings: Env }>();
 
@@ -76,6 +78,25 @@ funnel.get('/diagnose', async (c) => {
     cohort: c.req.query('cohort') ?? 'gen_z',
   });
   return c.json(diagnosis);
+});
+
+// POST /funnel/audience — create a REAL Optimizely audience from the recommendation's conditions and
+// return its id, so Revenue Radar's Launch can scope the experiment to the EXACT segment (the
+// /experiment/launch seam targets by audienceId). Gated by OPTIMIZELY_WRITE_ENABLED: if writes are off
+// it returns { created:false } and Launch proceeds unscoped — the demo never breaks. Idempotent
+// (createAudienceLive reuses an audience by name across runs).
+funnel.post('/audience', async (c) => {
+  const body = await c.req.json().catch(() => ({}) as any);
+  const name = typeof body?.name === 'string' && body.name ? body.name : 'Revenue Radar audience';
+  const conditions = body?.conditions;
+  const gate = gateWrite(c.env);
+  if (!gate.enabled) return c.json({ created: false, reason: gate.reason });
+  try {
+    const r = await createAudienceLive(fxConfig(c.env), { name, conditions });
+    return c.json({ created: true, audienceId: r.audienceId, name });
+  } catch (error) {
+    return c.json({ created: false, error: error instanceof Error ? error.message : String(error) });
+  }
 });
 
 export { funnel as funnelRoutes };

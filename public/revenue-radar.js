@@ -396,25 +396,37 @@
     if (!rec) return;
     const btn = document.getElementById('rr-launch-btn-' + idx);
     const out = document.getElementById('rr-launch-' + idx);
-    if (btn) { btn.disabled = true; btn.textContent = 'Launching…'; }
-    post('/experiment/launch', {
-      name: rec.audience.name,
-      audienceName: rec.audience.name,
-      conditions: rec.audience.conditions,
-      variations: rec.experiment.variations,
-      metric: rec.experiment.metric,
-      remedy: rec.remedy.kind,
-    })
-      .then((r) => r.json())
-      .then((exp) => {
+    if (btn) { btn.disabled = true; btn.textContent = 'Creating audience…'; }
+    // Step 1 — create the REAL Optimizely audience from the conditions → its id. This is what makes the
+    // experiment genuinely audience-scoped (the /experiment/launch seam targets by audienceId). If writes
+    // are disabled the endpoint returns created:false → audienceId stays undefined → Launch still works.
+    post('/funnel/audience', { name: rec.audience.name, conditions: rec.audience.conditions })
+      .then((r) => r.json()).catch(() => ({}))
+      .then((aud) => {
+        const audienceId = (aud && aud.created && typeof aud.audienceId === 'number') ? aud.audienceId : undefined;
+        if (btn) btn.textContent = 'Launching…';
+        // Step 2 — launch the experiment scoped to that real audience.
+        return post('/experiment/launch', {
+          name: rec.audience.name,
+          audienceName: rec.audience.name,
+          audienceId: audienceId,
+          conditions: rec.audience.conditions,
+          variations: rec.experiment.variations,
+          metric: rec.experiment.metric,
+          remedy: rec.remedy.kind,
+        }).then((r) => r.json()).then((exp) => ({ exp: exp, audienceId: audienceId }));
+      })
+      .then((res) => {
+        const exp = res.exp, audienceId = res.audienceId;
         if (btn) btn.textContent = '✓ Launched';
         const ro = exp.readout || exp;
         const liftRel = ro.liftRel != null ? ro.liftRel : exp.liftRel;
         const conf = ro.confidence != null ? ro.confidence : exp.confidence;
         const id = exp.experimentId || exp.experimentKey || exp.key || exp.id || rec.audience.name;
         const liftTxt = liftRel != null ? `<span class="rr-lift">+${liftRel}% lift</span>${conf != null ? ` · ${conf}% conf` : ''}` : 'measuring…';
-        if (out) out.innerHTML = `<div class="rr-live-box">⚡ <b>Experiment live</b> — ${esc(String(id))}<br>control vs ${esc(rec.remedy.kind)} on purchase · ${liftTxt}</div>`;
-        try { window.dispatchEvent(new CustomEvent('rr:launched', { detail: { rec, exp } })); } catch (e) {}
+        const scoped = audienceId ? `<br>scoped to audience <b>#${audienceId}</b> · ${esc(rec.audience.name)}` : '';
+        if (out) out.innerHTML = `<div class="rr-live-box">⚡ <b>Experiment live</b> — ${esc(String(id))}${scoped}<br>control vs ${esc(rec.remedy.kind)} on purchase · ${liftTxt}</div>`;
+        try { window.dispatchEvent(new CustomEvent('rr:launched', { detail: { rec: rec, exp: exp } })); } catch (e) {}
       })
       .catch(() => {
         if (out) out.innerHTML = '<div class="rr-live-box err">Launch failed — retry.</div>';
