@@ -2501,6 +2501,10 @@ class CoachStorefront {
         const query = (q || '').trim();
         if (!query) { grid.innerHTML = ''; if (edit) edit.innerHTML = ''; meta.textContent = 'Type a request to see AI-ranked, personalized results.'; return; }
         meta.innerHTML = `<span class="live-dot"></span>Reading your request…`;
+        // Rotate the status so the wait reads as active, not dead.
+        const mmsgs = ['Reading your request…', 'Ranking to your taste…', 'Styling your edit…'];
+        let mi = 0;
+        const mrot = setInterval(() => { mi = (mi + 1) % mmsgs.length; if (meta) meta.innerHTML = `<span class="live-dot"></span>${mmsgs[mi]}`; }, 1500);
         let results = null, intent = null, hero = null, src = 'fallback';
         try {
             const res = await fetch('/ai/search', {
@@ -2513,6 +2517,7 @@ class CoachStorefront {
                 intent = json.intent || null; hero = json.hero || null; src = 'gemini';
             }
         } catch (e) { /* fall back to the client heuristic */ }
+        clearInterval(mrot);
         if (!results || !results.length) { results = this.searchCatalog(query, 9); src = 'fallback'; }
         // The Edit — a Gemini-styled editorial scene of the REAL hero bag (instant if pre-genned;
         // live-generated for novel queries when committed; else gracefully no hero, just the grid).
@@ -2592,7 +2597,7 @@ class CoachStorefront {
     _editHeroHtml(asset, headline, subhead, productName, loading) {
         const cap = productName ? `Styled with AI · the ${this.escapeHtml(productName)} shown is the real product` : 'Styled with AI · real product';
         const img = asset ? `<img class="eh-img" src="${asset}" alt="" onload="this.classList.add('in')" onerror="this.closest('.edit-hero-wrap').innerHTML=''">` : '';
-        const kicker = loading ? `<span class="live-dot"></span>Styling your edit…` : `<span class="live-dot"></span>The Edit`;
+        const kicker = loading ? `<span class="eh-spin"></span>Styling your edit…` : `<span class="live-dot"></span>The Edit`;
         return `<div class="edit-hero${loading ? ' loading' : ''}">${img}<div class="eh-scrim"></div>
             <div class="eh-copy"><div class="eh-kicker">${kicker}</div>
             <div class="eh-headline">${this.escapeHtml(headline || '')}</div>
@@ -2658,8 +2663,10 @@ class CoachStorefront {
             const el = document.createElement('div');
             el.className = 'cc-look' + (loading ? ' loading' : '');
             const cap = productName ? `Styled with AI · the ${this.escapeHtml(productName)} is the real product` : '';
-            el.innerHTML = (asset ? `<img class="ccl-img" src="${asset}" alt="" onload="this.classList.add('in')" onerror="this.closest('.cc-look').remove()">` : '')
-                + (cap ? `<div class="ccl-cap">${cap}</div>` : '');
+            const body = asset
+                ? `<img class="ccl-img" src="${asset}" alt="" onload="this.classList.add('in')" onerror="this.closest('.cc-look').remove()">`
+                : (loading ? `<div class="ccl-load"><span class="ccl-spin"></span><span class="ccl-load-txt">Styling your look…</span></div>` : '');
+            el.innerHTML = body + (cap ? `<div class="ccl-cap">${cap}</div>` : '');
             thread.appendChild(el); thread.scrollTop = thread.scrollHeight;
             return el;
         };
@@ -2675,6 +2682,7 @@ class CoachStorefront {
             .then((url) => {
                 if (!url) { el.remove(); return; }
                 el.classList.remove('loading');
+                const load = el.querySelector('.ccl-load'); if (load) load.remove();
                 const img = document.createElement('img');
                 img.className = 'ccl-img'; img.src = url;
                 img.onload = () => img.classList.add('in'); img.onerror = () => el.remove();
@@ -2772,6 +2780,7 @@ class CoachStorefront {
         document.getElementById('cc-input').value = '';
         this.ccMessages = (this.ccMessages || []).concat([{ role: 'user', content: prompt }]);
         const thinking = this.appendCcThinking();
+        const killThinking = () => { if (thinking) { if (thinking._rotate) { clearInterval(thinking._rotate); thinking._rotate = null; } if (thinking.parentNode) thinking.remove(); } };
         let full = '', bot = null;
         try {
             const res = await fetch('/ai/concierge', {
@@ -2779,18 +2788,17 @@ class CoachStorefront {
                 body: JSON.stringify({ messages: this.ccMessages, affinity: { dominantLine: this.dominantLine, currentProductId: this.currentPdpId || null } }),
             });
             if (res.ok && res.body) {
-                thinking.remove();
-                bot = this.appendCcMsg('bot', '');
                 const reader = res.body.getReader(), dec = new TextDecoder();
                 for (;;) {
                     const { value, done } = await reader.read(); if (done) break;
                     full += dec.decode(value, { stream: true });
-                    bot.innerHTML = this.escapeHtml(full.replace(/\n?PICKS:.*$/is, '').trim());
-                    const th = document.getElementById('cc-thread'); if (th) th.scrollTop = th.scrollHeight;
+                    // Keep the (rotating) thinking indicator up until the FIRST token — then swap it for the streaming reply.
+                    if (!bot && full.trim()) { killThinking(); bot = this.appendCcMsg('bot', ''); }
+                    if (bot) { bot.innerHTML = this.escapeHtml(full.replace(/\n?PICKS:.*$/is, '').trim()); const th = document.getElementById('cc-thread'); if (th) th.scrollTop = th.scrollHeight; }
                 }
             }
         } catch (e) { /* fall through to the scripted fallback */ }
-        if (thinking && thinking.parentNode) thinking.remove();
+        killThinking();
         if (!full.trim()) {                                  // no key / timeout / empty → graceful fallback
             if (bot && bot.parentNode) bot.remove();
             const reply = this.conciergeReply(prompt);
@@ -2860,9 +2868,13 @@ class CoachStorefront {
         const thread = document.getElementById('cc-thread');
         const div = document.createElement('div');
         div.className = 'cc-msg bot cc-thinking';
-        div.innerHTML = `<span class="opal-dots"><span></span><span></span><span></span></span>`;
+        div.innerHTML = `<span class="cc-think-msg">Reading your request</span><span class="opal-dots"><span></span><span></span><span></span></span>`;
         thread.appendChild(div);
         thread.scrollTop = thread.scrollHeight;
+        // Rotate the status so the wait always feels active (the styled reply can take a few seconds).
+        const msgs = ['Reading your request', 'Pulling the right pieces', 'Styling your look'];
+        let i = 0; const lbl = div.querySelector('.cc-think-msg');
+        div._rotate = setInterval(() => { i = (i + 1) % msgs.length; if (lbl) lbl.textContent = msgs[i]; }, 2200);
         return div;
     }
     fromConcierge(id) { this.closeConcierge(); this.openPdp(id); }
