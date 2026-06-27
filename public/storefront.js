@@ -46,6 +46,9 @@ class CoachStorefront {
         // personalization state (mirrors the engine response)
         this.segments = [];
         this.decisions = {};
+        this._baseline = {};      // baseline (pre-personalization) zone captures for the [Compare] "before"
+        this._cards = {};         // [Compare] card registry: id → { zone, beforeImg, afterImg, title }
+        this._h2cP = null;        // lazy html2canvas loader promise
         this.journeyStage = 'early';
         this.recommendations = null;   // Product[] from engine
         this.sortOrder = null;         // string[] product ids from engine
@@ -114,6 +117,8 @@ class CoachStorefront {
         window.addEventListener('keydown', (e) => {
             if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); this.openCmdk(); }
         });
+        // Photograph the virgin baseline ("before" for [Compare]) once the cold start has settled.
+        setTimeout(() => { try { this.snapshotBaselines(); } catch (e) {} }, 2600);
     }
 
     /* ── Catalog ─────────────────────────────────────────────────────────── */
@@ -1170,6 +1175,11 @@ class CoachStorefront {
         const feed = document.getElementById('pzp-feed'); if (!feed) return;
         const empty = feed.querySelector('.pzp-empty'); if (empty) empty.remove();
         this._pzCount = (this._pzCount || 0) + 1;
+        const id = 'pzc' + this._pzCount;
+        // Register the [Compare] payload (data URLs are too big to inline in onclick) — id-addressed.
+        if (card.beforeImg && card.afterImg) {
+            this._cards[id] = { zone: card.zone || null, beforeImg: card.beforeImg, afterImg: card.afterImg, title: (card.usecase || 'Before → Now') };
+        }
         const chips = (card.evidence || []).map((t) => `<span class="pzc-chip">${this.escapeHtml(t)}</span>`).join('');
         const seg = card.segment ? `<span class="pzc-arrow">&#8594;</span><div class="pzc-node"><span class="pzc-node-k">Segment</span><span class="pzc-node-v">${this.escapeHtml(card.segment)}</span></div>` : '';
         const el = document.createElement('div');
@@ -1180,12 +1190,13 @@ class CoachStorefront {
             `<div class="pzc-chain"><div class="pzc-node"><span class="pzc-node-k">Signal</span><span class="pzc-node-v">${card.signal || '—'}</span></div>${seg}<span class="pzc-arrow">&#8594;</span><div class="pzc-node"><span class="pzc-node-k">Decision</span><span class="pzc-node-v">${card.decision || '—'}</span></div></div>` +
             (chips ? `<div class="pzc-evidence">${chips}</div>` : '') +
             ((card.before || card.after) ? `<div class="pzc-ba"><span class="pzc-ba-k">Before</span> <span class="pzc-ba-v">${this.escapeHtml(card.before || '—')}</span> &nbsp; <span class="pzc-ba-k now">Now</span> <span class="pzc-ba-v">${this.escapeHtml(card.after || '—')}</span></div>` : '') +
-            ((card.beforeImg && card.afterImg) ? `<button class="pzc-compare" onclick="store.openCompare('${card.beforeImg}','${card.afterImg}','${(card.usecase || 'Before → Now').replace(/'/g, '')}')">&#11020; Compare before / now</button>` : '') +
+            (this._cards[id] ? `<button class="pzc-compare" onclick="store.openCompareCard('${id}')">&#11020; Compare before / now</button>` : '') +
             `<div class="pzc-foot">&#9889; decided live at the edge</div>`;
         feed.insertBefore(el, feed.firstChild);   // newest on top
         const cnt = document.getElementById('pz-pill-count'); if (cnt) cnt.textContent = this._pzCount;
         if (this._pzMin) { const pill = document.getElementById('pz-pill'); if (pill) { pill.classList.add('flash'); setTimeout(() => pill.classList.remove('flash'), 500); } }
         else this.showPzPanel();
+        return id;
     }
     initPzDrag() {
         const head = document.getElementById('pzp-head'); const panel = document.getElementById('pz-panel');
@@ -1308,6 +1319,52 @@ class CoachStorefront {
     }
 
     /* ── Before / Now split-slider (drag the seam) — opened from a provenance card's [Compare] ── */
+    /* ── Live capture for the [Compare] slider ──────────────────────────────────
+       Photographs the ACTUAL rendered DOM (html2canvas) so the "now" is always exactly
+       what the human sees — across every hero / A-B / MAB / CMAB / xsurf / geo / quiz
+       variation. No per-beat static PNG to drift. Lazy-loaded; degrades to the static
+       fallback if capture isn't available or the zone isn't on screen. */
+    _ensureH2C() {
+        if (!this._h2cP) {
+            this._h2cP = new Promise((res) => {
+                if (window.html2canvas) return res(true);
+                const s = document.createElement('script');
+                s.src = '/html2canvas.min.js';
+                s.onload = () => res(true);
+                s.onerror = () => res(false);
+                document.head.appendChild(s);
+            });
+        }
+        return this._h2cP;
+    }
+    async captureZone(sel) {
+        try {
+            if (!sel) return null;
+            let el = document.querySelector(sel);
+            // xsurf can REPLACE the hero with its own element (#hero is then display:none).
+            if (sel === '#hero') { const vh = document.getElementById('view-home'); if (vh && vh.classList.contains('xsurf-hero')) el = document.getElementById('xsurf') || el; }
+            if (!el || el.offsetParent === null) return null;                     // not on screen (inactive view / display:none)
+            const r = el.getBoundingClientRect(); if (r.width < 8 || r.height < 8) return null;
+            const ok = await this._ensureH2C(); if (!ok || typeof window.html2canvas !== 'function') return null;
+            const canvas = await window.html2canvas(el, { useCORS: true, backgroundColor: '#FBF8F2', scale: Math.min(2, window.devicePixelRatio || 1), logging: false });
+            return canvas.toDataURL('image/png');
+        } catch (e) { return null; }
+    }
+    /* Capture the virgin baseline ("before") of the key zones, once, while still cold. */
+    async snapshotBaselines() {
+        for (const z of ['#hero', '#curated-section']) {
+            if (!this._baseline[z]) { const img = await this.captureZone(z); if (img) this._baseline[z] = img; }
+        }
+    }
+    /* Open [Compare] for a logged card — RE-CAPTURES the zone LIVE at click-time so "now" is the
+       CURRENT on-screen state (the bandit-selected hero, etc.); falls back to the beat-end capture
+       (or the static asset) only if the zone isn't currently capturable. */
+    openCompareCard(id) {
+        const c = this._cards && this._cards[id]; if (!c) return;
+        Promise.resolve(this.captureZone(c.zone))
+            .then((now) => this.openCompare(c.beforeImg, now || c.afterImg, c.title))
+            .catch(() => this.openCompare(c.beforeImg, c.afterImg, c.title));
+    }
     openCompare(beforeUrl, afterUrl, title) {
         const stage = document.getElementById('cmp-stage'), after = document.getElementById('cmp-after'), before = document.getElementById('cmp-before');
         if (!stage || !after || !before) return;
@@ -1594,7 +1651,7 @@ class CoachStorefront {
     annotateChange(zoneSel, before, after) {
         // Records this beat's Before→Now. The Personalization Activity panel renders it as a rich
         // provenance card (this replaces the old floating toast — see logActivity / applyStepCallout).
-        this._ba = { before, after };
+        this._ba = { before, after, zone: zoneSel };
     }
     appendBeforeAfter(before, after) {
         const body = document.getElementById('co-body');
@@ -2181,7 +2238,10 @@ class CoachStorefront {
         // Inject the runtime "Before → Now" line + log a rich provenance card to the Activity panel.
         const ba = this._ba;
         if (ba) this.appendBeforeAfter(ba.before, ba.after);
-        this.logActivity({
+        const zone = (ba && ba.zone) || (step.callout.compare && step.callout.compare.zone) || step.callout.anchor || null;
+        const staticBefore = step.callout.compare && step.callout.compare.before;
+        const staticAfter = step.callout.compare && step.callout.compare.after;
+        const id = this.logActivity({
             usecase: step.callout.usecase,
             headline: step.callout.title,
             signal: step.callout.signal,
@@ -2190,9 +2250,18 @@ class CoachStorefront {
             evidence: this.activityEvidence(),
             before: ba && ba.before,
             after: ba && ba.after,
-            beforeImg: step.callout.compare && step.callout.compare.before,
-            afterImg: step.callout.compare && step.callout.compare.after,
+            zone: zone,
+            // "before" = the live virgin baseline if we have it (else the static asset);
+            // "after" = the static asset as an immediate fallback — overwritten by the live capture below,
+            // and RE-captured live the instant the user clicks Compare (openCompareCard).
+            beforeImg: (zone && this._baseline[zone]) || staticBefore,
+            afterImg: staticAfter,
         });
+        // Photograph the live "now" at beat-end so the card always holds a real snapshot of THIS state,
+        // not a frozen PNG — even before the click-time re-capture.
+        if (id && this._cards[id] && zone) {
+            this.captureZone(zone).then((img) => { if (img && this._cards[id]) this._cards[id].afterImg = img; });
+        }
         this._ba = null;
     }
 
