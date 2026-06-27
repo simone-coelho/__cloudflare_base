@@ -140,7 +140,7 @@ Reuse the **experiment-surface** path; do NOT use the old operator/AudienceAutho
 
 ### Phase C — image generation wired into the moment (the hero)
 - **C1.** On moment launch, trigger `POST /ai/scene` for `COA-CH857` with the moment `sceneContext` (16:9, type `search`, `sceneId: "signal-tabby-tiktok"`); set `hero_image` to the returned stable URL.
-- **C2.** Extend the `#xsurf` render in `public/storefront.js` (`renderExperimentSurface` / `_xsurfCreative`, ~lines 374–404) to **read discrete variables** (prefer them over `payload`), render the **takeover hero**: generated `hero_image` as backdrop + Opal copy overlaid in negative space + offer/CTA/badge from variables. **Poll the `/ai/scene` GET url** until the image is ready before revealing.
+- **C2.** Extend the `#xsurf` render in `public/storefront.js` (`renderExperimentSurface` / `_xsurfCreative`, ~lines 374–404) to **read discrete variables** (prefer them over `payload`), render the **takeover hero**: generated `hero_image` as backdrop + Opal copy overlaid in negative space + offer/CTA/badge from variables. **Poll the `/ai/scene` GET url** until the image is ready before revealing. **When the takeover is active, hide the default `#hero` ROBUSTLY — it must be *computed* `display:none`/zero-geometry, not merely a `hidden` attribute or a class that can lose a CSS specificity tie (this caused a prior "two heroes" bug). Exactly ONE visible hero at all times.**
 - **C3.** Honest progress UX (Decision #5): explicit states — `Reading signal…` → `Opal is writing the moment copy…` → `Generating the hero image from the real Tabby… (Ns)` with elapsed counter + shimmer → `Hero ready — going live.` Never a blank/frozen state; if gen runs long, keep the status truthful.
 
 ### Phase D — GENERATE via Opal (copy) + fallback
@@ -159,7 +159,7 @@ Reuse the **experiment-surface** path; do NOT use the old operator/AudienceAutho
 - **F1.** Carry every label from §3 verbatim. **F2.** Never render Comprend economic figures as Optimizely numbers.
 
 ### Phase G — verification
-- **G1.** `/__shot` screenshots of each scene (DETECT toast+countdown, GENERATE progress states, takeover hero, MAB readout).
+- **G1.** `/__shot` screenshots of each scene (DETECT toast+countdown, GENERATE progress states, takeover hero, MAB readout). **Assertions MUST check *rendered* state — `getComputedStyle` + `getBoundingClientRect` (computed display + geometry) — NOT attributes like `hidden` (a prior test falsely passed because it checked the attribute). Explicitly assert exactly ONE visible hero (the takeover present, default `#hero` not rendered).**
 - **G2.** Confirm the real flag `xsurf_tiktok_tabby_moment` + `multi_armed_bandit` rule are created (token-gated) and the **discrete variables are visible in the Optimizely UI**.
 - **G3.** Confirm `/ai/scene` generates the Tabby hero (real bytes in R2) and the hero reveals after the honest wait.
 - **G4.** Full end-to-end run of the encore against prod/dev.

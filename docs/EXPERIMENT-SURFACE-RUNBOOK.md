@@ -55,3 +55,11 @@ So the real flags already exist (and Opal's first launch is instant), launch eac
 
 ## Status
 Hands-free beats (11/12/13) and the add-to-cart buy-signal trigger are **implemented + verified on prod**. The payment-stall trigger inside the Revenue Radar checkout is the other team's file — a coordination item, not done here.
+
+## Signal-Led Moment (TikTok) — the encore (anti-DY climax)
+After beat 15, click **"Show the Signal-Led Moment ▸"**. Three scenes:
+1. **DETECT** — a signal toast: *"Coach Tabby spiking on TikTok · +480% views/hr · NY"*, and a live **window countdown** (28:00) starts. *Say:* "A bag is going viral right now — ~28 minutes before it cools; no human team reacts this fast." Honesty chip: **SIMULATED · partner social-listening layer, not Optimizely.**
+2. **GENERATE** — Opal writes the copy and we generate the hero **live from the real Tabby photo** (~8s, with an honest "generating…" status so it never looks stuck). *Say:* "Model-written copy + an AI-generated scene of the *real* bag — delivered as **feature variables** over our module. No HTML."
+3. **SERVE + OPTIMIZE** — the storefront does a full-bleed **takeover** ("As seen on TikTok — The Tabby everyone's talking about"); the **MAB** auto-promotes the winner inside the window; *"loop closed in m:ss of 28:00."* *Say:* "Dynamic Yield reacts to the neighborhood. We react to what's happening in the world **right now**."
+
+**Real:** hero image (Gemini), copy (Opal), the flag + `multi_armed_bandit` rule (`xsurf_tiktok_tabby_moment`), the discrete feature variables. **Mocked:** only the TikTok signal (partner layer, badged). **Representative:** the lift figures (narrate; nothing in the UI claims measured). Your honesty line: *"The experience and the events are real and generated live at the edge; only the social-listening signal is simulated, and the lift is illustrative."* Full design + step list: `docs/architecture/12-signal-led-moment-build-brief.md`.

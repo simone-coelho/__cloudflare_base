@@ -196,6 +196,19 @@ export async function launchExperiment(cfg: FxConfig, input: LaunchExperimentInp
       variant: { key: 'variant', type: 'string', default_value: 'control', description: 'Assigned variation key.' },
       module_enabled: { key: 'module_enabled', type: 'boolean', default_value: 'false', description: 'Render the treatment experience.' },
       payload: { key: 'payload', type: 'string', default_value: '', description: 'Experiment-surface creative as JSON (image/headline/offer/cta/captureType…).' },
+      // Signal-Led Moment (doc 12 §4.3, FROZEN) — discrete, named feature variables promoted from
+      // the payload JSON to top-level flag variables so the moment's hero composes from them and they
+      // show clearly in the Optimizely UI. Additive: the existing 5 scenarios still drive `payload`.
+      hero_image: { key: 'hero_image', type: 'string', default_value: '', description: 'Signal-Led Moment: hero scene image URL (AI-generated via /ai/scene).' },
+      eyebrow: { key: 'eyebrow', type: 'string', default_value: '', description: 'Signal-Led Moment: hero eyebrow copy.' },
+      headline: { key: 'headline', type: 'string', default_value: '', description: 'Signal-Led Moment: hero headline (overlaid on the scene negative space).' },
+      subcopy: { key: 'subcopy', type: 'string', default_value: '', description: 'Signal-Led Moment: hero subcopy.' },
+      offer: { key: 'offer', type: 'string', default_value: '', description: 'Signal-Led Moment: offer chip copy.' },
+      cta_label: { key: 'cta_label', type: 'string', default_value: '', description: 'Signal-Led Moment: hero CTA button label.' },
+      cta_action: { key: 'cta_action', type: 'string', default_value: '', description: 'Signal-Led Moment: hero CTA action (navigate | capture | addToCart).' },
+      theme: { key: 'theme', type: 'string', default_value: '', description: 'Signal-Led Moment: hero theme skin (noir | paper | sale | tan).' },
+      layout: { key: 'layout', type: 'string', default_value: '', description: 'Signal-Led Moment: hero layout (hero | banner | card).' },
+      badge: { key: 'badge', type: 'string', default_value: '', description: 'Signal-Led Moment: hero badge / chip copy.' },
     },
   });
 

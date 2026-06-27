@@ -1189,6 +1189,61 @@
         #view-home.xsurf-hero #hero,
         #view-home #xsurf[data-layout="hero"]:not([hidden]) ~ #hero { display: none !important; }
 
+        /* ═══════ Signal-Led Moment encore (doc 12) — takeover hero · signal feed · countdown ═══════ */
+        /* SERVE (§2 Scene 3): the full-bleed "takeover" hero. It deliberately KEEPS data-layout="hero", so the
+           hard hero-hide rule above (#xsurf[data-layout="hero"]:not([hidden]) ~ #hero) STILL forces the default
+           #hero to a COMPUTED display:none !important — exactly one hero, never two. data-moment only restyles. */
+        #xsurf[data-moment="takeover"] { border-radius: 0; min-height: clamp(440px, 62vw, 660px); }
+        #xsurf[data-moment="takeover"] .xsurf-art { opacity: 0.95; background-position: center 34%; }
+        #xsurf[data-moment="takeover"] .xsurf-scrim { display: block; background: linear-gradient(100deg, rgba(16,12,8,0.88) 0%, rgba(16,12,8,0.52) 44%, rgba(16,12,8,0.05) 76%); }
+        #xsurf[data-moment="takeover"] .xsurf-inner { max-width: 620px; padding: 80px 84px; }
+        #xsurf[data-moment="takeover"] .xsurf-headline { font-size: clamp(40px, 5.4vw, 66px); }
+        #xsurf[data-moment="takeover"] .xsurf-eyebrow { color: #F4D9A8; }
+        #xsurf[data-moment="takeover"] .xsurf-flag { background: rgba(16,12,8,0.6); color: #F4D9A8; }
+        /* During DETECT→GENERATE (before the takeover shows) the default hero is also hidden, so the only hero
+           on screen is the one being generated — a second computed display:none, independent of the takeover. */
+        #view-home.moment-active #hero { display: none !important; }
+
+        .signal-feed { margin: 0 0 18px; display: grid; gap: 12px; }
+        .signal-feed[hidden] { display: none; }
+        .sig-toast { border: 1px solid var(--line); background: linear-gradient(100deg, #1C1A17 0%, #2A2016 70%); color: var(--paper); border-radius: var(--radius); padding: 16px 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.18); transform: translateY(-8px); opacity: 0; transition: transform .5s var(--ease), opacity .5s var(--ease); }
+        .signal-feed.show .sig-toast { transform: none; opacity: 1; }
+        .sig-toast-main { display: flex; align-items: center; gap: 14px; }
+        .sig-spark { font-size: 22px; line-height: 1; }
+        .sig-toast-copy { flex: 1; min-width: 0; }
+        .sig-head { font-size: 13.5px; font-weight: 600; letter-spacing: .02em; }
+        .sig-meta { font-size: 12px; color: #D8CDB8; margin-top: 2px; }
+        .sig-clock-wrap { font-size: 12px; color: #F4D9A8; letter-spacing: .04em; white-space: nowrap; }
+        .sig-clock { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; }
+        .sig-chip { margin-top: 11px; font-size: 10.5px; letter-spacing: .04em; color: #C9BFAC; background: rgba(244,217,168,0.08); border: 1px solid rgba(244,217,168,0.18); padding: 5px 10px; border-radius: 11px; display: inline-block; }
+        .sig-chip.wide { display: block; }
+
+        .sig-gen { border: 1px solid var(--line); background: #fff; border-radius: var(--radius); padding: 16px 18px; }
+        .sig-gen-status { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink); font-weight: 500; }
+        .sig-gen-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tan); animation: pulseDot 1.1s var(--ease) infinite; }
+        .sig-gen-hero { position: relative; overflow: hidden; border-radius: var(--radius); margin: 12px 0; min-height: clamp(200px, 26vw, 300px); background: #211B14 center/cover no-repeat; display: flex; align-items: center; }
+        .sig-gen-hero.ready .sig-shimmer { display: none; }
+        .sig-shimmer { position: absolute; inset: 0; background: linear-gradient(100deg, #2A2016 0%, #3D3020 40%, #5A4630 50%, #3D3020 60%, #2A2016 100%); background-size: 220% 100%; animation: sigShimmer 1.5s linear infinite; }
+        @keyframes sigShimmer { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
+        .sig-gen-copy { position: relative; z-index: 2; padding: 26px 30px; max-width: 72%; }
+        .sig-gen-eyebrow { display: block; font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: #F4D9A8; margin-bottom: 8px; min-height: 13px; }
+        .sig-gen-headline { display: block; font-family: var(--font-display); font-size: clamp(22px, 3vw, 34px); font-weight: 600; color: var(--paper); line-height: 1.1; }
+        .sig-gen-offer { display: inline-block; margin-top: 10px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; background: var(--tan); color: #1C1A17; padding: 3px 9px; border-radius: 11px; }
+        .sig-gen-offer:empty { display: none; }
+        .sig-gen-lab { display: block; margin-top: 14px; font-size: 10px; letter-spacing: .04em; color: #D8CDB8; }
+        .sig-gen-imglab { position: absolute; right: 12px; bottom: 10px; z-index: 2; font-size: 9.5px; letter-spacing: .03em; color: #E9DFCB; background: rgba(16,12,8,0.5); padding: 3px 8px; border-radius: 10px; }
+        .sig-deliver { font-size: 10.5px; letter-spacing: .03em; color: var(--ink-soft); margin-top: 4px; }
+        .sig-loop { display: grid; gap: 5px; font-size: 13px; color: var(--ink); background: #F3EEE4; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; }
+        .sig-loop[hidden] { display: none; }
+        .sig-loop b { color: var(--tan-deep); }
+        .sig-loop-main { display: flex; align-items: center; gap: 9px; }
+        .sig-loop-dot { width: 8px; height: 8px; border-radius: 50%; background: #4F8A4F; flex: none; }
+        .sig-loop-note { font-size: 10.5px; color: var(--ink-soft); letter-spacing: .02em; }
+        .sig-loop-note code { font-size: 10px; }
+
+        /* Encore launch button (appears after beat 15; core demo stays exactly 15 beats). */
+        .sb-encore { width: 100%; margin-top: 10px; }
+
         /* "Before → Now" line appended to the sidebar narration. */
         #co-body .co-ba { margin-top: 10px; padding-top: 9px; border-top: 1px dashed #3A332A; font-size: 12px; color: #C9BFAC; line-height: 1.5; }
         #co-body .co-ba .co-ba-k { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: #9A8F7C; margin-right: 3px; }
@@ -1279,6 +1334,37 @@
     <div class="page" id="page">
         <!-- ── Home ── -->
         <section class="view active" id="view-home">
+            <!-- ═══ Signal-Led Moment encore (doc 12) — DETECT toast + live window countdown + GENERATE progress.
+                 Placed before #xsurf so the takeover hero's hard hide rule (#xsurf[data-layout=hero] ~ #hero) is unaffected. ═══ -->
+            <section id="signal-feed" class="signal-feed" hidden aria-live="polite">
+                <div class="sig-toast" id="sig-toast">
+                    <div class="sig-toast-main">
+                        <span class="sig-spark">&#128200;</span>
+                        <div class="sig-toast-copy">
+                            <div class="sig-head" id="sig-head">SIGNAL — Coach Tabby spiking on TikTok</div>
+                            <div class="sig-meta" id="sig-meta">#CoachTabby +480% views/hr · NY metro</div>
+                        </div>
+                        <div class="sig-clock-wrap">Window <span class="sig-clock" id="sig-clock">28:00</span> <span class="sig-hourglass">&#8987;</span></div>
+                    </div>
+                    <div class="sig-chip" id="sig-chip">SIMULATED · partner social-listening layer, not Optimizely · velocity illustrative</div>
+                </div>
+                <div class="sig-gen" id="sig-gen" hidden>
+                    <div class="sig-gen-status"><span class="sig-gen-dot"></span><span id="sig-gen-msg">Reading signal…</span></div>
+                    <div class="sig-gen-hero" id="sig-gen-hero">
+                        <div class="sig-shimmer"></div>
+                        <div class="sig-gen-copy">
+                            <span class="sig-gen-eyebrow" id="sig-gen-eyebrow"></span>
+                            <span class="sig-gen-headline" id="sig-gen-headline"></span>
+                            <span class="sig-gen-offer" id="sig-gen-offer"></span>
+                            <span class="sig-gen-lab">Model-written copy</span>
+                        </div>
+                        <span class="sig-gen-imglab">AI-generated scene of the real product · no text baked in</span>
+                    </div>
+                    <div class="sig-chip wide" id="sig-gen-chip">Model-written copy + AI-generated scene of the real product, delivered as feature variables over our module. No bespoke HTML. Draft → a human clicks Launch (governance beat).</div>
+                    <div class="sig-deliver">Delivered as feature variables over our module · no bespoke HTML · draft→Launch</div>
+                </div>
+                <div class="sig-loop" id="sig-loop" hidden></div>
+            </section>
             <!-- ═══ Experiment Surface — Opal-launched A/B · MAB · CMAB render here (one block, data-driven variations) ═══ -->
             <section id="xsurf" class="xsurf" data-layout="hero" data-theme="noir" hidden>
                 <div class="xsurf-art" id="xsurf-art"></div>
@@ -1581,6 +1667,8 @@
                         <div class="co-body" id="co-body" style="display:none">Body</div>
                     </div>
                 </div>
+                <!-- Encore (doc 12): revealed AFTER beat 15 completes; the core demo stays exactly 15 beats. -->
+                <button class="sb-btn primary sb-encore" id="dir-encore" style="display:none" onclick="store.startSignalArc()">Show the Signal-Led Moment &#9656;</button>
             </div>
         </div>
 

@@ -7,9 +7,11 @@ import type { Env } from '@/types/env';
 import type { SegmentProvider } from './SegmentProvider';
 import type { AudienceAuthoring } from './AudienceAuthoring';
 import type { DecisionProvider } from './DecisionProvider';
+import type { SignalProvider } from './SignalProvider';
 import { MockSegmentProvider, LiveSegmentProvider } from './SegmentProvider';
 import { MockAudienceAuthoring, LiveAudienceAuthoring } from './AudienceAuthoring';
 import { MockDecisionProvider, LiveDecisionProvider } from './DecisionProvider';
+import { MockSignalProvider, LiveSignalProvider } from './SignalProvider';
 import { KvAudienceStore } from './AudienceStore';
 import { OptimizelyService } from '@/services/OptimizelyService';
 
@@ -17,6 +19,7 @@ export interface Connectors {
   segments: SegmentProvider;
   audiences: AudienceAuthoring;
   decisions: DecisionProvider;
+  signals: SignalProvider; // DETECT layer for the Signal-Led Moment (mocked partner social-listening)
 }
 
 export function getConnectors(env: Env): Connectors {
@@ -28,6 +31,7 @@ export function getConnectors(env: Env): Connectors {
       segments: new LiveSegmentProvider({ odpApiHost: env.ODP_API_HOST, odpPublicKey: env.ODP_PUBLIC_KEY }),
       audiences: new LiveAudienceAuthoring({ mcpEndpoint: env.OPAL_MCP_ENDPOINT, optiIdToken: env.OPTI_ID_TOKEN }),
       decisions: new LiveDecisionProvider(new OptimizelyService(env)),
+      signals: new LiveSignalProvider({ signalApiHost: env.SIGNAL_API_HOST, signalApiKey: env.SIGNAL_API_KEY }),
     };
   }
 
@@ -44,12 +48,14 @@ export function getConnectors(env: Env): Connectors {
     segments: new MockSegmentProvider(store),
     audiences: new MockAudienceAuthoring(store),
     decisions,
+    signals: new MockSignalProvider(),
   };
 }
 
 export type { SegmentProvider } from './SegmentProvider';
 export type { AudienceAuthoring } from './AudienceAuthoring';
 export type { DecisionProvider } from './DecisionProvider';
+export type { SignalProvider, TrendSignal } from './SignalProvider';
 export { KvAudienceStore } from './AudienceStore';
 export type { AudienceStore } from './AudienceStore';
 export * from './types';

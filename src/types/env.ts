@@ -38,6 +38,11 @@ export interface Env {
   ODP_PUBLIC_KEY?: string;
   OPAL_MCP_ENDPOINT?: string;
   OPTI_ID_TOKEN?: string;
+  // Signal-Led Moment DETECT seam — credentials for a LIVE partner social-listening feed.
+  // Absent by default: LiveSignalProvider throws NotWiredError and the demo runs on the
+  // mocked fixture (src/data/signals.json). DETECT is the only mocked stage of the moment.
+  SIGNAL_API_HOST?: string;
+  SIGNAL_API_KEY?: string;
 
   // Opal chat (Gemini) + FX write-tools — provide via wrangler secret / .dev.vars.
   GEMINI_API_KEY: string;

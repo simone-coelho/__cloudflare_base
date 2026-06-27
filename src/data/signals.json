@@ -1,0 +1,29 @@
+{
+  "_meta": {
+    "note": "DETECT is a MOCKED partner social-listening layer — NOT a native Optimizely capability. Optimizely does not ship a TikTok / social listener; this fixture stands in for a partner real-time trend feed. The velocity figures (velocityPct, windowMinutes, confidence) are INVENTED demo props — the phenomenon (a Coach Tabby going viral on TikTok in NY) is plausible, but the metrics are not measured. This is the ONLY mocked stage of the Signal-Led Moment; everything downstream (Opal copy, the /ai/scene hero image, the real flag + multi_armed_bandit rule) is real.",
+    "on_screen_label": "SIMULATED · partner social-listening layer, not Optimizely · velocity illustrative",
+    "simulated": true,
+    "source_of_use_case": "docs/architecture/12-signal-led-moment-build-brief.md §4.2 + §6 Phase A1",
+    "consumed_by": "MockSignalProvider.nextSignal() (src/connectors/SignalProvider.ts) via GET /signals/next; the route overlays the REAL /geo region as the one live tell",
+    "skus_are_real_coach_ids": true
+  },
+  "signals": [
+    {
+      "id": "sig_tabby_tiktok",
+      "source": "partner_social_listening",
+      "platform": "TikTok",
+      "headline": "Coach Tabby spiking on TikTok",
+      "hashtag": "#CoachTabby",
+      "skus": ["COA-CH857", "COA-CY201"],
+      "anchorLine": "Tabby",
+      "velocityPct": 480,
+      "unit": "views/hr",
+      "windowMinutes": 28,
+      "region": "US-NY",
+      "confidence": 0.86,
+      "nlSeed": "A Coach Tabby (COA-CH857) is going viral on TikTok in NY right now — #CoachTabby is up 480% views/hr and the window closes in about 28 minutes. Write a short, on-brand \"as seen on TikTok\" moment for the Tabby (eyebrow, headline, subcopy, offer, CTA) and launch the tiktok_tabby_moment experiment so the bandit can find the winner before the moment cools.",
+      "simulated": true,
+      "detectedAt": 0
+    }
+  ]
+}

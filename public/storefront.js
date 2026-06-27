@@ -82,6 +82,16 @@ class CoachStorefront {
         this.ticked = new Set();       // feature indices already demonstrated (persist across session)
         this._mabTimer = null;
 
+        // Signal-Led Moment encore (doc 12) — a 3-scene arc behind a button AFTER beat 15.
+        // The core demo stays EXACTLY 15 beats; the arc has its own index + chrome, never touches featureList.
+        this.MOMENT_KEY = 'xsurf_tiktok_tabby_moment';
+        this.encoreActive = false; this.arcIndex = -1; this.signalArc = null;
+        this._signal = null; this._momentImageUrl = null;
+        this._momentPending = false;   // GENERATE in flight → we own the reveal (image must be ready first)
+        this._momentRevealed = false;  // takeover shown → ignore late launches re-rendering it
+        this._momentLaunched = false;  // a real launch (Opal or deterministic fallback) fired
+        this._momentClockTimer = null; this._genTimer = null;
+
         // sidebar / tabs / persistent markers / session changelog
         this.activeTab = 'opal';       // Opal · Capabilities · Engine
         this.markers = new Map();      // selector -> { label, inside } persistent personalization markers
@@ -329,6 +339,11 @@ class CoachStorefront {
             else this.experiments.push({ experimentKey: expKey, variations: detail.variations, metricEventKey: detail.metricEventKey });
         }
         this._activeExperiment = { experimentKey: expKey, metricEventKey: detail.metricEventKey || (this._activeExperiment && this._activeExperiment.experimentKey === expKey ? this._activeExperiment.metricEventKey : null) };
+        // Signal-Led Moment: during GENERATE the encore OWNS the reveal — the takeover must appear ONLY when the
+        // real hero image is ready (doc 12 Decision #5 / §4.4). Record that a real launch fired (Opal tool OR the
+        // deterministic fallback), but do NOT render here. After reveal, block only the auto/Opal path (no creative)
+        // so a late tool callback can't replace the winner; an explicit ⌘K force (carries `creative`) still works.
+        if (this._isMomentKey(expKey) && (this._momentPending || (this._momentRevealed && !detail.creative))) { this._momentLaunched = true; return; }
         // 1) Render INSTANTLY from the scenario creative (never blank while the datafile propagates).
         const creative = detail.creative || await this._xsurfCreative(expKey, variationKey);
         if (creative) {
@@ -377,7 +392,11 @@ class CoachStorefront {
         let creative = null;
         if (v && v.payload) { try { creative = JSON.parse(v.payload); } catch (e) { creative = null; } }
         const vh = document.getElementById('view-home');
-        if (!creative) { root.hidden = true; if (vh) vh.classList.remove('xsurf-hero'); return; }
+        if (!creative) { root.hidden = true; root.removeAttribute('data-moment'); if (vh) vh.classList.remove('xsurf-hero'); return; }
+        // Signal-Led Moment (doc 12 §6 C2): render the DISTINCT full-bleed takeover, preferring the discrete
+        // §4.3 feature variables over `payload` when the confirmed decision provides them.
+        if (this._isMomentKey(expKey)) { this.renderMomentTakeover(this._discreteToCreative(v, creative)); return; }
+        root.removeAttribute('data-moment');   // any non-moment surface must never carry takeover styling
         this._xsurfActive = { experimentKey: expKey, creative };
         root.dataset.layout = creative.layout || 'hero';
         root.dataset.theme = creative.theme || 'noir';
@@ -401,6 +420,72 @@ class CoachStorefront {
         root.hidden = false;
         if (vh) vh.classList.toggle('xsurf-hero', (creative.layout || 'hero') === 'hero');
         this.trackXsurf('xsurf_impression');
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+     * SIGNAL-LED MOMENT — takeover hero render (doc 12 §6 C2, Decision #8)
+     * ════════════════════════════════════════════════════════════════════════ */
+    _isMomentKey(k) { return k === this.MOMENT_KEY; }
+
+    /* Build a creative from the discrete §4.3 feature variables, preferring them over the payload base
+     * (doc 12 §4.3: "the moment render prefers the discrete variables when present"). undefined/'' → base. */
+    _discreteToCreative(v, base) {
+        v = v || {}; base = base || {};
+        const pick = (k, d) => (typeof v[k] === 'string' && v[k] !== '') ? v[k] : d;
+        return {
+            key: v.variant || base.key || 'as_seen_tiktok',
+            layout: pick('layout', base.layout || 'hero'),
+            theme: pick('theme', base.theme || 'tan'),
+            image: pick('hero_image', base.image || ''),
+            eyebrow: pick('eyebrow', base.eyebrow || ''),
+            headline: pick('headline', base.headline || ''),
+            subcopy: pick('subcopy', base.subcopy || ''),
+            offer: pick('offer', base.offer || ''),
+            ctaLabel: pick('cta_label', base.ctaLabel || 'Shop the Tabby'),
+            ctaAction: pick('cta_action', base.ctaAction || 'navigate'),
+            badge: pick('badge', base.badge || 'Signal-led · trending'),
+            productId: base.productId || 'COA-CH857',
+        };
+    }
+
+    /* Render the DISTINCT full-bleed takeover hero into #xsurf (the SERVE climax).
+     * CRITICAL (prior "two heroes" bug): we keep data-layout="hero" and set root.hidden=false, so the
+     * frozen CSS rule `#view-home #xsurf[data-layout="hero"]:not([hidden]) ~ #hero { display:none !important }`
+     * forces the default #hero to a COMPUTED display:none — guaranteed by an !important rule keyed on #xsurf's
+     * OWN rendered state, NOT by the [hidden] attribute on #hero and NOT by a specificity-fragile class. The
+     * extra xsurf-hero class + moment-active class are belt-and-suspenders; the sibling rule is load-bearing. */
+    renderMomentTakeover(creative) {
+        const root = document.getElementById('xsurf'); if (!root || !creative) return;
+        this._xsurfActive = { experimentKey: this.MOMENT_KEY, creative };
+        root.dataset.layout = 'hero';            // keep hero-layout → the hard hero-hide rule stays active
+        root.dataset.theme = creative.theme || 'tan';
+        root.dataset.moment = 'takeover';        // distinct full-bleed styling (does not affect the hide rule)
+        const p = creative.productId && this.byId.get(creative.productId);
+        const img = creative.image || (p && p.image_url) || '';
+        document.getElementById('xsurf-art').style.backgroundImage = img ? `url("${img}")` : '';
+        document.getElementById('xsurf-eyebrow').textContent = creative.eyebrow || '';
+        document.getElementById('xsurf-headline').textContent = creative.headline || '';
+        document.getElementById('xsurf-subcopy').textContent = creative.subcopy || '';
+        document.getElementById('xsurf-offer').textContent = creative.offer || '';
+        const form = document.getElementById('xsurf-capture'); form.dataset.capture = 'none';
+        const input = document.getElementById('xsurf-input'); input.type = 'text'; input.value = ''; input.placeholder = '';
+        document.getElementById('xsurf-cta').textContent = creative.ctaLabel || 'Shop the Tabby';
+        const tag = document.getElementById('xsurf-flag'); if (tag) tag.textContent = creative.badge || 'Signal-led · trending';
+        root.hidden = false;                     // not hidden → :not([hidden]) matches → #hero computed display:none
+        const vh = document.getElementById('view-home'); if (vh) vh.classList.add('xsurf-hero');
+        this.trackXsurf('xsurf_impression');
+    }
+
+    /* The winner creative for the moment: prefer the discrete §4.3 variables off a confirmed decision,
+     * else the scenario's canned on-brand fields (deterministic fallback — identical downstream). */
+    async momentCreative() {
+        const base = await this._xsurfCreative(this.MOMENT_KEY, 'as_seen_tiktok');
+        const v = this.decVars(this.MOMENT_KEY);
+        if (v && (v.headline || v.hero_image || v.eyebrow)) return this._discreteToCreative(v, base);
+        return base || this._discreteToCreative(null, {
+            key: 'as_seen_tiktok', eyebrow: 'As seen on TikTok', headline: "The Tabby everyone's talking about",
+            subcopy: 'Trending in NY right now', offer: 'Trending now', badge: 'Signal-led · trending',
+        });
     }
 
     /* CTA / capture submit on the experiment surface → fire the event (our stream + Optimizely metric). */
@@ -431,7 +516,7 @@ class CoachStorefront {
     }
 
     clearForcedExperiment() {
-        const root = document.getElementById('xsurf'); if (root) root.hidden = true;
+        const root = document.getElementById('xsurf'); if (root) { root.hidden = true; root.removeAttribute('data-moment'); }
         const vh = document.getElementById('view-home'); if (vh) vh.classList.remove('xsurf-hero');
         this._xsurfActive = null;
     }
@@ -2130,6 +2215,7 @@ class CoachStorefront {
         this.hideCallout(); this.clearSpotlight(); this.hideCursor();
         this.hideTransientPanels(); this.closeCart();
         this.clearChangePills(); this.clearMarkers();    // clean slate on restart
+        this.resetMomentEncore();   // tear down the Signal-Led Moment encore (button, feed, countdown, takeover)
         try { window.dispatchEvent(new Event('opal:reset')); } catch (e) {}   // fresh Opal chat per demo run
         this.ticked.clear(); this.renderChecklist(-1);   // Restart resets the checklist
         this.resetShopper();
@@ -2161,10 +2247,12 @@ class CoachStorefront {
     }
     async nextStep() {
         if (this.busy) return;
+        if (this.encoreActive) { await this.nextArcStep(); return; }   // Signal-Led Moment arc owns Next while active
         if (this.stepIndex >= this.steps.length - 1) { if (this.autoplay) this.stopAutoplay(); return; }
         await this.gotoStep(this.stepIndex + 1);
     }
     async prevStep() {
+        if (this.encoreActive) return;   // the encore arc is forward-only; Restart exits it
         if (this.busy || this.stepIndex <= 0) return;
         // Stepping back re-runs from a clean shopper to keep state honest.
         this.stopAutoplay();
@@ -2223,7 +2311,7 @@ class CoachStorefront {
         this.busy = false;
         if (!fast) {
             nextBtn.disabled = false;
-            if (idx >= this.steps.length - 1) { nextBtn.disabled = true; this.stopAutoplay(); }
+            if (idx >= this.steps.length - 1) { nextBtn.disabled = true; this.stopAutoplay(); this.showEncore(); }   // beat 15 done → offer the encore
             if (this.autoplay && idx < this.steps.length - 1) this.scheduleAutoplay();
         }
     }
@@ -2480,12 +2568,20 @@ class CoachStorefront {
     /* ════════════════════════════════════════════════════════════════════════
      * STEP 12 — MAB: traffic auto-allocates to the winner (representative)
      * ════════════════════════════════════════════════════════════════════════ */
-    showMab() {
-        const arms = [
+    /* arms (optional): three {name, win?} — winner at index 1 (matches the convergence seq). opts.note
+     * overrides the "Representative …" honesty chip (the moment carries the verbatim §3 OPTIMIZE label).
+     * Default (no args) = beats-12 behavior, unchanged. Reused by the Signal-Led Moment OPTIMIZE (doc 12 §6 E5). */
+    showMab(arms, opts) {
+        opts = opts || {};
+        const def = [
             { name: 'Variation A · Classic hero' },
             { name: 'Variation B · Complete-the-Look', win: true },
             { name: 'Variation C · Premium edit' },
         ];
+        arms = (Array.isArray(arms) && arms.length === 3) ? arms : def;
+        const winIdx = Math.max(0, arms.findIndex((a) => a.win));
+        // Default (beat 12) keeps the exact original "Variation B" promotion text; the moment uses its winner name.
+        const winName = (arms === def) ? 'Variation B' : ((arms[winIdx] && arms[winIdx].name) || 'the winner');
         const wrap = document.getElementById('mab-arms');
         wrap.innerHTML = arms.map((a) =>
             `<div class="ab-arm ${a.win ? 'win' : 'base'}">
@@ -2495,6 +2591,8 @@ class CoachStorefront {
         const bars = wrap.querySelectorAll('.ab-track > i');
         const labels = wrap.querySelectorAll('.mab-traffic');
         document.getElementById('mab-foot').innerHTML = '';
+        const note = document.querySelector('#mab-readout .ab-demo-note');
+        if (note) note.textContent = opts.note || 'Representative · Optimizely MAB is GA';
         document.getElementById('mab-readout').classList.add('show');
         const seq = [[33, 34, 33], [22, 54, 24], [15, 65, 20], [11, 73, 16]];
         let r = 0;
@@ -2510,7 +2608,7 @@ class CoachStorefront {
             r++;
             if (r >= seq.length) {
                 clearInterval(this._mabTimer); this._mabTimer = null;
-                document.getElementById('mab-foot').innerHTML = `<b>Variation B</b> auto-promoted to <b>73%</b> of traffic on live performance — lift captured while still learning.`;
+                document.getElementById('mab-foot').innerHTML = `<b>${this.escapeHtml(winName)}</b> auto-promoted to <b>73%</b> of traffic on live performance — lift captured while still learning.`;
                 return;
             }
             apply();
@@ -2548,6 +2646,243 @@ class CoachStorefront {
     hideCmab() {
         const el = document.getElementById('cmab-readout'); if (el) el.classList.remove('show');
         const wrap = document.getElementById('cmab-ctx'); if (wrap) wrap.innerHTML = '';
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+     * SIGNAL-LED MOMENT — encore arc (doc 12 §6 D/E). Three micro-beats shaped
+     * EXACTLY like this.steps[] (incl. the `callout` object), surfaced behind a
+     * button AFTER beat 15. The core demo stays EXACTLY 15 beats: the arc has its
+     * own index + chrome and NEVER touches featureList / the "Step X of 15" count.
+     * ════════════════════════════════════════════════════════════════════════ */
+    showEncore() { const b = document.getElementById('dir-encore'); if (b) b.style.display = ''; }
+    hideEncore() { const b = document.getElementById('dir-encore'); if (b) b.style.display = 'none'; }
+
+    /* The 3 scenes (S1 DETECT · S2 GENERATE · S3 SERVE+OPTIMIZE+MEASURE). */
+    buildSignalArc() {
+        return [
+            {
+                label: 'Detect · TikTok signal',
+                watch: 'a live signal + the ~28-min window open',
+                caption: 'A bag is blowing up on TikTok right now — a real-time cultural signal, with a window that closes in ~28 minutes.',
+                run: async () => { await this.runMomentDetect(); },
+                callout: { anchor: '#signal-feed', usecase: 'Detect · real-time signal',
+                    title: 'A cultural moment, detected live',
+                    signal: 'Coach <strong>Tabby</strong> spiking on TikTok — <strong>#CoachTabby +480% views/hr</strong>, NY metro · a ~28-min window.',
+                    decision: 'Open the loop: detect → generate → serve → optimize before the moment cools.',
+                    impact: 'DY reacts to the neighbourhood (a stored postal-code average). We react to what\'s happening <strong>right now</strong>. <em>Detect is a simulated partner social-listening layer — not Optimizely.</em>' },
+            },
+            {
+                label: 'Generate · Opal copy + AI hero',
+                watch: 'Opal write the copy + generate the hero from the real Tabby',
+                caption: 'Opal writes on-brand copy and generates a hero from the real Tabby — delivered as feature variables, no bespoke HTML. Real generation (~8s), shown honestly.',
+                run: async () => { await this.runMomentGenerate(); },
+                callout: { anchor: '#signal-feed', usecase: 'Generate · model copy + AI scene',
+                    title: 'Opal builds the moment, live',
+                    signal: 'The signal (SKU, anchor line, window) flows to Opal.',
+                    decision: 'Model-written copy + an AI-generated scene of the <strong>real product</strong>, delivered as <strong>feature variables over our module</strong> — no bespoke HTML.',
+                    impact: 'Real generation (~8s, shown honestly). Draft → a human clicks <strong>Launch</strong> (governance). Autonomy is roadmap.' },
+            },
+            {
+                label: 'Serve · Optimize · Measure',
+                watch: 'the full-bleed takeover + the bandit find the winner',
+                caption: 'The storefront takes over with the real Tabby in the generated scene; a real multi-armed bandit shifts traffic to the winner — before the window closes.',
+                run: async () => { await this.runMomentServe(); },
+                callout: { anchor: '#xsurf', usecase: 'Serve · optimize · measure',
+                    title: 'Served, optimized — before the window shut',
+                    signal: 'The variation is live (a real flag + a real multi_armed_bandit rule).',
+                    decision: 'Serve the takeover; let the <strong>bandit</strong> shift traffic to the winner — automatically.',
+                    impact: 'Loop closed inside the window. Lift figures are representative (narrated, not claimed in UI). <strong>Representative · MAB is GA · real rule creatable.</strong>' },
+            },
+        ];
+    }
+
+    /* Enter encore mode (after beat 15). Reuses the director chrome + the Next button via nextArcStep(). */
+    startSignalArc() {
+        if (this.busy) return;
+        this.encoreActive = true; this.arcIndex = -1;
+        this._momentRevealed = false; this._momentImageUrl = null; this._signal = null;
+        if (!this.signalArc) this.signalArc = this.buildSignalArc();
+        this.demoActive = true;
+        const sb = document.getElementById('sidebar'); if (sb) sb.dataset.state = 'running';
+        this.toggleSidebar(true);
+        this.hideEncore();
+        this.nextArcStep();   // run Scene 1
+    }
+    async nextArcStep() {
+        if (this.busy) return;
+        if (!this.signalArc) this.signalArc = this.buildSignalArc();
+        if (this.arcIndex >= this.signalArc.length - 1) return;
+        await this.runArcStep(this.arcIndex + 1);
+    }
+    /* Run one arc scene — mirrors gotoStep() with ENCORE labels, but does NOT call tickFeature / pushChange,
+     * so featureList and the "Step X of 15" count are untouched (the core demo stays exactly 15). */
+    async runArcStep(idx) {
+        const scene = this.signalArc && this.signalArc[idx]; if (!scene) return;
+        this.busy = true; this.arcIndex = idx;
+        const st = document.getElementById('sb-step'); if (st) st.classList.remove('preview');
+        this.hideCallout(); this.clearSpotlight();
+        document.getElementById('dir-step-label').textContent = `Signal-Led Moment · Scene ${idx + 1} of ${this.signalArc.length} · ${scene.label}`;
+        document.getElementById('dir-bar-fill').style.width = `${((idx + 1) / this.signalArc.length) * 100}%`;
+        document.getElementById('dir-watch').innerHTML = `Watch: <b>${scene.watch}</b>`;
+        document.getElementById('dir-caption').textContent = scene.caption;
+        document.getElementById('dir-back').disabled = true;   // the arc is forward-only
+        const nextBtn = document.getElementById('dir-next');
+        nextBtn.innerHTML = 'Next &#9658;'; nextBtn.disabled = true;
+        try { await scene.run(); this.applyStepCallout(scene); } catch (e) { console.error('arc step error', e); }
+        this.busy = false;
+        nextBtn.disabled = idx >= this.signalArc.length - 1;   // end of arc → Next stays disabled (Restart to replay)
+    }
+
+    /* Tear down the encore (button + feed + countdown + timers + takeover state). Idempotent; safe pre-DOM. */
+    resetMomentEncore() {
+        this.encoreActive = false; this.arcIndex = -1;
+        this._momentPending = false; this._momentRevealed = false; this._momentLaunched = false;
+        this._signal = null; this._momentImageUrl = null;
+        this.stopWindowCountdown();
+        if (this._genTimer) { clearInterval(this._genTimer); this._genTimer = null; }
+        const feed = document.getElementById('signal-feed'); if (feed) { feed.hidden = true; feed.classList.remove('show'); }
+        const gen = document.getElementById('sig-gen'); if (gen) gen.hidden = true;
+        const loop = document.getElementById('sig-loop'); if (loop) { loop.hidden = true; loop.innerHTML = ''; }
+        const vh = document.getElementById('view-home'); if (vh) vh.classList.remove('moment-active');
+        this.hideEncore();
+    }
+
+    /* ── Scene 1 — DETECT: the (mocked, honestly-labeled) signal + the toast + the live window countdown. ── */
+    async runMomentDetect() {
+        this.go('home', { silent: true });
+        const feed = document.getElementById('signal-feed'); if (feed) feed.hidden = false;
+        const gen = document.getElementById('sig-gen'); if (gen) gen.hidden = true;
+        const loop = document.getElementById('sig-loop'); if (loop) { loop.hidden = true; loop.innerHTML = ''; }
+        const signal = await this.fetchSignal();
+        this._signal = signal;
+        const head = document.getElementById('sig-head'); if (head) head.textContent = `SIGNAL — ${signal.headline || 'Coach Tabby spiking on TikTok'}`;
+        const meta = document.getElementById('sig-meta');
+        if (meta) {
+            const region = signal.region || 'NY metro';
+            meta.textContent = `${signal.hashtag || '#CoachTabby'} +${signal.velocityPct || 480}% ${signal.unit || 'views/hr'} · ${region}${signal.regionLive ? ' · live geo' : ''}`;
+        }
+        const chip = document.getElementById('sig-chip'); if (chip) chip.textContent = 'SIMULATED · partner social-listening layer, not Optimizely · velocity illustrative';
+        if (feed) { void feed.offsetWidth; feed.classList.add('show'); }
+        this.startWindowCountdown(signal.windowMinutes || 28);   // the live window countdown is the dramatic spine
+        this.logEvent('signal', 'detect', `${signal.hashtag || '#CoachTabby'} +${signal.velocityPct || 480}% ${signal.unit || 'views/hr'}`, null, null);
+        await this.sleep(700);
+    }
+    /* The REAL DETECT call (GET /signals/next — mocked partner layer, real /geo region overlaid). */
+    fetchSignal() {
+        return fetch('/signals/next').then((r) => r.json()).catch(() => ({
+            headline: 'Coach Tabby spiking on TikTok', hashtag: '#CoachTabby', velocityPct: 480, unit: 'views/hr',
+            windowMinutes: 28, region: 'US-NY', anchorLine: 'Tabby', skus: ['COA-CH857'],
+            nlSeed: 'A Coach Tabby (COA-CH857) is going viral on TikTok in NY right now — #CoachTabby is up 480% views/hr and the window closes in about 28 minutes. Write a short, on-brand "as seen on TikTok" moment for the Tabby (eyebrow, headline, subcopy, offer, CTA) and launch the tiktok_tabby_moment experiment so the bandit can find the winner before the moment cools.',
+        }));
+    }
+
+    /* ── Scene 2 — GENERATE: Opal writes copy (real chat) + we generate the hero (real /ai/scene), with HONEST
+     *    progress the WHOLE time (Decision #5). Deterministic fallback launches the moment if Opal hasn't driven
+     *    a launch within a few seconds. The takeover reveals ONLY when the image is actually ready. ── */
+    async runMomentGenerate() {
+        this.go('home', { silent: true });
+        const vh = document.getElementById('view-home'); if (vh) vh.classList.add('moment-active');   // hide the default hero while the new one is born
+        this._momentPending = true; this._momentLaunched = false; this._momentRevealed = false;
+        const signal = this._signal || await this.fetchSignal();
+        const gen = document.getElementById('sig-gen'); if (gen) gen.hidden = false;
+        this._setGenHero(null);                         // shimmer placeholder
+        this.setMomentStatus('Reading signal…');
+        await this.sleep(900);
+        // (2) Opal writes the copy — drive the REAL Opal chat (mirror runOpalStep); the presenter may also dictate.
+        this.setMomentStatus('Opal is writing the moment copy…');
+        this.setTab('opal');
+        try { window.dispatchEvent(new CustomEvent('opal:ask', { detail: { text: signal.nlSeed } })); } catch (e) {}
+        this.logEvent('post', 'opal:ask', 'signal-led moment', null, null);
+        const winner = await this._xsurfCreative(this.MOMENT_KEY, 'as_seen_tiktok');
+        this._setGenCopy(winner);                       // eyebrow/headline/offer appear (canned; Opal's words land in the variables)
+        await this.sleep(900);
+        // Deterministic fallback (stage safety): if Opal hasn't launched within a few seconds (chat slow /
+        // unavailable), launch it ourselves — identical downstream. Self-guards on _momentLaunched, so it
+        // no-ops if Opal already launched; NOT cleared, so a cached/instant image can't cancel it.
+        setTimeout(() => {
+            if (!this._momentLaunched) { this._momentLaunched = true; this.runExperimentScenario('tiktok_tabby_moment', 'as_seen_tiktok', { noNav: true }); }
+        }, 5500);
+        // (3) Generate the hero from the REAL Tabby — live elapsed counter + shimmer the WHOLE time (~8s expected).
+        const t0 = Date.now();
+        this._genTimer = setInterval(() => {
+            const s = Math.round((Date.now() - t0) / 1000);
+            this.setMomentStatus(`Generating the hero image from the real Tabby… (${s}s)`);
+        }, 250);
+        const sceneContext = 'spotlit on a glossy after-hours editorial set, bold trending energy, current and Gen-Z, refined Coach palette';
+        let url = null;
+        try { url = await this._liveScene({ productId: 'COA-CH857', sceneId: 'signal-tabby-tiktok', type: 'search', sceneContext, aspect: '16:9' }); } catch (e) { url = null; }
+        if (this._genTimer) { clearInterval(this._genTimer); this._genTimer = null; }
+        // Stable URL either way: even if polling timed out, the job finishes + caches; the takeover backdrop fills.
+        this._momentImageUrl = url || (winner && winner.image) || '/ai/scene/COA-CH857/signal-tabby-tiktok';
+        this._setGenHero(this._momentImageUrl);
+        this.setMomentStatus('Hero ready — going live.');
+        await this.sleep(700);
+    }
+    setMomentStatus(msg) { const el = document.getElementById('sig-gen-msg'); if (el) el.textContent = msg; }
+    _setGenCopy(c) {
+        c = c || {};
+        const set = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = t || ''; };
+        set('sig-gen-eyebrow', c.eyebrow); set('sig-gen-headline', c.headline); set('sig-gen-offer', c.offer);
+    }
+    _setGenHero(url) {
+        const box = document.getElementById('sig-gen-hero'); if (!box) return;
+        if (url) { box.style.backgroundImage = `url("${url}")`; box.classList.add('ready'); }
+        else { box.style.backgroundImage = ''; box.classList.remove('ready'); }
+    }
+
+    /* ── Scene 3 — SERVE + OPTIMIZE + MEASURE: reveal the takeover (image is ready), close the loop off the
+     *    REAL elapsed, then animate the MAB readout with the moment arm labels. ── */
+    async runMomentServe() {
+        this.go('home', { silent: true });
+        this._momentPending = false;
+        const creative = await this.momentCreative();
+        if (this._momentImageUrl) creative.image = this._momentImageUrl;
+        // Reveal via the standard surface path (renderExperimentSurface delegates to renderMomentTakeover for the
+        // moment). previewExperiment also forces/confirms the real decision in the background.
+        await this.previewExperiment({ experimentKey: this.MOMENT_KEY, variationKey: 'as_seen_tiktok', creative, noNav: true, metricEventKey: 'add_to_cart' });
+        this._momentRevealed = true;   // lock out any late Opal launch from re-rendering the takeover
+        // Backstop: guarantee the REAL flag + multi_armed_bandit rule exist even if Opal never launched and the
+        // fallback timer hadn't fired yet (guarded → no double-launch). The guard above keeps it from re-rendering.
+        if (!this._momentLaunched) { this._momentLaunched = true; this.runExperimentScenario('tiktok_tabby_moment', 'as_seen_tiktok', { noNav: true }); }
+        const gen = document.getElementById('sig-gen'); if (gen) gen.hidden = true;
+        // Close the loop — REAL elapsed since DETECT (the image-ready event), never a blind timer (doc 12 §6 E3).
+        this.closeMomentLoop();
+        // OPTIMIZE: reuse showMab() with the moment arm labels; carry the verbatim §3 "Representative · MAB is GA" chip.
+        this.setTab('engine');
+        this.showMab(
+            [{ name: 'Control · New arrivals' }, { name: 'As seen on TikTok', win: true }, { name: 'Complete the look' }],
+            { note: 'Representative · MAB is GA · real rule creatable' },
+        );
+        await this.sleep(400);
+        this.scrollEngineTo('mab-readout'); this.pulse('#mab-readout');
+    }
+
+    /* ── Window countdown (the dramatic spine) + "loop closed" stat driven off the REAL image-ready event ── */
+    _fmtMMSS(s) { s = Math.max(0, Math.floor(s)); const m = Math.floor(s / 60), ss = s % 60; return `${m}:${ss < 10 ? '0' : ''}${ss}`; }
+    startWindowCountdown(minutes) {
+        this.stopWindowCountdown();
+        const total = Math.max(1, Math.round((minutes || 28) * 60));
+        this._momentWindowTotal = total; this._momentT0 = Date.now();
+        const clock = document.getElementById('sig-clock');
+        const render = () => {
+            const remain = total - Math.floor((Date.now() - this._momentT0) / 1000);
+            if (clock) clock.textContent = this._fmtMMSS(remain);
+            if (remain <= 0) this.stopWindowCountdown();
+        };
+        render();
+        this._momentClockTimer = setInterval(render, 1000);
+    }
+    stopWindowCountdown() { if (this._momentClockTimer) { clearInterval(this._momentClockTimer); this._momentClockTimer = null; } }
+    /* Loop-closed stat — REAL elapsed since DETECT, framed against the window. Window keeps ticking behind it. */
+    closeMomentLoop() {
+        const total = this._momentWindowTotal || 28 * 60;
+        const elapsed = Math.floor((Date.now() - (this._momentT0 || Date.now())) / 1000);
+        const loop = document.getElementById('sig-loop');
+        if (!loop) return;
+        loop.hidden = false;
+        loop.innerHTML =
+            `<div class="sig-loop-main"><span class="sig-loop-dot"></span><b>Loop closed in ${this._fmtMMSS(elapsed)} of ${this._fmtMMSS(total)}</b> — winner promoted automatically.</div>` +
+            `<div class="sig-loop-note">Today the loop closes with a human Launch click (governance). Autonomy is roadmap. · Representative figures · Optimizely MAB is GA. Real <code>multi_armed_bandit</code> rule is creatable.</div>`;
     }
 
     /* ════════════════════════════════════════════════════════════════════════
@@ -2985,6 +3320,7 @@ class CoachStorefront {
         this.clearMarkers();                       // drop all persistent personalization markers
         this.clearChangePills(); this.dismissWelcome();   // and the Before→Now pills + first-visit ribbon
         this._buySignalFired = false; if (this.clearForcedExperiment) this.clearForcedExperiment();   // reset buy-signal + experiment surface
+        this.resetMomentEncore();   // tear down the Signal-Led Moment encore on any fresh-shopper reset
         const anonChip = document.getElementById('eng-anon-chip'); if (anonChip) anonChip.classList.remove('show');
         this.changeLog = []; this.changeIdx.clear(); this.renderChanges();   // and the session changelog
         const si = document.getElementById('search-input'); if (si) si.value = '';
