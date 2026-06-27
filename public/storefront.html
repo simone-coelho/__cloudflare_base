@@ -1126,6 +1126,50 @@
         #pz-banner.publishing .pz-banner-tag { color: var(--tan); }
         #pz-banner.publishing .pz-banner-mark { animation: pzPulse 1.3s var(--ease) infinite; }
 
+        /* ═══════ Experiment Surface (experiment_surface flag) — one block, many variations via data ═══════ */
+        .xsurf { position: relative; overflow: hidden; border-radius: var(--radius); background: var(--x-bg); color: var(--x-fg);
+            --x-bg: linear-gradient(105deg, #211B14 0%, #3D3020 55%, #5A4630 100%); --x-fg: var(--paper); --x-accent: var(--tan);
+            --x-cta-bg: var(--paper); --x-cta-fg: var(--ink); --x-offer-bg: var(--tan); --x-offer-fg: #1C1A17; }
+        .xsurf[hidden] { display: none; }
+        .xsurf[data-theme="paper"] { --x-bg: #fff; --x-fg: var(--ink); --x-accent: var(--tan-deep); --x-cta-bg: var(--ink); --x-cta-fg: var(--paper); --x-offer-bg: var(--paper-2); --x-offer-fg: var(--tan-deep); }
+        .xsurf[data-theme="sale"] { --x-bg: linear-gradient(105deg, #211B14 0%, #3A201C 60%, #5A2E2E 100%); --x-accent: #E9B7B7; --x-cta-bg: var(--sale); --x-cta-fg: #fff; --x-offer-bg: var(--sale); --x-offer-fg: #fff; }
+        .xsurf[data-theme="tan"] { --x-cta-bg: var(--tan); --x-cta-fg: #1C1A17; --x-offer-bg: #fff; --x-offer-fg: var(--tan-deep); }
+        .xsurf-art { position: absolute; inset: 0; opacity: 0.34; background-size: cover; background-position: center 38%; }
+        .xsurf-scrim { position: absolute; inset: 0; background: linear-gradient(100deg, rgba(20,16,11,0.78) 0%, rgba(20,16,11,0.34) 55%, rgba(20,16,11,0.08) 100%); }
+        .xsurf[data-theme="paper"] .xsurf-scrim { display: none; }
+        .xsurf-inner { position: relative; z-index: 2; }
+        .xsurf-eyebrow { display: block; font-size: 12px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--x-accent); margin-bottom: 18px; }
+        .xsurf-eyebrow:empty { display: none; }
+        .xsurf-headline { font-family: var(--font-display); font-weight: 600; line-height: 1.04; }
+        .xsurf-subcopy { font-weight: 300; opacity: 0.92; margin-bottom: 22px; }
+        .xsurf-subcopy:empty { display: none; }
+        .xsurf-offer { display: inline-block; margin-bottom: 18px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; background: var(--x-offer-bg); color: var(--x-offer-fg); padding: 4px 10px; border-radius: 12px; }
+        .xsurf-offer:empty { display: none; }
+        .xsurf-capture { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .xsurf-input { font-family: var(--font-body); font-size: 15px; color: var(--ink); background: #fff; padding: 15px 16px; border: 1px solid var(--line-2); border-radius: var(--radius); min-width: 240px; }
+        .xsurf-input:focus { outline: none; border-color: var(--tan); }
+        .xsurf-capture[data-capture="none"] .xsurf-input { display: none; }
+        .xsurf-cta { background: var(--x-cta-bg); color: var(--x-cta-fg); border: none; padding: 16px 40px; font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: transform 0.35s var(--ease), filter 0.35s var(--ease); }
+        .xsurf-cta:hover { transform: translateY(-1px); filter: brightness(1.05); }
+        .xsurf-flag { position: absolute; right: 14px; bottom: 11px; z-index: 2; font-size: 10px; letter-spacing: 0.06em; color: var(--x-accent); background: rgba(20,18,15,0.40); padding: 3px 9px; border-radius: 11px; }
+        .xsurf[data-layout="hero"] { min-height: clamp(360px, 46vw, 520px); display: flex; align-items: center; }
+        .xsurf[data-layout="hero"] .xsurf-inner { max-width: 660px; padding: 64px 80px; }
+        .xsurf[data-layout="hero"] .xsurf-headline { font-size: clamp(34px, 4.4vw, 54px); margin-bottom: 20px; }
+        .xsurf[data-layout="hero"] .xsurf-subcopy { font-size: 18px; max-width: 480px; }
+        .xsurf[data-layout="banner"] { background: linear-gradient(90deg, #1C1A17, #2A2016); }
+        .xsurf[data-layout="banner"] .xsurf-art, .xsurf[data-layout="banner"] .xsurf-scrim { display: none; }
+        .xsurf[data-layout="banner"] .xsurf-inner { display: flex; align-items: center; gap: 14px; padding: 13px 28px; }
+        .xsurf[data-layout="banner"] .xsurf-eyebrow { margin: 0; }
+        .xsurf[data-layout="banner"] .xsurf-headline { font-family: var(--font-body); font-size: 14px; font-weight: 500; flex: 1; }
+        .xsurf[data-layout="banner"] .xsurf-subcopy { display: none; }
+        .xsurf[data-layout="banner"] .xsurf-input { padding: 8px 12px; min-width: 180px; font-size: 13px; }
+        .xsurf[data-layout="banner"] .xsurf-cta { padding: 9px 16px; border-radius: 16px; font-size: 11.5px; }
+        .xsurf[data-layout="card"] { border: 1px solid var(--line); background: #fff; }
+        .xsurf[data-layout="card"] .xsurf-inner { padding: 56px 60px; }
+        .xsurf[data-layout="card"] .xsurf-headline { font-size: 32px; margin-bottom: 16px; }
+        /* a live hero-layout experiment stands in for the brand hero (toggle, not structural) */
+        #view-home.xsurf-hero #hero { display: none; }
+
         /* "Before → Now" line appended to the sidebar narration. */
         #co-body .co-ba { margin-top: 10px; padding-top: 9px; border-top: 1px dashed #3A332A; font-size: 12px; color: #C9BFAC; line-height: 1.5; }
         #co-body .co-ba .co-ba-k { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: #9A8F7C; margin-right: 3px; }
@@ -1216,6 +1260,22 @@
     <div class="page" id="page">
         <!-- ── Home ── -->
         <section class="view active" id="view-home">
+            <!-- ═══ Experiment Surface — Opal-launched A/B · MAB · CMAB render here (one block, data-driven variations) ═══ -->
+            <section id="xsurf" class="xsurf" data-layout="hero" data-theme="noir" hidden>
+                <div class="xsurf-art" id="xsurf-art"></div>
+                <div class="xsurf-scrim"></div>
+                <div class="xsurf-inner">
+                    <span class="xsurf-eyebrow" id="xsurf-eyebrow"></span>
+                    <h2 class="xsurf-headline" id="xsurf-headline"></h2>
+                    <p class="xsurf-subcopy" id="xsurf-subcopy"></p>
+                    <span class="xsurf-offer" id="xsurf-offer"></span>
+                    <form class="xsurf-capture" id="xsurf-capture" data-capture="none" onsubmit="return store.xsurfSubmit(event)">
+                        <input class="xsurf-input" id="xsurf-input" type="text" autocomplete="off">
+                        <button class="xsurf-cta" id="xsurf-cta" type="submit">Shop</button>
+                    </form>
+                </div>
+                <span class="xsurf-flag" id="xsurf-flag">Experiment · live</span>
+            </section>
             <div id="hero">
                 <div class="hero-art" id="hero-art"></div>
                 <div class="hero-content" id="hero-content"><!-- rendered --></div>

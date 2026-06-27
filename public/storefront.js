@@ -53,6 +53,8 @@ class CoachStorefront {
 
         // Opal (chat island) → governed "preview as this audience" trigger for the live banner.
         window.addEventListener('opal:experience', (e) => { try { this.previewAudience(e.detail || {}); } catch (err) { console.error('previewAudience', err); } });
+        // Opal launched an experiment → render its first variation live on the experiment surface.
+        window.addEventListener('opal:experiment', (e) => { try { this.previewExperiment(e.detail || {}); } catch (err) { console.error('previewExperiment', err); } });
 
         // local browsing signals (drive copy + derivations between engine fields)
         this.eventCount = 0;
@@ -107,6 +109,8 @@ class CoachStorefront {
         this.initPzDrag();
         this.applyGeoColdStart();   // edge-geo cold-start: adapt the first paint to where they are
         this.initCompareDrag();
+        // Deep link: /storefront?experiment=<key> renders that experiment's surface (readoutUrl target).
+        try { const _ek = new URLSearchParams(location.search).get('experiment'); if (_ek) setTimeout(() => this.previewExperiment({ experimentKey: _ek }), 500); } catch (e) {}
         window.addEventListener('keydown', (e) => {
             if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); this.openCmdk(); }
         });
@@ -303,6 +307,128 @@ class CoachStorefront {
             this.decisions['personalized_banner'] = { enabled: true, variables: { message: detail.message }, reason: 'Optimizely flag (created by Opal)' };
         }
         this.renderBanner();
+    }
+
+    /* ════ Experiment Surface — decide → render → force (clones previewAudience, for experiment flags) ════ */
+    /* Poll the live Optimizely decision for an experiment flag (optionally FORCED to a variation), then
+     * render the self-contained #xsurf component from that variation's `payload` creative. */
+    async previewExperiment(detail) {
+        detail = detail || {};
+        const expKey = detail.experimentKey || detail.flagKey;
+        if (!expKey) return;
+        const variationKey = detail.variationKey || null;
+        if (detail.variations) {   // remember launched experiments so ⌘K can force any variation
+            this.experiments = this.experiments || [];
+            const found = this.experiments.find((e) => e.experimentKey === expKey);
+            if (found) found.variations = detail.variations;
+            else this.experiments.push({ experimentKey: expKey, variations: detail.variations, metricEventKey: detail.metricEventKey });
+        }
+        this._activeExperiment = { experimentKey: expKey, metricEventKey: detail.metricEventKey || (this._activeExperiment && this._activeExperiment.experimentKey === expKey ? this._activeExperiment.metricEventKey : null) };
+        // 1) Render INSTANTLY from the scenario creative (never blank while the datafile propagates).
+        const creative = detail.creative || await this._xsurfCreative(expKey, variationKey);
+        if (creative) {
+            this.decisions[expKey] = { enabled: true, variables: { payload: JSON.stringify(creative), variant: creative.key }, variationKey: creative.key, reason: 'experiment' };
+            try { this.go('home', { silent: true }); } catch (e) {}
+            this.renderExperimentSurface(expKey);
+        }
+        // 2) Confirm via the REAL Optimizely decision in the background (proves the decide once propagated).
+        this._confirmExperimentDecision(expKey, variationKey, detail.attributes || {});
+    }
+
+    /* Look up a variation's creative from the preset scenarios (cached) for instant render. */
+    async _xsurfCreative(expKey, variationKey) {
+        try {
+            if (!this._xsurfScenarios) { const r = await fetch('/experiment/scenarios'); const j = await r.json(); this._xsurfScenarios = j.scenarios || []; }
+            const sc = (this._xsurfScenarios || []).find((s) => s.key === expKey);
+            if (!sc) return null;
+            const list = sc.creatives || [];
+            return (variationKey && list.find((c) => c.key === variationKey)) || list[0] || null;
+        } catch (e) { return null; }
+    }
+
+    /* Poll the live Optimizely decision (optionally forced) and re-render once the datafile has the flag. */
+    async _confirmExperimentDecision(expKey, variationKey, attrs) {
+        for (let i = 0; i < 8; i++) {
+            try {
+                const res = await fetch('/optimizely/preview', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: this.anonId, userAttributes: attrs || {}, flag: expKey, variationKey }),
+                });
+                const json = await res.json();
+                if (json && json.enabled && json.variables && json.variables.payload) {
+                    this.decisions[expKey] = { enabled: true, variables: json.variables, variationKey: json.variationKey, reason: 'experiment' };
+                    this.renderExperimentSurface(expKey);
+                    return;
+                }
+            } catch (e) { /* retry through propagation */ }
+            await this.sleep(2500);
+        }
+    }
+
+    /* Render #xsurf from the decided experiment's `payload` creative (pure data, no DOM rebuild). */
+    renderExperimentSurface(expKey) {
+        const root = document.getElementById('xsurf'); if (!root) return;
+        const v = expKey ? this.decVars(expKey) : null;
+        let creative = null;
+        if (v && v.payload) { try { creative = JSON.parse(v.payload); } catch (e) { creative = null; } }
+        const vh = document.getElementById('view-home');
+        if (!creative) { root.hidden = true; if (vh) vh.classList.remove('xsurf-hero'); return; }
+        this._xsurfActive = { experimentKey: expKey, creative };
+        root.dataset.layout = creative.layout || 'hero';
+        root.dataset.theme = creative.theme || 'noir';
+        const p = creative.productId && this.byId.get(creative.productId);
+        const img = creative.image || (p && p.image_url) || '';
+        document.getElementById('xsurf-art').style.backgroundImage = img ? `url("${img}")` : '';
+        document.getElementById('xsurf-eyebrow').textContent = creative.eyebrow || '';
+        document.getElementById('xsurf-headline').textContent = creative.headline || '';
+        document.getElementById('xsurf-subcopy').textContent = creative.subcopy || '';
+        document.getElementById('xsurf-offer').textContent = creative.offer || '';
+        const form = document.getElementById('xsurf-capture');
+        const cap = creative.captureType || 'none';
+        form.dataset.capture = cap;
+        const input = document.getElementById('xsurf-input');
+        input.type = cap === 'phone' ? 'tel' : cap === 'email' ? 'email' : 'text';
+        input.placeholder = creative.capturePlaceholder || (cap === 'email' ? 'Email address' : cap === 'phone' ? 'Mobile number' : '');
+        input.value = '';
+        document.getElementById('xsurf-cta').textContent = creative.ctaLabel || 'Shop';
+        const tag = document.getElementById('xsurf-flag');
+        if (tag) tag.textContent = creative.badge || ('Experiment · ' + (v.variant || creative.key || 'live'));
+        root.hidden = false;
+        if (vh) vh.classList.toggle('xsurf-hero', (creative.layout || 'hero') === 'hero');
+        this.trackXsurf('xsurf_impression');
+    }
+
+    /* CTA / capture submit on the experiment surface → fire the event (our stream + Optimizely metric). */
+    xsurfSubmit(event) {
+        if (event) event.preventDefault();
+        const cr = this._xsurfActive && this._xsurfActive.creative; if (!cr) return false;
+        const cap = cr.captureType || 'none';
+        if (cap === 'email' || cap === 'phone') {
+            this.trackXsurf(cap === 'email' ? 'email_capture' : 'phone_capture'); this.trackXsurf('lead_capture');
+            const head = document.getElementById('xsurf-headline'); if (head) head.textContent = 'Thank you — your code is on its way.';
+            const form = document.getElementById('xsurf-capture'); if (form) form.style.display = 'none';
+        } else if ((cr.ctaAction || 'navigate') === 'addToCart' && cr.productId) {
+            this.trackXsurf('xsurf_click'); this.addToCart(cr.productId);
+        } else if (cr.productId) {
+            this.trackXsurf('xsurf_click'); this.openPdp(cr.productId);
+        } else {
+            this.trackXsurf('xsurf_click');
+        }
+        return false;
+    }
+
+    /* Fire an experiment event to BOTH our demo stream (Engine) and Optimizely's metric collector. */
+    trackXsurf(eventKey) {
+        const exp = this._activeExperiment || {};
+        const tags = { experiment: exp.experimentKey || (this._xsurfActive && this._xsurfActive.experimentKey) || '', variant: (this._xsurfActive && this._xsurfActive.creative && this._xsurfActive.creative.key) || '' };
+        try { this.sendAction(eventKey, tags); } catch (e) {}
+        try { fetch('/optimizely/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: this.anonId, eventKey, userAttributes: {}, eventTags: tags }) }); } catch (e) {}
+    }
+
+    clearForcedExperiment() {
+        const root = document.getElementById('xsurf'); if (root) root.hidden = true;
+        const vh = document.getElementById('view-home'); if (vh) vh.classList.remove('xsurf-hero');
+        this._xsurfActive = null;
     }
 
     resolveHero() {
@@ -889,6 +1015,18 @@ class CoachStorefront {
                 { id: 'singapore', label: 'Singapore', sub: 'Tropical · brights & straw', geo: { city: 'Singapore', region: 'Singapore', country: 'SG', timezone: 'Asia/Singapore', hemisphere: 'N', colo: 'SIN', season: 'summer' } },
             ]),
             onSelect: (it) => { if (it._auto) this.applyGeoColdStart(); else this.forceGeo(it.geo); },
+        }, {
+            id: 'experiment',
+            label: 'Preview as experiment variation',
+            placeholder: 'Force the session into an experiment arm…',
+            load: async () => {
+                const items = [{ id: '__clearx', label: 'Default — clear forced experiment', sub: 'Hide the experiment surface', tag: 'reset', _clear: true }];
+                const add = (expKey, variations) => (variations || []).forEach((vv) => items.push({ id: expKey + ':' + vv.key, label: vv.name || vv.key, sub: expKey, tag: vv.isControl ? 'control' : 'variation', experimentKey: expKey, variationKey: vv.key }));
+                (this.experiments || []).forEach((e) => add(e.experimentKey, e.variations));
+                try { const r = await fetch('/experiment'); const j = await r.json(); (j.experiments || []).forEach((e) => { if (!(this.experiments || []).some((x) => x.experimentKey === e.experimentKey)) add(e.experimentKey, e.variations); }); } catch (e) { /* session list only */ }
+                return items;
+            },
+            onSelect: (it) => { if (it._clear) { this.clearForcedExperiment(); return; } this.previewExperiment({ experimentKey: it.experimentKey, variationKey: it.variationKey }); },
         }];
         // ↑ add more force-behavior modes here (each: { id, label, placeholder, load(), onSelect(item) })
     }

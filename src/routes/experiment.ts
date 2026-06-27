@@ -15,6 +15,7 @@
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { runLaunch, normalizeInput, getExperiment, listExperiments } from '@/services/experimentRun';
+import { applyScenario, SCENARIOS } from '@/services/experimentScenarios';
 import { decideCmab, cmabMatrix, type CmabContext } from '@/services/cmab';
 
 const experiment = new Hono<{ Bindings: Env }>();
@@ -22,7 +23,7 @@ const experiment = new Hono<{ Bindings: Env }>();
 // ── POST /experiment/launch — the ONE seam Revenue Radar calls ────────────────
 experiment.post('/launch', async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const exp = await runLaunch(c.env, normalizeInput(body));
+  const exp = await runLaunch(c.env, normalizeInput(applyScenario(body)));
   return c.json(exp);
 });
 
@@ -42,6 +43,11 @@ experiment.get('/cmab/decide', (c) => {
   return c.json(decideCmab(ctx));
 });
 experiment.get('/cmab/matrix', (c) => c.json({ contexts: cmabMatrix(), representative: true }));
+
+// Preset scenarios (creatives) so the storefront can render a variation instantly while the datafile propagates.
+experiment.get('/scenarios', (c) => c.json({
+  scenarios: Object.values(SCENARIOS).map((s) => ({ id: s.id, key: `xsurf_${s.id}`, label: s.label, type: s.type, creatives: s.creatives })),
+}));
 
 // ── readout + list ────────────────────────────────────────────────────────────
 experiment.get('/:key/readout', async (c) => {

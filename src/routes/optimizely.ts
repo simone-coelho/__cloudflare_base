@@ -99,17 +99,23 @@ optimizely.post('/preview', async (c) => {
     const userId = typeof body.userId === 'string' ? body.userId : 'preview';
     const userAttributes = body.userAttributes && typeof body.userAttributes === 'object' ? body.userAttributes : {};
     const flag = typeof body.flag === 'string' ? body.flag : 'personalized_banner';
+    const variationKey = typeof body.variationKey === 'string' ? body.variationKey : null;
     const svc = new OptimizelyService(c.env);
     const { client, revision } = await svc.createFreshClient();
     if (!client || typeof (client as any).createUserContext !== 'function') {
       return c.json({ flag, enabled: false, variables: {}, error: 'SDK client unavailable' });
     }
     const ctx = (client as any).createUserContext(userId, userAttributes);
+    // Force a specific variation on demand (presenter "show this arm" / Opal auto-preview).
+    if (variationKey && typeof ctx.setForcedDecision === 'function') {
+      try { ctx.setForcedDecision({ flagKey: flag }, { variationKey }); } catch { /* fall through to natural decide */ }
+    }
     const decision = ctx.decide(flag);
     return c.json({
       flag,
       enabled: !!decision?.enabled,
       variables: decision?.variables || {},
+      variationKey: decision?.variationKey || variationKey || null,
       ruleKey: decision?.ruleKey || null,
       revision,
     });

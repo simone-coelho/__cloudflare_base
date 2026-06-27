@@ -96,6 +96,14 @@ function OpalChat() {
             window.dispatchEvent(new CustomEvent('opal:experience', { detail: { message: o.message, previewAttributes: o.previewAttributes, audienceName: o.audienceName } }));
           }
         }
+        // When Opal launches an experiment, render its first variation live on the storefront banner.
+        if (p?.type === 'tool-launchExperiment' && p.state === 'output-available' && p.output && p.toolCallId && !dispatched.current.has(p.toolCallId)) {
+          dispatched.current.add(p.toolCallId);
+          const o = p.output;
+          if (o && o.experimentKey) {
+            window.dispatchEvent(new CustomEvent('opal:experiment', { detail: { experimentKey: o.experimentKey, variationKey: o.firstVariationKey, variations: o.variations, metricEventKey: o.metricEventKey } }));
+          }
+        }
       }
     }
   }, [messages]);

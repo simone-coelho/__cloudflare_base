@@ -195,6 +195,7 @@ export async function launchExperiment(cfg: FxConfig, input: LaunchExperimentInp
     variable_definitions: {
       variant: { key: 'variant', type: 'string', default_value: 'control', description: 'Assigned variation key.' },
       module_enabled: { key: 'module_enabled', type: 'boolean', default_value: 'false', description: 'Render the treatment experience.' },
+      payload: { key: 'payload', type: 'string', default_value: '', description: 'Experiment-surface creative as JSON (image/headline/offer/cta/captureType…).' },
     },
   });
 
