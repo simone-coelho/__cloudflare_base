@@ -133,10 +133,13 @@ The Demo Director steps through 15 beats (Start ▶ → Next, or Auto-play). Eac
 
 ---
 
-## 8. Doc map — use these, ignore those
-**USE (current, fold here):** this playbook · `PROJECT_LEDGER.md` (build log/SoT) · `EXPERIMENT-SURFACE-RUNBOOK.md` · `EXPERIMENT-USE-CASES.md` · `opal-question-catalog.md` · `search-query-catalog.md` · `REVENUE-RADAR-{TDD,PRESENTER-GUIDE,EXPLAINER}.md` · `Tapestry-Coach-North-Star-Brief.md` · `MEMO-ab-cmab-handoff.md`.
+## 8. Doc map — what to use for THIS demo
+
+> ⚠️ **This repo is a base/template for several demos.** Docs that aren't about Coach/Tapestry (e.g. the banking / "First National Bank" demo) are **NOT superseded or dead** — they belong to *other* demos that share this base. Leave them in place; just use the **USE** list below when running the Coach/Tapestry demo.
+
+**USE (this demo, current):** this playbook · `PROJECT_LEDGER.md` (build log/SoT) · `EXPERIMENT-SURFACE-RUNBOOK.md` · `EXPERIMENT-USE-CASES.md` · `opal-question-catalog.md` · `search-query-catalog.md` · `REVENUE-RADAR-{TDD,PRESENTER-GUIDE,EXPLAINER}.md` · `Tapestry-Coach-North-Star-Brief.md` · `MEMO-ab-cmab-handoff.md`.
 **REFERENCE only:** `examples/*` (vendor REST + agent cheat-sheets), `docs/architecture/*MCP*`.
-**IGNORE — SUPERSEDED (pre-Coach "First National Bank" era):** `DEMO_EXPLANATION.md`, `SOLUTIONS_ARCHITECT_GUIDE.md`, `OPTIMIZELY_SETUP.md`, `optimizely-feature-config.md`, `optimizely-setup-instructions.md`, `_context_recovery.md`, `README.md`, `notes.md`, and most of `docs/architecture/0*` + `docs/{guides,api,integration,components}/*` (they predate the 15-beat Director and the whole experiment-surface layer).
-**DRAFT (rationale only, not as-built):** `EXPERIMENT-SURFACE-PLAN.md`, `MEMO-parallel-build.md`, `docs/architecture/05-12`.
+**OTHER DEMOS / SHARED BASE (not this demo — leave in place, don't delete):** `DEMO_EXPLANATION.md`, `SOLUTIONS_ARCHITECT_GUIDE.md`, `OPTIMIZELY_SETUP.md`, `optimizely-feature-config.md`, `optimizely-setup-instructions.md`, `_context_recovery.md`, `README.md`, `notes.md`, and parts of `docs/architecture/0*` + `docs/{guides,api,integration,components}/*` describe another demo and/or the shared base — out of scope here, but valid.
+**DRAFT — this demo's planning (rationale only, not as-built):** `EXPERIMENT-SURFACE-PLAN.md`, `MEMO-parallel-build.md`, `docs/architecture/05-12`.
 
 _Corrections folded in: BNPL = the **$595 Rogue** (not "$575 Tabby"); beats 11–13 = **real surface + real flag, illustrative readout numbers**; operator routes are **plural** `/operator/audiences/{suggest,publish}`._
