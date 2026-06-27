@@ -2698,7 +2698,25 @@ class CoachStorefront {
                     if (!url) { wrap.innerHTML = ''; return; }
                     const cur = document.getElementById('search-input');
                     if (cur && this._normQ(cur.value) !== this._normQ(query)) { wrap.innerHTML = ''; return; }  // stale
-                    wrap.innerHTML = this._editHeroHtml(url, headline, subhead, anchor.name);
+                    // Fade the finished image INTO the existing loading block — do NOT replace the block.
+                    // A full innerHTML swap tears the loading card down and builds a fresh <img> from
+                    // opacity:0, which reads as appear → hide → appear. In-place keeps one continuous fade.
+                    const heroEl = wrap.querySelector('.edit-hero');
+                    if (!heroEl) { wrap.innerHTML = this._editHeroHtml(url, headline, subhead, anchor.name); return; }
+                    const im = new Image();
+                    im.className = 'eh-img'; im.alt = '';
+                    im.onload = () => { heroEl.classList.remove('loading'); im.classList.add('in'); };
+                    im.onerror = () => { wrap.innerHTML = ''; };
+                    im.src = url;
+                    heroEl.insertBefore(im, heroEl.firstChild);
+                    const kick = heroEl.querySelector('.eh-kicker');
+                    if (kick) kick.innerHTML = '<span class="live-dot"></span>The Edit';
+                    if (!heroEl.querySelector('.eh-caption')) {
+                        const capEl = document.createElement('div');
+                        capEl.className = 'eh-caption';
+                        capEl.textContent = anchor.name ? `Styled with AI · the ${anchor.name} shown is the real product` : 'Styled with AI · real product';
+                        heroEl.appendChild(capEl);
+                    }
                 })
                 .catch(() => { wrap.innerHTML = ''; });
             return;
@@ -2750,11 +2768,14 @@ class CoachStorefront {
         this._liveScene({ productId: anchor.id, sceneId, type: 'concierge', sceneContext: ctx, aspect: '4:5' })
             .then((url) => {
                 if (!url) { el.remove(); return; }
-                el.classList.remove('loading');
-                const load = el.querySelector('.ccl-load'); if (load) load.remove();
+                // Keep the shimmer until the image is actually ready, then reveal in one step. Removing
+                // the loader before the <img> has loaded leaves a blank gap (the same flash search had).
+                const load = el.querySelector('.ccl-load');
                 const img = document.createElement('img');
-                img.className = 'ccl-img'; img.src = url;
-                img.onload = () => img.classList.add('in'); img.onerror = () => el.remove();
+                img.className = 'ccl-img'; img.alt = '';
+                img.onload = () => { el.classList.remove('loading'); if (load) load.remove(); img.classList.add('in'); };
+                img.onerror = () => el.remove();
+                img.src = url;
                 el.insertBefore(img, el.firstChild);
             })
             .catch(() => el.remove());

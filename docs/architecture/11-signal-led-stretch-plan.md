@@ -3,6 +3,8 @@
 **For:** Build agents · reviewing SA · CSM/AE (for the Coach narrative)
 **From:** Solutions Architecture
 **Status:** Stretch design (do LAST, after the core 15-beat demo + Opal chat land). This is the "wow" encore, not a core requirement.
+
+> 🛠️ **Build against [`./12-signal-led-moment-build-brief.md`](./12-signal-led-moment-build-brief.md)** — that is the DECIDED, current as-built target. This doc's Phase-0 *mechanics* predate the experiment-surface architecture and are superseded there; the rationale + honesty guidance below still stand.
 **Reads against:** [`./comprend_signal_led_brief.md`](./comprend_signal_led_brief.md) · [`../PROJECT_LEDGER.md`](../PROJECT_LEDGER.md) · [`../Tapestry-Coach-North-Star-Brief.md`](../Tapestry-Coach-North-Star-Brief.md) · [`./08-opal-chat-plan.md`](./08-opal-chat-plan.md) · [`./09-optimizely-api-plan.md`](./09-optimizely-api-plan.md) · [`./05-demo-build-spec.md`](./05-demo-build-spec.md)
 **Existing code it bolts onto:** `public/storefront.{html,js}` (Demo Director, `runOpalStep()`, `showMab()`), `src/routes/operator.ts` (`/operator/audiences/suggest|publish`), `src/connectors/AudienceAuthoring.ts`, `src/connectors/DecisionProvider.ts`, `src/data/insights.json`.
 

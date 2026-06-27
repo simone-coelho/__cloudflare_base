@@ -1144,7 +1144,7 @@
         .xsurf { position: relative; overflow: hidden; border-radius: var(--radius); background: var(--x-bg); color: var(--x-fg);
             --x-bg: linear-gradient(105deg, #211B14 0%, #3D3020 55%, #5A4630 100%); --x-fg: var(--paper); --x-accent: var(--tan);
             --x-cta-bg: var(--paper); --x-cta-fg: var(--ink); --x-offer-bg: var(--tan); --x-offer-fg: #1C1A17; }
-        .xsurf[hidden] { display: none; }
+        .xsurf[hidden] { display: none !important; }  /* MUST beat .xsurf[data-layout="hero"]{display:flex} below — equal specificity, later in source — else a hidden surface still renders as an empty second hero */
         .xsurf[data-theme="paper"] { --x-bg: #fff; --x-fg: var(--ink); --x-accent: var(--tan-deep); --x-cta-bg: var(--ink); --x-cta-fg: var(--paper); --x-offer-bg: var(--paper-2); --x-offer-fg: var(--tan-deep); }
         .xsurf[data-theme="sale"] { --x-bg: linear-gradient(105deg, #211B14 0%, #3A201C 60%, #5A2E2E 100%); --x-accent: #E9B7B7; --x-cta-bg: var(--sale); --x-cta-fg: #fff; --x-offer-bg: var(--sale); --x-offer-fg: #fff; }
         .xsurf[data-theme="tan"] { --x-cta-bg: var(--tan); --x-cta-fg: #1C1A17; --x-offer-bg: #fff; --x-offer-fg: var(--tan-deep); }
@@ -1181,8 +1181,13 @@
         .xsurf[data-layout="card"] { border: 1px solid var(--line); background: #fff; }
         .xsurf[data-layout="card"] .xsurf-inner { padding: 56px 60px; }
         .xsurf[data-layout="card"] .xsurf-headline { font-size: 32px; margin-bottom: 16px; }
-        /* a live hero-layout experiment stands in for the brand hero (toggle, not structural) */
-        #view-home.xsurf-hero #hero { display: none; }
+        /* The experiment surface and the cold-start hero are MUTUALLY EXCLUSIVE: when a hero-layout
+           experiment is live it TAKES OVER the hero — it must never stack on top of it. First selector
+           is the JS toggle; the second is the hard guarantee that wins any render race — any time a
+           visible #xsurf is hero-layout, the hero is hidden, regardless of class or timing. (banner/
+           card layouts may still sit above the hero by design.) Never two heroes. */
+        #view-home.xsurf-hero #hero,
+        #view-home #xsurf[data-layout="hero"]:not([hidden]) ~ #hero { display: none !important; }
 
         /* "Before → Now" line appended to the sidebar narration. */
         #co-body .co-ba { margin-top: 10px; padding-top: 9px; border-top: 1px dashed #3A332A; font-size: 12px; color: #C9BFAC; line-height: 1.5; }
