@@ -72,6 +72,7 @@ function OpalChat() {
   const [input, setInput] = useState('');
   const endRef = useRef<any>(null);
   const dispatched = useRef<Set<string>>(new Set());
+  const hydrated = useRef(false);   // first non-empty messages snapshot = REPLAYED persisted history → seed, don't re-fire
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isStreaming]);
   // Restarting the demo clears the merchandiser's chat (fresh conversation per run).
   useEffect(() => {
@@ -87,12 +88,19 @@ function OpalChat() {
   }, [sendMessage]);
   // When Opal creates a banner rule, tell the storefront to preview it as that audience.
   useEffect(() => {
-    for (const m of (messages as any[])) {
+    const msgs = messages as any[];
+    // On a page (re)load, useAgentChat hydrates the persisted thread from the Durable Object. Those tool
+    // outputs are HISTORY, not live actions — replaying their side-effects (e.g. re-rendering the
+    // Signal-Led Moment takeover, or re-applying a banner) would hijack the storefront on every load.
+    // So on the first non-empty snapshot, record the tool calls as already-handled WITHOUT dispatching;
+    // only tool calls that complete LIVE later this session fire their events.
+    const replaying = !hydrated.current;
+    for (const m of msgs) {
       for (const p of (m.parts || [])) {
         if (p?.type === 'tool-targetMessageToAudience' && p.state === 'output-available' && p.output && p.toolCallId && !dispatched.current.has(p.toolCallId)) {
           dispatched.current.add(p.toolCallId);
           const o = p.output;
-          if (o && o.status === 'live') {
+          if (!replaying && o && o.status === 'live') {
             window.dispatchEvent(new CustomEvent('opal:experience', { detail: { message: o.message, previewAttributes: o.previewAttributes, audienceName: o.audienceName } }));
           }
         }
@@ -100,12 +108,13 @@ function OpalChat() {
         if (p?.type === 'tool-launchExperiment' && p.state === 'output-available' && p.output && p.toolCallId && !dispatched.current.has(p.toolCallId)) {
           dispatched.current.add(p.toolCallId);
           const o = p.output;
-          if (o && o.experimentKey) {
+          if (!replaying && o && o.experimentKey) {
             window.dispatchEvent(new CustomEvent('opal:experiment', { detail: { experimentKey: o.experimentKey, variationKey: o.firstVariationKey, variations: o.variations, metricEventKey: o.metricEventKey } }));
           }
         }
       }
     }
+    if (msgs.length > 0) hydrated.current = true;
   }, [messages]);
 
   const send = (text: string) => {
