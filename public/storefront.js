@@ -1278,6 +1278,9 @@ class CoachStorefront {
             (this._cards[id] ? `<button class="pzc-compare" onclick="store.openCompareCard('${id}')">&#11020; Compare before / now</button>` : '') +
             `<div class="pzc-foot">&#9889; decided live at the edge</div>`;
         feed.insertBefore(el, feed.firstChild);   // newest on top
+        // Auto-size the feed to EXACTLY the newest card (card heights vary by type) so only ONE card is ever
+        // visible — older entries stay one scroll down. Frees the rest of the screen.
+        requestAnimationFrame(() => { const top = feed.firstElementChild; if (top) feed.style.maxHeight = (top.offsetHeight + 20) + 'px'; });
         const cnt = document.getElementById('pz-pill-count'); if (cnt) cnt.textContent = this._pzCount;
         if (this._pzMin) { const pill = document.getElementById('pz-pill'); if (pill) { pill.classList.add('flash'); setTimeout(() => pill.classList.remove('flash'), 500); } }
         else this.showPzPanel();
@@ -1753,7 +1756,7 @@ class CoachStorefront {
         this._ba = null;
         // Also reset the Personalization Activity panel (clean slate on Restart / reset).
         const feed = document.getElementById('pzp-feed');
-        if (feed) feed.innerHTML = '<div class="pzp-empty">As the store personalizes, each decision lands here — the <b>signal</b>, the <b>segment</b>, the <b>decision</b>, and exactly what changed <b>before → now</b>.</div>';
+        if (feed) { feed.style.maxHeight = ''; feed.innerHTML = '<div class="pzp-empty">As the store personalizes, each decision lands here — the <b>signal</b>, the <b>segment</b>, the <b>decision</b>, and exactly what changed <b>before → now</b>.</div>'; }
         this._pzCount = 0;
         const cnt = document.getElementById('pz-pill-count'); if (cnt) cnt.textContent = '';
     }
@@ -2304,7 +2307,7 @@ class CoachStorefront {
 
         try {
             if (fast) { await this.runStepFast(idx); }
-            else { await step.run(); this.applyStepCallout(step); }
+            else { await step.run(); await this.applyStepCallout(step); }
         } catch (e) { console.error('step error', e); }
         this.pushChange(idx);   // log "what changed this session" (deduped per beat)
 
@@ -2315,7 +2318,7 @@ class CoachStorefront {
             if (this.autoplay && idx < this.steps.length - 1) this.scheduleAutoplay();
         }
     }
-    applyStepCallout(step) {
+    async applyStepCallout(step) {
         if (!step.callout) return;
         this.showCallout(step.callout);
         // Patch live values into callout bodies that declare placeholders.
@@ -2329,6 +2332,9 @@ class CoachStorefront {
         const zone = (ba && ba.zone) || (step.callout.compare && step.callout.compare.zone) || step.callout.anchor || null;
         const staticBefore = step.callout.compare && step.callout.compare.before;
         const staticAfter = step.callout.compare && step.callout.compare.after;
+        // No static "after" asset (e.g. the TikTok takeover — a live, generated hero) but we have a zone:
+        // photograph the live "now" up-front so the Compare card can register (it needs before+after to exist).
+        const liveAfter = (!staticAfter && zone) ? await this.captureZone(zone) : null;
         const id = this.logActivity({
             usecase: step.callout.usecase,
             headline: step.callout.title,
@@ -2343,7 +2349,7 @@ class CoachStorefront {
             // "after" = the static asset as an immediate fallback — overwritten by the live capture below,
             // and RE-captured live the instant the user clicks Compare (openCompareCard).
             beforeImg: (zone && this._baseline[zone]) || staticBefore,
-            afterImg: staticAfter,
+            afterImg: staticAfter || liveAfter,
         });
         // Photograph the live "now" at beat-end so the card always holds a real snapshot of THIS state,
         // not a frozen PNG — even before the click-time re-capture.
@@ -2691,7 +2697,8 @@ class CoachStorefront {
                     title: 'Served, optimized — before the window shut',
                     signal: 'The variation is live (a real flag + a real multi_armed_bandit rule).',
                     decision: 'Serve the takeover; let the <strong>bandit</strong> shift traffic to the winner — automatically.',
-                    impact: 'Loop closed inside the window. Lift figures are representative (narrated, not claimed in UI). <strong>Representative · MAB is GA · real rule creatable.</strong>' },
+                    impact: 'Loop closed inside the window. Lift figures are representative (narrated, not claimed in UI). <strong>Representative · MAB is GA · real rule creatable.</strong>',
+                    compare: { zone: '#view-home' } },
             },
         ];
     }
@@ -2728,7 +2735,7 @@ class CoachStorefront {
         document.getElementById('dir-back').disabled = true;   // the arc is forward-only
         const nextBtn = document.getElementById('dir-next');
         nextBtn.innerHTML = 'Next &#9658;'; nextBtn.disabled = true;
-        try { await scene.run(); this.applyStepCallout(scene); } catch (e) { console.error('arc step error', e); }
+        try { await scene.run(); await this.applyStepCallout(scene); } catch (e) { console.error('arc step error', e); }
         this.busy = false;
         nextBtn.disabled = idx >= this.signalArc.length - 1;   // end of arc → Next stays disabled (Restart to replay)
     }
@@ -2834,6 +2841,10 @@ class CoachStorefront {
      *    REAL elapsed, then animate the MAB readout with the moment arm labels. ── */
     async runMomentServe() {
         this.go('home', { silent: true });
+        // "Before" the TikTok takeover — the storefront is showing but not yet taken over. Capture it now so
+        // the Compare card on this scene reads pre-takeover → live takeover (the takeover hero is generated,
+        // so there's no static asset; the "now" is photographed live in applyStepCallout / on Compare click).
+        this._baseline['#view-home'] = await this.captureZone('#view-home');
         this._momentPending = false;
         const creative = await this.momentCreative();
         if (this._momentImageUrl) creative.image = this._momentImageUrl;
