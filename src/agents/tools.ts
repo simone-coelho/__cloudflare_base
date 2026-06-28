@@ -19,6 +19,7 @@ const ALLOWED_TABLES = new Set([
   'v_audience_base', 'v_profiles', 'v_demo_profiles', 'demo_events',
   'coach_catalog', 'coach_transactions', 'coach_purchase_items', 'coach_odp_profiles',
   'meta_attribute_catalog',
+  'geo_census', 'geo_xref', // geo-cohort cold start: REAL public census + ZIP→metro→region crosswalk
 ]);
 
 /** Validate `sql` is a single read-only SELECT over allow-listed tables; enforce a LIMIT. */

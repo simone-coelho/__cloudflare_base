@@ -653,9 +653,12 @@ class CoachStorefront {
             if (art) art.style.backgroundImage = content.art ? `url("${content.art}")` : 'none';
             this.renderMarkers();   // re-assert hero marker after content swap
         };
-        if (el.dataset.title === content.title) return;
+        // Key the no-op short-circuit on title AND eyebrow — the eyebrow carries the geo-cohort grain + N,
+        // so a force-geo switch with the same headline but a different cohort still re-renders (no stale grain).
+        const _hkey = (content.title || '') + '||' + (content.eyebrow || '');
+        if (el.dataset.title === _hkey) return;
         const first = !el.innerHTML.trim();
-        el.dataset.title = content.title;
+        el.dataset.title = _hkey;
         if (first) { fill(); return; }
         // Morph the reshape via the View Transitions API (Keynote "Magic Move"); the
         // view-transition-name on .hero-content scopes it to the hero. Falls back to the cross-fade.
@@ -686,8 +689,13 @@ class CoachStorefront {
         this.renderCurated();
         this.renderStory(this.storyForStage('early'));
     }
-    /* The cold-start hero: the geo/season edit if we already know where the visitor is, else the default. */
+    /* The cold-start hero: the geo-cohort edit if we resolved a usable cohort, else the geo/season edit, else
+     * the default. Order matters — the cohort is the doc-13 anti-MasterCard cold start (what shoppers LIKE them,
+     * from here, actually buy) and outranks the season swatch. */
     _coldHero() {
+        // Geo-cohort cold start (doc 13): open on what shoppers near them buy. This branch is what
+        // applyGeoColdStart paints as the SINGLE first hero fill — never season→cohort (see ⛔ in that method).
+        if (!this.personalized && this._cohortUsable(this.cohort)) return this._cohortHero(this.cohort);
         if (this.geo && this.geo.season && !this.personalized) {
             const season = this.geo.season;
             const cap = season.charAt(0).toUpperCase() + season.slice(1);
@@ -696,8 +704,68 @@ class CoachStorefront {
         }
         return this.heroFallback();
     }
+    /* ── Geo-cohort cold start helpers (doc 13) ─────────────────────────────────
+     * A cohort is "usable" only when it cleared ABOVE the national floor and carries top lines; otherwise we
+     * fall back to the season cold start (still a SINGLE hero paint). granularityUsed ∈ zip|metro|region|national. */
+    _cohortUsable(c) {
+        if (!c || !Array.isArray(c.topLines) || !c.topLines.length) return false;
+        const g = String(c.granularityUsed || '').toLowerCase();
+        return g !== 'national' && g !== 'country';
+    }
+    /* The geo-cohort hero — leads with the cohort's top line(s) + an on-brand, price-band-appropriate headline;
+     * hero art = the top line's product image. Eyebrow surfaces the grain + N (honesty, doc §10: show the grain). */
+    _cohortHero(c) {
+        const lines = (c.topLines || []).map((t) => t.line).filter(Boolean);
+        const topName = lines[0] || 'Tabby';
+        const grain = c.grainLabel || (this.geo && this.geo.city) || 'your area';
+        const lead = lines.length >= 2 ? `${lines[0]} and ${lines[1]}` : topName;
+        const bandPhrase = ({ entry: 'everyday essentials', core: 'signature styles', elevated: 'our most elevated leathers' })[c.priceBand] || 'signature styles';
+        const n = (c.sampleSize != null) ? c.sampleSize : null;
+        return {
+            eyebrow: `What shoppers near you reach for · ${grain}${n != null ? ' · N=' + n : ''}`,
+            title: `The ${topName} leads near you`,
+            sub: `No history yet — so we open on what shoppers like them, from here, reach for: the ${lead}, in ${bandPhrase}. Aggregate, never the individual — we curate, never price.`,
+            cta: `Shop the ${topName}`,
+            line: topName,
+            art: this.lineImage(topName) || (this.heroFallback() || {}).art,
+        };
+    }
+    /* Rank the catalog by the cohort's topLines, then prefer the cohort's modal price band (CURATION only —
+     * never gate or vary price). Drives the cold-start curated grid before any engagement. */
+    _cohortRanked() {
+        const c = this.cohort || {};
+        const order = new Map((c.topLines || []).map((t, i) => [t.line, i]));
+        const band = c.priceBand;
+        return this.bagsCatalog().slice().sort((a, b) => {
+            const ra = order.has(a.line) ? order.get(a.line) : 99;
+            const rb = order.has(b.line) ? order.get(b.line) : 99;
+            if (ra !== rb) return ra - rb;
+            const ba = (band && this.priceBand(a) === band) ? 0 : 1;
+            const bb = (band && this.priceBand(b) === band) ? 0 : 1;
+            if (ba !== bb) return ba - bb;
+            return b.price_usd - a.price_usd;
+        });
+    }
+    /* Fetch the geo-cohort. Real edge path (forcedGeo null) → bare /geo/cohort (backend reads request.cf →
+     * geo.source:'edge'). A forced/QA geo → labeled ?zip/?region query params (geo.source:'query'). Returns
+     * null on any failure → season fallback (still one paint). */
+    async fetchCohort(forcedGeo) {
+        let url = '/geo/cohort';
+        if (forcedGeo) {
+            const qs = new URLSearchParams();
+            const zip = forcedGeo.zip || forcedGeo.postalCode;
+            const region = forcedGeo.regionCode || forcedGeo.region;
+            if (zip) qs.set('zip', zip);
+            if (region) qs.set('region', region);
+            const s = qs.toString(); if (s) url += '?' + s;
+        }
+        try { const r = await fetch(url); if (!r.ok) return null; return await r.json(); }
+        catch (e) { return null; }
+    }
     curatedItems() {
         if (this.recommendations) return this.recommendations.filter((p) => this.isBag(p)).slice(0, 8);
+        // Geo-cohort cold start (doc 13): before any engagement, rank by what shoppers near them carry.
+        if (!this.personalized && this._cohortUsable(this.cohort)) return this._cohortRanked().filter((p) => this.isBag(p)).slice(0, 8);
         if (this.dominantLine) {
             const same = this.lineItems(this.dominantLine).filter((p) => this.isBag(p));
             const rest = this.bagsCatalog().filter((p) => p.line !== this.dominantLine);
@@ -712,6 +780,10 @@ class CoachStorefront {
         if (this.personalized) {
             title.textContent = this.dominantLine ? `The ${this.dominantLine} Edit` : 'Curated for you';
             eyebrow.textContent = 'Selected for you · updated live';
+        } else if (this._cohortUsable(this.cohort)) {
+            // Geo-cohort cold start (doc 13): "What shoppers near you carry · {grainLabel}" (grain shown for honesty).
+            title.textContent = 'What shoppers near you carry';
+            eyebrow.textContent = `${this.cohort.grainLabel || 'near you'}${this.cohort.sampleSize != null ? ' · N=' + this.cohort.sampleSize : ''}`;
         } else {
             title.textContent = 'New Arrivals';
             eyebrow.textContent = 'Coach Originals';
@@ -1193,6 +1265,7 @@ class CoachStorefront {
             placeholder: 'Force the shopper’s location (geo cold-start)…',
             load: async () => ([
                 { id: 'auto', label: 'Auto — your real location', sub: 'Use the live edge geo for this request', _auto: true },
+                { id: 'winston', label: 'Winston-Salem, NC · United States', sub: 'Geo-cohort cold start · ZIP 27101 → Piedmont Triad metro', tag: 'forced location', geo: { city: 'Winston-Salem', region: 'North Carolina', regionCode: 'NC', zip: '27101', country: 'US', timezone: 'America/New_York', hemisphere: 'N', colo: 'CLT', season: 'summer', cohort: true } },
                 { id: 'miami', label: 'Miami, FL · United States', sub: 'Summer · coral & natural straw', geo: { city: 'Miami', region: 'Florida', regionCode: 'FL', country: 'US', timezone: 'America/New_York', hemisphere: 'N', colo: 'MIA', season: 'summer' } },
                 { id: 'sydney', label: 'Sydney · Australia', sub: 'Winter (same date!) · burgundy & leather', geo: { city: 'Sydney', region: 'New South Wales', regionCode: 'NSW', country: 'AU', timezone: 'Australia/Sydney', hemisphere: 'S', colo: 'SYD', season: 'winter' } },
                 { id: 'chicago', label: 'Chicago, IL · United States', sub: 'Winter · structured leather', geo: { city: 'Chicago', region: 'Illinois', regionCode: 'IL', country: 'US', timezone: 'America/Chicago', hemisphere: 'N', colo: 'ORD', season: 'winter' } },
@@ -1377,20 +1450,44 @@ class CoachStorefront {
         if (!geo) { try { const r = await fetch('/geo'); geo = await r.json(); } catch (e) { geo = null; } }
         if (!geo) { if (!this.personalized) this.renderHero(this.heroFallback()); return; }   // geo unavailable → paint the default hero ONCE (init skipped it), no later swap
         this.geo = geo;
+        // Geo-cohort cold start (doc 13): resolve the first-party + census cohort BEFORE the single hero paint,
+        // so _coldHero() returns the COHORT hero on its FIRST (and only) fill — never season→cohort. The REAL
+        // edge path (no forced geo) calls bare /geo/cohort (geo.source:'edge'); the ⌘K Winston-Salem entry is
+        // flagged cohort:true and passes labeled QA params. Other forced geos (Miami↔Sydney) stay pure season.
+        if (!this.personalized) {
+            if (!forced) this.cohort = await this.fetchCohort(null);
+            else if (forced.cohort) this.cohort = await this.fetchCohort(forced);
+            else this.cohort = null;
+        }
+        const cohortOk = this._cohortUsable(this.cohort);
         const place = geo.city || geo.region || geo.country || 'your area';
         const season = geo.season || 'this season';
         const palette = this._seasonPalette(season);
-        // Visible cold-start cue — geo-aware welcome ribbon (replaces the generic "you're new").
+        // Visible cold-start cue — geo-aware welcome ribbon. With a usable cohort, lead with what shoppers near
+        // them reach for (doc §5/§11); otherwise the season edit. (Geo is only the OPENING PRIOR.)
         const wr = document.querySelector('#welcome-ribbon .wr-text');
-        if (wr) wr.innerHTML = `<b>Welcome${geo.city ? ' from ' + this.escapeHtml(geo.city) : ''}.</b> It's ${this.escapeHtml(season)} where you are — we've opened on the ${this.escapeHtml(palette)} edit. No account, no cookie needed.`;
-        this.showWelcome();
-        // Swap the hero by SEASON (reliable; hemisphere+month) so the cold-start is visible in-store and
-        // MORPHS (View Transitions) when the location is switched. City stays in the ribbon/card (lower-stakes).
-        if (!this.personalized) {
-            // FIRST paint of the hero on cold load (init skipped it) → renderHero fills directly, no cross-fade.
-            this.renderHero(this._coldHero());
+        if (wr) {
+            const hi = `<b>Welcome${geo.city ? ' from ' + this.escapeHtml(geo.city) : ''}.</b>`;
+            if (cohortOk) {
+                const topName = this.cohort.topLines[0].line;
+                const grain = this.cohort.grainLabel || 'near you';
+                wr.innerHTML = `${hi} Shoppers near you tend to reach for the <b>${this.escapeHtml(topName)}</b> — we've opened on that, from <b>${this.escapeHtml(grain)}</b> first-party data. No account, no cookie needed.`;
+            } else {
+                wr.innerHTML = `${hi} It's ${this.escapeHtml(season)} where you are — we've opened on the ${this.escapeHtml(palette)} edit. No account, no cookie needed.`;
+            }
         }
-        // Provenance — the cold-start decision, as beat-0 of the Activity panel.
+        this.showWelcome();
+        // ⛔ SINGLE hero paint (anti-flash, doc 13): init left #hero-content EMPTY (renderHomeCold skipHero), so
+        // THIS renderHero is the FIRST paint → renderHero.fill() runs directly (no View-Transition cross-fade).
+        // Because the cohort is already resolved above, _coldHero() returns the COHORT hero right here — there is
+        // NO season-then-cohort double render. We also reshape the curated grid to the cohort edit.
+        if (!this.personalized) {
+            this.renderHero(this._coldHero());
+            this.renderCurated();
+        }
+        // Provenance — the rich geo-cohort card (doc §5) when a cohort cleared above the national floor; else
+        // the season cold-start card. Both are beat-0 of the Activity panel.
+        if (cohortOk) { this._logCohortActivity(this.cohort, geo); return; }
         this.logActivity({
             usecase: 'Cold-start · location',
             headline: `Opened on the ${this.escapeHtml(place)} ${this.escapeHtml(season)} edit`,
@@ -1400,6 +1497,38 @@ class CoachStorefront {
             evidence: [place, season, geo.timezone].filter(Boolean),
             before: 'Generic “New Arrivals”',
             after: `${place} · ${season} edit`,
+        });
+    }
+    /* Rich cold-start provenance card for the geo-cohort (doc §5/§10): REAL geo → first-party cohort + REAL
+     * public census, ALWAYS surfacing the grain used + N + census source. Framed as "shoppers LIKE them, from
+     * here" (aggregate, never the individual). Geo is only the OPENING PRIOR — the live persona engine takes
+     * over on first engagement (that handoff is untouched: every cohort branch is gated on !this.personalized). */
+    _logCohortActivity(c, geo) {
+        const g = c.geo || geo || {};
+        const city = g.city || geo.city || 'your area';
+        const region = g.region || geo.regionCode || geo.region || '';
+        const grain = c.grainLabel || c.granularityUsed || 'your area';
+        const gran = c.granularityUsed || '';
+        const names = (c.topLines || []).map((t) => t.line).filter(Boolean);
+        const n = (c.sampleSize != null) ? c.sampleSize : null;
+        const census = c.census || null;
+        const income = (census && census.medianHhIncome != null) ? '$' + Number(census.medianHhIncome).toLocaleString() : null;
+        const censusSrc = (census && census.source) ? census.source : null;
+        const srcLabel = (g.source === 'edge') ? 'real edge geo' : 'forced location · QA';
+        const signal =
+            `First touch · <strong>${this.escapeHtml(city)}${region ? ', ' + this.escapeHtml(region) : ''}</strong> (${this.escapeHtml(srcLabel)}) · ` +
+            `cohort = <strong>${this.escapeHtml(grain)}</strong>${gran ? ' · ' + this.escapeHtml(gran) + ' grain' : ''} · ${n != null ? this.escapeHtml(String(n)) : '—'} shoppers` +
+            (income ? ` · median HH income <strong>${this.escapeHtml(income)}</strong>${censusSrc ? ' (' + this.escapeHtml(censusSrc) + ')' : ''}` : '');
+        const chips = [grain, `N=${n != null ? n : '—'}`, income ? `${income} median HH${censusSrc ? ' · ' + censusSrc : ''}` : null, `data: ${c.dataSource || 'synthetic'}`].filter(Boolean);
+        this.logActivity({
+            usecase: 'Cold-start · geo-cohort',
+            headline: `Opened on what ${this.escapeHtml(grain)} shoppers buy`,
+            signal,
+            segment: `geo-cohort · ${grain}`,
+            decision: `No history yet → open on what <strong>${this.escapeHtml(grain)}</strong> shoppers buy: <strong>${this.escapeHtml(names.join(', '))}</strong>. Shoppers <em>like</em> them, from here — aggregate, never the individual. We curate, never price; first engagement hands off to the live persona engine.`,
+            evidence: chips,
+            before: 'Generic New Arrivals',
+            after: `${grain} cohort edit`,
         });
     }
     forceGeo(geo) { this.applyGeoColdStart(geo); }

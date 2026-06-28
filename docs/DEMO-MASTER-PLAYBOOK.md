@@ -114,6 +114,20 @@ The Demo Director steps through 15 beats (Start ▶ → Next, or Auto-play). Eac
 
 ---
 
+## 5b. Geo-Cohort Cold Start — the anti-MasterCard cold start (NEW · full spec `docs/architecture/13-geo-cohort-coldstart-prd-tdd.md`)
+**When:** a brand-new visitor with no profile lands (beat 2 / cold start).
+
+**What the room sees (live, from your REAL Winston-Salem location):** the store opens on **"The Tabby leads near you"** — a cohort hero + grid built from *what Coach shoppers from the Winston-Salem metro actually bought* (Tabby/Brooklyn/Pillow Tabby, core band), plus a provenance card citing the **real median HH income $65,903 (Census ACS 2024)**. Then open the **"◑ DY vs us"** modal (Revenue Radar) for the punchline: DY's third-party ZIP average vs your first-party cohort.
+
+**Say it (script-safe — doc 13 §11):**
+- *"Cold start, no profile — but we're not guessing. Dynamic Yield rents Mastercard's neighborhood spend AVERAGE by ZIP. We open on what shoppers LIKE them, from right here, actually bought — your own receipts — and the income signal is free from the census."*
+- *"This is a real operation: real edge geolocation, a real query — only the data is swapped (synthetic now, your warehouse in production)."*
+- *"It's the opening prior; the moment they engage, it sharpens into a live persona."*
+
+**Honest / fair (carry it):** we **curate, never price or gate**; **aggregate, never the individual** ("shoppers like them, from here"); always **show the grain used** (metro/region) and **cite census with its vintage**; first-party data is representative/synthetic today, swappable to the real warehouse with one flag (`GEO_COHORT_SOURCE`).
+
+**Real vs representative:** geo = REAL (request.cf) · query = REAL · census = REAL public (ACS 2024) · first-party cohort = REPRESENTATIVE/synthetic. **Never** vary price/access by geography; never use protected classes or a ZIP as a proxy; never tie to credit.
+
 ## 6. Other surfaces
 - **Cold-start / geo** (on load): edge geo → season hero + welcome ribbon. **⌘K → "Preview as location"** = Miami/Sydney/Chicago/Singapore (the **hemisphere flip**: same date, Miami summer vs Sydney winter).
 - **Style quiz**: welcome-ribbon "Personalize in 30s" → 4 taps → "Your Edit" (zero-party).

@@ -13,6 +13,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import type { Env } from '@/types/env';
 import { getOpalTools } from '@/agents/tools';
 import { diagnoseFunnel } from '@/agents/tools/diagnoseFunnel';
+import { geoCohort } from '@/agents/tools/geoCohort';
 
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 
@@ -63,6 +64,19 @@ ANOMALOUS leak(s) with recoverable dollars, and a ready-to-launch audience + rem
 for Gen-Z payment-stage hesitation). Lead with the leak, the recoverable $, and the recommended fix; if the
 user then says to launch it, use the activation tools below with the returned audience conditions.
 
+GEO-COHORT COLD START — when a brand-new visitor with no profile lands (first touch) and you are
+asked what to open the store on, or "what do shoppers in/from {place} buy", call **geoCohort** (pass
+zip/region/city when known). It returns the roll-up grain used (ZIP → metro → region → national,
+gated on FIRST-PARTY shopper count), sampleSize, top hero lines, modal price band, attach rate, AOV,
+browse→buy, and REAL public census (median HH income + home value, with source + vintage). Rules:
+geo is an OPENING PRIOR we REPLACE with real behaviour the moment they engage; it is an AGGREGATE —
+say "shoppers LIKE them, from here", NEVER this individual's income (census is a neighborhood
+average). ALWAYS cite the grain used and the sampleSize, and cite census with its vintage (e.g.
+"~$65.9k median HH income, Census ACS 2024"). The first-party data is REPRESENTATIVE/synthetic today
+(dataSource "synthetic"), swappable to the customer's real warehouse with no change to the query.
+CURATE the storefront only — NEVER price, gate, discount, or vary access by geography; never tie geo
+to credit/BNPL; never use protected classes or a ZIP as a proxy for one.
+
 CREATING / ACTIVATING — only when the user explicitly asks to create or launch something:
 - To **personalize the storefront banner** for an audience ("show/target a message or banner to [audience]",
   "if this audience is met, change their messaging to …", "personalize the banner for …"), use
@@ -99,7 +113,11 @@ export class OpalAgent extends AIChatAgent<Env> {
 
     const google = createGoogleGenerativeAI({ apiKey });
     const modelId = this.env.GEMINI_MODEL || DEFAULT_MODEL;
-    const tools: ToolSet = { ...getOpalTools(this.env), diagnoseFunnel: diagnoseFunnel(this.env) };
+    const tools: ToolSet = {
+      ...getOpalTools(this.env),
+      diagnoseFunnel: diagnoseFunnel(this.env),
+      geoCohort: geoCohort(this.env),
+    };
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {

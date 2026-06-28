@@ -152,43 +152,77 @@
     .rrco-done-s { font-size: 12px; color: #6E6557; }
   `;
 
-  function buildContrast() {
-    if (document.getElementById('rrx')) return;
+  // The "◑ DY vs us" anchor (doc 13 §5/§11) — parameterized from the LIVE /geo/cohort:
+  //   LEFT (DY)  = the REAL detected ZIP/city + REAL census median income → a third-party-style neighborhood
+  //                AVERAGE (the affluence axis DY rents from Mastercard), with NO purchase intent.
+  //   RIGHT (us) = the FIRST-PARTY cohort (topLines, modal price band, grain, N) — "real intent · your own
+  //                receipts · {grainLabel} · N={sampleSize}". CURATION framing only (never price/gate).
+  // Rebuilt on every open so the figures always match the painted cohort; graceful national fallback if absent.
+  function buildContrast(opts) {
+    opts = opts || {};
+    const old = document.getElementById('rrx-wrap'); if (old) old.remove();
+    const c = opts.cohort || null;
+    const g = (c && c.geo) || {};
+    const census = (c && c.census) || null;
+    const gl = String((c && c.granularityUsed) || '').toLowerCase();
+    const usable = !!(c && Array.isArray(c.topLines) && c.topLines.length && gl !== 'national' && gl !== 'country');
+
+    // LEFT (DY) — real geo + real census, as a neighborhood AVERAGE proxy.
+    const city = esc(g.city || (census && census.label) || 'your area');
+    const region = esc(g.region || '');
+    const zip = esc(g.zip || '');
+    const pin = `📍 ${zip ? 'ZIP ' + zip + ' · ' : ''}${city}${region ? ', ' + region : ''}`;
+    const income = (census && census.medianHhIncome != null) ? '$' + Math.round(census.medianHhIncome).toLocaleString() : null;
+    const homeVal = (census && census.medianHomeValue != null) ? '$' + Math.round(census.medianHomeValue).toLocaleString() : null;
+    const censusSrc = esc((census && census.source) || 'Census ACS');
+    const dyQuote = income
+      ? `“This neighborhood averages <b>${income}</b> household income${homeVal ? ' · <b>' + homeVal + '</b> homes' : ''}.”`
+      : `“This neighborhood’s spend, as a postal-code average.”`;
+
+    // RIGHT (Optimizely) — first-party cohort (curation only; intent, not price).
+    const grainLabel = esc((c && c.grainLabel) || 'your cohort');
+    const n = (c && c.sampleSize != null) ? esc(String(c.sampleSize)) : '—';
+    const bandLabel = { entry: 'entry · under $150', core: 'core · $150–400', elevated: 'elevated · $400+' }[(c && c.priceBand)] || esc((c && c.priceBand) || '—');
+    const intentList = usable
+      ? c.topLines.map((t) => `<li>Carry the <b>${esc(t.line)}</b>${t.share != null ? ' · ' + Math.round(t.share * 100) + '% of shoppers here' : ''}</li>`).join('')
+      : '<li>No local first-party signal yet — national catalog</li>';
+    const attach = (c && c.attachRate != null) ? `<li>Attach a companion <b>${Math.round(c.attachRate * 100)}%</b> of the time</li>` : '';
+    const optiSub = usable ? `real intent · your own receipts · ${grainLabel} · N=${n}` : 'real intent · your own receipts';
+
     const wrap = document.createElement('div');
+    wrap.id = 'rrx-wrap';
     wrap.innerHTML = `
       <div class="rrx-overlay" id="rrx-overlay"></div>
       <div class="rrx" id="rrx" role="dialog" aria-label="Optimizely vs geo-targeting">
         <div class="rrx-head">
-          <div class="rrx-ttl">Dynamic Yield knows the <em>neighborhood</em>.<br>Optimizely knows the <em>shopper</em>.</div>
+          <div class="rrx-ttl">Dynamic Yield rents the <em>neighborhood’s</em> average wallet.<br>Optimizely uses <em>your own receipts</em>.</div>
           <button class="rrx-x" id="rrx-x" aria-label="Close">&times;</button>
         </div>
         <div class="rrx-cols">
           <div class="rrx-col dy">
-            <div class="rrx-col-h">Dynamic Yield<span>Mastercard geo data</span></div>
-            <div class="rrx-pin">📍 ZIP 33139 · Miami Beach, FL</div>
-            <div class="rrx-quote">“Shoppers in this area spend <b>~$420</b> on average.”</div>
+            <div class="rrx-col-h">Dynamic Yield<span>third-party proxy · neighborhood AVERAGE · no purchase intent</span></div>
+            <div class="rrx-pin">${pin}</div>
+            <div class="rrx-quote">${dyQuote}</div>
             <ul class="rrx-list dim">
-              <li>Third-party (purchased data)</li>
-              <li>Aggregate — a postal-code average</li>
-              <li>Static — yesterday’s cohort</li>
-              <li>No idea what <i>this</i> person just did</li>
+              <li>Third-party proxy — a postal-code <b>average</b></li>
+              <li>Affluence guess, <b>not</b> purchase intent</li>
+              <li>Historical — yesterday’s cohort</li>
+              <li>No idea what <i>this</i> shopper actually buys</li>
             </ul>
-            <div class="rrx-foot dim">Personalizes a <b>postal code</b></div>
+            <div class="rrx-foot dim">Guesses the <b>neighborhood’s wallet</b> · ${censusSrc}, free &amp; public</div>
           </div>
           <div class="rrx-col opti">
-            <div class="rrx-col-h">Optimizely<span>first-party · live at the edge</span></div>
-            <div class="rrx-pin">👤 Anonymous shopper · live this session</div>
+            <div class="rrx-col-h">Optimizely<span>${optiSub}</span></div>
+            <div class="rrx-pin">👤 Shoppers <b>like them</b>, from here · first-party</div>
             <ul class="rrx-list">
-              <li>Viewed <b>Tabby ×3</b></li>
-              <li>Added the <b>$575</b> quilted Tabby</li>
-              <li>Stalled <b>40s</b> at the payment step</li>
-              <li>Matches the <b>Gen-Z BNPL</b> cohort</li>
-              <li>Abandoned on shipping <b>twice</b> before</li>
+              ${intentList}
+              <li>Modal price band: <b>${bandLabel}</b> <span class="rrx-skew">(curation only)</span></li>
+              ${attach}
             </ul>
-            <div class="rrx-foot">Personalizes a <b>person</b>, in-session (&lt;50ms)</div>
+            <div class="rrx-foot">Curates the <b>storefront</b>, never the price — aggregate, never the individual</div>
           </div>
         </div>
-        <div class="rrx-cta">→ So we recover <b>her</b> — with the installments she’ll actually use — not a zip-code average.</div>
+        <div class="rrx-cta">→ We open on what shoppers <b>like them, from here</b> actually buy — your own receipts, not a zip-code average. We enrich, never gate.</div>
       </div>`;
     document.body.appendChild(wrap);
     const close = () => { if (window.store && window.store.rrCloseContrast) window.store.rrCloseContrast(); };
@@ -351,11 +385,9 @@
         <button class="rr-ctrl" onclick="store.rrBurst(true)">Recover</button>
         <button class="rr-ctrl" id="rr-reset-btn" onclick="store.rrReset()">↺ Reset demo</button>
         <button class="rr-ctrl" onclick="store.rrPlay()">▶ Play story</button>
+        <button class="rr-ctrl" onclick="store.rrContrast()">◑ DY vs us</button>
       </div>
       <div class="rr-narrate" id="rr-narrate"></div>`;
-    // NOTE: "◑ DY vs us" (Neighborhood-vs-Shopper) button temporarily hidden pending messaging.
-    // Re-enable by adding back: <button class="rr-ctrl" onclick="store.rrContrast()">◑ DY vs us</button>
-    // (store.rrContrast() + the modal are left intact.)
     const shell = (inner) => `
       <div class="rr">
         <div class="rr-top"><div class="rr-ttl">Revenue Radar</div><div class="rr-sub">Where checkout revenue leaks — diagnosed live at the edge</div></div>
@@ -508,8 +540,12 @@
       }
     };
 
-    store.rrContrast = function () {
-      buildContrast();
+    store.rrContrast = async function () {
+      // Pull live from /geo/cohort. Prefer the cohort the storefront already resolved (so the modal matches the
+      // painted cold start, incl. a ⌘K forced location); else fetch the real edge cohort. Graceful if absent.
+      let cohort = this.cohort || null;
+      if (!cohort) { try { const r = await fetch('/geo/cohort'); if (r.ok) cohort = await r.json(); } catch (e) { cohort = null; } }
+      buildContrast({ cohort });
       const o = document.getElementById('rrx-overlay'), m = document.getElementById('rrx');
       if (o) o.classList.add('open');
       if (m) m.classList.add('open');

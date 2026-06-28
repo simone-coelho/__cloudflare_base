@@ -8,6 +8,7 @@
  */
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
+import { computeGeoCohort, getGeoCohortSource, type GeoInput } from '@/services/geo/cohort';
 
 const geo = new Hono<{ Bindings: Env }>();
 
@@ -36,6 +37,46 @@ geo.get('/', (c) => {
     hemisphere,
     season,
   });
+});
+
+/**
+ * GET /geo/cohort — the geo-cohort cold start (the anti-MasterCard cold start).
+ *
+ * Thin wrapper (mirrors /funnel) over the shared brain src/services/geo/cohort.ts, with the
+ * REAL request.cf geo overlaid exactly like src/routes/signals.ts: identification is REAL
+ * (edge geolocation), the query is REAL — only the first-party DATA is synthetic today
+ * (dataSource:'synthetic'). Resolves a first-party-gated grain (ZIP → metro → region →
+ * national), returns "what shoppers LIKE them, from here, buy" + REAL public census.
+ *
+ * Query overrides ?zip / ?region / ?city are the LABELED QA / demo path (e.g. the ⌘K
+ * force-geo and the Winston-Salem demo moment /geo/cohort?zip=27101&region=NC) — when
+ * present, geo.source is reported as 'query' instead of 'edge'.
+ *
+ * NEVER prices or gates by geography — curation only (doc 13 §10). Defensive end-to-end
+ * (computeGeoCohort never throws); the belt-and-braces try/catch keeps the route safe too.
+ */
+geo.get('/cohort', async (c) => {
+  const cf: any = (c.req.raw as any).cf || {};
+  const q = c.req.query();
+  // If ANY geo query param is present it's the LABELED QA / force-geo override (doc §4) and is
+  // SELF-CONTAINED — we do not mix in the real cf (so e.g. ?region=CA can't be overridden by the
+  // edge ZIP). Otherwise this is the live cold start: build purely from the REAL request.cf.
+  const hasOverride = q.zip != null || q.region != null || q.city != null || q.country != null;
+  const geoInput: GeoInput = hasOverride
+    ? { zip: q.zip ?? null, region: q.region ?? null, city: q.city ?? null, country: q.country ?? null, source: 'query' }
+    : {
+        zip: cf.postalCode ?? null,
+        region: cf.regionCode ?? cf.region ?? null,
+        city: cf.city ?? null,
+        country: cf.country ?? null,
+        source: 'edge',
+      };
+  try {
+    const cohort = await computeGeoCohort(geoInput, getGeoCohortSource(c.env));
+    return c.json(cohort);
+  } catch (error) {
+    return c.json({ error: 'Failed to compute geo cohort', details: error instanceof Error ? error.message : String(error) }, 500);
+  }
 });
 
 export { geo as geoRoutes };
