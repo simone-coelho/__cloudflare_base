@@ -123,7 +123,14 @@ class CoachStorefront {
         this.applyGeoColdStart();   // edge-geo cold-start: adapt the first paint to where they are
         this.initCompareDrag();
         // Deep link: /storefront?experiment=<key> renders that experiment's surface (readoutUrl target).
-        try { const _ek = new URLSearchParams(location.search).get('experiment'); if (_ek) setTimeout(() => this.previewExperiment({ experimentKey: _ek }), 500); } catch (e) {}
+        // (B) The Signal-Led Moment is an ENCORE, not a default homepage surface — a stale
+        // ?experiment=<moment> must never hijack the store on load: strip it from the URL and skip the
+        // takeover. Other experiments still deep-link to their readout as before.
+        try {
+            const _ek = new URLSearchParams(location.search).get('experiment');
+            if (_ek === this.MOMENT_KEY) { this._clearExperimentQuery(); }
+            else if (_ek) { setTimeout(() => this.previewExperiment({ experimentKey: _ek }), 500); }
+        } catch (e) {}
         window.addEventListener('keydown', (e) => {
             if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); this.openCmdk(); }
         });
@@ -519,6 +526,18 @@ class CoachStorefront {
         const root = document.getElementById('xsurf'); if (root) { root.hidden = true; root.removeAttribute('data-moment'); }
         const vh = document.getElementById('view-home'); if (vh) vh.classList.remove('xsurf-hero');
         this._xsurfActive = null;
+    }
+
+    /* (A) Strip ?experiment=<key> (and the #engine readout hash) from the URL so a reload/reset never
+     * re-fires the on-load deep-link. No-op if absent. */
+    _clearExperimentQuery() {
+        try {
+            const u = new URL(location.href);
+            if (!u.searchParams.has('experiment')) return;
+            u.searchParams.delete('experiment');
+            const hash = u.hash === '#engine' ? '' : u.hash;
+            history.replaceState(null, '', u.pathname + u.search + hash);
+        } catch (e) {}
     }
 
     /* Beat helper: render the experiment surface for a scenario AND create the real Optimizely flag. */
@@ -1426,15 +1445,29 @@ class CoachStorefront {
         return this._h2cP;
     }
     async captureZone(sel) {
+        // Capture the VISIBLE STOREFRONT WINDOW (what the shopper actually sees) — uniformly, NOT per element.
+        // Capturing individual elements was the root of every recurring Compare failure: tall ones (#plp-grid-wrap,
+        // #curated-section, #view-home) became thin strips; hidden ones came back blank; the takeover swapped them;
+        // some included the nav and some didn't. The window is ONE consistent thing — always on screen, same frame
+        // and aspect, never a strip, never blank — and it's literally a screenshot. `sel` is kept for call-site
+        // compatibility but IGNORED: every before/now is the same storefront shot, capped to one viewport tall,
+        // anchored at the current scroll. #store-shell is the shopper's column (the Director sidebar is a separate
+        // element, so it's naturally excluded).
         try {
-            if (!sel) return null;
-            let el = document.querySelector(sel);
-            // xsurf can REPLACE the hero with its own element (#hero is then display:none).
-            if (sel === '#hero') { const vh = document.getElementById('view-home'); if (vh && vh.classList.contains('xsurf-hero')) el = document.getElementById('xsurf') || el; }
-            if (!el || el.offsetParent === null) return null;                     // not on screen (inactive view / display:none)
-            const r = el.getBoundingClientRect(); if (r.width < 8 || r.height < 8) return null;
             const ok = await this._ensureH2C(); if (!ok || typeof window.html2canvas !== 'function') return null;
-            const canvas = await window.html2canvas(el, { useCORS: true, backgroundColor: '#FBF8F2', scale: Math.min(2, window.devicePixelRatio || 1), logging: false });
+            const shell = document.getElementById('store-shell') || document.body;
+            if (!shell || shell.offsetParent === null) return null;
+            const r = shell.getBoundingClientRect(); const sw = Math.round(r.width); if (sw < 8) return null;
+            const capH = Math.min(Math.round(shell.scrollHeight || r.height), Math.round(window.innerHeight));
+            const y = Math.max(0, Math.round(window.scrollY));
+            const opts = { useCORS: true, backgroundColor: '#FBF8F2', scale: Math.min(2, window.devicePixelRatio || 1), logging: false, height: capH, y };
+            // The Search / Style Concierge pop-ups are .lux-modal elements docked at body level — siblings of
+            // #store-shell, so they are NOT in the shell's subtree and a shell capture misses them. When one is
+            // open, capture the BODY clipped to the storefront region (width = shell width) so the modal IS in
+            // the shot, z-order respected — still right-clipped past the Director sidebar.
+            let target = shell;
+            if (document.querySelector('.lux-modal.open')) { target = document.body; opts.x = 0; opts.width = sw; }
+            const canvas = await window.html2canvas(target, opts);
             return canvas.toDataURL('image/png');
         } catch (e) { return null; }
     }
@@ -1447,8 +1480,13 @@ class CoachStorefront {
     /* Open [Compare] for a logged card — RE-CAPTURES the zone LIVE at click-time so "now" is the
        CURRENT on-screen state (the bandit-selected hero, etc.); falls back to the beat-end capture
        (or the static asset) only if the zone isn't currently capturable. */
+    // Modal zones (Search / Concierge) can't be re-photographed by html2canvas — object-fit + flex layouts
+    // don't survive its DOM clone, so the modal renders as an empty box. Those cards carry a baked
+    // real-browser screenshot as their "now"; every other card re-captures the live storefront on click.
+    _isModalZone(zone) { const el = zone && document.querySelector(zone); return !!(el && el.classList && el.classList.contains('lux-modal')); }
     openCompareCard(id) {
         const c = this._cards && this._cards[id]; if (!c) return;
+        if (c.noLiveRecap) { this.openCompare(c.beforeImg, c.afterImg, c.title); return; }
         Promise.resolve(this.captureZone(c.zone))
             .then((now) => this.openCompare(c.beforeImg, now || c.afterImg, c.title))
             .catch(() => this.openCompare(c.beforeImg, c.afterImg, c.title));
@@ -1460,14 +1498,16 @@ class CoachStorefront {
         before.style.backgroundImage = `url("${beforeUrl}")`;
         const t = document.getElementById('cmp-title'); if (t) t.textContent = title || 'Before → Now';
         stage.style.setProperty('--cmp-seam', '50%');
-        this._cmpZoom = 0; stage.style.setProperty('--cmp-bgsize', 'contain');
+        this._cmpZoom = 0; stage.style.setProperty('--cmp-bgsize', 'cover');
         const zl = document.getElementById('cmp-zlabel'); if (zl) zl.textContent = 'Fit';
-        // Size the stage to the image's aspect within the viewport so the WHOLE page shows (contain, crisp,
-        // never cover-zoomed) AND the modal hugs it — works for portrait full-page shots and landscape alike.
+        // Size the stage to the image's aspect within the viewport, but CLAMP that aspect into a sane reading
+        // band so no image can size the stage to a sliver. SYSTEMIC backstop: even if a tall full-page capture,
+        // a portrait static asset, or a stale "before" reaches here, the stage stays a sane box and the images
+        // render `cover` from the top (set above) — focused, aligned, never a thin strip — for EVERY card.
         const probe = new Image();
         probe.onload = () => {
             if (!probe.naturalWidth) return;
-            const aspect = probe.naturalWidth / probe.naturalHeight;
+            const aspect = Math.max(0.62, Math.min(2.4, probe.naturalWidth / probe.naturalHeight));
             const maxH = window.innerHeight * 0.80, maxW = window.innerWidth * 0.92;
             let h = maxH, w = h * aspect;
             if (w > maxW) { w = maxW; h = w / aspect; }
@@ -1479,7 +1519,7 @@ class CoachStorefront {
         document.getElementById('cmp').classList.add('open');
     }
     zoomCompare(dir) {
-        const levels = ['contain', '150%', '220%', '320%'], labels = ['Fit', '1.5×', '2.2×', '3.2×'];
+        const levels = ['cover', '150%', '220%', '320%'], labels = ['Fit', '1.5×', '2.2×', '3.2×'];
         this._cmpZoom = Math.max(0, Math.min(levels.length - 1, (this._cmpZoom || 0) + dir));
         const stage = document.getElementById('cmp-stage'); if (stage) stage.style.setProperty('--cmp-bgsize', levels[this._cmpZoom]);
         const zl = document.getElementById('cmp-zlabel'); if (zl) zl.textContent = labels[this._cmpZoom];
@@ -2137,7 +2177,7 @@ class CoachStorefront {
                     signal: 'A natural-language query — <em>"bags for a winter wedding"</em> (intent, not keywords).',
                     decision: 'Rank the real catalog by <strong>occasion, style & her live affinity</strong> — then render an <strong>AI-styled Edit</strong> of the real product.',
                     impact: 'She doesn\'t just see results — <strong>she sees herself there</strong>. Relevance from the first result.',
-                    compare: { before: '/images/demo/before-curated.png', after: '/images/demo/after-curated.png' } },
+                    compare: { before: '/images/demo/before-modal.png', after: '/images/demo/after-search.png' } },
             },
             /* 15 ── AI chat · Style Concierge (real-feeling, scripted) ──────── */
             {
@@ -2159,7 +2199,7 @@ class CoachStorefront {
                     signal: 'A styling question in <strong>plain language</strong>.',
                     decision: 'The concierge replies with on-brand rationale, an <strong>AI-styled look</strong>, and <strong>real catalog pieces</strong>.',
                     impact: '<strong>Conversational commerce that shows the vision</strong> — taps straight to product.',
-                    compare: { before: '/images/demo/before-hero.png', after: '/images/demo/after-hero.png' } },
+                    compare: { before: '/images/demo/before-modal.png', after: '/images/demo/after-concierge.png' } },
             },
         ];
     }
@@ -2352,9 +2392,14 @@ class CoachStorefront {
             afterImg: staticAfter || liveAfter,
         });
         // Photograph the live "now" at beat-end so the card always holds a real snapshot of THIS state,
-        // not a frozen PNG — even before the click-time re-capture.
+        // not a frozen PNG — UNLESS it's a modal zone (Search/Concierge), which html2canvas can't render;
+        // those keep their baked real-browser screenshot and never re-capture.
         if (id && this._cards[id] && zone) {
-            this.captureZone(zone).then((img) => { if (img && this._cards[id]) this._cards[id].afterImg = img; });
+            if (this._isModalZone(zone)) {
+                this._cards[id].noLiveRecap = true;
+            } else {
+                this.captureZone(zone).then((img) => { if (img && this._cards[id]) this._cards[id].afterImg = img; });
+            }
         }
         this._ba = null;
     }
@@ -2698,7 +2743,7 @@ class CoachStorefront {
                     signal: 'The variation is live (a real flag + a real multi_armed_bandit rule).',
                     decision: 'Serve the takeover; let the <strong>bandit</strong> shift traffic to the winner — automatically.',
                     impact: 'Loop closed inside the window. Lift figures are representative (narrated, not claimed in UI). <strong>Representative · MAB is GA · real rule creatable.</strong>',
-                    compare: { zone: '#view-home' } },
+                    compare: { zone: '#hero' } },
             },
         ];
     }
@@ -2841,10 +2886,6 @@ class CoachStorefront {
      *    REAL elapsed, then animate the MAB readout with the moment arm labels. ── */
     async runMomentServe() {
         this.go('home', { silent: true });
-        // "Before" the TikTok takeover — the storefront is showing but not yet taken over. Capture it now so
-        // the Compare card on this scene reads pre-takeover → live takeover (the takeover hero is generated,
-        // so there's no static asset; the "now" is photographed live in applyStepCallout / on Compare click).
-        this._baseline['#view-home'] = await this.captureZone('#view-home');
         this._momentPending = false;
         const creative = await this.momentCreative();
         if (this._momentImageUrl) creative.image = this._momentImageUrl;
@@ -3332,6 +3373,7 @@ class CoachStorefront {
         this.clearChangePills(); this.dismissWelcome();   // and the Before→Now pills + first-visit ribbon
         this._buySignalFired = false; if (this.clearForcedExperiment) this.clearForcedExperiment();   // reset buy-signal + experiment surface
         this.resetMomentEncore();   // tear down the Signal-Led Moment encore on any fresh-shopper reset
+        this._clearExperimentQuery();   // (A) drop any ?experiment= deep-link so a later reload lands clean
         const anonChip = document.getElementById('eng-anon-chip'); if (anonChip) anonChip.classList.remove('show');
         this.changeLog = []; this.changeIdx.clear(); this.renderChanges();   // and the session changelog
         const si = document.getElementById('search-input'); if (si) si.value = '';

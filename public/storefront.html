@@ -1113,7 +1113,7 @@
         /* Stage is sized to the image's aspect (so the WHOLE component is shown — contain, crisp, never cover-zoomed) and capped to the viewport. */
         /* width/height are set in JS (openCompare) to hug the image's aspect within the viewport, so any page shape — portrait full-page or landscape — fills the modal with no side-bars. */
         .cmp-stage { position: relative; width: 600px; height: 70vh; background: #0F0D0A; overflow: hidden; touch-action: none; user-select: none; cursor: ew-resize; }
-        .cmp-img { position: absolute; inset: 0; background-repeat: no-repeat; background-position: center; background-size: var(--cmp-bgsize, contain); }
+        .cmp-img { position: absolute; inset: 0; background-repeat: no-repeat; background-position: center top; background-size: var(--cmp-bgsize, cover); }
         .cmp-before { clip-path: inset(0 calc(100% - var(--cmp-seam, 50%)) 0 0); }
         .cmp-divider { position: absolute; top: 0; bottom: 0; left: var(--cmp-seam, 50%); width: 2px; background: var(--paper); transform: translateX(-1px); pointer-events: none; }
         .cmp-handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; border-radius: 50%; background: var(--paper); color: var(--ink); display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
