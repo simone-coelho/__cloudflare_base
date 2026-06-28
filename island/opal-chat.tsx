@@ -72,7 +72,7 @@ function OpalChat() {
   const [input, setInput] = useState('');
   const endRef = useRef<any>(null);
   const dispatched = useRef<Set<string>>(new Set());
-  const hydrated = useRef(false);   // first non-empty messages snapshot = REPLAYED persisted history → seed, don't re-fire
+  const liveSince = useRef(false);   // true only after a message is sent THIS session; gates tool-call side-effects so REPLAYED persisted history (on every load) never re-fires/flashes
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isStreaming]);
   // Restarting the demo clears the merchandiser's chat (fresh conversation per run).
   useEffect(() => {
@@ -82,19 +82,20 @@ function OpalChat() {
   }, [clearHistory]);
   // The guided demo (beat 10) drives THIS real chat from outside via an event — no separate scripted UI.
   useEffect(() => {
-    const onAsk = (e: any) => { const t = (e?.detail?.text || '').trim(); if (t) sendMessage({ text: t }); };
+    const onAsk = (e: any) => { const t = (e?.detail?.text || '').trim(); if (t) { liveSince.current = true; sendMessage({ text: t }); } };
     window.addEventListener('opal:ask', onAsk);
     return () => window.removeEventListener('opal:ask', onAsk);
   }, [sendMessage]);
   // When Opal creates a banner rule, tell the storefront to preview it as that audience.
   useEffect(() => {
     const msgs = messages as any[];
-    // On a page (re)load, useAgentChat hydrates the persisted thread from the Durable Object. Those tool
-    // outputs are HISTORY, not live actions — replaying their side-effects (e.g. re-rendering the
-    // Signal-Led Moment takeover, or re-applying a banner) would hijack the storefront on every load.
-    // So on the first non-empty snapshot, record the tool calls as already-handled WITHOUT dispatching;
-    // only tool calls that complete LIVE later this session fire their events.
-    const replaying = !hydrated.current;
+    // On a page (re)load, useAgentChat hydrates the persisted thread from the Durable Object — and it can
+    // arrive over SEVERAL updates. Those tool outputs are HISTORY, not live actions; replaying their
+    // side-effects (re-rendering the Signal-Led Moment takeover, re-applying a banner) would hijack /
+    // FLASH the storefront on every load. Gate strictly: until a message is actually sent THIS session
+    // (liveSince), record every tool call as already-handled WITHOUT dispatching. Only tool calls that
+    // arrive AFTER a live send fire — robust even when history streams in over multiple updates.
+    const replaying = !liveSince.current;
     for (const m of msgs) {
       for (const p of (m.parts || [])) {
         if (p?.type === 'tool-targetMessageToAudience' && p.state === 'output-available' && p.output && p.toolCallId && !dispatched.current.has(p.toolCallId)) {
@@ -114,12 +115,12 @@ function OpalChat() {
         }
       }
     }
-    if (msgs.length > 0) hydrated.current = true;
   }, [messages]);
 
   const send = (text: string) => {
     const t = text.trim();
     if (!t || isStreaming) return;
+    liveSince.current = true;
     sendMessage({ text: t });
     setInput('');
   };
