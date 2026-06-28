@@ -82,10 +82,17 @@ function OpalChat() {
   }, [clearHistory]);
   // The guided demo (beat 10) drives THIS real chat from outside via an event — no separate scripted UI.
   useEffect(() => {
-    const onAsk = (e: any) => { const t = (e?.detail?.text || '').trim(); if (t) { liveSince.current = true; sendMessage({ text: t }); } };
+    // fresh:true (the Signal-Led Moment) wipes the persisted thread FIRST, so the moment is generated +
+    // launched LIVE each run — no stale "already live" replay from a prior run.
+    const onAsk = async (e: any) => {
+      const t = (e?.detail?.text || '').trim(); if (!t) return;
+      liveSince.current = true;
+      if (e?.detail?.fresh) { try { await clearHistory(); } catch (_e) {} }
+      sendMessage({ text: t });
+    };
     window.addEventListener('opal:ask', onAsk);
     return () => window.removeEventListener('opal:ask', onAsk);
-  }, [sendMessage]);
+  }, [sendMessage, clearHistory]);
   // When Opal creates a banner rule, tell the storefront to preview it as that audience.
   useEffect(() => {
     const msgs = messages as any[];

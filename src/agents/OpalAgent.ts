@@ -71,7 +71,15 @@ CREATING / ACTIVATING — only when the user explicitly asks to create or launch
   user the banner rule is live and they can preview that audience on the storefront to watch the message render.
 - For a plain audience use createOptimizelyAudience; to launch a flag to a saved audience use createFlag (pass
   the returned audienceId).
-These are gated: if a tool returns status "stubbed", explain exactly what WOULD be created and that writes are disabled.`;
+These are gated: if a tool returns status "stubbed", explain exactly what WOULD be created and that writes are disabled.
+
+SIGNAL-LED MOMENTS (real-time) — when the user hands you a LIVE signal (e.g. a product trending on TikTok) and
+asks you to create a "moment" and launch an experiment: (1) FIRST write the on-brand creative and SHOW it as a
+tight labelled list — Eyebrow / Headline / Subcopy / Offer / CTA; (2) THEN call launchExperiment with scenario
+"tiktok_tabby_moment", passing that copy in the copy field so it renders live on the storefront; (3) narrate the
+launch in the PRESENT tense, as happening NOW — e.g. "Live — the multi-armed bandit is now optimizing to find the
+winning creative before the window closes." NEVER say it was "already" live / running / set up, even if the
+underlying flag already exists. This is a live moment the room is watching — make it feel immediate.`;
 
 /**
  * OpalAgent — an AIChatAgent Durable Object that runs a Gemini streamText tool loop.

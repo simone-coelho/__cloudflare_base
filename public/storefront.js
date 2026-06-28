@@ -2882,7 +2882,7 @@ class CoachStorefront {
         // (2) Opal writes the copy — drive the REAL Opal chat (mirror runOpalStep); the presenter may also dictate.
         this.setMomentStatus('Opal is writing the moment copy…');
         this.setTab('opal');
-        try { window.dispatchEvent(new CustomEvent('opal:ask', { detail: { text: signal.nlSeed } })); } catch (e) {}
+        try { window.dispatchEvent(new CustomEvent('opal:ask', { detail: { text: signal.nlSeed, fresh: true } })); } catch (e) {}   // fresh thread → Opal generates + launches the moment LIVE each run (no stale "already live")
         this.logEvent('post', 'opal:ask', 'signal-led moment', null, null);
         const winner = await this._xsurfCreative(this.MOMENT_KEY, 'as_seen_tiktok');
         this._setGenCopy(winner);                       // eyebrow/headline/offer appear (canned; Opal's words land in the variables)
