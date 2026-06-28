@@ -85,6 +85,7 @@ class CoachStorefront {
         // Signal-Led Moment encore (doc 12) — a 3-scene arc behind a button AFTER beat 15.
         // The core demo stays EXACTLY 15 beats; the arc has its own index + chrome, never touches featureList.
         this.MOMENT_KEY = 'xsurf_tiktok_tabby_moment';
+        this._armed = false;   // experiment surfaces render ONLY after a real user gesture — nothing shows #xsurf on a fresh load (kills any replayed-launch flash, even with stale cached island code)
         this.encoreActive = false; this.arcIndex = -1; this.signalArc = null;
         this._signal = null; this._momentImageUrl = null;
         this._momentPending = false;   // GENERATE in flight → we own the reveal (image must be ready first)
@@ -131,6 +132,11 @@ class CoachStorefront {
             if (_ek === this.MOMENT_KEY) { this._clearExperimentQuery(); }
             else if (_ek) { setTimeout(() => this.previewExperiment({ experimentKey: _ek }), 500); }
         } catch (e) {}
+        // Arm experiment surfaces on the FIRST real user gesture. On a fresh page load there is no gesture,
+        // so renderExperimentSurface() is a no-op — a replayed Opal launch can never flash the takeover
+        // before the user acts. Every legitimate render (beats, encore, ⌘K, buy-signal) is preceded by a
+        // click/keypress, so this never blocks an intended surface.
+        ['pointerdown', 'keydown'].forEach((ev) => window.addEventListener(ev, () => { this._armed = true; }, { once: true }));
         window.addEventListener('keydown', (e) => {
             if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); this.openCmdk(); }
         });
@@ -395,6 +401,10 @@ class CoachStorefront {
     /* Render #xsurf from the decided experiment's `payload` creative (pure data, no DOM rebuild). */
     renderExperimentSurface(expKey) {
         const root = document.getElementById('xsurf'); if (!root) return;
+        // HARD GATE: never show an experiment surface before the first real user gesture. A launch replayed
+        // by the Opal island on page (re)load would otherwise flash the takeover, then swap to the normal
+        // store. This is the SINGLE chokepoint for showing #xsurf, so gating here kills the flash for good.
+        if (!this._armed) { root.hidden = true; root.removeAttribute('data-moment'); const _vh = document.getElementById('view-home'); if (_vh) _vh.classList.remove('xsurf-hero', 'moment-active'); return; }
         const v = expKey ? this.decVars(expKey) : null;
         let creative = null;
         if (v && v.payload) { try { creative = JSON.parse(v.payload); } catch (e) { creative = null; } }
