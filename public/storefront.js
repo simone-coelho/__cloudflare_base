@@ -352,11 +352,18 @@ class CoachStorefront {
             else this.experiments.push({ experimentKey: expKey, variations: detail.variations, metricEventKey: detail.metricEventKey });
         }
         this._activeExperiment = { experimentKey: expKey, metricEventKey: detail.metricEventKey || (this._activeExperiment && this._activeExperiment.experimentKey === expKey ? this._activeExperiment.metricEventKey : null) };
-        // Signal-Led Moment: during GENERATE the encore OWNS the reveal — the takeover must appear ONLY when the
-        // real hero image is ready (doc 12 Decision #5 / §4.4). Record that a real launch fired (Opal tool OR the
-        // deterministic fallback), but do NOT render here. After reveal, block only the auto/Opal path (no creative)
-        // so a late tool callback can't replace the winner; an explicit ⌘K force (carries `creative`) still works.
-        if (this._isMomentKey(expKey) && (this._momentPending || (this._momentRevealed && !detail.creative))) { this._momentLaunched = true; return; }
+        // Signal-Led Moment — ANTI-FLASH GUARD. The takeover renders ONLY when genuinely driven: either the
+        // encore is running (this.encoreActive) or the call carries an explicit `creative` (⌘K force /
+        // runMomentServe reveal). A BARE opal:experiment for the moment — e.g. the Opal island replaying a
+        // persisted launch on page load (ANY hydration-timing race), or any auto re-fire — carries no
+        // `creative` and isn't in the encore, so it must NEVER paint the takeover. We still record the launch
+        // (so ⌘K can force it later); we just don't render. THIS is the definitive kill for the on-load flash.
+        if (this._isMomentKey(expKey)) {
+            if (!detail.creative && !this.encoreActive) { this._momentLaunched = true; return; }
+            // During GENERATE the encore owns the reveal (wait for the real image); after reveal, block a late
+            // no-creative re-render from swapping the winner.
+            if (this._momentPending || (this._momentRevealed && !detail.creative)) { this._momentLaunched = true; return; }
+        }
         // 1) Render INSTANTLY from the scenario creative (never blank while the datafile propagates).
         const creative = detail.creative || await this._xsurfCreative(expKey, variationKey);
         if (creative) {
