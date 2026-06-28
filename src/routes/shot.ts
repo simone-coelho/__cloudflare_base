@@ -17,6 +17,10 @@ import type { Env } from '@/types/env';
 const shot = new Hono<{ Bindings: Env }>();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// rec=hero: record the #hero title sequence from document-start, so a DURING-LOAD flash
+// (e.g. "The Tabby Shop" → "The Summer Edit") is captured even though the screenshot settles after it.
+const REC_SCRIPT = `window.__herolog=[];(function(){var last=null,t0=Date.now();var iv=setInterval(function(){var el=document.querySelector('#hero-content .hero-title');var t=el?(el.textContent||'').trim():'';if(t!==last){window.__herolog.push({ms:Date.now()-t0,title:t||'(empty)'});last=t;}},16);setTimeout(function(){clearInterval(iv);},9000);})();`;
+
 shot.get('/', async (c) => {
   if (!c.env.BROWSER) return c.json({ ok: false, error: 'Browser Rendering not bound' }, 503);
   const q = c.req.query();
@@ -25,17 +29,20 @@ shot.get('/', async (c) => {
   const h = Math.min(4000, parseInt(q.h || '1600', 10) || 1600);
   const wait = Math.min(8000, parseInt(q.wait || '1400', 10) || 1400);
   const clicks = (q.clicks || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const rec = q.rec || '';
   let browser: any;
   try {
     browser = await puppeteer.launch(c.env.BROWSER as any);
     const page = await browser.newPage();
     await page.setViewport({ width: w, height: h });
+    if (rec) { try { await page.evaluateOnNewDocument(REC_SCRIPT); } catch (e) { /* recorder optional */ } }
     await page.goto(url.toString(), { waitUntil: 'networkidle0', timeout: 30000 });
     await sleep(wait);
     for (const sel of clicks) {
       try { await page.click(sel); await sleep(wait); } catch { /* selector may be absent in this state */ }
     }
     if (q.js) { try { await page.evaluate(q.js); await sleep(Math.max(900, wait)); } catch (e) { /* eval optional */ } }
+    if (rec) { const herolog = await page.evaluate('window.__herolog || []'); return c.json({ ok: true, herolog }); }
     let buf: Uint8Array;
     if (q.clip) {
       const el = await page.$(q.clip);

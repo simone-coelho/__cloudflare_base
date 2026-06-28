@@ -110,7 +110,7 @@ class CoachStorefront {
 
     async init() {
         await this.loadCatalog();
-        this.renderHomeCold();
+        this.renderHomeCold({ skipHero: true });   // hero painted ONCE by applyGeoColdStart below — no "Tabby Shop → Season Edit" cold-start flash
         this.renderPLP(this.bagsCatalog().slice(0, 16), { flip: false });
         this.renderCategoryRail();
         this.openDefaultPdp();
@@ -669,10 +669,32 @@ class CoachStorefront {
     /* ════════════════════════════════════════════════════════════════════════
      * CURATED GRID (home)
      * ════════════════════════════════════════════════════════════════════════ */
-    renderHomeCold() {
-        this.renderHero(this.heroFallback());
+    renderHomeCold(opts) {
+        // Paint the hero ONCE, geo-correct, to kill the cold-start "Tabby Shop → Season Edit" flash.
+        // First load: geo isn't known yet, so init passes {skipHero:true} and applyGeoColdStart paints the
+        // hero as the FIRST render (renderHero fills directly — no View-Transition cross-fade/ghost). On
+        // reset, geo is already known → _coldHero() returns the season hero, and the same title
+        // short-circuits renderHero (no swap).
+        if (opts && opts.skipHero) {
+            // Never blank: show the hero ART immediately (the SAME bag in every cold-start hero); the season
+            // TITLE is painted once by applyGeoColdStart (no "Tabby Shop" first, no swap/ghost).
+            const _art = document.getElementById('hero-art'); const _a = (this.heroFallback() || {}).art;
+            if (_art && _a) _art.style.backgroundImage = `url("${_a}")`;
+        } else {
+            this.renderHero(this._coldHero());
+        }
         this.renderCurated();
         this.renderStory(this.storyForStage('early'));
+    }
+    /* The cold-start hero: the geo/season edit if we already know where the visitor is, else the default. */
+    _coldHero() {
+        if (this.geo && this.geo.season && !this.personalized) {
+            const season = this.geo.season;
+            const cap = season.charAt(0).toUpperCase() + season.slice(1);
+            const palette = this._seasonPalette(season);
+            return { eyebrow: `Your ${season} edit`, title: `The ${cap} Edit`, sub: `No history yet — so we're leading with ${palette}, right for the season where you are.`, cta: 'Shop the edit', art: (this.heroFallback() || {}).art };
+        }
+        return this.heroFallback();
     }
     curatedItems() {
         if (this.recommendations) return this.recommendations.filter((p) => this.isBag(p)).slice(0, 8);
@@ -1353,7 +1375,7 @@ class CoachStorefront {
     async applyGeoColdStart(forced) {
         let geo = forced;
         if (!geo) { try { const r = await fetch('/geo'); geo = await r.json(); } catch (e) { geo = null; } }
-        if (!geo) return;
+        if (!geo) { if (!this.personalized) this.renderHero(this.heroFallback()); return; }   // geo unavailable → paint the default hero ONCE (init skipped it), no later swap
         this.geo = geo;
         const place = geo.city || geo.region || geo.country || 'your area';
         const season = geo.season || 'this season';
@@ -1365,8 +1387,8 @@ class CoachStorefront {
         // Swap the hero by SEASON (reliable; hemisphere+month) so the cold-start is visible in-store and
         // MORPHS (View Transitions) when the location is switched. City stays in the ribbon/card (lower-stakes).
         if (!this.personalized) {
-            const cap = season.charAt(0).toUpperCase() + season.slice(1);
-            this.renderHero({ eyebrow: `Your ${season} edit`, title: `The ${cap} Edit`, sub: `No history yet — so we're leading with ${palette}, right for the season where you are.`, cta: 'Shop the edit', art: (this.heroFallback() || {}).art });
+            // FIRST paint of the hero on cold load (init skipped it) → renderHero fills directly, no cross-fade.
+            this.renderHero(this._coldHero());
         }
         // Provenance — the cold-start decision, as beat-0 of the Activity panel.
         this.logActivity({
