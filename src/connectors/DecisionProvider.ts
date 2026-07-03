@@ -120,6 +120,7 @@ const MODULE_TO_FLAG: Record<string, string> = {
   curated_grid: 'hero_module',
   premium_hero: 'hero_module',
   line_spotlight: 'hero_module',
+  affinity_hero: 'hero_module', // Edge Affinity Reflex choreography (doc 16 §10)
   // complete_the_look slot
   complete_the_look: 'complete_the_look',
   // promo_banner variations
@@ -165,6 +166,28 @@ const FLAG_DEFAULTS: Record<
   },
 };
 
+/**
+ * Edge Affinity Reflex choreography (doc 16 §10): when the shopper is a CURRENT
+ * MEMBER of a line-affinity audience (hysteresis-governed — present in segments),
+ * that live, decaying signal is the freshest intent we have, so it wins the hero
+ * and the sort. The attributes carry the freshly-computed reflex reads
+ * (`line_affinity_top` = display value, `line_affinity.<slug>` = score) — never
+ * persisted, always current. Membership gone (decayed out) → this returns null
+ * and every decision falls back → the storefront visibly reverts.
+ */
+function affinityAnchor(
+  segments: SegmentKey[],
+  attributes: Record<string, any>
+): { line: string; key: string; score?: number } | null {
+  const top = attributes?.line_affinity_top;
+  if (typeof top !== 'string' || !top) return null;
+  const slug = top.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const key = `line_${slug}_affinity`;
+  if (!segments.includes(key)) return null; // leading, but not (or no longer) a member
+  const score = attributes[`line_affinity.${slug}`];
+  return { line: top, key, score: typeof score === 'number' ? score : undefined };
+}
+
 /** Qualified segments ordered by descending priority (used to pick the winner). */
 function rankSegments(segments: SegmentKey[]): SegmentKey[] {
   const set = new Set(segments);
@@ -199,9 +222,40 @@ function fallbackDecision(flagKey: string): Decision {
 function decideFromSegments(
   flagKey: string,
   segments: SegmentKey[],
-  _attributes: Record<string, any>
+  attributes: Record<string, any>
 ): Decision {
   const ranked = rankSegments(segments);
+
+  // Live affinity membership outranks everything for the hero + sort — it is the
+  // freshest signal (in-session, decaying) and the demo's cause→effect beat:
+  // the chip lights and the page pivots in the same push; the membership decays
+  // out and both revert.
+  const aff = affinityAnchor(segments, attributes ?? {});
+  if (aff && flagKey === 'hero_module') {
+    return {
+      flagKey,
+      enabled: true,
+      variationKey: 'affinity_hero',
+      variables: {
+        module: 'affinity_hero',
+        anchorLine: aff.line,
+        affinityKey: aff.key,
+        ...(aff.score !== undefined ? { affinityScore: aff.score } : {}),
+      },
+      ruleKey: aff.key,
+      reason: 'experiment',
+    };
+  }
+  if (aff && flagKey === 'plp_sort') {
+    return {
+      flagKey,
+      enabled: true,
+      variationKey: 'line_first',
+      variables: { module: 'plp_sort', sort: 'line_first', anchorLine: aff.line, affinityKey: aff.key },
+      ruleKey: aff.key,
+      reason: 'experiment',
+    };
+  }
 
   // plp_sort is segment-derived (not an insight module) — handle first.
   if (flagKey === 'plp_sort') {

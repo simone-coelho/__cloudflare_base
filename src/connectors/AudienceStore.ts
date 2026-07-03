@@ -13,6 +13,8 @@ export interface AudienceStore {
   get(key: string): Promise<AudienceDef | null>;
   /** Load Coach launch audiences at boot (idempotent — won't clobber runtime-created ones). */
   seed(defs: AudienceDef[]): Promise<void>;
+  /** Retire an audience (e.g. its catalog value disappeared) — drops out of qualification. */
+  archive(key: string): Promise<void>;
 }
 
 const PREFIX = 'audience:';
@@ -46,5 +48,11 @@ export class KvAudienceStore implements AudienceStore {
         await this.env.CACHE.put(PREFIX + def.key, JSON.stringify({ ...def, status: 'published' }));
       }
     }
+  }
+
+  async archive(key: string): Promise<void> {
+    const def = await this.get(key);
+    if (!def || def.status === 'archived') return;
+    await this.env.CACHE.put(PREFIX + key, JSON.stringify({ ...def, status: 'archived' }));
   }
 }

@@ -21,9 +21,28 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // (e.g. "The Tabby Shop" → "The Summer Edit") is captured even though the screenshot settles after it.
 const REC_SCRIPT = `window.__herolog=[];(function(){var last=null,t0=Date.now();var iv=setInterval(function(){var el=document.querySelector('#hero-content .hero-title');var t=el?(el.textContent||'').trim():'';if(t!==last){window.__herolog.push({ms:Date.now()-t0,title:t||'(empty)'});last=t;}},16);setTimeout(function(){clearInterval(iv);},9000);})();`;
 
+/** Reuse a free Browser Rendering session when one exists — ACQUISITIONS are
+    rate-limited account-wide (the "Unable to create new browser: 500" failure
+    after heavy use); reconnecting to a live session is not. Else launch fresh. */
+async function getBrowser(env: Env): Promise<any> {
+  try {
+    const sessions = await (puppeteer as any).sessions(env.BROWSER);
+    const free = (sessions || []).find((s: any) => !s.connectionId);
+    if (free) return await (puppeteer as any).connect(env.BROWSER, free.sessionId);
+  } catch { /* fall through to a fresh launch */ }
+  return await puppeteer.launch(env.BROWSER as any, { keep_alive: 60000 } as any);
+}
+
 shot.get('/', async (c) => {
   if (!c.env.BROWSER) return c.json({ ok: false, error: 'Browser Rendering not bound' }, 503);
   const q = c.req.query();
+  // Diagnostics: ?diag=1 → live sessions + account acquisition limits (never guess again).
+  if (q.diag) {
+    const out: Record<string, unknown> = { ok: true };
+    try { out.sessions = await (puppeteer as any).sessions(c.env.BROWSER); } catch (e) { out.sessions = String(e); }
+    try { out.limits = await (puppeteer as any).limits(c.env.BROWSER); } catch (e) { out.limits = String(e); }
+    return c.json(out);
+  }
   const url = new URL(q.path || '/storefront', c.req.url); // same-origin only
   const w = Math.min(2000, parseInt(q.w || '1440', 10) || 1440);
   const h = Math.min(4000, parseInt(q.h || '1600', 10) || 1600);
@@ -32,7 +51,7 @@ shot.get('/', async (c) => {
   const rec = q.rec || '';
   let browser: any;
   try {
-    browser = await puppeteer.launch(c.env.BROWSER as any);
+    browser = await getBrowser(c.env);
     const page = await browser.newPage();
     await page.setViewport({ width: w, height: h });
     if (rec) { try { await page.evaluateOnNewDocument(REC_SCRIPT); } catch (e) { /* recorder optional */ } }
@@ -54,7 +73,16 @@ shot.get('/', async (c) => {
   } catch (e) {
     return c.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 500);
   } finally {
-    if (browser) try { await browser.close(); } catch { /* ignore */ }
+    // Close our pages, then DISCONNECT (not close): the session stays warm
+    // (keep_alive) for the next shot to reuse — successive shots stop burning
+    // rate-limited acquisitions. Idle sessions self-expire on Cloudflare's side.
+    if (browser) {
+      try {
+        const pages = await browser.pages();
+        for (const p of pages) { try { await p.close(); } catch { /* ignore */ } }
+      } catch { /* ignore */ }
+      try { await browser.disconnect(); } catch { try { await browser.close(); } catch { /* ignore */ } }
+    }
   }
 });
 

@@ -49,24 +49,63 @@ INSERT INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_
   ('metro',    '16740',            'Charlotte-Concord-Gastonia, NC-SC Metro',      85938, 400400, 'Census ACS 2024', '2024'),
   ('metro',    '39580',            'Raleigh-Cary, NC Metro',                      102144, 465800, 'Census ACS 2024', '2024');
 
--- (b) Region rows for the 15 states present in the base seed. REAL public:
---     income = Census ACS 2023 1-yr (B19013); home value = Zillow ZHVI Jul-2025.
+-- (b) Region rows for ALL 50 states + DC (NC is in block (a) above, identical values). REAL public:
+--     U.S. Census ACS 2024 1-yr — median HH income = B19013, median home value = B25077
+--     (api.census.gov/data/2024/acs/acs1; data.census.gov tables ACSDT1Y2024.B19013 / .B25077).
+--     One consistent source + vintage (matches the national row); safe to cite on stage. This is
+--     what powers the representative geo-cohort fallback (doc §12) so ANY presenter, anywhere in
+--     the US, gets a local cold start on their REAL state income even with no first-party rows there.
 INSERT INTO geo_census (geo_level, geo_key, label, median_hh_income_usd, median_home_value_usd, source, vintage) VALUES
-  ('region', 'CA', 'California',     95521, 809227, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'NY', 'New York',       82095, 487737, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'TX', 'Texas',          75780, 308212, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'FL', 'Florida',        73311, 405280, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'IL', 'Illinois',       80306, 292156, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'NJ', 'New Jersey',     99781, 588776, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'MA', 'Massachusetts',  99858, 685886, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'WA', 'Washington',     94605, 626603, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'PA', 'Pennsylvania',   73824, 286397, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'GA', 'Georgia',        74632, 338734, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'NV', 'Nevada',         76364, 472477, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'VA', 'Virginia',       89931, 416516, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'CO', 'Colorado',       92911, 567724, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'AZ', 'Arizona',        77315, 440228, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025'),
-  ('region', 'MI', 'Michigan',       69183, 259702, 'Census ACS 2023 1-yr (income); Zillow ZHVI 2025 (home value)', '2023/2025');
+  ('region', 'AL', 'Alabama', 66659, 233300, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'AK', 'Alaska', 95665, 376500, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'AZ', 'Arizona', 81486, 426000, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'AR', 'Arkansas', 62106, 215600, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'CA', 'California', 100149, 759500, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'CO', 'Colorado', 97113, 574600, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'CT', 'Connecticut', 96049, 396900, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'DE', 'Delaware', 87534, 371600, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'DC', 'District of Columbia', 109707, 733400, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'FL', 'Florida', 77735, 396900, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'GA', 'Georgia', 79991, 343300, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'HI', 'Hawaii', 100745, 875900, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'ID', 'Idaho', 81166, 446400, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'IL', 'Illinois', 83211, 280700, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'IN', 'Indiana', 71959, 243500, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'IA', 'Iowa', 75501, 227300, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'KS', 'Kansas', 75514, 238700, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'KY', 'Kentucky', 64526, 226000, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'LA', 'Louisiana', 60986, 223200, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'ME', 'Maine', 76442, 341900, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'MD', 'Maryland', 102905, 436300, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'MA', 'Massachusetts', 104828, 607400, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'MI', 'Michigan', 72389, 254200, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'MN', 'Minnesota', 87117, 344600, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'MS', 'Mississippi', 59127, 186500, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'MO', 'Missouri', 71589, 254400, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'MT', 'Montana', 75340, 425400, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'NE', 'Nebraska', 76376, 263100, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'NV', 'Nevada', 81134, 455500, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'NH', 'New Hampshire', 99782, 458800, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'NJ', 'New Jersey', 104294, 496000, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'NM', 'New Mexico', 67816, 279900, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'NY', 'New York', 85820, 449800, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'ND', 'North Dakota', 77871, 266100, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'OH', 'Ohio', 72212, 239800, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'OK', 'Oklahoma', 66148, 222100, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'OR', 'Oregon', 85220, 497500, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'PA', 'Pennsylvania', 77545, 277600, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'RI', 'Rhode Island', 83504, 455700, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'SC', 'South Carolina', 72350, 299500, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'SD', 'South Dakota', 76881, 289600, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'TN', 'Tennessee', 71997, 332600, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'TX', 'Texas', 79721, 313200, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'UT', 'Utah', 96658, 545200, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'VT', 'Vermont', 82730, 352800, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'VA', 'Virginia', 92090, 403500, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'WA', 'Washington', 99389, 602200, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'WV', 'West Virginia', 60798, 170800, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'WI', 'Wisconsin', 77488, 294700, 'Census ACS 2024 1-yr', '2024'),
+  ('region', 'WY', 'Wyoming', 75532, 339500, 'Census ACS 2024 1-yr', '2024');
 
 -- (c) Representative metro rows for those 15 states (largest metro). CLEARLY LABELED
 --     representative (state-level proxy) per doc 13 §70 — first-party never rolls up to

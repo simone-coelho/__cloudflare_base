@@ -32,6 +32,20 @@ import {
 } from '@/connectors';
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
 import { SEED_AUDIENCES } from '@/data/seed-audiences';
+import {
+  DEFAULT_REFLEX_CONFIG,
+  apply as applyReflex,
+  attributesFrom as reflexAttributes,
+  extractTouches,
+  snapshot as reflexSnapshot,
+  type ReflexResult,
+} from '@/reflex/core';
+import {
+  DEFAULT_GENERATOR_CONFIG,
+  generateAffinityAudiences,
+  regenerateCatalogAudiences,
+} from '@/reflex/audienceGenerator';
+import { fetchOdpAudiences, mapActionToOdp, odpEnabled, toRecentEventFlat } from '@/services/odpLoop';
 
 export interface ActionEvent {
   type:
@@ -101,6 +115,9 @@ const RETAIL_SIGNAL_DEFAULTS: Record<string, number> = {
   wishlist_adds: 0,
   page_views: 0,
   category_dwell_ms: 0,
+  // `purchases eq 0` gates the ready-to-buy/cart audiences — without a default an
+  // anonymous session evaluates undefined === 0 → false, and they can NEVER qualify.
+  purchases: 0,
 };
 
 export class RealtimeSegmentEngine {
@@ -134,11 +151,37 @@ export class RealtimeSegmentEngine {
   private async ensureSeeded(): Promise<void> {
     if (this.seeded) return;
     try {
-      await new KvAudienceStore(this.env).seed(SEED_AUDIENCES);
+      const store = new KvAudienceStore(this.env);
+      await store.seed(SEED_AUDIENCES);
+      await this.ensureCatalogAudiences(store);
       this.seeded = true;
     } catch (error) {
       console.error('Error seeding audiences:', error);
     }
+  }
+
+  /**
+   * Catalog-driven affinity audiences (doc 16 §5): the CATALOG writes the
+   * audiences ("Tote Affinity" = catalog value + "Affinity"); the reflex fills
+   * them. Version-gated on a hash of the generated set so the hot path pays ONE
+   * KV read; the diff (regenerateCatalogAudiences) runs only when the catalog or
+   * generator config actually changed — and never clobbers pinned/human edits.
+   */
+  private async ensureCatalogAudiences(store: KvAudienceStore): Promise<void> {
+    const generated = generateAffinityAudiences(
+      this.catalogService.getAllProducts() as unknown as Array<Record<string, unknown>>,
+      DEFAULT_REFLEX_CONFIG,
+      DEFAULT_GENERATOR_CONFIG
+    );
+    const setHash = generated.map((d) => `${d.key}:${d.generatorHash}`).join('|');
+    const MARKER = 'reflex:audgen:v1';
+    if ((await this.env.CACHE.get(MARKER)) === setHash) return;
+    const s = await regenerateCatalogAudiences(store, generated);
+    await this.env.CACHE.put(MARKER, setHash);
+    console.log(
+      `[reflex] catalog audiences regenerated: +${s.published.length} ~${s.updated.length} −${s.archived.length}` +
+        ` (skipped: ${s.skippedHumanEdited.length} human-edited, ${s.skippedPinned.length} pinned)`
+    );
   }
 
   async processActionEvent(event: ActionEvent, sessionId?: string): Promise<PersonalizationUpdate | null> {
@@ -177,6 +220,30 @@ export class RealtimeSegmentEngine {
       this.updateAttributesWithEvent(newAttributes, event);
       const newEngagementScore = this.calculateEngagementScore(newAttributes);
 
+      // 2.5 Edge Affinity Reflex (doc 16): decayed per-dimension affinity via the
+      // pure core. State rides the session in P0 (relocates into the DO in P2).
+      // The ENGINE clock is authoritative — client timestamps are advisory only.
+      const nowMs = Date.now();
+      const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
+      let reflex: ReflexResult | null = null;
+      if (reflexOn) {
+        const data = event.data ?? {};
+        const pid = data.productId ?? data.product_id ?? data.sku;
+        const product = pid ? this.catalogService.getProduct(String(pid)) : undefined;
+        const action = String(data.action ?? data.eventName ?? event.type);
+        reflex = applyReflex(
+          sessionData.reflex,
+          {
+            action,
+            touches: product
+              ? extractTouches(product as unknown as Record<string, unknown>, DEFAULT_REFLEX_CONFIG)
+              : [],
+          },
+          nowMs,
+          DEFAULT_REFLEX_CONFIG
+        );
+      }
+
       // 3. Qualify segments through the ODP seam against the live context.
       const ctx = this.buildQualificationContext(
         event.userId,
@@ -186,7 +253,43 @@ export class RealtimeSegmentEngine {
       );
       const journeyStage = deriveStage(ctx);
       ctx.attributes.journey_stage = journeyStage; // stage is itself an audience attribute
-      const newSegments = await this.connectors.segments.fetchQualifiedSegments(event.userId, ctx);
+      // Reflex scores are computed FRESH into the context (never persisted — they
+      // decay by construction), so store-published affinity audiences can gte them.
+      if (reflex) Object.assign(ctx.attributes, reflexAttributes(reflex.state, nowMs, DEFAULT_REFLEX_CONFIG));
+      const localSegments = await this.connectors.segments.fetchQualifiedSegments(event.userId, ctx);
+      // ODP loop (doc 16 §8): seed/refresh the session's LIVE ODP-qualified audiences.
+      // Additive + hard-capped (1.5s in fetchOdpAudiences) — ODP can only ever ADD;
+      // slow or down degrades to exactly the pre-ODP behavior.
+      let odpSeed = sessionData.odpSeed ?? [];
+      let odpSeedAt = sessionData.odpSeedAt ?? 0;
+      let odpRing = Array.isArray(sessionData.odpRecentEvents) ? sessionData.odpRecentEvents.slice() : [];
+      if (odpEnabled(this.env)) {
+        // Maintain the ring of recent events in the FLAT recent_events shape
+        // (≤10 entries, ≤55 min — inside the segments' 3600s windows).
+        const mappedEvent = mapActionToOdp(event);
+        if (mappedEvent) {
+          odpRing.push(toRecentEventFlat(mappedEvent, nowMs));
+          const floorTs = Math.floor(nowMs / 1000) - 3300;
+          odpRing = odpRing.filter((e) => typeof e.ts === 'number' && (e.ts as number) > floorTs).slice(-10);
+        }
+        // Read policy: a reflex membership CHANGE forces an instant read (the "· ODP"
+        // badge lands on the very action that caused the entry — recent_events makes
+        // the answer ~200ms); otherwise throttle to 10s with events / 120s idle.
+        const membershipChanged = !!reflex && (reflex.changes.entered.length > 0 || reflex.changes.exited.length > 0);
+        const throttle = odpRing.length ? 10_000 : 120_000;
+        if (membershipChanged || nowMs - odpSeedAt > throttle) {
+          const fetched = await fetchOdpAudiences(this.env, currentSessionId, odpRing);
+          if (fetched) odpSeed = fetched;
+          odpSeedAt = nowMs; // stamped even on failure — natural retry on the next boundary
+        }
+      }
+      // Union: local evaluation ∪ live reflex memberships ∪ ODP-confirmed seed —
+      // any enter/exit drives the same change-detect → persist → decide → push loop.
+      const newSegments = Array.from(new Set([
+        ...localSegments,
+        ...(reflex ? reflex.state.audiences : []),
+        ...odpSeed,
+      ]));
 
       // 4. Detect what actually changed (segments OR journey stage) — either is a trigger.
       const segmentsChanged = this.hasSegmentChanges(sessionData.segments, newSegments);
@@ -197,6 +300,10 @@ export class RealtimeSegmentEngine {
         await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
           ...sessionData,
           attributes: newAttributes,
+          reflex: reflex ? reflex.state : sessionData.reflex,
+          odpSeed,
+          odpSeedAt,
+          odpRecentEvents: odpRing,
           metadata: {
             ...sessionData.metadata,
             lastSeen: Date.now(),
@@ -211,6 +318,10 @@ export class RealtimeSegmentEngine {
       await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
         ...sessionData,
         attributes: newAttributes,
+        reflex: reflex ? reflex.state : sessionData.reflex,
+        odpSeed,
+        odpSeedAt,
+        odpRecentEvents: odpRing,
         segments: newSegments,
         metadata: {
           ...sessionData.metadata,
@@ -240,6 +351,11 @@ export class RealtimeSegmentEngine {
           recommendations: personalizationConfig.recommendations,
           sortOrder: personalizationConfig.sortOrder,
           journeyStage,
+          // Live affinity payload for the Affinity Instrument (dims use original
+          // catalog value names; changed = this event's explain records).
+          affinity: reflex
+            ? { ...reflexSnapshot(reflex.state, nowMs, DEFAULT_REFLEX_CONFIG), changed: reflex.changes.explain, odpConfirmed: odpSeed }
+            : undefined,
           cookies: personalizationConfig.cookieUpdates,
           cookieHeaders: personalizationConfig.cookieHeaders,
           sessionId: currentSessionId,
@@ -407,6 +523,12 @@ export class RealtimeSegmentEngine {
 
   private async getPersonalizationConfig(sessionData: SessionData, sessionId: string): Promise<PersonalizationConfig> {
     const attributes = { ...RETAIL_SIGNAL_DEFAULTS, ...sessionData.attributes };
+    // Live affinity reads for the decision layer (doc 16 §10 choreography):
+    // computed FRESH from the reflex state — they decay by construction, so they
+    // are never persisted; the decision sees the score as of THIS moment.
+    if ((this.env.REFLEX_ENABLED ?? 'true') !== 'false' && sessionData.reflex) {
+      Object.assign(attributes, reflexAttributes(sessionData.reflex, Date.now(), DEFAULT_REFLEX_CONFIG));
+    }
 
     const userAttributes = {
       segments: sessionData.segments,

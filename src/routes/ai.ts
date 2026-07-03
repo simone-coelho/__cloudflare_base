@@ -58,6 +58,7 @@ ai.post('/concierge', async (c) => {
     const body = await c.req.json().catch(() => ({} as any));
     const rawMessages: any[] = Array.isArray(body.messages) ? body.messages : [];
     const affinity = body.affinity && typeof body.affinity === 'object' ? body.affinity : {};
+    const avoidIds: string[] = Array.isArray(body.avoidIds) ? body.avoidIds.filter((x: any) => typeof x === 'string') : [];
     if (!c.env.GEMINI_API_KEY) return c.json({ error: 'GEMINI_API_KEY not configured' }, 503);
     if (!rawMessages.length) return c.json({ error: 'no messages' }, 400);
 
@@ -68,8 +69,13 @@ ai.post('/concierge', async (c) => {
       `Rules:\n` +
       `- Pick 2-4 pieces that genuinely pair (anchor bag + complementary small leather good / accessory).\n` +
       `- Give 2-4 sentences of on-brand rationale; reference pieces by name. No prices unless asked.\n` +
-      (affinity.dominantLine ? `- Lean toward the ${affinity.dominantLine} line when it fits.\n` : '') +
+      `- This is a CONVERSATION: each new message may REFINE or CORRECT the previous one. Always honor the shopper's MOST RECENT request. ` +
+      `When they ask for something different (other colors, styles, lines, vibe, or price), CHANGE your picks to satisfy it and show FRESH pieces — do NOT return the same items again unless one is clearly the single best match for the new request.\n` +
+      `- Honor color requests using each product's "color" field. "darker"/"deeper"/"richer"/"moody" → Black, Deep Berry, Moss, Walnut, 1941 Saddle, Grey; "lighter"/"neutral"/"soft" → Chalk, Ivory, Cream, Light Saddle. If they say to avoid a shade, never pick it. Name the colorway you mean in your rationale.\n` +
+      `- If the catalog genuinely can't satisfy the request, say so and offer the closest alternative — never silently repeat the same pieces.\n` +
+      (affinity.dominantLine ? `- Lean toward the ${affinity.dominantLine} line when it fits, but the shopper's explicit request always wins.\n` : '') +
       (affinity.currentProductId ? `- The shopper is currently viewing product ${affinity.currentProductId}; consider pairing with it.\n` : '') +
+      (avoidIds.length ? `- Earlier in THIS conversation you already showed these product ids: ${avoidIds.join(', ')}. The shopper is refining their request — recommend DIFFERENT pieces that better fit their LATEST message. Reuse one of those ids ONLY if it is unmistakably the single best match for the new request, and if so, say why.\n` : '') +
       `- End your reply with EXACTLY one final line: "PICKS: <id>, <id>, <id>" using product id values from the catalog. Put nothing after it.`;
 
     const messages: ModelMessage[] = rawMessages.map((m) => ({

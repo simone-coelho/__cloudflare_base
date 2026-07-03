@@ -54,6 +54,31 @@ class CoachStorefront {
         this.sortOrder = null;         // string[] product ids from engine
         this.personalized = false;
 
+        // Edge Affinity Reflex (doc 16) — live instrument state
+        this.affinity = null;            // { dims:{dim:{value:a}}, audiences:[] } — last server snapshot
+        this._afCfg = { tauMs: 60000, K: 1.8, thetaIn: 0.6, thetaOut: 0.45, dims: { priceBand: { tauMs: 150000 } } };  // tuning (hydrated from /realtime/reflex; dims = per-dimension overrides)
+        this._afAt = 0;                  // local clock anchor for the honest decay animation
+        this._afDrain = null;            // drain-animation interval
+        this._afTick = null;             // scheduled server re-evaluation at the computed θ_out crossing
+        this._lastAppliedTs = 0;         // dedupe: a POST response vs its own WebSocket echo
+
+        // Reflex Moments — the top banner slot, personalized live (white-glove flavor)
+        this._rmxCooldowns = {};         // audience key → last-shown ts (same story ≤ once / 3 min)
+        this._rmxLastAt = 0;             // global spacing between cards
+        this._rmxTimer = null;           // auto-dismiss
+        this._rmxCountdown = null;       // honest ticking offer timer
+        this._rmxOnCta = null;           // active CTA action
+        this._rmxKey = null;             // audience key backing the active moment (early-expire on its exit)
+        this._rmxQueue = [];             // stories that lost the push or arrived during an offer — played in sequence
+        this._rmxCountdownOwns = false;  // an offer holds the MAIN strip (first ~20s, then it docks)
+        this._rmxDockAfter = null;       // timer: offer card → compact dock pill
+        this._rmxActive = null;          // the live offer meta {label, end, expiredReason, key}
+        this._rmxDocked = false;         // the live offer currently lives in the dock pill
+        this._afxLog = [];               // affinity transitions log (the AFFINITY tab), capped 8
+        this._afxIntroduced = false;     // auto-open the Affinity tab exactly once, on the first entry
+        this._odpFeed = [];              // ODP memory-sync feed rows (dispatches ↗ + seed confirmations ↙), capped 12
+        this._odpConfirmedPrev = null;   // last odpConfirmed list — diffed for ↙ rows
+
         // Opal (chat island) → governed "preview as this audience" trigger for the live banner.
         window.addEventListener('opal:experience', (e) => { try { this.previewAudience(e.detail || {}); } catch (err) { console.error('previewAudience', err); } });
         // Opal launched an experiment → render its first variation live on the experiment surface.
@@ -116,12 +141,13 @@ class CoachStorefront {
         this.openDefaultPdp();
         this.updateEngine();
         this.connectWebSocket();
+        this.hydrateReflex();   // returning shopper: the instrument resumes from the persisted vector
         this.buildSteps();
         this.buildChecklist();
         this.previewStep(0);   // step-progress visible on load — never gated behind clicking Next
         this.initSidebarResize();
         this.initPzDrag();
-        this.applyGeoColdStart();   // edge-geo cold-start: adapt the first paint to where they are
+        this.applyGeoColdStart(this._cohortDeepLink());   // edge-geo cold-start (or ?cohort=<state|city> force) — adapt the first paint to where they are
         this.initCompareDrag();
         // Deep link: /storefront?experiment=<key> renders that experiment's surface (readoutUrl target).
         // (B) The Signal-Led Moment is an ENCORE, not a default homepage surface — a stale
@@ -201,6 +227,7 @@ class CoachStorefront {
 
     handleWsMessage(msg) {
         const data = msg.data || {};
+        if (msg.type === 'odp_receipt') { this.odpReceiptRow(data); return; }   // ✓ ODP answered the dispatch
         if (msg.type === 'audience_published' || data.audienceWentLive) {
             const a = data.audienceWentLive || msg.audienceWentLive;
             this.logEvent('push', 'audience_published', a ? (a.name || a.key) : 'new audience live');
@@ -237,6 +264,7 @@ class CoachStorefront {
 
         const update = (result && result.update && result.update.data) ? result.update.data : null;
         this.logEvent('post', type, (meta && meta.label) || (payload && (payload.productId || payload.path)) || '', rtt, update);
+        if (result && result.odp) this.odpDispatchRow(result.odp, payload);   // ↗ the server's own receipt
         this.applyUpdate(update || {}, rtt, false);
         return result;
     }
@@ -245,7 +273,16 @@ class CoachStorefront {
      * APPLY ENGINE UPDATE → every store zone
      * ════════════════════════════════════════════════════════════════════════ */
     applyUpdate(data, decisionMs, fromPush) {
+        // A shopper's own action returns the update in the POST response AND echoes it
+        // over the WebSocket — apply once (both carry the same server timestamp).
+        if (data.timestamp) {
+            if (fromPush && data.timestamp === this._lastAppliedTs) return;
+            this._lastAppliedTs = data.timestamp;
+        }
+        if (data.affinity) this.applyAffinity(data.affinity);
+        const _prevSegs = this.segments || [];
         if (Array.isArray(data.segments) && data.segments.length) this.segments = data.segments;
+        this.reactToSegments(this.segments, _prevSegs);
         if (data.decisions && typeof data.decisions === 'object') this.decisions = data.decisions;
         this.renderBanner();
         if (data.journeyStage) this.journeyStage = data.journeyStage; else this.journeyStage = this.deriveStage();
@@ -260,11 +297,12 @@ class CoachStorefront {
         const sort = this.resolveSort();
         const ctl = this.resolveCompleteLook();
 
-        // Render in a short luxury cascade (one zone at a time).
+        // Render in a short luxury cascade (one zone at a time) — trimmed so a
+        // reflex-driven swap reads as instant while keeping the staggered reveal.
         this.renderHero(hero);
-        setTimeout(() => this.renderCurated(), 130);
-        setTimeout(() => this.applySort(sort), 260);
-        setTimeout(() => this.applyCompleteLook(ctl), 340);
+        setTimeout(() => this.renderCurated(), 70);
+        setTimeout(() => this.applySort(sort), 140);
+        setTimeout(() => this.applyCompleteLook(ctl), 200);
         this.applyStageCopy(this.journeyStage);
         this.renderStory(this.storyForStage(this.journeyStage));
         this.refreshPdpRecs();
@@ -276,6 +314,479 @@ class CoachStorefront {
         if (this.cart.length > 0) return 'late';
         if (this.productViews >= 2 || this.wishlist.size > 0) return 'mid';
         return 'early';
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+     * EDGE AFFINITY REFLEX — the live instrument (doc 16 §10)
+     * Bars drain with the REAL math: the server pushes a snapshot (a per value);
+     * between pushes the client recomputes a(t) with the same closed-form decay
+     * (R0 = K·a/(1−a); a(t) = R0·e^(−Δt/τ) / (R0·e^(−Δt/τ) + K)) — an honest
+     * preview, not an animation guess. Membership (chips, bar color) flips ONLY
+     * on server confirmation; the client just PROMPTS a re-evaluation at the
+     * computed θ_out crossing (P2 moves that scheduling into the DO alarm).
+     * ════════════════════════════════════════════════════════════════════════ */
+    async hydrateReflex() {
+        try {
+            const r = await fetch(`/realtime/reflex?userId=${this.anonId}`, { credentials: 'include' });
+            const j = await r.json();
+            if (j && j.config) this._afCfg = j.config;
+            if (j && j.affinity && j.affinity.dims && Object.keys(j.affinity.dims).length) {
+                this.applyAffinity({ ...j.affinity, changed: [] });
+            }
+        } catch (e) { /* the instrument is optional chrome — never block the store */ }
+    }
+    _afSlug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); }
+    _afKey(dim, value) { return `${this._afSlug(dim)}_${this._afSlug(value)}_affinity`; }
+    prettyAudience(key) {
+        let k = String(key).replace(/_affinity$/, '');
+        for (const d of ['line', 'category', 'subcategory', 'silhouette', 'occasion', 'priceband']) {
+            if (k.startsWith(d + '_')) { k = k.slice(d.length + 1); break; }
+        }
+        return k.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' Affinity';
+    }
+    applyAffinity(aff) {
+        this.affinity = aff;
+        this._afAt = Date.now();
+        // ↙ seed confirmations: when ODP's confirmed list changes, log it in the feed.
+        const oc = aff.odpConfirmed;
+        if (Array.isArray(oc)) {
+            const prev = this._odpConfirmedPrev;
+            if (prev !== null && JSON.stringify(oc) !== JSON.stringify(prev) && (oc.length || prev.length)) {
+                this.odpFeedPush({
+                    dir: 'in', status: 'ok',
+                    label: oc.length
+                        ? `seed · ${oc.length} audience${oc.length === 1 ? '' : 's'} confirmed by ODP`
+                        : 'seed · confirmations cleared (memory caught up with the decay)',
+                });
+            }
+            this._odpConfirmedPrev = oc;
+        }
+        for (const c of aff.changed || []) {
+            this.logEvent('push', c.direction === 'enter' ? 'affinity in' : 'affinity out', this.prettyAudience(c.audience));
+            this._afxLog.unshift({ d: c.direction, n: this.prettyAudience(c.audience), s: c.score, t: new Date().toLocaleTimeString() });
+        }
+        this._afxLog = this._afxLog.slice(0, 8);
+        this.renderAffinity();
+        this.reactToAffinity(aff);
+        this._startAffinityDrain();
+        this._scheduleReflexTick();
+    }
+    /** Top values across dimensions — the rows the instrument shows. */
+    _afTop(n) {
+        const rows = [];
+        const dims = (this.affinity && this.affinity.dims) || {};
+        for (const d in dims) for (const v in dims[d]) rows.push({ dim: d, value: v, a: dims[d][v] });
+        rows.sort((x, y) => y.a - x.a || (x.value < y.value ? -1 : 1));
+        return rows.filter((r) => r.a >= 0.02).slice(0, n);
+    }
+    /** Per-dimension tuning lookup (e.g. priceBand's slower τ). */
+    _afDim(dim) {
+        const o = (this._afCfg.dims || {})[dim] || {};
+        return {
+            tauMs: o.tauMs || this._afCfg.tauMs,
+            K: o.K || this._afCfg.K,
+            thetaIn: o.thetaIn || this._afCfg.thetaIn,
+            thetaOut: o.thetaOut || this._afCfg.thetaOut,
+        };
+    }
+    /** Honest client-side decay: recompute a(t) from the pushed a + the dimension's TRUE constants. */
+    _afNow(a0, dim) {
+        if (!(a0 > 0)) return 0;
+        const { tauMs, K } = this._afDim(dim);
+        const r0 = (K * a0) / (1 - Math.min(a0, 0.9999));
+        const r = r0 * Math.exp(-(Date.now() - this._afAt) / tauMs);
+        return r / (r + K);
+    }
+    renderAffinity() {
+        const box = document.getElementById('pzp-affinity');
+        const dimsEl = document.getElementById('pzaf-dims');
+        const chipsEl = document.getElementById('pzaf-chips');
+        if (!box || !dimsEl || !chipsEl) return;
+        const rows = this._afTop(5);
+        const members = new Set((this.affinity && this.affinity.audiences) || []);
+        // Affinity tab chrome: member-count badge on the tab + the empty hint.
+        const badge = document.getElementById('afx-count');
+        if (badge) { badge.textContent = String(members.size); badge.style.display = members.size ? '' : 'none'; }
+        const emptyEl = document.getElementById('pzaf-empty');
+        const logEl = document.getElementById('pzaf-log');
+        if (logEl) {
+            logEl.innerHTML = this._afxLog.map((e) =>
+                `<div class="pzaf-lrow ${e.d}"><span class="pzaf-ldir">${e.d === 'enter' ? '&oplus;' : '&CircleMinus;'}</span> ${e.n}` +
+                `<span class="pzaf-lscore">${typeof e.s === 'number' ? e.s.toFixed(2) : ''}</span><span class="pzaf-lt">${e.t}</span></div>`
+            ).join('');
+        }
+        if (!rows.length && !members.size) { box.hidden = true; if (emptyEl) emptyEl.hidden = false; return; }
+        box.hidden = false;
+        if (emptyEl) emptyEl.hidden = true;
+        const { thetaIn, thetaOut } = this._afCfg;
+        dimsEl.innerHTML = rows.map((r) => {
+            const key = this._afKey(r.dim, r.value);
+            const isM = members.has(key);
+            return `<div class="pzaf-row" data-key="${key}" data-a="${r.a}" data-dim="${r.dim}">
+                <span class="pzaf-label" title="${r.dim}">${r.value} <i>${r.dim}</i></span>
+                <span class="pzaf-track">
+                    <span class="pzaf-fill${isM ? ' member' : ''}" style="width:${(this._afNow(r.a, r.dim) * 100).toFixed(1)}%"></span>
+                    <span class="pzaf-th" style="left:${thetaOut * 100}%" title="exit below ${thetaOut}"></span>
+                    <span class="pzaf-th in" style="left:${thetaIn * 100}%" title="enter at ${thetaIn}"></span>
+                </span>
+                <span class="pzaf-val">${this._afNow(r.a, r.dim).toFixed(2)}</span>
+            </div>`;
+        }).join('');
+        // Chips ODP's real-time segments ALSO confirm get the "· ODP" badge —
+        // the two-speed story on one chip: edge decided now, the memory agrees.
+        const odp = new Set((this.affinity && this.affinity.odpConfirmed) || []);
+        chipsEl.innerHTML = [...members].sort().map((k) =>
+            `<span class="pzaf-chip${odp.has(k) ? ' odp' : ''}">${this.prettyAudience(k)}</span>`
+        ).join('');
+    }
+    _startAffinityDrain() {
+        if (this._afDrain) clearInterval(this._afDrain);
+        this._afDrain = setInterval(() => {
+            const rows = document.querySelectorAll('#pzaf-dims .pzaf-row');
+            if (!rows.length) { clearInterval(this._afDrain); this._afDrain = null; return; }
+            let alive = false;
+            rows.forEach((row) => {
+                const a0 = parseFloat(row.getAttribute('data-a') || '0');
+                const a = this._afNow(a0, row.getAttribute('data-dim') || '');
+                if (a > 0.005) alive = true;
+                const fill = row.querySelector('.pzaf-fill');
+                const val = row.querySelector('.pzaf-val');
+                if (fill) fill.style.width = (a * 100).toFixed(1) + '%';
+                if (val) val.textContent = a.toFixed(2);
+            });
+            if (!alive) { clearInterval(this._afDrain); this._afDrain = null; }
+        }, 300);
+    }
+    /** Prompt the server to re-evaluate at the earliest computed θ_out crossing.
+        The server stays authoritative — this only asks at the honest moment. */
+    _scheduleReflexTick() {
+        if (this._afTick) { clearTimeout(this._afTick); this._afTick = null; }
+        const members = (this.affinity && this.affinity.audiences) || [];
+        if (!members.length) return;
+        let earliest = null;
+        const dims = this.affinity.dims || {};
+        for (const d in dims) {
+            const { tauMs, K, thetaOut } = this._afDim(d);   // per-dimension constants
+            const floor = (K * thetaOut) / (1 - thetaOut);
+            for (const v in dims[d]) {
+                if (!members.includes(this._afKey(d, v))) continue;
+                const a0 = dims[d][v];
+                if (!(a0 > 0)) continue;
+                const r0 = (K * a0) / (1 - Math.min(a0, 0.9999));
+                if (r0 <= floor) { earliest = 0; continue; }
+                const dt = tauMs * Math.log(r0 / floor);
+                earliest = earliest === null ? dt : Math.min(earliest, dt);
+            }
+        }
+        if (earliest === null) return;
+        const delay = Math.max(3000, earliest + 900); // buffer past the crossing; never rapid-fire
+        this._afTick = setTimeout(() => {
+            this.sendAction('custom', { action: 'reflex_tick' }, { label: 'affinity re-check' });
+        }, delay);
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+     * REFLEX MOMENTS — the store reacts WHERE THE SHOPPER IS STANDING (PDP, PLP
+     * or home) the instant an audience is entered — not just on the hero behind
+     * them. Triggers are SERVER-CONFIRMED membership changes (the pushed explain
+     * records / segment diffs); the client only chooses the presentation.
+     * White-glove flavor: perks + holds with HONEST ticking countdowns that
+     * really expire — never fake urgency.
+     * ════════════════════════════════════════════════════════════════════════ */
+    reactToAffinity(aff) {
+        const changed = aff.changed || [];
+        if (!changed.length) return;
+        const enters = changed.filter((c) => c.direction === 'enter');
+        const exits = changed.filter((c) => c.direction === 'exit');
+        // The audience backing the ACTIVE offer decayed out → end it honestly, naming why.
+        if (this._rmxKey && exits.some((c) => c.audience === this._rmxKey)) {
+            this.expireReflexMoment(`You drifted out of ${this.prettyAudience(this._rmxKey)} — the offer retired with it.`);
+        }
+        // First entry of the session → introduce the Affinity tab (once); afterwards just pulse it.
+        if (enters.length) {
+            if (!this._afxIntroduced) { this._afxIntroduced = true; try { this.setTab('affinity'); } catch (e) {} }
+            const tb = document.querySelector('.sb-tab[data-tab="affinity"]');
+            if (tb) { tb.classList.remove('flash'); void tb.offsetWidth; tb.classList.add('flash'); }
+        }
+        const lineIn = enters.find((c) => c.dim === 'line');
+        const lineOut = exits.find((c) => c.dim === 'line');
+        const occIn = enters.find((c) => c.dim === 'occasion' && !/^(everyday|gift)$/i.test(c.value));
+        const luxeIn = enters.find((c) => c.dim === 'priceBand' && c.value === 'elevated');
+        const score = (c) => (typeof c.score === 'number' ? ` · ${c.score.toFixed(2)}` : '');
+
+        // Collect EVERY story this push earned, in priority order — the winner shows
+        // now, the rest QUEUE and play in sequence (~18s apart) instead of being
+        // silently dropped (simultaneous entries used to eat the lower stories).
+        const candidates = [];
+        if (lineIn && lineOut && lineOut.value !== lineIn.value) {
+            candidates.push({
+                key: 'shift_' + lineIn.audience, kind: 'shift',
+                badge: 'Live', eyebrow: `Affinity shift · decided live${score(lineIn)}`,
+                title: `Your taste is shifting — ${lineIn.value} is taking over`,
+                body: `${lineOut.value} is fading as ${lineIn.value} rises. The edit just re-centered in real time.`,
+                cta: `See the ${lineIn.value} edit`, onCta: () => this.go('home'),
+            });
+        } else if (lineIn) {
+            candidates.push({
+                key: lineIn.audience, kind: 'curated',
+                badge: 'Decided live', eyebrow: `You entered ${this.prettyAudience(lineIn.audience)}${score(lineIn)}`,
+                title: `You keep coming back to the ${lineIn.value}`,
+                body: 'So we re-centered your edit on it — the silhouettes you\'ve been circling, and the pieces that finish them.',
+                cta: `See your ${lineIn.value} edit`, onCta: () => this.go('home'),
+            });
+        }
+        if (luxeIn) {
+            candidates.push({
+                key: luxeIn.audience, kind: 'whiteglove',
+                badge: 'White glove', eyebrow: `Elevated affinity · decided live${score(luxeIn)}`,
+                title: 'Complimentary monogramming — on us',
+                dockLabel: 'Monogramming on us',
+                body: 'You have an eye for our finest. Monogramming and express delivery are on the house if you order within',
+                countdownMs: 15 * 60 * 1000,
+                expiredReason: 'The monogramming window closed — white-glove offers here are real, so they end.',
+                cta: 'Explore the Elevated Edit', onCta: () => this.go('home'),
+            });
+        }
+        if (occIn) {
+            candidates.push({
+                key: occIn.audience, kind: 'occasion',
+                badge: 'Decided live', eyebrow: `Occasion affinity${score(occIn)}`,
+                title: `Styling for ${occIn.value}?`,
+                body: `Your edit now leans ${occIn.value} — we pulled the pieces that finish that look forward.`,
+                cta: `See the ${occIn.value} edit`, onCta: () => this.go('home'),
+            });
+        }
+        if (candidates.length) {
+            this.showReflexMoment(candidates[0]);
+            for (const m of candidates.slice(1)) this._rmxEnqueue(m);
+            return;
+        }
+        // Everything faded: the ending beat — bordeaux, with the reason named.
+        const anyLineLeft = (aff.audiences || []).some((k) => /^line_/.test(k));
+        if (exits.some((c) => c.dim === 'line') && !anyLineLeft) {
+            this._rmxQueue = [];   // stale stories die with the session's affinity
+            this.showReflexMoment({
+                key: 'rmx_revert', kind: 'revert', ttlMs: 15000, ending: true,
+                badge: 'Faded', eyebrow: 'Affinity decayed',
+                title: 'Your session affinity faded below the line',
+                body: 'so the edit returned to neutral. Browse anything — it will follow you again.',
+            });
+        }
+    }
+    /** Stories that lost a push (or arrived mid-offer) wait here — played oldest-first
+        after the current card clears; anything older than 90s is stale and dropped. */
+    _rmxEnqueue(m) {
+        m._queuedAt = Date.now();
+        this._rmxQueue.push(m);
+        this._rmxQueue = this._rmxQueue.slice(-3);
+    }
+    _rmxShowNext() {
+        if (!this._rmxQueue.length) return;
+        const host = document.getElementById('rmx');
+        if (host && host.classList.contains('show')) return;   // something else took the strip
+        const now = Date.now();
+        while (this._rmxQueue.length) {
+            const m = this._rmxQueue.shift();
+            if (now - m._queuedAt > 90000) continue;            // stale story
+            m._fromQueue = true;
+            this.showReflexMoment(m);
+            return;
+        }
+    }
+    reactToSegments(nowSegs, prevSegs) {
+        // NOTE: the bag-hold moment is deliberately NOT triggered here. A returning
+        // session still carries its old cart, so ready_to_buy "newly appears" on the
+        // first update of EVERY page load — firing a hold off a mere product view.
+        // Holds are ACTION-anchored instead: the addToCart hook fires _holdMoment()
+        // after the server confirms the segment. This diff hook stays for future
+        // segment-transition reactions (e.g. cart_abandoner win-back).
+        void nowSegs; void prevSegs;
+    }
+    /** The bag-hold moment — fired on the segment's first transition AND on every
+        confirmed add-to-cart while the segment holds (60s cooldown keeps it sane). */
+    _holdMoment(p) {
+        this.showReflexMoment({
+            key: 'late_journey_ready_to_buy', kind: 'hold', cooldownMs: 60000,
+            badge: 'White glove', eyebrow: 'Reserved for you',
+            title: 'We\'re holding your bag',
+            body: `${p && p.name ? p.name : 'Your selection'} is set aside, with complimentary express delivery if you complete within`,
+            countdownMs: 15 * 60 * 1000,
+            expiredReason: 'The hold released — your bag returned to the shelf.',
+            cta: 'View your bag', onCta: () => this.openCart(),
+        });
+    }
+    showReflexMoment(m) {
+        const host = document.getElementById('rmx');
+        if (!host) return;
+        const now = Date.now();
+        // While an offer holds the MAIN strip (its first ~20s, before it docks to the
+        // corner pill), arriving stories WAIT in the queue instead of being dropped.
+        if (this._rmxCountdownOwns && !m.countdownMs) { this._rmxEnqueue(m); return; }
+        if (m.key && now - (this._rmxCooldowns[m.key] || 0) < (m.cooldownMs || 180000)) return;  // same story cooldown (default 3 min)
+        if (!m._fromQueue && now - this._rmxLastAt < 6000 && !m.countdownMs && !m.ending) { this._rmxEnqueue(m); return; }  // sequence, don't drop
+        if (m.key) this._rmxCooldowns[m.key] = now;
+        this._rmxLastAt = now;
+        this._clearRmxTimers(!!m.countdownMs);   // a NEW offer replaces any live offer; plain stories never kill a docked offer
+        this._rmxOnCta = m.onCta || null;
+        if (m.countdownMs) this._rmxKey = m.key || null;       // offers early-expire on their audience's exit
+        else if (!this._rmxActive) this._rmxKey = null;        // plain stories never unhook a live (docked) offer
+        this.dismissWelcome();   // the cold-start ribbon yields to the live session
+        host.classList.toggle('ending', !!m.ending);
+        host.innerHTML = `
+            <div class="rmx-strip">
+                <span class="rmx-badge">${m.badge || 'Live'}</span>
+                <span class="rmx-text"><b class="rmx-title">${m.title}</b>${m.body ? ` <span class="rmx-body">— ${m.body}</span>` : ''}</span>
+                ${m.countdownMs ? '<span class="rmx-count" id="rmx-count"></span>' : ''}
+                ${m.cta ? `<button class="rmx-cta" onclick="store.reflexMomentCta()">${m.cta}</button>` : ''}
+                <button class="rmx-x" onclick="store.dismissReflexMoment()" aria-label="Dismiss">&times;</button>
+            </div>
+            ${m.countdownMs ? '<div class="rmx-bar"><span id="rmx-bar"></span></div>' : ''}`;
+        host.classList.add('show');
+        this.logEvent('push', 'moment', m.title);
+        if (m.countdownMs) {
+            const end = now + m.countdownMs;
+            this._rmxActive = { end, label: m.dockLabel || m.title, expiredReason: m.expiredReason, key: m.key || null };
+            this._rmxCountdownOwns = true;
+            this._rmxDocked = false;
+            const fmt = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+            const tick = () => {
+                const left = end - Date.now();
+                const c = document.getElementById('rmx-count'); if (c) c.textContent = fmt(left);
+                const b = document.getElementById('rmx-bar'); if (b) b.style.width = Math.max(0, (left / m.countdownMs) * 100) + '%';
+                const dc = document.getElementById('rmx-dock-count'); if (dc) dc.textContent = fmt(left);
+                if (left <= 0) this.expireReflexMoment(m.expiredReason || 'The window closed — offers here are real, so they end.');
+            };
+            tick();
+            this._rmxCountdown = setInterval(tick, 500);
+            // After ~20s the offer DOCKS to the corner pill (still ticking, still real)
+            // and releases the strip so the next stories can play.
+            this._rmxDockAfter = setTimeout(() => this.dockReflexMoment(), 20000);
+        } else {
+            this._rmxTimer = setTimeout(() => this.dismissReflexMoment(), m.ttlMs || 18000);
+        }
+    }
+    /** Shrink the live offer to the corner pill — visible, honest, still expiring —
+        and free the main strip for the queued stories. */
+    dockReflexMoment() {
+        if (!this._rmxCountdown || !this._rmxActive || this._rmxDocked) return;
+        this._rmxDocked = true;
+        this._rmxCountdownOwns = false;
+        const dock = document.getElementById('rmx-dock');
+        if (dock) {
+            dock.classList.remove('ending');
+            dock.innerHTML = `<span class="rmxd-label">${this._rmxActive.label}</span>` +
+                `<span class="rmxd-count" id="rmx-dock-count"></span>` +
+                `<button class="rmx-x" onclick="store.dismissReflexDock()" aria-label="Dismiss">&times;</button>`;
+            dock.classList.add('show');
+        }
+        const host = document.getElementById('rmx');
+        if (host) host.classList.remove('show', 'ending');
+        this._rmxOnCta = null;
+        setTimeout(() => this._rmxShowNext(), 600);
+    }
+    dismissReflexDock() {
+        if (this._rmxCountdown) { clearInterval(this._rmxCountdown); this._rmxCountdown = null; }
+        this._rmxActive = null; this._rmxKey = null; this._rmxDocked = false; this._rmxCountdownOwns = false;
+        const dock = document.getElementById('rmx-dock');
+        if (dock) dock.classList.remove('show', 'ending');
+    }
+    /** The prominent ENDING: flip to the bordeaux contrast state and NAME the reason
+        (offers never silently vanish — the glass box applies to endings too). */
+    expireReflexMoment(reason) {
+        if (this._rmxCountdown) { clearInterval(this._rmxCountdown); this._rmxCountdown = null; }
+        if (this._rmxDockAfter) { clearTimeout(this._rmxDockAfter); this._rmxDockAfter = null; }
+        const wasDocked = this._rmxDocked;
+        this._rmxCountdownOwns = false; this._rmxActive = null; this._rmxKey = null; this._rmxDocked = false;
+        this.logEvent('push', 'moment ended', reason);
+        if (wasDocked) {
+            // The offer lived in the corner pill — end it there, bordeaux, reason named.
+            const dock = document.getElementById('rmx-dock');
+            if (dock) {
+                dock.classList.add('ending', 'show');
+                dock.innerHTML = `<span class="rmxd-label">${reason}</span>` +
+                    `<button class="rmx-x" onclick="store.dismissReflexDock()" aria-label="Dismiss">&times;</button>`;
+                setTimeout(() => this.dismissReflexDock(), 9000);
+            }
+            return;
+        }
+        const host = document.getElementById('rmx');
+        if (!host || !host.classList.contains('show')) { this._rmxShowNext(); return; }
+        this._rmxOnCta = null;
+        host.classList.add('ending');
+        host.innerHTML = `
+            <div class="rmx-strip">
+                <span class="rmx-badge">Ended</span>
+                <span class="rmx-text"><b class="rmx-title">${reason}</b></span>
+                <button class="rmx-x" onclick="store.dismissReflexMoment()" aria-label="Dismiss">&times;</button>
+            </div>`;
+        this._rmxTimer = setTimeout(() => this.dismissReflexMoment(), 14000);
+    }
+    /* ── ODP · MEMORY SYNC feed (Affinity tab) — the live conversation with the
+       memory. ↗ rows are the SERVER's dispatch receipts (returned on the action
+       response); each upgrades to its real ✓ status when the forwarder pushes the
+       ODP answer over the WebSocket. ↙ rows are seed confirmations coming back. ── */
+    odpDispatchRow(o, payload) {
+        const verb = o.type === 'pageview' ? 'page view'
+            : o.action === 'detail' ? 'product detail'
+            : o.action === 'add_to_cart' ? 'add to cart'
+            : o.action === 'save_for_later' ? 'wishlist' : (o.action || o.type);
+        const p = o.product_id && this.byId ? this.byId.get(o.product_id) : null;
+        const what = p ? p.name : (o.product_id || (payload && payload.path) || '');
+        this.odpFeedPush({ id: o.receiptId, dir: 'out', status: 'sent', label: `${verb}${what ? ' · ' + what : ''}` });
+    }
+    odpReceiptRow(data) {
+        const row = this._odpFeed.find((r) => r.id && r.id === data.receiptId);
+        if (!row) return;
+        row.status = data.status === 202 ? 'ok' : 'err';
+        row.code = data.status;
+        this.renderOdpFeed();
+    }
+    odpFeedPush(row) {
+        row.t = new Date().toLocaleTimeString();
+        this._odpFeed.unshift(row);
+        this._odpFeed = this._odpFeed.slice(0, 12);
+        this.renderOdpFeed();
+    }
+    renderOdpFeed() {
+        const box = document.getElementById('odp-feed');
+        const rows = document.getElementById('odp-feed-rows');
+        if (!box || !rows) return;
+        if (!this._odpFeed.length) { box.hidden = true; return; }
+        box.hidden = false;
+        rows.innerHTML = this._odpFeed.map((r) => {
+            const status = r.dir === 'in' ? ''
+                : r.status === 'ok' ? `<span class="odpf-status ok">&#10003; ${r.code || 202}</span>`
+                : r.status === 'err' ? `<span class="odpf-status err">&#10007; ${r.code || ''}</span>`
+                : '<span class="odpf-status">&hellip;</span>';
+            return `<div class="odpf-row ${r.dir}"><span class="odpf-dir">${r.dir === 'out' ? '&#8599;' : '&#8601;'}</span>` +
+                `<span class="odpf-label">${r.label}</span>${status}<span class="odpf-t">${r.t}</span></div>`;
+        }).join('');
+    }
+
+    reflexMomentCta() { const fn = this._rmxOnCta; this.dismissReflexMoment(); if (fn) { try { fn(); } catch (e) {} } }
+    _clearRmxTimers(killOffer) {
+        if (this._rmxTimer) { clearTimeout(this._rmxTimer); this._rmxTimer = null; }
+        if (this._rmxDockAfter) { clearTimeout(this._rmxDockAfter); this._rmxDockAfter = null; }
+        if (killOffer && this._rmxCountdown) {
+            clearInterval(this._rmxCountdown); this._rmxCountdown = null;
+            this._rmxCountdownOwns = false; this._rmxDocked = false; this._rmxActive = null; this._rmxKey = null;
+            const dock = document.getElementById('rmx-dock');
+            if (dock) dock.classList.remove('show', 'ending');
+        }
+    }
+    dismissReflexMoment() {
+        const host = document.getElementById('rmx');
+        if (host) host.classList.remove('show', 'ending');
+        if (this._rmxTimer) { clearTimeout(this._rmxTimer); this._rmxTimer = null; }
+        if (!this._rmxDocked) {
+            // The main strip held the offer (if any) — dismissing kills it. A DOCKED
+            // offer survives main-strip dismissals untouched.
+            if (this._rmxCountdown) { clearInterval(this._rmxCountdown); this._rmxCountdown = null; }
+            if (this._rmxDockAfter) { clearTimeout(this._rmxDockAfter); this._rmxDockAfter = null; }
+            this._rmxCountdownOwns = false; this._rmxActive = null; this._rmxKey = null;
+        }
+        this._rmxOnCta = null;
+        setTimeout(() => this._rmxShowNext(), 600);   // let the next queued story play
     }
     recomputeDominantLine() {
         let best = null, n = -1;
@@ -594,6 +1105,7 @@ class CoachStorefront {
     resolveHero() {
         const v = this.decVars('hero_module');
         const line = (v && v.anchorLine) || this.dominantLine;
+        if (v && v.module === 'affinity_hero') return this.heroAffinity(v);   // reflex choreography (doc 16 §10)
         if (v && v.module === 'premium_hero') return this.heroPremium(line);
         if (line) return this.heroForLine(line);
         return this.heroFallback();
@@ -635,6 +1147,18 @@ class CoachStorefront {
         return { eyebrow: 'The Elevated Edit', title: 'Considered, not ordinary',
             sub: 'An elevated selection in our finest leathers — chosen for the discerning eye.',
             cta: 'Explore the Edit', line: line || 'Tabby', art: this.lineImage(line || 'Tabby') };
+    }
+    /* Edge Affinity Reflex choreography (doc 16 §10): the hero the store pivots to
+       the instant a line-affinity audience is ENTERED — and pivots away from when
+       the membership decays out. The eyebrow names the cause so the room sees the
+       chip light and the page move as one event. */
+    heroAffinity(v) {
+        const line = v.anchorLine || this.dominantLine || 'Tabby';
+        const score = typeof v.affinityScore === 'number' ? ` · ${v.affinityScore.toFixed(2)}` : '';
+        return { eyebrow: `For your ${line} affinity · decided live${score}`,
+            title: `The ${line}, because you keep coming back`,
+            sub: `Your live affinity just crossed the threshold — so the edit re-centered on ${line}: the silhouettes you've been circling, and the pieces that finish them.`,
+            cta: `Shop ${line}`, line, art: this.lineImage(line) };
     }
     lineImage(line) {
         const p = this.lineItems(line).find((x) => this.isBag(x) && x.image_url) || this.bagsCatalog().find((x) => x.image_url);
@@ -720,7 +1244,7 @@ class CoachStorefront {
         const grain = c.grainLabel || (this.geo && this.geo.city) || 'your area';
         const lead = lines.length >= 2 ? `${lines[0]} and ${lines[1]}` : topName;
         const bandPhrase = ({ entry: 'everyday essentials', core: 'signature styles', elevated: 'our most elevated leathers' })[c.priceBand] || 'signature styles';
-        const n = (c.sampleSize != null) ? c.sampleSize : null;
+        const n = (!c.synthesized && c.sampleSize != null) ? c.sampleSize : null;
         return {
             eyebrow: `What shoppers near you reach for · ${grain}${n != null ? ' · N=' + n : ''}`,
             title: `The ${topName} leads near you`,
@@ -783,7 +1307,7 @@ class CoachStorefront {
         } else if (this._cohortUsable(this.cohort)) {
             // Geo-cohort cold start (doc 13): "What shoppers near you carry · {grainLabel}" (grain shown for honesty).
             title.textContent = 'What shoppers near you carry';
-            eyebrow.textContent = `${this.cohort.grainLabel || 'near you'}${this.cohort.sampleSize != null ? ' · N=' + this.cohort.sampleSize : ''}`;
+            eyebrow.textContent = `${this.cohort.grainLabel || 'near you'}${(!this.cohort.synthesized && this.cohort.sampleSize != null) ? ' · N=' + this.cohort.sampleSize : ''}`;
         } else {
             title.textContent = 'New Arrivals';
             eyebrow.textContent = 'Coach Originals';
@@ -1033,7 +1557,14 @@ class CoachStorefront {
         badge.classList.remove('bump'); void badge.offsetWidth; badge.classList.add('bump');
         if (!opts || !opts.silent) {
             this.renderCart(); this.openCart();
-            this.sendAction('add_to_cart', { product_id: id, productId: id, line: p.line, value: p.price_usd }, { label: p.name });
+            this.sendAction('add_to_cart', { product_id: id, productId: id, line: p.line, value: p.price_usd }, { label: p.name })
+                .then(() => {
+                    // The hold moment must fire on EVERY confirmed ready-to-buy add — not only on the
+                    // segment's first-ever transition (a returning session already carries it, so the
+                    // segment diff alone stays silent). Server state is still the authority.
+                    if ((this.segments || []).includes('late_journey_ready_to_buy')) this._holdMoment(p);
+                })
+                .catch(() => {});
         }
         // Buy signal: first add-to-cart = ready-to-buy → act on it (launch a pay-over-time experiment).
         if (!this._buySignalFired && this.cart.length >= 1) { this._buySignalFired = true; this.onReadyToBuy(); }
@@ -1266,9 +1797,16 @@ class CoachStorefront {
             load: async () => ([
                 { id: 'auto', label: 'Auto — your real location', sub: 'Use the live edge geo for this request', _auto: true },
                 { id: 'winston', label: 'Winston-Salem, NC · United States', sub: 'Geo-cohort cold start · ZIP 27101 → Piedmont Triad metro', tag: 'forced location', geo: { city: 'Winston-Salem', region: 'North Carolina', regionCode: 'NC', zip: '27101', country: 'US', timezone: 'America/New_York', hemisphere: 'N', colo: 'CLT', season: 'summer', cohort: true } },
+                // "Force my city" — geo-cohort cold start for distributed presenters (belt-and-braces if edge
+                // geo misfires on a VPN/hotspot). regionCode (2-letter) drives the REAL state census via the
+                // representative fallback; no ZIP needed (these metros carry no first-party rows → representative).
+                { id: 'nyc', label: 'New York, NY · United States', sub: 'Geo-cohort cold start · real NY census (representative cohort)', tag: 'forced location', geo: { city: 'New York', region: 'New York', regionCode: 'NY', country: 'US', timezone: 'America/New_York', hemisphere: 'N', colo: 'EWR', season: 'summer', cohort: true } },
+                { id: 'sf', label: 'San Francisco, CA · United States', sub: 'Geo-cohort cold start · real CA census (representative cohort)', tag: 'forced location', geo: { city: 'San Francisco', region: 'California', regionCode: 'CA', country: 'US', timezone: 'America/Los_Angeles', hemisphere: 'N', colo: 'SFO', season: 'summer', cohort: true } },
+                { id: 'austin', label: 'Austin, TX · United States', sub: 'Geo-cohort cold start · real TX census (representative cohort)', tag: 'forced location', geo: { city: 'Austin', region: 'Texas', regionCode: 'TX', country: 'US', timezone: 'America/Chicago', hemisphere: 'N', colo: 'AUS', season: 'summer', cohort: true } },
+                { id: 'philly', label: 'Philadelphia, PA · United States', sub: 'Geo-cohort cold start · real PA census (representative cohort)', tag: 'forced location', geo: { city: 'Philadelphia', region: 'Pennsylvania', regionCode: 'PA', country: 'US', timezone: 'America/New_York', hemisphere: 'N', colo: 'PHL', season: 'summer', cohort: true } },
+                { id: 'chicago', label: 'Chicago, IL · United States', sub: 'Geo-cohort cold start · real IL census (representative cohort)', tag: 'forced location', geo: { city: 'Chicago', region: 'Illinois', regionCode: 'IL', country: 'US', timezone: 'America/Chicago', hemisphere: 'N', colo: 'ORD', season: 'winter', cohort: true } },
                 { id: 'miami', label: 'Miami, FL · United States', sub: 'Summer · coral & natural straw', geo: { city: 'Miami', region: 'Florida', regionCode: 'FL', country: 'US', timezone: 'America/New_York', hemisphere: 'N', colo: 'MIA', season: 'summer' } },
                 { id: 'sydney', label: 'Sydney · Australia', sub: 'Winter (same date!) · burgundy & leather', geo: { city: 'Sydney', region: 'New South Wales', regionCode: 'NSW', country: 'AU', timezone: 'Australia/Sydney', hemisphere: 'S', colo: 'SYD', season: 'winter' } },
-                { id: 'chicago', label: 'Chicago, IL · United States', sub: 'Winter · structured leather', geo: { city: 'Chicago', region: 'Illinois', regionCode: 'IL', country: 'US', timezone: 'America/Chicago', hemisphere: 'N', colo: 'ORD', season: 'winter' } },
                 { id: 'singapore', label: 'Singapore', sub: 'Tropical · brights & straw', geo: { city: 'Singapore', region: 'Singapore', country: 'SG', timezone: 'Asia/Singapore', hemisphere: 'N', colo: 'SIN', season: 'summer' } },
             ]),
             onSelect: (it) => { if (it._auto) this.applyGeoColdStart(); else this.forceGeo(it.geo); },
@@ -1511,27 +2049,60 @@ class CoachStorefront {
         const gran = c.granularityUsed || '';
         const names = (c.topLines || []).map((t) => t.line).filter(Boolean);
         const n = (c.sampleSize != null) ? c.sampleSize : null;
+        const synth = !!c.synthesized;
         const census = c.census || null;
         const income = (census && census.medianHhIncome != null) ? '$' + Number(census.medianHhIncome).toLocaleString() : null;
         const censusSrc = (census && census.source) ? census.source : null;
         const srcLabel = (g.source === 'edge') ? 'real edge geo' : 'forced location · QA';
+        // Synthesized = no local first-party cohort cleared, so we borrowed the representative leaders and
+        // showed them at the visitor's REAL region with that region's REAL census (doc §12). Be honest: no
+        // precise shopper N, label it a representative cohort. geo + census stay real either way.
+        const sizePhrase = synth ? 'representative cohort' : `${n != null ? this.escapeHtml(String(n)) : '—'} shoppers`;
+        const synthNote = synth
+            ? ` <em>Representative cohort shown for your real location — in production this is your ${this.escapeHtml(grain)} customers' own purchase history.</em>`
+            : '';
         const signal =
             `First touch · <strong>${this.escapeHtml(city)}${region ? ', ' + this.escapeHtml(region) : ''}</strong> (${this.escapeHtml(srcLabel)}) · ` +
-            `cohort = <strong>${this.escapeHtml(grain)}</strong>${gran ? ' · ' + this.escapeHtml(gran) + ' grain' : ''} · ${n != null ? this.escapeHtml(String(n)) : '—'} shoppers` +
+            `cohort = <strong>${this.escapeHtml(grain)}</strong>${gran ? ' · ' + this.escapeHtml(gran) + ' grain' : ''} · ${sizePhrase}` +
             (income ? ` · median HH income <strong>${this.escapeHtml(income)}</strong>${censusSrc ? ' (' + this.escapeHtml(censusSrc) + ')' : ''}` : '');
-        const chips = [grain, `N=${n != null ? n : '—'}`, income ? `${income} median HH${censusSrc ? ' · ' + censusSrc : ''}` : null, `data: ${c.dataSource || 'synthetic'}`].filter(Boolean);
+        const chips = [grain, synth ? 'representative cohort' : `N=${n != null ? n : '—'}`, income ? `${income} median HH${censusSrc ? ' · ' + censusSrc : ''}` : null, `data: ${c.dataSource || 'synthetic'}`].filter(Boolean);
         this.logActivity({
             usecase: 'Cold-start · geo-cohort',
-            headline: `Opened on what ${this.escapeHtml(grain)} shoppers buy`,
+            headline: synth ? `Opened on what shoppers near you reach for` : `Opened on what ${this.escapeHtml(grain)} shoppers buy`,
             signal,
             segment: `geo-cohort · ${grain}`,
-            decision: `No history yet → open on what <strong>${this.escapeHtml(grain)}</strong> shoppers buy: <strong>${this.escapeHtml(names.join(', '))}</strong>. Shoppers <em>like</em> them, from here — aggregate, never the individual. We curate, never price; first engagement hands off to the live persona engine.`,
+            decision: `No history yet → open on what <strong>${this.escapeHtml(grain)}</strong> shoppers buy: <strong>${this.escapeHtml(names.join(', '))}</strong>. Shoppers <em>like</em> them, from here — aggregate, never the individual. We curate, never price; first engagement hands off to the live persona engine.${synthNote}`,
             evidence: chips,
             before: 'Generic New Arrivals',
             after: `${grain} cohort edit`,
         });
     }
     forceGeo(geo) { this.applyGeoColdStart(geo); }
+
+    /* Deep link: /storefront?cohort=<2-letter state code | known city slug> forces the geo-cohort
+     * cold start for that location (belt-and-braces for distributed presenters / a bookmarkable link
+     * if edge geo misfires on a VPN). Returns undefined when absent → the real edge path runs. The
+     * region (2-letter) drives the REAL state census via the representative fallback (doc §12). */
+    _cohortDeepLink() {
+        try {
+            const v = new URLSearchParams(location.search).get('cohort');
+            if (!v) return undefined;
+            const CITY = {
+                newyork: { city: 'New York', regionCode: 'NY' }, nyc: { city: 'New York', regionCode: 'NY' },
+                sanfrancisco: { city: 'San Francisco', regionCode: 'CA' }, sf: { city: 'San Francisco', regionCode: 'CA' },
+                austin: { city: 'Austin', regionCode: 'TX' },
+                philadelphia: { city: 'Philadelphia', regionCode: 'PA' }, philly: { city: 'Philadelphia', regionCode: 'PA' },
+                chicago: { city: 'Chicago', regionCode: 'IL' },
+                winstonsalem: { city: 'Winston-Salem', regionCode: 'NC', zip: '27101' }, winston: { city: 'Winston-Salem', regionCode: 'NC', zip: '27101' },
+            };
+            const slug = v.toLowerCase().replace(/[^a-z]/g, '');
+            const hit = CITY[slug];
+            if (hit) return { ...hit, region: hit.regionCode, country: 'US', cohort: true };
+            const cc = v.toUpperCase().slice(0, 2);   // otherwise treat the value as a 2-letter state code
+            const cityQ = new URLSearchParams(location.search).get('city');
+            return { regionCode: cc, region: cc, city: cityQ || cc, country: 'US', cohort: true };
+        } catch (e) { return undefined; }
+    }
 
     /* ── Cold-start Act 2: the 30-second style quiz (zero-party → instant re-personalization) ── */
     openQuiz() {
@@ -2438,6 +3009,15 @@ class CoachStorefront {
      * demo UI; this clears the SERVER-side events captured during demo runs. The
      * historical Coach dataset (profiles, orders, payment history) is kept, so Opal
      * still builds meaningful audiences over the historical+demo union afterwards. */
+    /* NEW SHOPPER — the presenter's restart. Expires the (HttpOnly) session cookies
+       server-side, drops the KV session, rotates the Opal chat session, and reloads
+       cold: fresh reflex, fresh journey, geo cold-start hero. No incognito needed. */
+    async newShopper() {
+        if (!window.confirm('Start over as a brand-new shopper?\n\nClears this browser\'s session — affinity, cart, journey, chat — and reloads cold.')) return;
+        try { await fetch('/realtime/session/reset', { method: 'POST', credentials: 'include' }); } catch (e) {}
+        try { localStorage.removeItem('opal-session-id'); } catch (e) {}   // fresh Opal thread too (still per-browser keyed)
+        location.reload();
+    }
     async resetDemoData() {
         const btn = document.getElementById('dir-clear-demo');
         if (btn && btn.disabled) return;
@@ -3409,6 +3989,7 @@ class CoachStorefront {
         const thread = document.getElementById('cc-thread');
         if (!thread.dataset.init) {
             thread.innerHTML = '';
+            this.ccMessages = []; this.ccShownIds = [];   // fresh conversation → clear history + shown-id memory
             this.appendCcMsg('bot', `Hi — I'm your Coach <b>Style Concierge</b>. Tell me the occasion or who you're shopping for, and I'll pull a few pieces from the collection.`);
             thread.dataset.init = '1';
         }
@@ -3430,7 +4011,7 @@ class CoachStorefront {
         try {
             const res = await fetch('/ai/concierge', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: this.ccMessages, affinity: { dominantLine: this.dominantLine, currentProductId: this.currentPdpId || null } }),
+                body: JSON.stringify({ messages: this.ccMessages, avoidIds: (this.ccShownIds || []), affinity: { dominantLine: this.dominantLine, currentProductId: this.currentPdpId || null } }),
             });
             if (res.ok && res.body) {
                 const reader = res.body.getReader(), dec = new TextDecoder();
@@ -3450,6 +4031,7 @@ class CoachStorefront {
             this.appendCcMsg('bot', reply.text);
             this._renderConciergeLook(reply.ids[0], prompt);
             this._renderCcCards(reply.ids);
+            this.ccShownIds = Array.from(new Set([...(this.ccShownIds || []), ...reply.ids]));
             this.logEvent('chat', 'concierge', prompt.slice(0, 42));
             return;
         }
@@ -3458,9 +4040,14 @@ class CoachStorefront {
         let ids = m ? m[1].split(',').map((s) => s.trim()).filter(Boolean) : [];
         ids = ids.filter((id) => this.byId.has(id));         // resolve → drop any hallucinated SKU
         if (ids.length < 2) { const recs = (this.recommendations || []).map((p) => p.id); ids = (recs.length ? recs : this.products.slice(0, 3).map((p) => p.id)).slice(0, 3); }
-        this.ccMessages.push({ role: 'assistant', content: full });
+        // Store the PROSE only — NOT the machine-readable "PICKS: <ids>" line. Replaying that id-list
+        // back into the model every turn was the strongest anchor: it parroted its prior picks instead of
+        // honoring a refinement ("darker colors"). Keeping just the rationale preserves conversational
+        // coherence without pinning the selection.
+        this.ccMessages.push({ role: 'assistant', content: full.replace(/\n?PICKS:.*$/is, '').trim() });
         this._renderConciergeLook(ids[0], prompt);
         this._renderCcCards(ids);
+        this.ccShownIds = Array.from(new Set([...(this.ccShownIds || []), ...ids]));   // remember what we've shown → nudge variety on the next turn
         this.logEvent('chat', 'concierge', prompt.slice(0, 42));
     }
     _renderCcCards(ids) {

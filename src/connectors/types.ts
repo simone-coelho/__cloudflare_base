@@ -21,8 +21,14 @@ export interface AudienceDef {
   conditions: AudienceCondition;
   /** 'realtime' = evaluated per-event at the edge (ODP real-time audiences). */
   evaluation: 'realtime' | 'batch';
-  source: 'opal_nl' | 'manual' | 'seed';
+  /** 'catalog' = emitted by the Edge Affinity Reflex audience generator (doc 16 §5). */
+  source: 'opal_nl' | 'manual' | 'seed' | 'catalog';
   createdAt: number;
+  /** Human override: a pinned audience is NEVER touched by generator regeneration. */
+  pinned?: boolean;
+  /** Hash of the generator's own output at publish time. If the stored def no longer
+      hashes to this value, a human edited it — regeneration must leave it alone. */
+  generatorHash?: string;
   /** Set once createAudience() is called; absent on a draft suggestion. */
   audienceId?: string;
   status: 'suggested' | 'draft' | 'published' | 'archived';

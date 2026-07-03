@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegmentEngine';
 import { getConnectors } from '@/connectors';
+import { DEFAULT_REFLEX_CONFIG, snapshot as reflexSnapshot } from '@/reflex/core';
+import { forwardEventToOdp, mapActionToOdp, odpEnabled, upsertOdpProfile } from '@/services/odpLoop';
 import { z } from 'zod';
 
 const realtimeRoutes = new Hono<{ Bindings: Env }>();
@@ -79,6 +81,33 @@ realtimeRoutes.post('/action', async (c) => {
     const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     const result = await segmentEngine.processActionEventWithSession(actionEvent, cookieHeader);
 
+    // ODP loop (doc 16 §8): forward the behavioral event to ODP OFF the response
+    // path — the shopper never waits on the memory; ODP down = zero impact.
+    // The response carries a dispatch RECEIPT (server truth: what the platform is
+    // forwarding); the forwarder later pushes the ODP status over the WebSocket as
+    // an `odp_receipt` so the feed row upgrades to its real ✓ 202.
+    let odpReceipt: { receiptId: string; type: string; action?: string; product_id?: string } | undefined;
+    if (odpEnabled(c.env)) {
+      const mapped = mapActionToOdp(actionEvent);
+      if (mapped) {
+        odpReceipt = {
+          receiptId: crypto.randomUUID(),
+          type: mapped.type,
+          ...(mapped.action ? { action: mapped.action } : {}),
+          ...(typeof mapped.data.product_id === 'string' ? { product_id: mapped.data.product_id } : {}),
+        };
+        c.executionCtx.waitUntil(forwardEventToOdp(c.env, actionEvent, result.sessionId, odpReceipt.receiptId));
+      }
+      // §4 score upsert: on membership changes, persist the reflex's live scores
+      // onto the ODP profile (the memory carrying the edge's numbers).
+      const aff = result.update?.data?.affinity;
+      if (aff && Array.isArray(aff.changed) && aff.changed.length > 0) {
+        c.executionCtx.waitUntil(
+          upsertOdpProfile(c.env, result.sessionId, aff, result.update?.data?.journeyStage)
+        );
+      }
+    }
+
     // Set updated cookies in response
     result.cookieHeaders.forEach(cookieHeader => {
       c.header('Set-Cookie', cookieHeader, { append: true });
@@ -90,14 +119,16 @@ realtimeRoutes.post('/action', async (c) => {
         message: 'Action processed and personalization updated',
         update: result.update,
         sessionId: result.sessionId,
-        cookiesUpdated: result.cookieHeaders.length > 0
+        cookiesUpdated: result.cookieHeaders.length > 0,
+        odp: odpReceipt
       });
     } else {
       return c.json({
         success: true,
         message: 'Action processed, no personalization changes needed',
         sessionId: result.sessionId,
-        cookiesUpdated: result.cookieHeaders.length > 0
+        cookiesUpdated: result.cookieHeaders.length > 0,
+        odp: odpReceipt
       });
     }
 
@@ -169,6 +200,72 @@ realtimeRoutes.get('/personalization/:userId', async (c) => {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, 500);
   }
+});
+
+// Edge Affinity Reflex — hydrate snapshot for the Affinity Instrument (doc 16 §10).
+// Resolves the shopper's session from cookies and returns freshly-computed live
+// affinity (scores decay by construction, so they are ALWAYS computed at read).
+realtimeRoutes.get('/reflex', async (c) => {
+  try {
+    const cookieHeader = c.req.header('Cookie') ?? null;
+    const userId = c.req.query('userId') || 'anonymous';
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
+    const { sessionData } = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
+    const cfg = DEFAULT_REFLEX_CONFIG;
+    const now = Date.now();
+    return c.json({
+      ok: true,
+      now,
+      config: {
+        tauMs: cfg.tauMs,
+        K: cfg.K,
+        thetaIn: cfg.thetaIn,
+        thetaOut: cfg.thetaOut,
+        // Per-dimension overrides (e.g. priceBand's slower τ) so the client's
+        // honest drain animation decays each bar at its TRUE rate.
+        dims: Object.fromEntries(
+          cfg.dimensions
+            .filter((d) => d.tauMs || d.K || d.thetaIn || d.thetaOut)
+            .map((d) => [d.key, { tauMs: d.tauMs, K: d.K, thetaIn: d.thetaIn, thetaOut: d.thetaOut }])
+        ),
+      },
+      affinity: sessionData.reflex
+        ? { ...reflexSnapshot(sessionData.reflex, now, cfg), odpConfirmed: sessionData.odpSeed ?? [] }
+        : null,
+    });
+  } catch (error) {
+    return c.json(
+      { ok: false, error: error instanceof Error ? error.message : 'reflex snapshot failed' },
+      500
+    );
+  }
+});
+
+// New shopper — expire the session cookies (opt_session_id is HttpOnly, so only the
+// server can clear it) and drop the KV session. The next page load cold-starts clean:
+// fresh reflex, fresh journey, geo cold-start hero. Powers the "New shopper" button
+// so presenters restart WITHOUT hunting for an incognito window.
+realtimeRoutes.post('/session/reset', async (c) => {
+  const cookieHeader = c.req.header('Cookie') ?? '';
+  const cookies: Record<string, string> = {};
+  for (const part of cookieHeader.split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0) cookies[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+  }
+  // Best-effort KV hygiene (TTL would reap these anyway).
+  const sid = cookies['opt_session_id'];
+  const uid = cookies['opt_user_id'];
+  try { if (sid) await c.env.SESSIONS.delete(`session:${sid}`); } catch { /* best-effort */ }
+  try { if (uid) await c.env.SESSIONS.delete(`user:${uid}`); } catch { /* best-effort */ }
+  // Expire every opt_* cookie the SessionManager sets (superset — extras are harmless).
+  const names = [
+    'opt_session_id', 'opt_user_id', 'opt_anonymous_id', 'opt_segments',
+    'opt_engagement_score', 'opt_last_update', 'opt_tracking_consent', 'opt_personalization_enabled',
+  ];
+  for (const name of names) {
+    c.header('Set-Cookie', `${name}=; Max-Age=0; Path=/; SameSite=Lax`, { append: true });
+  }
+  return c.json({ ok: true, cleared: !!sid });
 });
 
 // Session preferences management

@@ -27,6 +27,10 @@ export interface Env {
   WEBHOOK_ENDPOINTS?: string;
   CDP_ENDPOINTS?: string;
 
+  // Edge Affinity Reflex (docs/architecture/16-edge-affinity-reflex.md) — on by
+  // default; set 'false' as the kill-switch. Purely additive attributes/segments.
+  REFLEX_ENABLED?: string;
+
   // Connector layer — "real seams, mocked calls" (docs/architecture/05-demo-build-spec.md)
   CONNECTOR_MODE?: 'mock' | 'live';
   // Mode-B decision source, independent of CONNECTOR_MODE:

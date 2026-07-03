@@ -1,7 +1,7 @@
 import type { Decision } from '@/connectors';
 
 export interface PersonalizationUpdate {
-  type: 'segment_update' | 'personalization_update' | 'feature_flag_update' | 'audience_published';
+  type: 'segment_update' | 'personalization_update' | 'feature_flag_update' | 'audience_published' | 'odp_receipt';
   userId: string;
   data: {
     segments?: string[];
@@ -14,6 +14,15 @@ export interface PersonalizationUpdate {
     sortOrder?: string[];
     journeyStage?: 'early' | 'mid' | 'late';
     audienceWentLive?: { key: string; name: string };
+    /** Edge Affinity Reflex (doc 16): live per-dimension scores + memberships
+        + the explain records for this event — feeds the Affinity Instrument. */
+    affinity?: {
+      dims: Record<string, Record<string, number>>;
+      audiences: string[];
+      changed?: unknown[];
+      /** Audiences ODP's real-time segments ALSO confirm (the memory agreeing with the reflex). */
+      odpConfirmed?: string[];
+    };
   };
 }
 

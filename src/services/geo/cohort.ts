@@ -119,6 +119,14 @@ export interface GeoCohort {
   browseToBuy: number | null; // 0..1 — cohort product-view→purchase ratio (null if unavailable)
   census: CensusFacts | null;
   honesty: { geo: 'real'; query: 'real'; firstParty: 'representative'; census: 'real-public' };
+  /**
+   * True when no local first-party cohort cleared and we presented the national (representative)
+   * leaders AT the visitor's real region, with that region's REAL census — a demo-robustness
+   * fallback so any presenter, anywhere, gets a local-looking cold start (doc §12). geo + census
+   * stay REAL; firstParty is 'representative' as it always was. The UI suppresses the precise N
+   * and labels it a representative cohort when this is set.
+   */
+  synthesized?: boolean;
   ladder: RollupRung[];
   generatedAt: number;
 }
@@ -465,17 +473,39 @@ export async function computeGeoCohort(geo: GeoInput, source: GeoCohortSource): 
 
   try {
     const rollup = await resolveGeoRollup(geo, source);
-    const grain: ResolvedGrain = { level: rollup.granularityUsed, key: rollup.geoKey };
+
+    // Default presentation: the resolved grain (gated on first-party count).
+    let presentLevel: GeoLevel = rollup.granularityUsed;
+    const aggGrain: ResolvedGrain = { level: rollup.granularityUsed, key: rollup.geoKey };
+    let censusGrain: ResolvedGrain = aggGrain;
+    let synthesized = false;
+
+    // REPRESENTATIVE FALLBACK (demo robustness, doc §12): nothing local cleared (we're on the
+    // national floor) but we know the visitor's REAL region and have that region's REAL census →
+    // present the national (representative) leaders AT the visitor's region, with the region's
+    // REAL public census. This is the SAME honesty tier we already stand on (firstParty stays
+    // 'representative'); geo + census remain REAL — we only relabel the grain so any presenter,
+    // anywhere, gets a local cold start. Against a real warehouse a populated region returns its
+    // OWN cohort, so this is a demo stand-in, never hit for a region that has first-party data.
+    const regionKey = upper(geo.region);
+    if (rollup.granularityUsed === 'national' && regionKey) {
+      const regionCensus = await source.census({ level: 'region', key: regionKey }).catch(() => null);
+      if (regionCensus) {
+        synthesized = true;
+        presentLevel = 'region';
+        censusGrain = { level: 'region', key: regionKey }; // aggGrain stays national → borrow the leaders
+      }
+    }
 
     const [agg, census] = await Promise.all([
-      source.aggregate(grain, rollup.sampleSize).catch(() => EMPTY_AGG),
-      source.census(grain).catch(() => null),
+      source.aggregate(aggGrain, rollup.sampleSize).catch(() => EMPTY_AGG),
+      source.census(censusGrain).catch(() => null),
     ]);
 
     return {
       geo: geoEcho,
-      granularityUsed: rollup.granularityUsed,
-      grainLabel: census?.label || GRAIN_FALLBACK_LABEL[rollup.granularityUsed],
+      granularityUsed: presentLevel,
+      grainLabel: census?.label || GRAIN_FALLBACK_LABEL[presentLevel],
       sampleSize: rollup.sampleSize,
       dataSource: source.kind,
       topLines: agg.topLines,
@@ -485,6 +515,7 @@ export async function computeGeoCohort(geo: GeoInput, source: GeoCohortSource): 
       browseToBuy: agg.browseToBuy,
       census,
       honesty,
+      synthesized,
       ladder: rollup.ladder,
       generatedAt: Date.now(),
     };
@@ -503,6 +534,7 @@ export async function computeGeoCohort(geo: GeoInput, source: GeoCohortSource): 
       browseToBuy: null,
       census: null,
       honesty,
+      synthesized: false,
       ladder: [],
       generatedAt: Date.now(),
     };

@@ -1043,6 +1043,91 @@
         .pzp-feed { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; transition: max-height 0.3s var(--ease); }
         .pzp-empty { color: #6B6258; font-size: 12px; line-height: 1.55; padding: 8px 4px; }
         .pzp-empty b { color: #9A8F7C; }
+        /* ── Edge Affinity Reflex instrument (doc 16 §10) ─────────────────────── */
+        .pzp-affinity { border-bottom: 1px solid #2C2620; background: #14110D; padding: 10px 14px 12px; }
+        .pzaf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+        .pzaf-title { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #B9AF9C; }
+        .pzaf-sub { font-size: 9px; color: #6B6258; letter-spacing: 0.04em; }
+        .pzaf-dims { display: flex; flex-direction: column; gap: 7px; margin-top: 9px; }
+        .pzaf-row { display: grid; grid-template-columns: 112px 1fr 30px; gap: 8px; align-items: center; }
+        .pzaf-label { font-size: 10px; color: #D9CFBC; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pzaf-label i { font-style: normal; font-size: 8.5px; color: #6B6258; letter-spacing: 0.05em; }
+        .pzaf-track { position: relative; height: 6px; border-radius: 3px; background: #241F19; }
+        .pzaf-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, #8A6D3B, var(--tan)); transition: width 0.3s linear; }
+        .pzaf-fill.member { background: linear-gradient(90deg, #2E7D4F, #5FCF80); }
+        .pzaf-th { position: absolute; top: -2px; bottom: -2px; width: 1px; background: #4A4238; }
+        .pzaf-th.in { background: #5FCF80; opacity: 0.55; }
+        .pzaf-val { font-size: 9.5px; color: #9A8F7C; text-align: right; font-variant-numeric: tabular-nums; }
+        .pzaf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .pzaf-chip { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: 9px;
+            border: 1px solid #3A5A46; color: #5FCF80; background: rgba(95, 207, 128, 0.08); animation: pzafIn 0.35s var(--ease); }
+        .pzaf-chip.odp { border-color: #5FCF80; }
+        .pzaf-chip.odp::after { content: ' \00B7 ODP'; color: #B9AF9C; font-size: 8px; letter-spacing: 0.06em; }
+        @keyframes pzafIn { from { opacity: 0; transform: translateY(4px); } }
+        /* ── Reflex Moments — the TOP banner slot, personalized live (white-glove).
+               The cold-start welcome ribbon yields to this strip; endings flip to an
+               elegant bordeaux contrast that NAMES the reason before clearing. ── */
+        .rmx { position: fixed; top: 0; left: 0; right: var(--sb-w); z-index: 66; transform: translateY(-110%); opacity: 0;   /* BELOW the cart (70) + modals (80+): task surfaces always beat ambient banners */
+            transition: transform 0.45s var(--ease), opacity 0.45s var(--ease), right 0.45s var(--ease); pointer-events: none; }
+        .rmx.show { transform: none; opacity: 1; pointer-events: auto; }
+        .rmx-strip { display: flex; align-items: center; gap: 14px; background: #14110D; border-bottom: 2px solid var(--tan);
+            padding: 12px 26px; box-shadow: 0 12px 34px rgba(0, 0, 0, 0.38); }
+        .rmx-badge { font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase; color: #120F0C; background: var(--tan);
+            border-radius: 8px; padding: 2px 8px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+        .rmx-text { flex: 1; font-size: 13px; color: #B9AF9C; line-height: 1.45; min-width: 0; }
+        .rmx-title { font-family: Georgia, serif; font-size: 15.5px; color: #F4EEE2; font-weight: 400; }
+        .rmx-count { font-size: 19px; color: var(--tan); font-variant-numeric: tabular-nums; letter-spacing: 0.03em; flex-shrink: 0; }
+        .rmx-cta { flex-shrink: 0; background: var(--tan); color: #14110D; border: none; padding: 8px 15px; font-size: 10.5px;
+            letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; cursor: pointer; border-radius: 3px; }
+        .rmx-cta:hover { filter: brightness(1.08); }
+        .rmx-x { background: none; border: none; color: #6B6258; font-size: 17px; cursor: pointer; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+        .rmx-x:hover { color: var(--tan); }
+        .rmx-bar { height: 2px; background: #241F19; }
+        .rmx-bar > span { display: block; height: 100%; width: 100%; background: var(--tan); transition: width 0.5s linear; }
+        /* Docked offer pill — the live countdown, compact, below the strip line. */
+        .rmx-dock { position: fixed; top: 54px; right: calc(var(--sb-w) + 20px); z-index: 65; display: flex; align-items: center; gap: 9px;
+            background: #14110D; border: 1px solid var(--tan); border-radius: 20px; padding: 7px 13px; opacity: 0; transform: translateY(-14px);
+            transition: opacity 0.35s var(--ease), transform 0.35s var(--ease), right 0.45s var(--ease); pointer-events: none; max-width: min(430px, 52vw); }
+        .rmx-dock.show { opacity: 1; transform: none; pointer-events: auto; }
+        .rmxd-label { font-size: 11px; color: #E8E0D2; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rmxd-count { font-size: 13px; color: var(--tan); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+        .rmx-dock.ending { border-color: #8E3B3B; }
+        .rmx-dock.ending .rmxd-label { color: #E8C9C9; white-space: normal; }
+        /* Ending state — bordeaux contrast, the reason made prominent. */
+        .rmx.ending .rmx-strip { border-bottom-color: #8E3B3B; }
+        .rmx.ending .rmx-badge { background: #8E3B3B; color: #F4E4E4; }
+        .rmx.ending .rmx-title { color: #E8C9C9; }
+        .rmx.ending .rmx-count { color: #C96A6A; }
+        .rmx.ending .rmx-bar > span { background: #8E3B3B; }
+        /* ── AFFINITY tab chrome ── */
+        .pzaf-intro { font-size: 11.5px; color: #9A8F7C; line-height: 1.55; padding: 12px 14px 4px; }
+        .pzaf-intro b { color: var(--tan); font-weight: 600; }
+        .pzaf-reset { display: block; margin-top: 9px; background: none; border: 1px solid #3A342C; color: #B9AF9C;
+            padding: 6px 12px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; border-radius: 6px; }
+        .pzaf-reset:hover { border-color: var(--tan); color: var(--tan); }
+        #tab-affinity .pzp-affinity { border: 1px solid #2C2620; border-radius: 10px; margin: 10px 12px; }
+        .pzaf-empty { font-size: 11.5px; color: #6B6258; line-height: 1.5; padding: 10px 14px; }
+        .pzaf-log { display: flex; flex-direction: column; gap: 5px; padding: 4px 14px 14px; }
+        .pzaf-lrow { font-size: 10.5px; color: #9A8F7C; display: flex; gap: 7px; align-items: baseline; font-variant-numeric: tabular-nums; }
+        .pzaf-lrow.enter .pzaf-ldir { color: #5FCF80; }
+        .pzaf-lrow.exit .pzaf-ldir { color: #C96A6A; }
+        .pzaf-lrow .pzaf-lscore { color: #B9AF9C; }
+        .pzaf-lrow .pzaf-lt { margin-left: auto; color: #6B6258; font-size: 9.5px; }
+        /* ── ODP · MEMORY SYNC feed ── */
+        .odpf { border-top: 1px solid #2C2620; margin: 4px 12px 14px; padding-top: 10px; }
+        .odpf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px 7px; }
+        .odpf-title { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #B9AF9C; }
+        .odpf-sub { font-size: 9px; color: #6B6258; letter-spacing: 0.04em; }
+        .odpf-rows { display: flex; flex-direction: column; gap: 5px; }
+        .odpf-row { font-size: 10.5px; color: #9A8F7C; display: flex; gap: 7px; align-items: baseline; font-variant-numeric: tabular-nums; animation: pzafIn 0.3s var(--ease); }
+        .odpf-row .odpf-dir { flex-shrink: 0; }
+        .odpf-row.out .odpf-dir { color: var(--tan); }
+        .odpf-row.in .odpf-dir { color: #5FCF80; }
+        .odpf-row .odpf-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .odpf-row .odpf-status { flex-shrink: 0; font-size: 9px; letter-spacing: 0.05em; color: #6B6258; }
+        .odpf-row .odpf-status.ok { color: #5FCF80; }
+        .odpf-row .odpf-status.err { color: #C96A6A; }
+        .odpf-row .odpf-t { margin-left: auto; color: #6B6258; font-size: 9.5px; flex-shrink: 0; }
         .pz-card { background: #1E1A15; border: 1px solid #2C2620; border-left: 3px solid var(--tan); border-radius: 9px; padding: 11px 13px; animation: pzCardIn 0.4s var(--ease); }
         @keyframes pzCardIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
         .pzc-eyebrow { display: flex; align-items: center; gap: 7px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tan); margin-bottom: 7px; }
@@ -1585,6 +1670,13 @@
         <span class="pz-pill-dot"></span> Personalization <span class="pz-pill-count" id="pz-pill-count"></span>
     </button>
 
+    <!-- Reflex Moment — the in-place reaction card: the store responds WHERE the shopper
+         is standing the instant a server-confirmed affinity audience is entered. -->
+    <div id="rmx" class="rmx" aria-live="polite"></div>
+    <!-- Docked offer pill — a live countdown offer shrinks here after ~20s (still
+         ticking, still honestly expiring) so the strip stays free for new stories. -->
+    <div id="rmx-dock" class="rmx-dock" aria-live="polite"></div>
+
     <!-- ═══════════ Cold-start style quiz (Act 2 · zero-party → instant re-personalization) ═══════════ -->
     <div class="quiz-overlay" id="quiz-overlay" onclick="store.closeQuiz()"></div>
     <div class="quiz" id="style-quiz" role="dialog" aria-label="Style quiz">
@@ -1645,6 +1737,7 @@
                     <button class="sb-btn primary" id="dir-next" onclick="store.nextStep()">Next &#9658;</button>
                     <div class="sb-autoplay" title="Auto-play"><span class="sb-ap-label">Auto</span><div class="switch" id="autoplay-switch" onclick="store.toggleAutoplay()"><div class="knob"></div></div></div>
                     <button class="sb-icon-btn" onclick="store.restartDemo()" title="Restart">&#8635;</button>
+                    <button class="sb-icon-btn" id="dir-new-shopper" onclick="store.newShopper()" title="New shopper — fresh session (clears affinity, cart &amp; history; reloads cold)">&#128100;</button>
                     <button class="sb-icon-btn" id="dir-clear-demo" onclick="store.resetDemoData()" title="Clear demo-captured events (keeps the historical dataset)">&#128465;&#65038;</button>
                 </div>
                 <!-- Step: progress + narration always visible; the SIGNAL/DECISION/WHY callout is collapsible -->
@@ -1679,6 +1772,7 @@
         <div class="sb-tabbar">
             <button class="sb-tab active" data-tab="opal" onclick="store.setTab('opal')">Opal</button>
             <button class="sb-tab" data-tab="capabilities" onclick="store.setTab('capabilities')">Capabilities <span class="tab-badge" id="req-count-tab">0/15</span></button>
+            <button class="sb-tab" data-tab="affinity" onclick="store.setTab('affinity')">Affinity <span class="tab-badge" id="afx-count" style="display:none">0</span></button>
             <button class="sb-tab" data-tab="engine" onclick="store.setTab('engine')">Engine</button>
             <button class="sb-tab" data-tab="radar" onclick="store.setTab('radar');store.renderRadar()">Radar</button>
             <button class="sb-cmdk-btn" id="sb-cmdk-btn" onclick="store.openCmdk()" title="Force experience (⌘K / Ctrl-K)" aria-label="Force experience">
@@ -1760,6 +1854,31 @@
                     <div id="cmab-ctx"></div>
                     <div class="ab-foot" id="cmab-foot">One experiment, many winners — chosen by context in real time.</div>
                     <div class="ab-demo-note">Representative · contextual bandit (CMAB)</div>
+                </div>
+            </section>
+            <!-- ── AFFINITY tab — the Edge Affinity Reflex instrument (doc 16 §10) ── -->
+            <section class="sb-panel" id="tab-affinity">
+                <div class="pzaf-intro">The live affinity vector — built from behavior, <b>decaying in real time</b>. Cross a threshold and you enter an audience; go quiet and you fall back out.
+                    <button class="pzaf-reset" onclick="store.newShopper()" title="Clears this browser's session — affinity, cart, journey — and reloads cold">&#128100; New shopper</button></div>
+                <div class="pzp-affinity" id="pzp-affinity" hidden>
+                    <div class="pzaf-head">
+                        <span class="pzaf-title">Live affinity</span>
+                        <span class="pzaf-sub">decays in real time &middot; in &ge; 0.60 &middot; out &lt; 0.45</span>
+                    </div>
+                    <div class="pzaf-dims" id="pzaf-dims"></div>
+                    <div class="pzaf-chips" id="pzaf-chips"></div>
+                </div>
+                <div class="pzaf-empty" id="pzaf-empty">No live affinity yet — browse a few products and watch the vector build, decay, and move you in and out of audiences.</div>
+                <div class="pzaf-log" id="pzaf-log"></div>
+                <!-- ODP · MEMORY SYNC — the live conversation with the memory: every event
+                     dispatched (↗, upgraded to its real ✓ status when ODP answers) and every
+                     seed confirmation coming back (↙). -->
+                <div class="odpf" id="odp-feed" hidden>
+                    <div class="odpf-head">
+                        <span class="odpf-title">ODP &middot; memory sync</span>
+                        <span class="odpf-sub">events out &#8599; &middot; confirmations in &#8601;</span>
+                    </div>
+                    <div class="odpf-rows" id="odp-feed-rows"></div>
                 </div>
             </section>
             <section class="sb-panel" id="tab-radar"></section>

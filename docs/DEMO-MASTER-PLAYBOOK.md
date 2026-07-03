@@ -128,6 +128,8 @@ The Demo Director steps through 15 beats (Start ▶ → Next, or Auto-play). Eac
 
 **Real vs representative:** geo = REAL (request.cf) · query = REAL · census = REAL public (ACS 2024) · first-party cohort = REPRESENTATIVE/synthetic. **Never** vary price/access by geography; never use protected classes or a ZIP as a proxy; never tie to credit.
 
+**Presenter-agnostic (2026-06-28 — no risk if you're not in WS):** the cold start now works from ANY US location. Winston-Salem shows the real NC metro cohort (N=320, $65,903); every other state shows its **real ACS 2024 income** + a representative cohort (card labeled "representative cohort · your {State} customers' own history in production", N suppressed for honesty). Force a city: ⌘K → "Preview as location" (Winston-Salem / New York / San Francisco / Austin / Philadelphia / Chicago) or the deep-link `/storefront?cohort=NY` (state code) / `?cohort=austin` (city). All 50 states + DC census seeded (ACS 2024 1-yr). As-built: `docs/architecture/13-geo-cohort-coldstart-prd-tdd.md` §12a.
+
 ## 6. Other surfaces
 - **Cold-start / geo** (on load): edge geo → season hero + welcome ribbon. **⌘K → "Preview as location"** = Miami/Sydney/Chicago/Singapore (the **hemisphere flip**: same date, Miami summer vs Sydney winter).
 - **Style quiz**: welcome-ribbon "Personalize in 30s" → 4 taps → "Your Edit" (zero-party).

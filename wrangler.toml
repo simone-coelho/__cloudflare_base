@@ -97,6 +97,9 @@ CONNECTOR_MODE = "mock"
 # Mode-B decision source: 'mock' (default — current demo) | 'optimizely' (real FX SDK + datafile).
 # Independent of CONNECTOR_MODE so live decisions can be flipped on without touching segments/audiences.
 DECISION_SOURCE = "mock"
+# ODP REST base (NOT secret — the key is; `wrangler secret put ODP_PUBLIC_KEY`).
+# Coach RTS demo instance scope 11023 (app.zaius.com); v3 endpoints: /v3/graphql, /v3/events.
+ODP_API_HOST = "https://api.zaius.com"
 JWT_SECRET = "development-secret-key-change-in-production"
 JWT_ISSUER = "edge-platform"
 JWT_AUDIENCE = "edge-platform-api"

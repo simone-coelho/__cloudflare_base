@@ -1,4 +1,5 @@
 import type { Env } from '@/types/env';
+import type { ReflexState } from '@/reflex/core';
 import { z } from 'zod';
 
 export interface SessionData {
@@ -6,6 +7,15 @@ export interface SessionData {
   anonymousId?: string;
   segments: string[];
   attributes: Record<string, any>;
+  /** Edge Affinity Reflex state (doc 16) — raw (R, tLast) per dimension·value.
+      P0 hosting: rides the session; relocates into the ShopperReflex DO in P2. */
+  reflex?: ReflexState;
+  /** ODP loop (doc 16 §8): the session's last-seeded qualified ODP audiences + when. */
+  odpSeed?: string[];
+  odpSeedAt?: number;
+  /** Ring of the session's recent events in the FLAT recent_events shape (≤10, ≤55min)
+      — injected inline into the GraphQL read for instant (~200ms) qualification. */
+  odpRecentEvents?: Array<Record<string, unknown>>;
   metadata: {
     firstSeen: number;
     lastSeen: number;
@@ -48,6 +58,11 @@ const sessionDataSchema = z.object({
   anonymousId: z.string().optional(),
   segments: z.array(z.string()),
   attributes: z.record(z.string(), z.any()),
+  // Reflex state must be declared or .parse() silently STRIPS it on every read/write.
+  reflex: z.any().optional(),
+  odpSeed: z.array(z.string()).optional(),
+  odpSeedAt: z.number().optional(),
+  odpRecentEvents: z.array(z.any()).optional(),
   metadata: z.object({
     firstSeen: z.number(),
     lastSeen: z.number(),
@@ -96,6 +111,10 @@ export class SessionManager {
           ...existingSession?.attributes,
           ...data.attributes
         },
+        reflex: data.reflex ?? existingSession?.reflex,
+        odpSeed: data.odpSeed ?? existingSession?.odpSeed,
+        odpSeedAt: data.odpSeedAt ?? existingSession?.odpSeedAt,
+        odpRecentEvents: data.odpRecentEvents ?? existingSession?.odpRecentEvents,
         metadata: {
           firstSeen: existingSession?.metadata.firstSeen || now,
           lastSeen: now,

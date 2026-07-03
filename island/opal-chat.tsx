@@ -59,6 +59,15 @@ function Part({ part }: { part: any }) {
   return null;
 }
 
+// An assistant bubble is "visible" once it carries renderable content (streamed text or a tool card).
+// Until then we render an animated typing indicator instead of leaving an empty bubble (no blank "ghost").
+function hasVisibleContent(m: any): boolean {
+  return (m?.parts || []).some((p: any) =>
+    (p?.type === 'text' && typeof p.text === 'string' && p.text.trim() !== '') ||
+    (typeof p?.type === 'string' && p.type.startsWith('tool-'))
+  );
+}
+
 const SUGGESTIONS = [
   "High-intent Tabby browsers who haven't added to cart — how many, and their average order value?",
   'Which persona has the highest predicted lifetime value?',
@@ -66,8 +75,20 @@ const SUGGESTIONS = [
   'Top 5 best-selling products by units sold, with revenue.',
 ];
 
+// Each browser/presenter gets its OWN OpalAgent DO instance via a stable per-browser id, so concurrent
+// presenters never share or cross-contaminate Opal chat. Without a `name`, the Agents SDK routes EVERY
+// client to the single "default" DO — fine for one user, but a crossover risk when the team demos at once.
+function opalSessionName(): string {
+  try {
+    let n = localStorage.getItem('opal-session-id');
+    if (!n) { n = 'opal-' + Math.random().toString(36).slice(2, 11) + '-' + Date.now().toString(36); localStorage.setItem('opal-session-id', n); }
+    return n;
+  } catch (e) { return 'opal-' + Math.random().toString(36).slice(2, 11); }
+}
+
 function OpalChat() {
-  const agent = useAgent({ agent: 'opal-agent' });
+  const [sessionName] = useState(opalSessionName);
+  const agent = useAgent({ agent: 'opal-agent', name: sessionName });
   const { messages, sendMessage, status, isStreaming, clearHistory } = useAgentChat({ agent }) as any;
   const [input, setInput] = useState('');
   const endRef = useRef<any>(null);
@@ -132,6 +153,11 @@ function OpalChat() {
     setInput('');
   };
 
+  // Always show a typing indicator while a reply is pending — covers the gap BEFORE the assistant
+  // bubble exists (last message is still the user's), so the user never stares at a blank/empty bubble.
+  const last = messages[messages.length - 1];
+  const awaitingReply = (status === 'submitted' || status === 'streaming' || isStreaming) && (!last || last.role === 'user');
+
   return (
     <div className="opal-chat">
       <div className="opal-chat-head">
@@ -153,9 +179,12 @@ function OpalChat() {
         {messages.map((m: any) => (
           <div key={m.id} className={`opal-msg ${m.role}`}>
             {(m.parts || []).map((p: any, i: number) => <Part key={i} part={p} />)}
+            {m.role === 'assistant' && !hasVisibleContent(m) && (
+              <span className="opal-dots"><span></span><span></span><span></span></span>
+            )}
           </div>
         ))}
-        {status === 'submitted' && <div className="opal-msg assistant opal-dots">Opal is thinking…</div>}
+        {awaitingReply && <div className="opal-msg assistant opal-dots"><span></span><span></span><span></span></div>}
         <div ref={endRef} />
       </div>
 
