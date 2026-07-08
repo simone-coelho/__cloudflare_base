@@ -122,6 +122,47 @@ export function toRecentEventFlat(
   };
 }
 
+/**
+ * Maintain the session's ring of recent events in the FLAT `recent_events` shape
+ * (≤10 entries, ≤55 min — inside the segments' 3600s windows). Pure policy,
+ * shared by the request-path engine AND the ShopperReflex DO (doc 16 §6, P2) so
+ * ring semantics can never drift between hosts. Returns a NEW array; events that
+ * don't map to the ODP taxonomy return the input ring unchanged.
+ */
+export function updateOdpRing(
+  ring: Array<Record<string, unknown>>,
+  event: ActionEvent,
+  nowMs: number
+): Array<Record<string, unknown>> {
+  const mapped = mapActionToOdp(event);
+  if (!mapped) return ring;
+  const next = [...ring, toRecentEventFlat(mapped, nowMs)];
+  const floorTs = Math.floor(nowMs / 1000) - 3300;
+  return next.filter((e) => typeof e.ts === 'number' && (e.ts as number) > floorTs).slice(-10);
+}
+
+/**
+ * Seed read policy (doc 16 §8), shared by both hosts: a reflex membership CHANGE
+ * forces an instant read (the "· ODP" badge lands on the very action that caused
+ * the entry — recent_events makes the answer ~200ms); otherwise throttle to 10s
+ * while events flow / 120s idle. `seedAt` advances even when the read fails —
+ * natural retry on the next boundary. Behavior-identical to the engine's
+ * original inline policy (it moved here verbatim for the P2 DO).
+ */
+export async function refreshOdpSeedIfDue(
+  env: Env,
+  sessionId: string,
+  ring: Array<Record<string, unknown>>,
+  current: { seed: string[]; seedAt: number },
+  nowMs: number,
+  membershipChanged: boolean
+): Promise<{ seed: string[]; seedAt: number }> {
+  const throttle = ring.length ? 10_000 : 120_000;
+  if (!membershipChanged && nowMs - current.seedAt <= throttle) return current;
+  const fetched = await fetchOdpAudiences(env, sessionId, ring);
+  return { seed: fetched ?? current.seed, seedAt: nowMs };
+}
+
 /** Serialize a flat object as a GraphQL literal (bare keys), pre-escaped for our
     manually-built JSON body (strings land as \" in the body string). */
 export function gqlObjectLiteral(obj: Record<string, unknown>): string {
@@ -135,13 +176,17 @@ export function gqlObjectLiteral(obj: Record<string, unknown>): string {
 }
 
 /** Fire-and-forget event forward (call via executionCtx.waitUntil). Never throws.
-    When a receiptId is supplied, the ODP response status is pushed to the shopper's
-    WebSocket DO as an `odp_receipt` — the feed's "dispatched → ✓ 202" upgrade. */
+    When a receiptId is supplied, the ODP response status is pushed to the shopper as
+    an `odp_receipt` — the feed's "dispatched → ✓ 202" upgrade. By default that push
+    goes to the PersonalizationWebSocket relay DO (the request-path transport); a
+    host owning its OWN sockets (the ShopperReflex DO, doc 16 §6 — no cross-object
+    hop) supplies `pushReceipt` and the receipt is delivered through it instead. */
 export async function forwardEventToOdp(
   env: Env,
   event: ActionEvent,
   sessionId: string,
-  receiptId?: string
+  receiptId?: string,
+  pushReceipt?: (data: { receiptId: string; status: number; ts: number; source: string }) => void
 ): Promise<void> {
   try {
     if (!odpEnabled(env)) return;
@@ -155,17 +200,22 @@ export async function forwardEventToOdp(
     });
     if (!res.ok) console.warn(`[odp] event forward ${res.status}: ${(await res.text()).slice(0, 200)}`);
     if (receiptId) {
+      const receipt = { receiptId, status: res.status, ts: Date.now(), source: 'odp' };
       try {
-        const stub = env.PERSONALIZATION_WEBSOCKET.get(env.PERSONALIZATION_WEBSOCKET.idFromName(event.userId));
-        await stub.fetch('https://internal/broadcast', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'odp_receipt',
-            userId: event.userId,
-            data: { receiptId, status: res.status, ts: Date.now(), source: 'odp' },
-          }),
-        });
+        if (pushReceipt) {
+          pushReceipt(receipt);
+        } else {
+          const stub = env.PERSONALIZATION_WEBSOCKET.get(env.PERSONALIZATION_WEBSOCKET.idFromName(event.userId));
+          await stub.fetch('https://internal/broadcast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'odp_receipt',
+              userId: event.userId,
+              data: receipt,
+            }),
+          });
+        }
       } catch { /* receipt push is chrome — never let it fail the forward */ }
     }
   } catch (e) {

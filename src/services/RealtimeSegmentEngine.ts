@@ -45,7 +45,7 @@ import {
   generateAffinityAudiences,
   regenerateCatalogAudiences,
 } from '@/reflex/audienceGenerator';
-import { fetchOdpAudiences, mapActionToOdp, odpEnabled, toRecentEventFlat } from '@/services/odpLoop';
+import { odpEnabled, refreshOdpSeedIfDue, updateOdpRing } from '@/services/odpLoop';
 
 export interface ActionEvent {
   type:
@@ -108,8 +108,10 @@ export interface PersonalizationConfig {
  * Retail signals every QualificationContext starts with, so a cold session still
  * evaluates the audience condition trees sensibly (e.g. a `cart_adds eq 0` predicate
  * must be true for a brand-new shopper). Numeric counters initialize to 0.
+ * Exported for the ShopperReflex DO (doc 16 §6, P2) — both hosts qualify against
+ * the identical baseline.
  */
-const RETAIL_SIGNAL_DEFAULTS: Record<string, number> = {
+export const RETAIL_SIGNAL_DEFAULTS: Record<string, number> = {
   product_views: 0,
   cart_adds: 0,
   wishlist_adds: 0,
@@ -119,6 +121,162 @@ const RETAIL_SIGNAL_DEFAULTS: Record<string, number> = {
   // anonymous session evaluates undefined === 0 → false, and they can NEVER qualify.
   purchases: 0,
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// P2 seam (doc 16 §6): the pure/pipeline pieces of this engine that the
+// ShopperReflex Durable Object must run IDENTICALLY are lifted to module scope
+// and exported. The class methods below delegate to these — same behavior, one
+// source, two hosts (request path today, per-shopper DO behind REFLEX_HOST='do').
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Update attributes based on a retail action event. Retail intent can arrive either
+ * as a typed event or carried in `event.data.action` (the storefront posts catalog
+ * events as page_view/custom with a `line`/`productId`/`action` payload), so we
+ * inspect both. Derives the attributes the Coach audiences are written against:
+ * viewed_product_line, product_views, cart_adds, wishlist_adds, price_band_viewed,
+ * category_dwell_ms, page_views.
+ */
+export function applyEventToAttributes(
+  attributes: Record<string, any>,
+  event: ActionEvent,
+  catalog: CatalogService
+): void {
+  const data = event.data ?? {};
+  // The retail action: explicit data.action wins, else the event type.
+  const action = String(data.action ?? data.eventName ?? event.type);
+
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  const inc = (key: string, by = 1) => {
+    attributes[key] = num(attributes[key]) + by;
+  };
+
+  // Resolve a product (if referenced) so we can enrich line / price band from the catalog.
+  const productId: string | undefined = data.productId ?? data.product_id ?? data.sku;
+  const product = productId ? catalog.getProduct(productId) : undefined;
+  const line: string | undefined =
+    product?.line ?? (typeof data.line === 'string' ? data.line : undefined);
+  const priceUsd: number | undefined =
+    product?.price_usd ?? (typeof data.price_usd === 'number' ? data.price_usd : undefined);
+
+  const applyLineAndBand = () => {
+    if (line) attributes.viewed_product_line = line;
+    if (typeof priceUsd === 'number') attributes.price_band_viewed = priceBandOf(priceUsd);
+  };
+
+  switch (action) {
+    case 'product_view':
+    case 'pdp_view':
+    case 'view_product':
+      inc('product_views');
+      applyLineAndBand();
+      if (typeof data.dwellMs === 'number') inc('category_dwell_ms', data.dwellMs);
+      break;
+
+    case 'add_to_cart':
+    case 'cart_add':
+      inc('cart_adds');
+      applyLineAndBand();
+      break;
+
+    case 'wishlist':
+    case 'wishlist_add':
+    case 'add_to_wishlist':
+    case 'save_for_later':
+      inc('wishlist_adds');
+      applyLineAndBand();
+      break;
+
+    case 'purchase':
+    case 'checkout':
+    case 'order_complete':
+      inc('purchases');
+      applyLineAndBand();
+      break;
+
+    case 'page_view':
+      inc('page_views');
+      if (typeof data.path === 'string') attributes.last_page_path = data.path;
+      if (typeof data.dwellMs === 'number') inc('category_dwell_ms', data.dwellMs);
+      // A page_view that carries a product line/category still updates affinity.
+      applyLineAndBand();
+      break;
+
+    case 'button_click':
+      inc('button_clicks');
+      if (data.buttonId) attributes.last_button_clicked = data.buttonId;
+      break;
+
+    default:
+      // Unknown/custom retail signal: still capture line/band if present so affinity grows.
+      applyLineAndBand();
+      if (typeof data.dwellMs === 'number') inc('category_dwell_ms', data.dwellMs);
+      break;
+  }
+
+  attributes.last_activity = Date.now();
+}
+
+/**
+ * Catalog-aware engagement score. Weights real retail intent: cart adds and
+ * wishlist saves dominate, PDP views and dwell contribute, page views are a light
+ * signal. Clamped to 0–100 so it stays a stable, comparable session score.
+ */
+export function calculateEngagementScore(attributes: Record<string, any>): number {
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+  const productViews = num(attributes.product_views);
+  const cartAdds = num(attributes.cart_adds);
+  const wishlistAdds = num(attributes.wishlist_adds);
+  const purchases = num(attributes.purchases);
+  const pageViews = num(attributes.page_views);
+  const dwellMinutes = num(attributes.category_dwell_ms) / 60000;
+
+  const score =
+    productViews * 8 +
+    cartAdds * 25 +
+    wishlistAdds * 15 +
+    purchases * 40 +
+    pageViews * 2 +
+    dwellMinutes * 5;
+
+  return Math.min(100, Math.round(score));
+}
+
+/** Set-diff over segment keys — the change-detect both hosts trigger pushes on. */
+export function hasSegmentChanges(oldSegments: string[], newSegments: string[]): boolean {
+  if (oldSegments.length !== newSegments.length) {
+    return true;
+  }
+  const oldSet = new Set(oldSegments);
+  return newSegments.some((segment) => !oldSet.has(segment));
+}
+
+/**
+ * Idempotently load the Coach launch audiences + the catalog-generated affinity
+ * audiences (doc 16 §5) into the shared AudienceStore. Version-gated on a hash of
+ * the generated set so the hot path pays ONE KV read; the diff
+ * (regenerateCatalogAudiences) runs only when the catalog or generator config
+ * actually changed — and never clobbers pinned/human edits.
+ */
+export async function ensureAudiencesSeeded(env: Env, catalogService: CatalogService): Promise<void> {
+  const store = new KvAudienceStore(env);
+  await store.seed(SEED_AUDIENCES);
+  const generated = generateAffinityAudiences(
+    catalogService.getAllProducts() as unknown as Array<Record<string, unknown>>,
+    DEFAULT_REFLEX_CONFIG,
+    DEFAULT_GENERATOR_CONFIG
+  );
+  const setHash = generated.map((d) => `${d.key}:${d.generatorHash}`).join('|');
+  const MARKER = 'reflex:audgen:v1';
+  if ((await env.CACHE.get(MARKER)) === setHash) return;
+  const s = await regenerateCatalogAudiences(store, generated);
+  await env.CACHE.put(MARKER, setHash);
+  console.log(
+    `[reflex] catalog audiences regenerated: +${s.published.length} ~${s.updated.length} −${s.archived.length}` +
+      ` (skipped: ${s.skippedHumanEdited.length} human-edited, ${s.skippedPinned.length} pinned)`
+  );
+}
 
 export class RealtimeSegmentEngine {
   private env: Env;
@@ -147,41 +305,16 @@ export class RealtimeSegmentEngine {
    * Idempotently load the Coach launch audiences into the shared AudienceStore.
    * Called at the start of any operation that qualifies segments, so ODP (mock or
    * live) always has the seed audiences plus any Opal-created ones to evaluate.
+   * Delegates to the exported ensureAudiencesSeeded (shared with the P2 DO).
    */
   private async ensureSeeded(): Promise<void> {
     if (this.seeded) return;
     try {
-      const store = new KvAudienceStore(this.env);
-      await store.seed(SEED_AUDIENCES);
-      await this.ensureCatalogAudiences(store);
+      await ensureAudiencesSeeded(this.env, this.catalogService);
       this.seeded = true;
     } catch (error) {
       console.error('Error seeding audiences:', error);
     }
-  }
-
-  /**
-   * Catalog-driven affinity audiences (doc 16 §5): the CATALOG writes the
-   * audiences ("Tote Affinity" = catalog value + "Affinity"); the reflex fills
-   * them. Version-gated on a hash of the generated set so the hot path pays ONE
-   * KV read; the diff (regenerateCatalogAudiences) runs only when the catalog or
-   * generator config actually changed — and never clobbers pinned/human edits.
-   */
-  private async ensureCatalogAudiences(store: KvAudienceStore): Promise<void> {
-    const generated = generateAffinityAudiences(
-      this.catalogService.getAllProducts() as unknown as Array<Record<string, unknown>>,
-      DEFAULT_REFLEX_CONFIG,
-      DEFAULT_GENERATOR_CONFIG
-    );
-    const setHash = generated.map((d) => `${d.key}:${d.generatorHash}`).join('|');
-    const MARKER = 'reflex:audgen:v1';
-    if ((await this.env.CACHE.get(MARKER)) === setHash) return;
-    const s = await regenerateCatalogAudiences(store, generated);
-    await this.env.CACHE.put(MARKER, setHash);
-    console.log(
-      `[reflex] catalog audiences regenerated: +${s.published.length} ~${s.updated.length} −${s.archived.length}` +
-        ` (skipped: ${s.skippedHumanEdited.length} human-edited, ${s.skippedPinned.length} pinned)`
-    );
   }
 
   async processActionEvent(event: ActionEvent, sessionId?: string): Promise<PersonalizationUpdate | null> {
@@ -204,7 +337,7 @@ export class RealtimeSegmentEngine {
             firstSeen: userProfile.metadata.firstSeen,
             lastSeen: Date.now(),
             sessionCount: userProfile.metadata.sessionCount,
-            engagementScore: this.calculateEngagementScore(userProfile.attributes),
+            engagementScore: calculateEngagementScore(userProfile.attributes),
             lastSegmentUpdate: userProfile.lastUpdated
           },
           preferences: {
@@ -217,8 +350,8 @@ export class RealtimeSegmentEngine {
 
       // 2. Apply this event's retail signals to a fresh attribute snapshot.
       const newAttributes = { ...sessionData.attributes };
-      this.updateAttributesWithEvent(newAttributes, event);
-      const newEngagementScore = this.calculateEngagementScore(newAttributes);
+      applyEventToAttributes(newAttributes, event, this.catalogService);
+      const newEngagementScore = calculateEngagementScore(newAttributes);
 
       // 2.5 Edge Affinity Reflex (doc 16): decayed per-dimension affinity via the
       // pure core. State rides the session in P0 (relocates into the DO in P2).
@@ -264,24 +397,19 @@ export class RealtimeSegmentEngine {
       let odpSeedAt = sessionData.odpSeedAt ?? 0;
       let odpRing = Array.isArray(sessionData.odpRecentEvents) ? sessionData.odpRecentEvents.slice() : [];
       if (odpEnabled(this.env)) {
-        // Maintain the ring of recent events in the FLAT recent_events shape
-        // (≤10 entries, ≤55 min — inside the segments' 3600s windows).
-        const mappedEvent = mapActionToOdp(event);
-        if (mappedEvent) {
-          odpRing.push(toRecentEventFlat(mappedEvent, nowMs));
-          const floorTs = Math.floor(nowMs / 1000) - 3300;
-          odpRing = odpRing.filter((e) => typeof e.ts === 'number' && (e.ts as number) > floorTs).slice(-10);
-        }
-        // Read policy: a reflex membership CHANGE forces an instant read (the "· ODP"
-        // badge lands on the very action that caused the entry — recent_events makes
-        // the answer ~200ms); otherwise throttle to 10s with events / 120s idle.
+        // Ring maintenance + seed read policy live in odpLoop (updateOdpRing /
+        // refreshOdpSeedIfDue) — shared verbatim with the ShopperReflex DO (P2)
+        // so the two hosts can never drift.
+        odpRing = updateOdpRing(odpRing, event, nowMs);
         const membershipChanged = !!reflex && (reflex.changes.entered.length > 0 || reflex.changes.exited.length > 0);
-        const throttle = odpRing.length ? 10_000 : 120_000;
-        if (membershipChanged || nowMs - odpSeedAt > throttle) {
-          const fetched = await fetchOdpAudiences(this.env, currentSessionId, odpRing);
-          if (fetched) odpSeed = fetched;
-          odpSeedAt = nowMs; // stamped even on failure — natural retry on the next boundary
-        }
+        ({ seed: odpSeed, seedAt: odpSeedAt } = await refreshOdpSeedIfDue(
+          this.env,
+          currentSessionId,
+          odpRing,
+          { seed: odpSeed, seedAt: odpSeedAt },
+          nowMs,
+          membershipChanged
+        ));
       }
       // Union: local evaluation ∪ live reflex memberships ∪ ODP-confirmed seed —
       // any enter/exit drives the same change-detect → persist → decide → push loop.
@@ -292,7 +420,7 @@ export class RealtimeSegmentEngine {
       ]));
 
       // 4. Detect what actually changed (segments OR journey stage) — either is a trigger.
-      const segmentsChanged = this.hasSegmentChanges(sessionData.segments, newSegments);
+      const segmentsChanged = hasSegmentChanges(sessionData.segments, newSegments);
       const stageChanged = sessionData.metadata.journeyStage !== journeyStage;
 
       if (!segmentsChanged && !stageChanged) {
@@ -428,98 +556,9 @@ export class RealtimeSegmentEngine {
     };
   }
 
-  /**
-   * Update attributes based on a retail action event. Retail intent can arrive either
-   * as a typed event or carried in `event.data.action` (the storefront posts catalog
-   * events as page_view/custom with a `line`/`productId`/`action` payload), so we
-   * inspect both. Derives the attributes the Coach audiences are written against:
-   * viewed_product_line, product_views, cart_adds, wishlist_adds, price_band_viewed,
-   * category_dwell_ms, page_views.
-   */
-  private updateAttributesWithEvent(attributes: Record<string, any>, event: ActionEvent): void {
-    const data = event.data ?? {};
-    // The retail action: explicit data.action wins, else the event type.
-    const action = String(data.action ?? data.eventName ?? event.type);
-
-    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
-    const inc = (key: string, by = 1) => {
-      attributes[key] = num(attributes[key]) + by;
-    };
-
-    // Resolve a product (if referenced) so we can enrich line / price band from the catalog.
-    const productId: string | undefined = data.productId ?? data.product_id ?? data.sku;
-    const product = productId ? this.catalogService.getProduct(productId) : undefined;
-    const line: string | undefined =
-      product?.line ?? (typeof data.line === 'string' ? data.line : undefined);
-    const priceUsd: number | undefined =
-      product?.price_usd ?? (typeof data.price_usd === 'number' ? data.price_usd : undefined);
-
-    const applyLineAndBand = () => {
-      if (line) attributes.viewed_product_line = line;
-      if (typeof priceUsd === 'number') attributes.price_band_viewed = priceBandOf(priceUsd);
-    };
-
-    switch (action) {
-      case 'product_view':
-      case 'pdp_view':
-      case 'view_product':
-        inc('product_views');
-        applyLineAndBand();
-        if (typeof data.dwellMs === 'number') inc('category_dwell_ms', data.dwellMs);
-        break;
-
-      case 'add_to_cart':
-      case 'cart_add':
-        inc('cart_adds');
-        applyLineAndBand();
-        break;
-
-      case 'wishlist':
-      case 'wishlist_add':
-      case 'add_to_wishlist':
-      case 'save_for_later':
-        inc('wishlist_adds');
-        applyLineAndBand();
-        break;
-
-      case 'purchase':
-      case 'checkout':
-      case 'order_complete':
-        inc('purchases');
-        applyLineAndBand();
-        break;
-
-      case 'page_view':
-        inc('page_views');
-        if (typeof data.path === 'string') attributes.last_page_path = data.path;
-        if (typeof data.dwellMs === 'number') inc('category_dwell_ms', data.dwellMs);
-        // A page_view that carries a product line/category still updates affinity.
-        applyLineAndBand();
-        break;
-
-      case 'button_click':
-        inc('button_clicks');
-        if (data.buttonId) attributes.last_button_clicked = data.buttonId;
-        break;
-
-      default:
-        // Unknown/custom retail signal: still capture line/band if present so affinity grows.
-        applyLineAndBand();
-        if (typeof data.dwellMs === 'number') inc('category_dwell_ms', data.dwellMs);
-        break;
-    }
-
-    attributes.last_activity = Date.now();
-  }
-
-  private hasSegmentChanges(oldSegments: string[], newSegments: string[]): boolean {
-    if (oldSegments.length !== newSegments.length) {
-      return true;
-    }
-
-    const oldSet = new Set(oldSegments);
-    return newSegments.some(segment => !oldSet.has(segment));
-  }
+  // updateAttributesWithEvent / hasSegmentChanges / calculateEngagementScore were
+  // lifted verbatim to exported module functions (applyEventToAttributes, …) so
+  // the ShopperReflex DO runs the identical pipeline — see the P2 seam block above.
 
   private async getPersonalizationConfig(sessionData: SessionData, sessionId: string): Promise<PersonalizationConfig> {
     const attributes = { ...RETAIL_SIGNAL_DEFAULTS, ...sessionData.attributes };
@@ -613,34 +652,8 @@ export class RealtimeSegmentEngine {
       'opt_product_views': (attributes.product_views ?? 0).toString(),
       'opt_cart_adds': (attributes.cart_adds ?? 0).toString(),
       'opt_journey_stage': journeyStage,
-      'opt_engagement_score': this.calculateEngagementScore(attributes).toString()
+      'opt_engagement_score': calculateEngagementScore(attributes).toString()
     };
-  }
-
-  /**
-   * Catalog-aware engagement score. Weights real retail intent: cart adds and
-   * wishlist saves dominate, PDP views and dwell contribute, page views are a light
-   * signal. Clamped to 0–100 so it stays a stable, comparable session score.
-   */
-  private calculateEngagementScore(attributes: Record<string, any>): number {
-    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
-
-    const productViews = num(attributes.product_views);
-    const cartAdds = num(attributes.cart_adds);
-    const wishlistAdds = num(attributes.wishlist_adds);
-    const purchases = num(attributes.purchases);
-    const pageViews = num(attributes.page_views);
-    const dwellMinutes = num(attributes.category_dwell_ms) / 60000;
-
-    const score =
-      productViews * 8 +
-      cartAdds * 25 +
-      wishlistAdds * 15 +
-      purchases * 40 +
-      pageViews * 2 +
-      dwellMinutes * 5;
-
-    return Math.min(100, Math.round(score));
   }
 
   private async broadcastUpdate(update: PersonalizationUpdate): Promise<void> {
@@ -764,7 +777,7 @@ export class RealtimeSegmentEngine {
           firstSeen: userProfile.metadata.firstSeen,
           lastSeen: Date.now(),
           sessionCount: userProfile.metadata.sessionCount,
-          engagementScore: parseInt(cookies.engagementScore || '0') || this.calculateEngagementScore(userProfile.attributes),
+          engagementScore: parseInt(cookies.engagementScore || '0') || calculateEngagementScore(userProfile.attributes),
           lastSegmentUpdate: parseInt(cookies.lastUpdate || '0') || userProfile.lastUpdated
         },
         preferences: {
