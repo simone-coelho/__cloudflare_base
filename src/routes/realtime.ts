@@ -22,10 +22,20 @@ realtimeRoutes.get('/ws', async (c) => {
   }
 
   try {
+    // Edge Affinity Reflex P2 (doc 16 §6): REFLEX_HOST='do' relocates the socket
+    // INTO the per-shopper ShopperReflex DO — state + compute co-located, hot,
+    // hibernating. `userId` is the STABLE visitor id the client persists
+    // (opt_visitor_id), so every tab/device lands on the same object. Default
+    // 'session' keeps the original relay DO — byte-identical behavior.
+    if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
+      const id = c.env.SHOPPER_REFLEX.idFromName(userId);
+      return c.env.SHOPPER_REFLEX.get(id).fetch(c.req.raw);
+    }
+
     // Get the Durable Object instance for this user
     const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(userId);
     const durableObject = c.env.PERSONALIZATION_WEBSOCKET.get(id);
-    
+
     // Forward the WebSocket upgrade request to the Durable Object
     return durableObject.fetch(c.req.raw);
   } catch (error) {
@@ -74,6 +84,23 @@ realtimeRoutes.post('/action', async (c) => {
     const sessionId = typeof body.sessionId === 'string' ? body.sessionId : undefined;
     const capture = captureDemoEvent(c.env, actionEvent, sessionId);
     try { c.executionCtx.waitUntil(capture); } catch { void capture; /* no execCtx (e.g. tests) */ }
+
+    // ── Edge Affinity Reflex P2 (doc 16 §6): REFLEX_HOST='do' forwards to the
+    // shopper's ShopperReflex DO, which runs the same pipeline IN-OBJECT (reflex →
+    // qualify → decide → push over its own socket) and returns the same envelope
+    // shape ({success, update?, sessionId, cookiesUpdated, odp?}). The DO owns the
+    // ODP loop on this path (forward + seed + receipt over its own socket), so no
+    // route-level ODP dispatch here. The D1 captureDemoEvent above ran either way.
+    if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
+      const stub = c.env.SHOPPER_REFLEX.get(c.env.SHOPPER_REFLEX.idFromName(actionEvent.userId));
+      const doRes = await stub.fetch('https://shopper-reflex/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(actionEvent),
+      });
+      const out = (await doRes.json()) as Record<string, unknown>;
+      return c.json(out, doRes.status as 200);
+    }
 
     // Get cookie header for session management
     const cookieHeader = c.req.header('Cookie') ?? null;
@@ -210,6 +237,15 @@ realtimeRoutes.get('/reflex', async (c) => {
   try {
     const cookieHeader = c.req.header('Cookie') ?? null;
     const userId = c.req.query('userId') || 'anonymous';
+
+    // REFLEX_HOST='do' (doc 16 §6): the vector lives in the shopper's own
+    // ShopperReflex DO — read the snapshot there (same response shape).
+    if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
+      const stub = c.env.SHOPPER_REFLEX.get(c.env.SHOPPER_REFLEX.idFromName(userId));
+      const doRes = await stub.fetch('https://shopper-reflex/snapshot');
+      return c.json((await doRes.json()) as Record<string, unknown>, doRes.status as 200);
+    }
+
     const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     const { sessionData } = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
     const cfg = DEFAULT_REFLEX_CONFIG;

@@ -10,7 +10,7 @@
  *   POST /realtime/action  {type, userId, data:{product_id,line}, source}
  *        -> { update: { data: { segments, decisions, recommendations,
  *                               sortOrder, journeyStage, sessionId } } }
- *   WS   /realtime/ws?userId=<anonId>           (operator-published pushes)
+ *   WS   /realtime/ws?userId=<visitorId>        (operator-published pushes)
  *   POST /operator/audiences/suggest {nlPrompt} -> { drafts:[AudienceDef] }
  *   POST /operator/audiences/publish {audience} -> { audienceId }
  *
@@ -131,6 +131,27 @@ class CoachStorefront {
     mintIds() {
         this.anonId = 'v-' + Math.random().toString(36).slice(2, 11).toUpperCase();
         this.sessionId = 's-' + Date.now().toString(36).toUpperCase();
+        // STABLE visitor id (doc 16 §6, P2): the transport key for the WS query +
+        // action posts — and the name the per-shopper ShopperReflex DO is keyed on
+        // (SHOPPER_REFLEX.idFromName), so every tab/reload lands on the SAME object.
+        // Persisted in localStorage with a cookie fallback; the per-load anonId
+        // above retires as the transport key but stays for legacy/display uses.
+        // NOTE: the ODP vuid remains SESSION-derived (SHA-256(sessionId), see
+        // src/services/odpLoop.ts) until the identity cutover maps vuid ⇄ visitor id.
+        this.visitorId = this.mintVisitorId();
+    }
+    mintVisitorId() {
+        const KEY = 'opt_visitor_id';
+        let id = null;
+        try { id = localStorage.getItem(KEY); } catch (e) {}
+        if (!id) { try { id = (document.cookie.match(/(?:^|;\s*)opt_visitor_id=([^;]+)/) || [])[1] || null; } catch (e) {} }
+        if (!id) {
+            id = 'vis-' + ((window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+                : Math.random().toString(36).slice(2) + Date.now().toString(36));
+        }
+        try { localStorage.setItem(KEY, id); } catch (e) {}
+        try { document.cookie = KEY + '=' + id + '; Max-Age=' + (60 * 60 * 24 * 365) + '; Path=/; SameSite=Lax'; } catch (e) {}
+        return id;
     }
 
     async init() {
@@ -213,7 +234,9 @@ class CoachStorefront {
      * ════════════════════════════════════════════════════════════════════════ */
     connectWebSocket() {
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const url = `${proto}//${location.host}/realtime/ws?userId=${this.anonId}`;
+        // Keyed on the STABLE visitor id — with REFLEX_HOST='do' this upgrade lands
+        // on the shopper's own ShopperReflex DO (the same object that scores events).
+        const url = `${proto}//${location.host}/realtime/ws?userId=${encodeURIComponent(this.visitorId)}`;
         try { this.ws = new WebSocket(url); } catch (e) { return; }
 
         this.ws.onopen = () => this.setWs('connected');
@@ -250,8 +273,8 @@ class CoachStorefront {
                 credentials: 'include',
                 body: JSON.stringify({
                     type,
-                    userId: this.anonId,
-                    anonymousId: this.anonId,
+                    userId: this.visitorId,      // stable transport key (matches the WS + the ShopperReflex DO name)
+                    anonymousId: this.anonId,    // per-load anon id — legacy vuid for the D1 demo_events capture
                     sessionId: this.sessionId,
                     data: payload,
                     source: 'coach-storefront',
@@ -327,7 +350,7 @@ class CoachStorefront {
      * ════════════════════════════════════════════════════════════════════════ */
     async hydrateReflex() {
         try {
-            const r = await fetch(`/realtime/reflex?userId=${this.anonId}`, { credentials: 'include' });
+            const r = await fetch(`/realtime/reflex?userId=${encodeURIComponent(this.visitorId)}`, { credentials: 'include' });
             const j = await r.json();
             if (j && j.config) this._afCfg = j.config;
             if (j && j.affinity && j.affinity.dims && Object.keys(j.affinity.dims).length) {
@@ -3016,6 +3039,12 @@ class CoachStorefront {
         if (!window.confirm('Start over as a brand-new shopper?\n\nClears this browser\'s session — affinity, cart, journey, chat — and reloads cold.')) return;
         try { await fetch('/realtime/session/reset', { method: 'POST', credentials: 'include' }); } catch (e) {}
         try { localStorage.removeItem('opal-session-id'); } catch (e) {}   // fresh Opal thread too (still per-browser keyed)
+        // Rotate the STABLE visitor id: the reload mints a fresh one → a brand-new
+        // ShopperReflex DO (REFLEX_HOST='do') / relay identity, so no old affinity
+        // can follow the "new" shopper. The abandoned object decays out and its
+        // retention alarm deletes it (doc 16 §12 lifecycle).
+        try { localStorage.removeItem('opt_visitor_id'); } catch (e) {}
+        try { document.cookie = 'opt_visitor_id=; Max-Age=0; Path=/; SameSite=Lax'; } catch (e) {}
         location.reload();
     }
     async resetDemoData() {

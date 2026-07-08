@@ -9,6 +9,10 @@ export interface Env {
   STATE_MANAGER: DurableObjectNamespace;
   RATE_LIMITER: DurableObjectNamespace;
   PERSONALIZATION_WEBSOCKET: DurableObjectNamespace;
+  // Edge Affinity Reflex P2 (doc 16 §6): per-shopper SQLite DO owning the
+  // WebSocket + affinity state (wrangler migration v4). Keyed on the STABLE
+  // visitor id; used only when REFLEX_HOST = 'do'.
+  SHOPPER_REFLEX: DurableObjectNamespace;
   // Opal chat agent (SQLite-backed DO, wrangler migration v3) — reached via
   // routeAgentRequest(/agents/*), not app routes; declared here for Env completeness.
   OpalAgent: DurableObjectNamespace;
@@ -33,6 +37,14 @@ export interface Env {
   // Edge Affinity Reflex (docs/architecture/16-edge-affinity-reflex.md) — on by
   // default; set 'false' as the kill-switch. Purely additive attributes/segments.
   REFLEX_ENABLED?: string;
+  // Reflex host (doc 16 §6, P2): 'session' (default — state rides the KV session,
+  // WS on the relay DO) | 'do' (socket + state + closed-form alarms co-located in
+  // the per-shopper ShopperReflex DO). Flag off ⇒ byte-identical default behavior.
+  REFLEX_HOST?: 'session' | 'do';
+  // ShopperReflex lifecycle/abuse knobs (optional; sensible defaults in the DO):
+  // idle self-expiry in days (default 30) and per-minute ingest cap (default 240).
+  REFLEX_RETENTION_DAYS?: string;
+  REFLEX_RATE_LIMIT_PER_MIN?: string;
 
   // Connector layer — "real seams, mocked calls" (docs/architecture/05-demo-build-spec.md)
   CONNECTOR_MODE?: 'mock' | 'live';

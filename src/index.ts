@@ -34,6 +34,7 @@ import { routeAgentRequest } from 'agents';
 import { StateManager } from '@/durable-objects/StateManager';
 import { RateLimiter } from '@/durable-objects/RateLimiter';
 import { PersonalizationWebSocket } from '@/durable-objects/PersonalizationWebSocket';
+import { ShopperReflex } from '@/durable-objects/ShopperReflex';
 import { OpalAgent } from '@/agents/OpalAgent';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -112,7 +113,7 @@ app.notFound((c) => {
   return c.json({ error: 'Not Found' }, 404);
 });
 
-export { StateManager, RateLimiter, PersonalizationWebSocket, OpalAgent };
+export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent };
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
