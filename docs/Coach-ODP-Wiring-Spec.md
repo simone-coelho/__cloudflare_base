@@ -18,8 +18,7 @@
 
 ## 2. Identity contract
 
-- We mint a **stable visitor id per browser** and send it as the **`vuid`** identifier on every event; the GraphQL read queries by the same `vuid`.
-- We'll format it UUID-style for compatibility — **confirm any vuid format constraints** in your account.
+- We derive the **`vuid`** deterministically from the session — `SHA-256(sessionId)`, first 16 bytes, as a **dashless 32-hex string** (ODP hard-validates `char(32)`). Every event carries it in `identifiers`; the GraphQL read queries by the same `vuid`. *(As built and live-verified.)*
 - No PII is sent. (If you want a "known shopper" beat, we can additionally send a demo `email` identifier on one scripted profile — optional.)
 
 ## 3. Events we forward (edge → ODP `POST /v3/events`)
@@ -30,7 +29,7 @@
 | Add to cart | `product` / `action: add_to_cart` | `product_id` | same |
 | Wishlist add | `product` / `action: save_for_later` (or your preferred action) | `product_id` | same |
 | Page view (PLP/nav) | `pageview` | `page` | — |
-| Purchase (demo checkout) | `order` / `action: purchase` | order summary | — |
+| Purchase (demo checkout) | `order` / `action: purchase` *(planned — not yet forwarded)* | order summary | — |
 
 We **flatten the product's catalog attributes onto each event** (the custom fields above) so your segment builder can qualify on line/silhouette/occasion **without a catalog join**. If you'd rather do it properly with ODP product objects, we'll also hand you the **71-SKU Coach demo catalog as CSV** (id, name, line, category, subcategory, silhouette, occasions, price_usd, price_band) — your call; the events work either way.
 
@@ -81,13 +80,16 @@ The edge engine **generates its audiences from the catalog** (population-filtere
 
 ## 8. What we read back (ODP → edge)
 
-On session start, the edge calls the GraphQL real-time segment read for the shopper's `vuid` and **unions** the qualified ODP segments with its own live evaluation (additive — ODP being slow or unreachable never blocks the storefront):
+The edge reads the shopper's qualified segments over GraphQL and **unions** them with its own live evaluation (additive — ODP being slow or unreachable never blocks the storefront; the read is capped at 1.5 s and degrades to edge-only). **As built and live-verified**, the query enumerates the mirrored audience **names** (unknown names risk validation errors) and can inject the session's **`recent_events` inline** — the instant-seed path (~85–200 ms), so a membership badge can land on the very action that caused it:
 
 ```graphql
-query { customer(vuid: $id) { audiences(subset: ["realtime"]) { edges { node { name state } } } } }
+query { customer(vuid: "<32-hex vuid>") {
+  audiences(subset: ["line_tabby_affinity","silhouette_tote_affinity","occasion_evening_affinity","luxe_affinity","late_journey_ready_to_buy"],
+            recent_events: [ { idempotence_id: "…", type: "product", action: "detail", ts: 1751900000, product_id: "COA-CH857", product_line: "Tabby", … } ])
+  { edges { node { name state } } } } }
 ```
 
-This is the "returning shopper starts warm from the ODP profile" beat.
+Notes: `recent_events` entries are **flat** (fields at the event's top level, not under `data`), `ts` is **epoch seconds**, and each carries an `idempotence_id` so replays dedupe. We keep qualified names where `state = "qualified"`. Beyond the in-session seed, we also **upsert the live affinity scores onto the ODP profile** (`POST /v3/profiles`: `line_affinity_tabby`, `silhouette_affinity_tote`, `occasion_affinity_evening`, `dominant_line`, `journey_stage`) so the edge's view is visible on the ODP customer record. This is the "shopper starts warm from the ODP profile" beat.
 
 ## 9. The 30-minute wiring test (together, before Friday EOD)
 
