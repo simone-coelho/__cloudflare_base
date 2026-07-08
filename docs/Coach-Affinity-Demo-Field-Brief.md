@@ -24,16 +24,16 @@ That is exactly the DY capability Mandeep asked about — audiences that build t
 
 **Status: I'm building this right now.** It's an extension of the engine we already have — most of the plumbing exists — not a from-scratch build. **Ready by Monday.**
 
-## 3) How it fits with the ODP demo — one story, two speeds
+## 3) How it fits with the ODP demo — one live system, two acts
 
 The ODP team shows the **memory**; I show the **reflex**. Same story, two acts:
 
-- **Act 1 — ODP (their demo): the foundation exists today.** Behavioral signals → unified first-party profile → dynamic affinity audiences updating in near-real-time (~90 seconds) → personalized content. This directly answers Mandeep's stated goal for Monday: *prove the behavioral personalization foundation exists today.*
+- **Act 1 — ODP (their demo): the foundation exists today.** Behavioral signals → unified first-party profile → dynamic affinity audiences updating in near-real-time → personalized content. This directly answers Mandeep's stated goal for Monday: *prove the behavioral personalization foundation exists today.*
 - **Act 2 — the edge reflex (my demo): the layer on top.** The same shopper story, but the reaction is **in-session and instant**, shoppers visibly move in *and out*, and every event flows **into that same ODP profile**.
 
-**The handoff line:** *"What you just watched ODP do in about a minute — now watch it happen in milliseconds, inside the session, feeding the same profile."*
+**The handoff line:** *"Everything ODP just captured — now watch the same live event stream drive the experience in milliseconds, inside the session, feeding the same profile."*
 
-Why this works: the two demos don't compete — **Act 2 makes Act 1 stronger.** ODP's ~90-second refresh stops being a "versus DY" latency question and becomes what it really is: the durable memory cadence — with the edge covering the instant part. That combination is the thing DY cannot do on data Coach actually owns.
+Why this works: the two demos don't compete — **Act 2 makes Act 1 stronger.** The split is by responsibility, not speed: ODP owns the facts, the profile, and the audiences; the edge owns the in-session decay and scoring — and the event stream between them flows in real time. That combination is the thing DY cannot do on data Coach actually owns.
 
 **Coordination asks (small but important):**
 - Use the **same audience names in both demos** (e.g., "Tote Affinity") so it reads as one system, not two products.

@@ -34,9 +34,9 @@ ODP is the **durable, first-party memory**:
 - **Real-time behavioral segments** that a shopper moves in and out of as their behavior changes.
 - **Predictive insights** (order likelihood, churn, engagement rank) — the genuine ML layer.
 
-This is exactly the system of record you want your audiences to live in. Its cadence is measured in seconds — right for a durable, cross-channel profile.
+This is exactly the system of record you want your audiences to live in — and its event stream flows in real time.
 
-A Dynamic Yield–style *in-session* experience needs one more thing on top: a **reflex** that reacts the instant a shopper views a product — sub-second, in the current session — so the store visibly adapts as they browse. That's not a gap in ODP; it's a different cadence doing a different job. **ODP is the memory; the reflex is the layer we add on top of it, at the edge.**
+A Dynamic Yield–style *in-session* experience needs one more thing on top: a **reflex** that reacts the instant a shopper views a product — sub-second, in the current session — so the store visibly adapts as they browse. That's not a gap in ODP; it's a different job — the in-session scoring and decay belong at the edge, computed on the same real-time events. **ODP is the memory; the reflex is the layer we add on top of it, at the edge.**
 
 ---
 

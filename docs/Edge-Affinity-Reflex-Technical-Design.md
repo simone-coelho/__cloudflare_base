@@ -214,7 +214,7 @@ The separation is **structural**, not procedural:
 3. **Different questions, different horizons.** The edge answers a *descriptive, in-session* question ("what is she interested in right now"); the platform's ML answers *predictive, longitudinal* ones ("will she order in 30 days"). Same evidence, different mathematics.
 4. **The seed direction is additive.** At session start the edge reads the platform's qualified real-time segments and **unions** them with its own evaluation — the durable profile warms the reflex. If the platform is slow or unreachable, the edge evaluation stands alone; the storefront never blocks on the platform.
 
-A useful corollary for validation: because both systems derive membership independently from the same evidence, showing them **agree** (edge instantly, platform within its refresh cycle) is a genuine cross-check, not a mirror.
+A useful corollary for validation: because both systems derive membership independently from the same evidence, showing them **agree** — each under its own evaluation — is a genuine cross-check, not a mirror.
 
 ---
 
