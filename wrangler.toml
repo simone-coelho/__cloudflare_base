@@ -61,6 +61,13 @@ class_name = "PersonalizationWebSocket"
 name = "OpalAgent"
 class_name = "OpalAgent"
 
+# Edge Affinity Reflex P2 (docs/architecture/16-edge-affinity-reflex.md §6):
+# per-shopper hot object owning BOTH the WebSocket and the affinity state.
+# Keyed on the STABLE visitor id; reached only when REFLEX_HOST = "do".
+[[durable_objects.bindings]]
+name = "SHOPPER_REFLEX"
+class_name = "ShopperReflex"
+
 [[migrations]]
 tag = "v1"
 new_classes = ["StateManager", "RateLimiter"]
@@ -73,6 +80,12 @@ new_classes = ["PersonalizationWebSocket"]
 [[migrations]]
 tag = "v3"
 new_sqlite_classes = ["OpalAgent"]
+
+# ShopperReflex is SQLite-backed by spec (doc 16 §6): affinity state + hibernating
+# WebSockets + closed-form alarms live in ctx.storage.
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["ShopperReflex"]
 
 # Analytics Engine
 [[analytics_engine_datasets]]
@@ -106,6 +119,10 @@ JWT_AUDIENCE = "edge-platform-api"
 # Optimizely FX SDK key — NOT secret (the datafile at cdn.optimizely.com/datafiles/<key>.json is public).
 OPTIMIZELY_SDK_KEY = "RLCQEiLW3ifgVH5fwuHoo"
 OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/RLCQEiLW3ifgVH5fwuHoo.json"
+# Edge Affinity Reflex P2 host (doc 16 §6): 'session' (default — reflex state rides
+# the KV session, WebSocket on the relay DO; today's behavior) | 'do' (opt-in —
+# socket + state + alarms co-located in the per-shopper ShopperReflex DO).
+REFLEX_HOST = "session"
 
 # Static assets configuration
 [assets]
