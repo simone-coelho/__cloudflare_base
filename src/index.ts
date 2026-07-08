@@ -82,10 +82,10 @@ app.route('/signals', signalRoutes); // Signal-Led Moment DETECT layer (owner: a
 app.get('/api-info', (c) => {
   return c.json({
     name: 'Edge Platform API',
-    version: '1.0.0',
+    version: '2.0.0',
     environment: c.env.ENVIRONMENT,
     endpoints: {
-      demo: '/',
+      storefront: '/storefront',
       health: '/health',
       auth: '/auth',
       api: '/api',
@@ -95,7 +95,16 @@ app.get('/api-info', (c) => {
       optimizely: '/optimizely',
       cdp: '/cdp',
       realtime: '/realtime',
+      operator: '/operator',
+      ai: '/ai',
+      aiScene: '/ai/scene',
+      geo: '/geo',
+      funnel: '/funnel',
+      experiment: '/experiment',
+      signals: '/signals',
+      opalAgent: '/agents/opal-agent/:session',
     },
+    docs: 'docs/api/01-rest-endpoints.md',
   });
 });
 

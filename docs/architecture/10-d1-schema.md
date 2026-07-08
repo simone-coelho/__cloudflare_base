@@ -14,8 +14,8 @@
 | `coach_purchase_items` | 0001 | line items, denormalized line/category/price_band | Opal, geo cohort |
 | `coach_odp_profiles` | 0001 | ODP-shaped profiles (~60 cols: identity, aggregates, favorites, realtime snapshot, predictions, persona) | Opal, geo cohort |
 | `meta_attribute_catalog` | 0001 (seeded in `seed_001`) | the 35-attribute audience whitelist (condition-compiler guard) | audience tooling |
-| `odp_events` | 0001 | 58-col ODP event-export mirror — **schema-fidelity artifact, currently unseeded/empty** | none (excluded from Opal) |
-| `odp_customers_authenticated`, `conversions`, `decisions` | 0001 | export-mirror fidelity tables — **unseeded/empty** | none |
+| `odp_events` | 0001 | 58-col ODP event-export mirror — **schema-fidelity artifact, intentionally empty** | none (excluded from Opal) |
+| `odp_customers_authenticated`, `conversions`, `decisions` | 0001 | export-mirror fidelity tables — **intentionally empty** | none |
 | `v_profiles` (view) | 0001 | profiles ⋈ purchase aggregates (incl. 90-day windows, `bought_lines`) | Opal |
 | `demo_events` | 0002 | **live** storefront/funnel event capture (product_id, line, price, path, dwell); reset via `POST /operator/events/reset` | Opal, experiment readouts, operator stats |
 | `v_demo_profiles` (view) | 0002 | live demo events rolled up to the profile shape | Opal |
@@ -23,7 +23,7 @@
 | `funnel_seed`, `funnel_live` | 0003 | Revenue Radar funnel baseline + live counters | funnel compute/sim |
 | `geo_census`, `geo_xref` | 0004 | **real** public census (income/home value) + ZIP→metro/region crosswalk (seeded by `seed_011_geo`) | geo cohort |
 
-Notes: no `ALTER TABLE` anywhere — evolution is add-only objects per migration. The four export-mirror tables exist to prove schema fidelity and are deliberately empty (decide at productization: seed or remove).
+Notes: no `ALTER TABLE` anywhere — evolution is add-only objects per migration. The four export-mirror tables prove warehouse-export schema fidelity and are **intentionally empty (decision 2026-07-08)** — seeding adds no demo value; revisit only if a live warehouse-sync story needs rows.
 
 ## Access surface (as-built)
 

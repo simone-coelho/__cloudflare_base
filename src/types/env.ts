@@ -9,6 +9,9 @@ export interface Env {
   STATE_MANAGER: DurableObjectNamespace;
   RATE_LIMITER: DurableObjectNamespace;
   PERSONALIZATION_WEBSOCKET: DurableObjectNamespace;
+  // Opal chat agent (SQLite-backed DO, wrangler migration v3) — reached via
+  // routeAgentRequest(/agents/*), not app routes; declared here for Env completeness.
+  OpalAgent: DurableObjectNamespace;
 
   // D1 — Coach demo dataset (ODP profiles + commerce + warehouse-export mirror).
   // Backs the Opal chat's aggregate-then-reason query surface. See

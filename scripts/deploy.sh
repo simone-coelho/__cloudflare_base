@@ -2,7 +2,7 @@
 
 set -e
 
-ENVIRONMENT=${1:-production}
+ENVIRONMENT=${1:-default}
 
 echo "🚀 Deploying to $ENVIRONMENT environment..."
 
@@ -20,10 +20,12 @@ npm run test
 
 # Deploy
 echo "📦 Deploying to Cloudflare Workers..."
-if [ "$ENVIRONMENT" = "production" ]; then
-    wrangler deploy --env production
-elif [ "$ENVIRONMENT" = "staging" ]; then
-    wrangler deploy --env staging
+if [ "$ENVIRONMENT" = "production" ] || [ "$ENVIRONMENT" = "staging" ]; then
+    echo "❌ '--env $ENVIRONMENT' is not deployable yet: [env.$ENVIRONMENT] in wrangler.toml declares only a name."
+    echo "   Named envs do NOT inherit bindings — this would ship a worker with no KV/R2/D1/DO/Queues/vars."
+    echo "   Deploy the default worker instead (npm run deploy), or duplicate the bindings into the env first."
+    echo "   See docs/deployment/01-deploy.md."
+    exit 1
 else
     wrangler deploy
 fi
@@ -39,5 +41,5 @@ fi
 echo ""
 echo "🔗 Useful post-deployment commands:"
 echo "  wrangler tail                    - View real-time logs"
-echo "  wrangler kv:key list --binding CACHE  - List cache keys"
+echo "  wrangler kv key list --binding CACHE  - List cache keys"
 echo "  curl $DEPLOYED_URL/health        - Check health status"

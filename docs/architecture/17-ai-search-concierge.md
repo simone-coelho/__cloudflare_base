@@ -1,6 +1,6 @@
 # Plan: make AI Search + Style Concierge genuinely Gemini-powered
 
-Status: investigated (max-reasoning agent, validated against the repo) — awaiting go-ahead to build.
+Status: **BUILT and verified live on prod** (see `docs/PROJECT_LEDGER.md`) — shipped as specced, plus post-plan growth: `/ai/search` also authors the Edit-hero copy + sceneContext feeding `/ai/scene`; the concierge gained multi-turn refinement + `avoidIds` anti-repeat. *(Renumbered 12 → 17 to resolve the duplicate number with the Signal-Led Moment build brief.)*
 
 ## Recommendation (TL;DR)
 - **AI Search → Gemini `generateObject` (NL → structured intent) → compile to a real catalog filter + rank, blended with the shopper's live affinity.** NOT Vectorize: at 71 richly-attributed products, intent-parse is more controllable, enforces hard constraints (price/in-stock/category) that vectors can't, personalizes cleanly, adds zero infra, ~1 model call (~0.5–1s). Vectorize/hybrid is the **scale path** (thousands of SKUs).

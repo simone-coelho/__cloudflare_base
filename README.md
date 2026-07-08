@@ -280,14 +280,12 @@ npm run dev
 ### Deployment
 
 ```bash
-# Deploy to Cloudflare
+# Deploy to Cloudflare (the one safe path — deploys the "edge-platform" worker with all bindings)
 npm run deploy
 
-# Deploy to staging
-wrangler deploy --env staging
-
-# Deploy to production
-wrangler deploy --env production
+# NOTE: do NOT use `wrangler deploy --env staging|production` yet — those named envs
+# declare only a worker name in wrangler.toml and would ship with NO bindings/vars.
+# See docs/deployment/01-deploy.md.
 ```
 
 ## 🔧 Configuration
