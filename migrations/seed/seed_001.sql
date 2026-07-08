@@ -2030,3 +2030,25 @@ INSERT INTO coach_odp_profiles (vuid, customer_id, email, fs_user_id, first_name
   ('vuid_f984233b5ea193c15f3f7ffbca3e5c95', NULL, NULL, NULL, NULL, NULL, 'US', 'NV', 'Las Vegas', 'en-US', 'America/New_York', 'mobile', 'paid_search', 0, 0, 0, NULL, 1778635640673, 1778820928087, 12, 2, 986, 493, 'Tabby', 'Small Leather Goods', 'core', 0, 'loyal_repeat', 'Tabby', 9, 21, 353518, 4, 0, 1, 'core', 'late', 0, 0, 8, 33, 9, 2, 0.794, 'vip', 0.064, 2943, '[]'),
   ('vuid_09c8411536010576bc82a8ac13fce999', NULL, NULL, NULL, NULL, NULL, 'US', 'FL', 'Miami', 'en-US', 'America/New_York', 'desktop', 'affiliate', 0, 0, 0, NULL, 1778084007258, 1781587767284, 2, 0, 0, 167, 'Essential', 'Handbags', 'core', 0, 'email_reengaged', 'Essential', 1, 2, 45111, 0, 0, 0, 'core', 'early', 0, 0, 6, 5, 0, 0, 0.087, 'medium', 0.335, 44, '["early_journey_cold_start"]'),
   ('vuid_f3ad7ecd45371b59b071cdb51e0d6ff8', 'coach_cust_0101839', 'scarlett.hall739@icloud.com', 'fs_0001839', 'Scarlett', 'Hall', 'CA', 'BC', 'Vancouver', 'en-CA', 'America/Toronto', 'mobile', 'direct', 1, 0, 1, 'member', 1775127015121, 1779336277310, 8, 0, 0, 219, 'Essential', 'Small Leather Goods', 'entry', 0, 'accessory_addon', 'Essential', 5, 4, 219310, 0, 0, 0, 'entry', 'mid', 0, 0, 1, 12, 3, 1, 0.205, 'vip', 0.168, 135, '["mid_journey_considering"]');
+
+-- meta_attribute_catalog rows 36-38 — added by migration 0005 (silhouette /
+-- subcategory / occasion dimensions). Duplicated here so a FULL RESEED (which
+-- DELETEs meta_attribute_catalog above) retains them. INSERT OR REPLACE keeps
+-- this idempotent whether 0005 or the reseed runs last.
+INSERT OR REPLACE INTO meta_attribute_catalog
+  (key, source_table, column_expr, kind, sql_type, domain_kind, operators, enum_values, example, description) VALUES
+  ('viewed_silhouette', 'v_audience_base', 'viewed_silhouette', 'behavior', 'TEXT', 'enum',
+   '["eq","neq","in","exists"]',
+   '["bag charm","billfold","card case","card holder","chain wallet","coin case","crossbody","hobo","shoulder","slim wallet","strap","top-handle","tote","wristlet","zip wallet","zip-around wallet"]',
+   'tote',
+   'Most-engaged product silhouette — latest viewed for live demo shoppers; most-purchased for historical profiles.'),
+  ('viewed_subcategory', 'v_audience_base', 'viewed_subcategory', 'behavior', 'TEXT', 'enum',
+   '["eq","neq","in","exists"]',
+   '["Bag Charms","Bag Straps","Card Cases","Crossbody Bags","Keychains","Shoulder Bags","Top-Handle Bags","Totes & Carryalls","Wallets","Wristlets"]',
+   'Totes & Carryalls',
+   'Most-engaged product subcategory — latest viewed for live demo shoppers; most-purchased for historical profiles.'),
+  ('viewed_occasions', 'v_audience_base', 'viewed_occasions', 'behavior', 'TEXT', 'text',
+   '["contains","exists"]',
+   '["date-night","evening","everyday","festival","gift","special-occasion","travel","winter","work"]',
+   'evening',
+   'Occasion tags engaged with (comma list; use contains) — latest viewed item''s tags for live shoppers; purchased items'' tags for historical profiles.');

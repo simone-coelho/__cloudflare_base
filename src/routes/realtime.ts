@@ -4,6 +4,7 @@ import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegm
 import { getConnectors } from '@/connectors';
 import { DEFAULT_REFLEX_CONFIG, snapshot as reflexSnapshot } from '@/reflex/core';
 import { forwardEventToOdp, mapActionToOdp, odpEnabled, upsertOdpProfile } from '@/services/odpLoop';
+import { CatalogService } from '@/services/CatalogService';
 import { z } from 'zod';
 
 const realtimeRoutes = new Hono<{ Bindings: Env }>();
@@ -633,6 +634,13 @@ realtimeRoutes.post('/demo/trigger', async (c) => {
  * are enriched authoritatively from coach_catalog inside v_demo_profiles, so we
  * only store what the click carried. Best-effort: never throws into the request.
  */
+// One catalog per isolate for capture-time enrichment (mirrors odpLoop's pattern);
+// the CatalogService constructor builds the affinity graph — never rebuild per event.
+let _captureCatalog: CatalogService | null = null;
+function captureCatalog(): CatalogService {
+  return (_captureCatalog = _captureCatalog ?? new CatalogService());
+}
+
 async function captureDemoEvent(
   env: Env,
   event: ActionEvent,
@@ -643,11 +651,17 @@ async function captureDemoEvent(
     const d = event.data ?? {};
     const vuid = event.anonymousId ?? event.userId;
     const productId = d.product_id ?? d.productId ?? d.sku ?? null;
+    // 0005: enrich the captured row with silhouette/subcategory/occasions
+    // server-side (catalog-authoritative — no client payload change needed).
+    // v_demo_profiles still re-joins the catalog; these are the self-contained
+    // copy + the fallback when a stray product id misses the join.
+    const product = productId ? captureCatalog().getProduct(String(productId)) : undefined;
     await env.DB.prepare(
       `INSERT INTO demo_events
          (ts, vuid, session_id, demo_run_id, event_type,
-          product_id, product_name, line, price_usd, path, label, dwell_ms, raw_json, source)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'demo')`
+          product_id, product_name, line, price_usd, path, label, dwell_ms, raw_json, source,
+          silhouette, subcategory, occasions)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'demo', ?, ?, ?)`
     )
       .bind(
         event.timestamp ?? Date.now(),
@@ -656,13 +670,16 @@ async function captureDemoEvent(
         sessionId ?? null, // demo_run_id defaults to the session — enables per-run reset
         event.type,
         productId,
-        d.product_name ?? d.name ?? null,
-        typeof d.line === 'string' ? d.line : null,
-        typeof d.price_usd === 'number' ? Math.round(d.price_usd) : null,
+        d.product_name ?? d.name ?? product?.name ?? null,
+        typeof d.line === 'string' ? d.line : (product?.line ?? null),
+        typeof d.price_usd === 'number' ? Math.round(d.price_usd) : (product?.price_usd ?? null),
         typeof d.path === 'string' ? d.path : null,
         d.label ?? d.query ?? null,
         typeof d.dwellMs === 'number' ? Math.round(d.dwellMs) : null,
-        JSON.stringify({ source: event.source, data: d }) // full payload (provenance incl. original source)
+        JSON.stringify({ source: event.source, data: d }), // full payload (provenance incl. original source)
+        product?.silhouette ?? null,
+        product?.subcategory ?? null,
+        product?.occasion && product.occasion.length ? product.occasion.join(',') : null
       )
       .run();
   } catch (err) {

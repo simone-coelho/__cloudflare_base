@@ -32,6 +32,9 @@ QUERYABLE SCHEMA (only these tables/views exist):
 v_audience_base — ONE ROW PER CUSTOMER/VISITOR (historical + live-demo union). Primary audience surface.
   vuid, source('historical'|'demo'), viewed_product_line, journey_stage('early'|'mid'|'late'),
   product_views, page_views, cart_adds, wishlist_adds, cart_abandoned(0/1), price_band_viewed,
+  viewed_silhouette('tote'|'crossbody'|'shoulder'|'hobo'|'bag charm'|'card case'|...),
+  viewed_subcategory('Totes & Carryalls'|'Shoulder Bags'|'Crossbody Bags'|'Wallets'|...),
+  viewed_occasions(comma list of 'evening','work','travel','date-night','everyday',... — use LIKE '%evening%'),
   favorite_line, preferred_category('Handbags'|'Small Leather Goods'|'Accessories'), preferred_price_band,
   loyalty_tier('silver'|'gold'|'platinum'|'member' or NULL), loyalty_member(0/1), gifter(0/1),
   order_likelihood(0..1), churn_risk_score(0..1), predicted_ltv_usd, lifetime_value_usd,
@@ -47,7 +50,8 @@ coach_transactions — orders: order_id, vuid, order_ts, subtotal_usd, discount_
   tender_type('card'|'paypal'|'apple_pay'|'google_pay'|'affirm'|'tabby'|'afterpay'|'gift_card'),
   status, item_count, is_gift(0/1), channel, billing_country. Treat subtotal_usd as the order value.
 coach_purchase_items — line items: order_id, vuid, product_id, product_name, line, category, unit_price_usd, quantity, price_band, order_ts.
-demo_events — events captured live this session: ts, vuid, event_type, product_id, line, price_usd, path, label, source('demo').
+demo_events — events captured live this session: ts, vuid, event_type, product_id, line, silhouette, subcategory,
+  occasions(comma list), price_usd, path, label, source('demo').
 
 TIMESTAMPS (order_ts, ts, last_order_ts, first_seen_ts, last_seen_ts) are Unix epoch MILLISECONDS (integers).
 Filter relative dates like: order_ts >= (unixepoch('now','-90 days') * 1000); read one as a date with
