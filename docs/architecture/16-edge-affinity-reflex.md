@@ -208,6 +208,8 @@ On a membership change the DO resolves the content decision and pushes it over t
 
 ODP is the durable, cross-session, first-party **memory**; the edge is the **reflex**. A loop, not a handoff.
 
+> **As built (`src/services/odpLoop.ts`, live-verified):** the loop landed as a dedicated module that is **additive by design and bypasses `CONNECTOR_MODE`** — gated solely on ODP credentials. Events forward to `/v3/events` (flattened `product_*` fields, receipt pushed to the shopper as `odp_receipt`); the seed reads the **mirrored audience names** via GraphQL with the session's `recent_events` injected inline (~85–200 ms, instant read on membership change, throttled otherwise); the reflex's scores upsert to `/v3/profiles`; identity = `vuid = SHA-256(sessionId)` (dashless 32-hex). The engine unions `local ∪ reflex ∪ odpSeed`.
+
 - **Seed (memory → edge):** on session start, `fetchQualifiedSegments(vuid)` → seed `odpSeed`, so the reflex starts from the shopper's durable history. Uncomment the live GraphQL in `LiveSegmentProvider` (`POST {ODP_API_HOST}/v3/graphql`, `x-api-key`), supply creds. Cache in KV.
 - **Forward (edge → memory):** async-forward each behavioral event to ODP's ingestion API (`POST {ODP_API_HOST}/v3/events`) via the `waitUntil` pattern (mirrors `captureDemoEvent`) or a queue-consumer branch. The engine already normalizes events into ODP-shaped attributes.
 - **Additive, never either/or:** make `LiveSegmentProvider` **union** ODP's qualified segments with the local edge evaluator — mirroring the live-with-mock-fallback pattern `LiveDecisionProvider` already has. (`getConnectors` `live` mode currently *replaces* the triad; that's the one change.) So the reflex qualifies at the edge whether or not ODP answers.
@@ -278,7 +280,7 @@ Show the **scores (bars), the audience in/out flips (badges), and the content sw
 | **P1 — Generator** | catalog-driven audience generation | new `audienceGenerator`, `CatalogService` dimension enum, `KvAudienceStore` | days |
 | **P2 — Hot DO** | new **`ShopperReflex` DO** (SQLite, migration v4): socket + `POST /ingest` + hibernation + closed-form alarms + **stable id**; the P0 core moves in **unchanged** | new `src/durable-objects/ShopperReflex.ts`, `wrangler.toml` (migration), `realtime.ts`, client transport | **~1 week (the real lift)** |
 | **P3 — Instant + viz** | push on threshold, kill double-apply, trim cascade, the **Affinity Instrument**, `GET /realtime/reflex` snapshot for first-paint (no flash) *(as built)* | `storefront.js` (apply + panel), `realtime.ts` | days |
-| **P4 — ODP loop** | live GraphQL seed, event forwarder, **additive** provider, identity | `SegmentProvider`, `index.ts` (connectors + queue), `realtime.ts` | days–week |
+| **P4 — ODP loop** *(as built)* | landed as `src/services/odpLoop.ts` — event forward + `recent_events` instant seed + profile upsert; creds-gated, additive, bypasses `CONNECTOR_MODE`; session-derived vuid | `odpLoop.ts`, `RealtimeSegmentEngine`, `realtime.ts` | done |
 | **P5 — Dimensions** | silhouette/occasion capture → rollup → whitelist → audiences | `demo_events`, `v_demo_profiles`, `coach_odp_profiles`, `meta_attribute_catalog`, `insights.json` | days (mechanical) |
 
 - **Demo slice** = P0 + P1 + P3, running the **same pure core** on the existing request path — a **few days**, ODP-optional, and **zero throwaway**: P2 relocates the hosting for latency, not the engine for correctness.

@@ -152,7 +152,8 @@ sequenceDiagram
 Every Optimizely integration is a **real connector**, named after the actual product. What differs is whether it returns **live** data or **sample** data today:
 
 - **Live today** (gated behind a flag): creating real audiences, flags, and A/B · MAB · CMAB experiments through the Optimizely API; serving real decisions from the datafile; event tracking. Plus real edge geo and real Gemini AI.
-- **Built, sample data today** (flip a switch to go live): ODP audiences/segments, the Opal audience builder, and the bandit's live serving. The connector is real; it returns sample data until credentials are plugged in.
+- **Live when credentials are present:** the **ODP loop** — behavioral events forwarded to ODP in real time, the instant `recent_events` segment seed, and the affinity-score profile upsert (verified against a real ODP account; additive, independent of the other switches).
+- **Built, sample data today** (flip a switch to go live): the Opal audience builder, the ODP segment-qualification connector, and the bandit's live serving. The connector is real; it returns sample data until credentials are plugged in.
 - **Simulated on purpose** (clearly labeled): social-listening (badged *"simulated · not Optimizely"*), the representative lift numbers, and the local recommendations math.
 
 **The config-flip (sample → live):**
@@ -176,7 +177,7 @@ Every Optimizely integration is a **real connector**, named after the actual pro
 | Launch A/B · MAB · CMAB | **Live** (gated) | Feature Experimentation |
 | Personalized banner / hero decisions | **Live** (opt-in) | FX decisions (datafile) |
 | The creative values that drive "the moment" | **Live** | FX feature variables |
-| Real-time audiences / segments | **Sample data** | ODP |
+| Real-time audiences / segments | **Live** (creds-gated: events out + instant seed + profile upsert) | ODP |
 | Natural-language audience building | **Sample data** | Opal (ODP audience builder) |
 | The bandit's live winner + lift chart | **Sample data** (real rule created) | MAB / CMAB serving |
 | Product recommendations | **Sample data** | Optimizely Recommendations |
@@ -190,7 +191,7 @@ Every Optimizely integration is a **real connector**, named after the actual pro
 High-level, and genuinely open — this is where a product conversation would start:
 
 1. **Which "audience" do we mean?** The experiment-targeting kind (live today via the API) or ODP's real-time audiences (which need credentials and carry approval/governance rules)? They're different objects.
-2. **How do the two speed layers combine?** ODP refreshes in under ~90 seconds; our edge personalizes in under 50ms. What belongs to the durable profile vs. the in-session edge?
+2. **How do the two layers divide responsibility?** ODP owns the facts, the profile, and the audiences (with the `recent_events` read answering in ~85–200 ms); the edge owns in-session decay and scoring at sub-50 ms. What belongs to the durable profile vs. the in-session edge?
 3. **Whose AI agent orchestrates?** Build on Optimizely's own AI agent (Opal, credit-based, human-approves), or keep our agent talking to the API directly?
 4. **What's realistic for optimization?** The bandit learns over *hours* on real traffic — so live convergence is a real-world outcome, not a 30-minute-demo one. Set that expectation.
 5. **Recommendations** — which recs product, and how its daily refresh sits under a live, in-session experience.
