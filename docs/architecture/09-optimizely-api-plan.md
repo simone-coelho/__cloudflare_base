@@ -276,9 +276,10 @@ https://config.optimizely.com/datafiles/auth/{SDK_KEY}.json          # secure/au
 
 ## 8. Mapping to our connectors (build hand-off)
 
-- The OPAL chat's tools (`create_audience`, `create_flag`, `add_rule`, `launch`) are thin wrappers over §3's endpoints, **token-gated** behind `OPTIMIZELY_API_TOKEN` (Worker secret) + a human-confirm step before §3.7.
-- `LiveDecisionProvider` = §6 option 1 (datafile fetch + evaluate). `MockDecisionProvider` stays the stage fallback. One `CONNECTOR_MODE` flag flips them — **real seam, the live adapter is now genuinely wired** for this path.
-- **Subject to API rate limits** (see Optimizely "API conventions"); the chat should create sequentially and reuse ids, not hammer in parallel.
+- *(As built)* The Opal chat's tools are **`createOptimizelyAudience`, `createFlag`, `targetMessageToAudience`, `launchExperiment`** (`src/agents/tools.ts`, `experimentTools.ts`) — thin wrappers over §3's endpoints, gated by the **env write gate** (`OPTIMIZELY_WRITE_ENABLED==='true'` + `OPTIMIZELY_API_TOKEN`); when off they return `status:'stubbed'` plans (no per-call human-confirm step shipped).
+- *(As built)* `LiveDecisionProvider` = §6 option 1 (no-store datafile fetch + `decide()`), degrading per-flag to mock. The flip is **`DECISION_SOURCE=optimizely`** — independent of `CONNECTOR_MODE` (`src/connectors/index.ts:38-45`). `MockDecisionProvider` stays the stage fallback.
+- **Subject to API rate limits** (see Optimizely "API conventions"); the chat creates sequentially and reuses ids (`ensure*` helpers), not in parallel.
+- **Implemented in:** `src/services/optimizelyFx.ts` (§3 chain + banner rules), `src/services/experimentFx.ts` (typed rules: a/b · multi_armed_bandit · contextual_multi_armed_bandit + metric events), `src/routes/webhook.ts` (§6 option 3 at `/webhook/optimizely-datafile`, HMAC-verified), `src/connectors/DecisionProvider.ts` (§6 option 1).
 
 ---
 
