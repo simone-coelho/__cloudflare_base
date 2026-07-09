@@ -6,6 +6,31 @@
 
 ---
 
+## 0. The loop at a glance (as built, live-verified)
+
+```mermaid
+sequenceDiagram
+    participant S as Shopper (browser)
+    participant E as Edge Worker (reflex)
+    participant O as ODP (api.zaius.com)
+    S->>E: POST /realtime/action (product_view)
+    Note over E: reflex scores instantly (ms):<br/>decay + accumulate + hysteresis
+    E-->>S: response: decisions + affinity + dispatch receipt
+    par Facts out (fire-and-forget)
+        E->>O: POST /v3/events {type: product, action: detail,<br/>product_line / silhouette / occasions / price_band,<br/>identifiers.vuid}
+        O-->>E: 202 + receiptId
+        E-->>S: WS push odp_receipt (feed row upgrades to a real 202)
+    and Seed in (instant on membership change, else throttled 10s / 120s idle)
+        E->>O: POST /v3/graphql customer(vuid)<br/>audiences(subset: 5 mirrored names, recent_events: session ring)
+        Note over O: real-time segments evaluate in 85-200 ms<br/>(their windows: 1 hour)
+        O-->>E: qualified audience names
+        Note over E: segments = local + reflex + odpSeed (union)<br/>member chips gain the "ODP" badge
+    and Scores onto the profile (on membership change)
+        E->>O: POST /v3/profiles {vuid, line_affinity_tabby,<br/>silhouette_affinity_tote, journey_stage, ...}
+    end
+    Note over S,O: vuid = SHA-256(sessionId), dashless 32-hex, no PII.<br/>Edge owns decay + scoring · ODP owns facts, profile, audiences.<br/>ODP slow or down means the edge stands alone (1.5s cap, graceful degrade)
+```
+
 ## 1. What we need from you (the handoff)
 
 | # | Item | Notes |
