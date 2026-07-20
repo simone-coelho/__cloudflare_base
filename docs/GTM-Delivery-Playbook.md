@@ -66,6 +66,18 @@ We build with AI-assisted engineering and routinely deliver in **hours-to-days**
 
 Why this matters commercially: the buffer is not padding for slowness — it is what lets us absorb customer-side delays (access, approvals, workshops are the real long poles, not our code) while never missing a public date.
 
+**Both tracks, side by side** — so nobody misreads §5's external dates as build-effort estimates:
+
+| Item | Internal (build reality) | External (committed) | Why the gap exists |
+|---|---|---|---|
+| Tuning UI | ~1–2 days | this week | standard buffer |
+| Foundation deploy | ~2–3 days | 7–14 days | customer-side access, credentials, environment approvals |
+| Rung 2 — content S1 | days of engine work | weeks | the long poles are theirs: content sample, CMS API access, the front-end workshop |
+| Rung 3 — outcome learning | days of build | **~2 months — the customer's own stated target** | **not build time — data physics:** it learns from outcomes, so rung 2 must run on live traffic for weeks accumulating impressions, clicks, and conversions before there is anything to learn from |
+| Rung 4 — experience | design complete; build ~1–2 weeks | **~6 months — the customer's own pacing** ("not in a month or two," their words) | their organizational/governance readiness + it builds on rungs 2–3's accumulated data |
+
+Read the two starred rows carefully: those external dates **came from the customer**, not from us — they are agreed expectations we carried into §5 as commitments. Our internal reality is that we could build faster than either; rung 3's calendar is bounded by data accumulation, not engineering, and rung 4's by the customer's own readiness.
+
 ## 7. Cost & pricing — how to think about it (the foundation, not the price)
 
 Everything above **rides infrastructure we build and operate ourselves at the edge** (Cloudflare: compute, per-shopper stateful objects, key-value and object storage, queues, sockets). The Optimizely products (ODP, Feature Experimentation) are platform; the edge layer is **ours — and it has a real, meterable cost per visitor.**
