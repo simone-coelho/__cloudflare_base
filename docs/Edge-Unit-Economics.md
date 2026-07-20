@@ -44,7 +44,17 @@ Per 1,000 engaged sessions, production architecture — the full Cloudflare bill
 | Wakeup re-reads, misc | | $0.27 |
 | **Total (Cloudflare)** | | **≈ $1.19** |
 
-Scenario range: light session ≈ $0.10–0.15/1K-equivalent; heavy ≈ $2–2.5/1K. Monthly, all-engaged worst case: **≈ $6/mo at 10K sessions · ≈ $60 at 100K · ≈ $600 at 1M** (marginal, before included allotments — which cover most of the 10K tier outright). Storage: ~5 KB per shopper, 30-day retention, inside included tiers to ~1M monthly shoppers.
+Scenario range: light session ≈ $0.10–0.15/1K-equivalent; heavy ≈ $2–2.5/1K.
+
+**Monthly at scale — strictly linear** (all-engaged worst case, at the $1.19/1K marginal rate):
+
+| Sessions/month | Marginal cost | Billed (after included allotments + $5 plan) |
+|---|---|---|
+| 10,000 | ≈ $12 | **≈ $5–6** — the paid plan's included allotments absorb nearly all of it |
+| 100,000 | ≈ $119 | ≈ $100–110 |
+| 1,000,000 | ≈ $1,190 | ≈ $1,150–1,190 |
+
+Read the shape correctly: **per-session cost is constant — there is no volume discount in this model.** The only non-linearity is at the *small* end, where Cloudflare's included monthly allotments (50M database rows, 10M requests, etc.) swallow most of a 10K-sessions month; past those, cost converges to the flat marginal rate and scales exactly linearly. Storage: ~5 KB per shopper, 30-day retention, inside included tiers to ~1M monthly shoppers.
 
 What dominates in production: nothing, meaningfully — the largest line is 55¢ per thousand half-hour sessions. The architecture is deliberately shaped so cost is a non-issue in commercial conversations.
 
