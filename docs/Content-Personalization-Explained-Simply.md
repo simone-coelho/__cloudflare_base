@@ -29,6 +29,19 @@ That's what we're proposing. Retail brands are asking for exactly this — Tapes
 4. **We send the answer; the brand's website displays it.** We push a tiny message: "in the hero spot, show content **#CMP1234**, and here's *why*." Their website does the actual displaying. **We never touch, redesign, or inject anything into their site** — a huge selling point for engineering teams burned by tools that mess with their pages.
 5. **The system learns what actually works.** Over time we see which content leads to purchases, for which kinds of shoppers, from which channels ("visitors from paid social buy more after seeing the model-worn shot"). The winners rise in the rankings — exactly how product recommendations get smarter. And every choice can answer the question "*why did this shopper see this?*" — no black box.
 
+### …and a real page isn't one picture — it's a wall of frames
+
+The story above followed one spot (the hero image) to keep it simple. A real page — say a product page — might have **eight content sections** top to bottom: a banner, the product gallery, a storytelling block, a recommendations widget, reviews, a styling module, and so on. The same machine handles all of them:
+
+- **Think of the page as a wall of picture frames.** The brand's template decides the frames — which sections exist and where. We choose **what hangs in each frame**, per shopper.
+- Every piece of content in the catalog says which frames it can hang in ("this is a banner," "this fits the storytelling section").
+- **One reading, eight picks.** The engine reads the shopper's interest thermometer *once*, then picks the best content for each frame from that one reading — eight small decisions sent together as one message: "frame 1 → #CMP1234, frame 3 → #CMP2201, …"
+- **House rules keep the page sane:** never hang the same picture twice on one page; some frames are never personalized (header, footer, legal — the brand marks them off-limits); and any frame we don't send a pick for simply shows the brand's default. The page never breaks and never waits on us.
+- **The product-recommendations widget stays product recs.** That section keeps choosing *products* (the existing machinery). Content personalization fills the frames *around* it — same brain, the shopper's live interests, feeding both.
+- **Rearranging the wall itself** — which frames exist, in what order, per shopper — is deliberately *later*: that's step 4 of the ladder (layout personalization, ~6 months). Today the wall is fixed and the pictures are personal; later the wall adapts too.
+
+And we've built multi-frame pages before: **HD Supply's CRePE fills a 10-widget home page this way today** — every widget resolved per request, duplicates removed across the page, a fallback per widget — just with fixed business rules doing the picking. Content personalization swaps the picker (live interest instead of rules); the multi-section delivery is shipped technology.
+
 ## 4. What's an Optimizely product, and what did we build?
 
 Honest and simple:
