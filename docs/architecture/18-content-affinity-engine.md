@@ -78,12 +78,18 @@ New event types through the **existing ingestion seam**: `content_impression`, `
 A thin embeddable client, extracted from what `storefront.js` already does: **connect** (WS with the stable visitor id) · **emit** (behavior + content interactions) · **listen** (decision push → customer's event handler). Push payload (v1, to be co-designed with each customer's front-end team — the schema is the partnership artifact):
 
 ```json
-{ "kind": "content_decision", "slot": "pdp-hero",
-  "content": { "customerContentId": "CMP1234", "systemId": "cnt_8f3a…", "type": "image", "url": "…" },
-  "score": 0.78,
-  "explain": { "drivers": [{"dim": "occasion", "tag": "evening", "a": 0.72}], "context": {"channel": "paid_social", "visit": 2} },
+{ "kind": "content_decisions", "page": "pdp",
+  "decisions": [
+    { "slot": "pdp-hero", "order": 1,
+      "content": { "customerContentId": "CMP1234", "systemId": "cnt_8f3a…", "type": "image", "url": "…" },
+      "score": 0.78,
+      "explain": { "drivers": [{"dim": "occasion", "tag": "evening", "a": 0.72}], "context": {"channel": "paid_social", "visit": 2} } },
+    { "slot": "pdp-story", "order": 2, "content": { "customerContentId": "CMP2201", "…": "…" }, "score": 0.66 }
+  ],
   "ts": … }
 ```
+
+**Page-level, ordered by design:** one push = every slot's decision for the page (one vector reading, N slot rankings), each carrying `order` — echoing the tenant's template until experience personalization (doc 15) activates, at which point reordering is a data change inside the same contract. Cross-slot invariants at assembly: dedupe (no content twice per page), non-personalizable slots excluded per tenant config, absent decision → customer default.
 
 Snapshot endpoint for first-paint (no flash), graceful absence (no decision → customer default renders — never blocked, never arbitrary).
 

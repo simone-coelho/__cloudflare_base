@@ -22,6 +22,14 @@ You gave us a three-tier hierarchy, and we're using it as the spine of the roadm
 
 **And the delivery contract we agreed, which everything below honors:** you are headless. Everything has an ID. We push decisions — content ID, type, metadata, score — over a WebSocket through a small SDK, and **your front end paints — always.** We never render, inject, or touch your DOM: the decision arrives as data, your renderer maps it to a component, and when no decision arrives, your default renders. Your rendering stays entirely yours — that is the point of the contract.
 
+**One word we want to use precisely: "sequencing."** Ordering means three different things, and they sit in different tiers. Here is our interpretation — offered as the starting point, not the final word:
+
+1. **Order within a section** — the sequence inside a carousel, the sort of a grid. That's ranking, and it's **live today**.
+2. **Emphasis across fixed sections** — "bring up reviews," the confidence-building content leading for a returning shopper. That's **this build**: content chosen per shopper inside your template's layout. This is the tier you named as the prize: *"we can have initially the same layout, but the content that goes into the different things is different — that alone will be a huge, huge, huge win."*
+3. **Module presence and position** — the banner relocating, a module appearing only for social-channel visitors. That's **experience personalization**, on your own ~6-month framing — and the contract below (§4.4) is deliberately built so it arrives as a data change, not a re-integration.
+
+There are many ways to draw these lines. This split is our reading of your words, not a constraint — if you want pieces of tier 3 earlier, or the boundary drawn differently, that is exactly the conversation we want in the working session. The architecture accommodates any of those answers as tuning, not redesign.
+
 ## 3. Why this is an extension, not a new build
 
 Two facts make this proposal credible rather than aspirational:
@@ -81,17 +89,24 @@ A thin embeddable client: **connect** (WebSocket, stable visitor identity) · **
 
 ```json
 {
-  "kind": "content_decision",
-  "slot": "pdp-hero",
-  "content": { "yourId": "CMP1234", "systemId": "cnt_8f3a…", "type": "image", "url": "…" },
-  "score": 0.78,
-  "explain": {
-    "drivers": [ { "dim": "occasion", "tag": "evening", "a": 0.72 } ],
-    "context": { "channel": "paid_social", "visit": 2 }
-  },
+  "kind": "content_decisions",
+  "page": "pdp",
+  "decisions": [
+    { "slot": "pdp-hero",  "order": 1,
+      "content": { "yourId": "CMP1234", "systemId": "cnt_8f3a…", "type": "image", "url": "…" },
+      "score": 0.78,
+      "explain": { "drivers": [ { "dim": "occasion", "tag": "evening", "a": 0.72 } ],
+                   "context": { "channel": "paid_social", "visit": 2 } } },
+    { "slot": "pdp-story", "order": 2,
+      "content": { "yourId": "CMP2201", "systemId": "cnt_91d4…", "type": "module", "url": "…" },
+      "score": 0.66,
+      "explain": { "drivers": [ { "dim": "visit", "tag": "returning", "a": 1.0 } ] } }
+  ],
   "ts": 1752000000000
 }
 ```
+
+Two deliberate choices in that shape. It is **page-level**: one push carries every slot's pick for the page — one interest reading, all sections filled together. And it carries **`order` from day one** — initially echoing your template exactly, so nothing moves until you decide it should; when experience personalization arrives (your ~6-month tier), reordering becomes a **data change inside a contract your front end already speaks**, not a new integration.
 
 Your front end subscribes once (a wrapper at the application skeleton, as we discussed) and paints whatever arrives, wherever its slot maps. A snapshot endpoint covers first paint (no flash); absence of a decision means your default renders — the system never blocks your page and never fills a slot arbitrarily.
 
