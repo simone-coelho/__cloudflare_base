@@ -292,6 +292,7 @@ button, input, select { font: inherit; color: inherit; }
    instalment line → stars + review count → Add to Cart (suppressed when sold out)
    ========================================================================== */
 .bh-card {
+  position: relative;                 /* the NEW PICK badge anchors here */
   display: flex; flex-direction: column;
   background: var(--bh-white); border: 1px solid var(--bh-greige-2); padding: 12px;
 }
@@ -489,6 +490,60 @@ button, input, select { font: inherit; color: inherit; }
 .bh-panel__head { padding: 14px 16px; border-bottom: 1px solid #33405A; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .bh-panel__head h2 { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; }
 .bh-panel__scroll { overflow-y: auto; padding: 0 16px 26px; flex: 1 1 auto; }
+
+/* ── THE TRANSPORT: sticky, above the tabs, visible on every view ────────── */
+.bh-transport {
+  flex: 0 0 auto; padding: 10px 16px; background: #141C2C; border-bottom: 1px solid #33405A;
+}
+.bh-transport__btns { display: flex; gap: 6px; align-items: stretch; }
+.bh-transport__btns .bh-opsbtn--play { flex: 1 1 auto; }
+.bh-opsbtn--icon { min-width: 40px; text-align: center; padding-inline: 10px; }
+.bh-transport__beat {
+  margin: 7px 0 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: #9FB0CC; font-weight: 700;
+}
+
+/* ── TABS ────────────────────────────────────────────────────────────────── */
+.bh-tabs { flex: 0 0 auto; display: flex; background: #141C2C; border-bottom: 1px solid #33405A; }
+.bh-tab {
+  flex: 1 1 0; background: transparent; border: 0; border-bottom: 3px solid transparent;
+  color: #9FB0CC; font-family: var(--bh-head); font-size: 12px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; padding: 11px 6px; cursor: pointer;
+  position: relative;
+}
+.bh-tab:hover { color: #FFFFFF; background: #182238; }
+.bh-tab[aria-selected="true"] { color: #FFFFFF; border-bottom-color: var(--bh-coral); background: #1A2436; }
+/* a θ crossing while the presenter is on another tab must not pass unseen */
+.bh-tab__dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--bh-coral); margin-left: 6px; vertical-align: middle;
+}
+.bh-tab__dot[hidden] { display: none; }
+
+/* ── THE STORY FEED ──────────────────────────────────────────────────────
+   Every entry is one breath: what was done, what it arithmetically did, and
+   WHERE on screen the result landed. Reading it aloud is the narration. */
+.bh-story__hint {
+  font-size: 10px; letter-spacing: .06em; color: var(--bh-coral); text-transform: none;
+  font-weight: 700; margin-left: 8px;
+}
+.bh-story__list { list-style: none; margin: 0; padding: 0; }
+.bh-story__row {
+  border-left: 3px solid var(--bh-coral); background: #141C2C;
+  padding: 9px 11px; margin: 0 0 8px;
+}
+.bh-story__row--beat { border-left-color: #4A5876; background: #16203260; }
+.bh-story__t {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10px; color: #7C8BA6; display: block; margin-bottom: 3px;
+}
+.bh-story__act { margin: 0; font-size: 13px; font-weight: 700; color: #FFFFFF; line-height: 1.35; }
+.bh-story__math {
+  margin: 4px 0 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px; color: #C7D3E6; line-height: 1.4;
+}
+.bh-story__cons { margin: 4px 0 0; font-size: 12.5px; color: var(--bh-coral); line-height: 1.4; font-weight: 700; }
+.bh-story__row--beat .bh-story__act { font-weight: 500; color: #C7D3E6; font-size: 12.5px; }
 .bh-panel section { padding: 14px 0; border-bottom: 1px solid #2C3852; }
 .bh-panel section > h3 {
   font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #9FB0CC; margin: 0 0 10px; font-weight: 700;
@@ -693,17 +748,82 @@ button, input, select { font: inherit; color: inherit; }
 .bh-moved { animation: bh-moved-cue .45s ease-out 1; }
 
 /* THE CAMERA'S RING — the whole slot, once the camera has actually put it on
-   screen. Outline-only, and its offset (6px) sits inside the shell's 20px
-   gutter, so a ring can never widen the page it is ringing. */
+   screen. It PERSISTS until that slot is recomposed again: a 2.5s ring that
+   expires while the presenter is still explaining it has told nobody anything.
+   Outline + glow only, and the 6px offset sits inside the shell's 20px gutter,
+   so a ring can never widen the page it is ringing. */
 @keyframes bh-slot-ring {
-  0%   { outline-color: rgba(239,122,94,0); }
-  10%  { outline-color: rgba(239,122,94,1); }
-  72%  { outline-color: rgba(239,122,94,1); }
-  100% { outline-color: rgba(239,122,94,0); }
+  0%   { outline-color: rgba(239,122,94,0); box-shadow: 0 0 0 0 rgba(239,122,94,0); }
+  18%  { outline-color: rgba(239,122,94,1); box-shadow: 0 0 0 14px rgba(239,122,94,.28); }
+  100% { outline-color: rgba(239,122,94,1); box-shadow: 0 0 0 7px rgba(239,122,94,.20); }
 }
 .bh-slotring {
-  outline: 3px solid rgba(239,122,94,0); outline-offset: 6px;
-  animation: bh-slot-ring 2.5s ease-out 1;
+  position: relative;
+  outline: 3px solid var(--bh-coral); outline-offset: 6px;
+  box-shadow: 0 0 0 7px rgba(239,122,94,.20);
+  animation: bh-slot-ring 1.1s ease-out 1;
+}
+/* the label chip, ATTACHED to the ring — says what changed, and stays */
+.bh-slotchip {
+  position: absolute; top: -13px; left: 14px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 7px; max-width: calc(100% - 28px);
+  background: var(--bh-coral); color: #22160f;
+  font-family: var(--bh-head); font-size: 12px; font-weight: 700; line-height: 1;
+  padding: 6px 11px; box-shadow: 0 3px 10px rgba(10,14,22,.24);
+}
+.bh-slotchip__k { letter-spacing: .1em; text-transform: uppercase; font-size: 10px; opacity: .8; }
+.bh-slotchip__v { font-weight: 700; }
+
+/* SPOTLIGHT DIM — one beat of "look here", then it lifts and the ring stays.
+   Stops at the Glass Box edge: the presenter's panel is never dimmed. */
+.bh-dimveil {
+  position: fixed; inset: 0; z-index: 150; background: rgba(16,22,36,.44);
+  opacity: 0; transition: opacity .45s ease; pointer-events: none;
+}
+.bh-dimveil[hidden] { display: none; }
+.bh-dimveil--in { opacity: 1; }
+body.bh-panel-open .bh-dimveil { right: var(--bh-panel-w); }
+@media (max-width: 1100px) { body.bh-panel-open .bh-dimveil { right: 0; } }
+/* the lit slot sits ABOVE the veil, on its own white ground */
+.bh-slot--lit { position: relative; z-index: 151; background: var(--bh-white); }
+
+/* ── THE GHOST CURSOR ────────────────────────────────────────────────────
+   Above the store, below the toast and the caption bar, and never in the way
+   of a real pointer. The tip of the arrow is the hot point, so the element is
+   positioned AT the target and the glyph hangs down-right from it. */
+.bh-cursor {
+  position: fixed; top: 0; left: 0; z-index: 190; pointer-events: none;
+  width: 44px; height: 44px; margin: -6px 0 0 -8px;
+  opacity: 0; transition: opacity .18s ease, transform .18s ease;
+  filter: drop-shadow(0 4px 8px rgba(10,14,22,.45));
+  transform: translate3d(0,0,0);
+}
+.bh-cursor[hidden] { display: none; }
+.bh-cursor--in { opacity: 1; }
+/* a control inside the Glass Box (z 200) would otherwise be clicked by an
+   invisible hand — the pointer rises above the panel only for those */
+.bh-cursor--overpanel { z-index: 210; }
+/* the press: the pointer dips, and a coral ring leaves the tip */
+.bh-cursor--press svg { transform: scale(.85); }
+.bh-cursor svg { transition: transform .12s ease; transform-origin: 12px 7px; }
+@keyframes bh-cursor-ripple {
+  0%   { transform: scale(.2); opacity: .85; }
+  100% { transform: scale(1);  opacity: 0; }
+}
+.bh-cursor__ripple {
+  position: absolute; left: 12px; top: 7px; width: 92px; height: 92px;
+  margin: -46px 0 0 -46px; border: 3px solid var(--bh-coral); border-radius: 50%;
+  opacity: 0; pointer-events: none;
+}
+.bh-cursor__ripple--go { animation: bh-cursor-ripple .55s ease-out 1; }
+
+/* NEW PICK — structural, like the pip: it states a fact about the card and
+   stays until the composition that put it there is replaced. */
+.bh-newpick {
+  position: absolute; top: 6px; right: 6px; z-index: 2;
+  background: var(--bh-coral); color: #22160f; font-family: var(--bh-head);
+  font-size: 9.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 7px; box-shadow: 0 2px 6px rgba(10,14,22,.2);
 }
 /* Armed, not playing: a mark waits here until it intersects the viewport, so
    nothing can expire off-screen while the presenter is still talking. The

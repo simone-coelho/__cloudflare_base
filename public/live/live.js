@@ -1426,12 +1426,13 @@
     // a signal-driven recompose: name the slot that moved and the reason
     if (c.kind === 'signal') {
       var lead = dimReading('category');
+      var did = state.lastBatchHadClicks ? 'your clicks did that.' : 'your browsing did that.';
       var slotName = flip ? ((SLOT_META[flip.slot] && SLOT_META[flip.slot].title) || flip.slot) : null;
       if (slotName && lead && lead.value) {
-        return slotName + ' now leans ' + lead.value + ' — your clicks did that.';
+        return slotName + ' now leans ' + lead.value + ' — ' + did;
       }
       if (Object.keys(diff.fresh).length && lead && lead.value) {
-        return 'The page re-ranked toward ' + lead.value + ' — your clicks did that.';
+        return 'The page re-ranked toward ' + lead.value + ' — ' + did;
       }
     }
     if (flip) {
@@ -1540,6 +1541,315 @@
    *      of a timer that expired while they were talking.
    * ═══════════════════════════════════════════════════════════════════ */
 
+  /* WHERE a slot is, in words a presenter can say while pointing at a screen.
+     A consequence with no location is not a consequence anyone can follow. */
+  var SLOT_WHERE = {
+    hero_billboard:    'the banner at the very top',
+    daily_deal:        'top of the page',
+    spotlight_for_you: 'upper middle of the page',
+    deals_rail:        'the second rail down',
+    on_air_rail:       'the middle of the page',
+    category_rail:     'the tiles below the rails',
+    event_module:      'the reveal module, mid page',
+    discovery_rail:    'lower down the page'
+  };
+  function slotTitle(id) { return (SLOT_META[id] && SLOT_META[id].title) || id || 'the page'; }
+  function slotWhere(id) { return SLOT_WHERE[id] || 'on the page'; }
+
+  /* ══════════════════════════════════════════════════════════════════════
+   * THE STORY — the running ledger, and the thing a presenter reads ALOUD.
+   *
+   * A ring tells the room WHERE something changed. It cannot tell them WHY,
+   * and "the page re-ranked" is not a why. Every entry here is one breath in
+   * three parts:
+   *
+   *     ACTION      what was just done, in shopper language
+   *     ARITHMETIC  the weight that went in, the score before → after, the
+   *                 threshold it did or did not cross
+   *     CONSEQUENCE the audience it entered, and the module it moved —
+   *                 named WITH ITS LOCATION on screen
+   *
+   * Every number is read from the live snapshot and the engine's published
+   * config. Nothing here computes a score, and nothing here is scripted: if a
+   * click moved nothing, the entry says so, because that is also the lesson.
+   * ═══════════════════════════════════════════════════════════════════ */
+
+  /* Mirrors the engine's published weight table (BRIGHTHOUR_WEIGHTS) for the
+     actions this storefront can fire. Used ONLY to say out loud what the
+     engine already did with them — no score on this page is computed here. */
+  var ACTION_WEIGHT = {
+    product_view: 1, product_click: 2, category_click: 1,
+    add_to_cart: 3, waitlist: 3, advance_order: 3, search: 3
+  };
+
+  var story = [];             // the whole session's ledger, oldest first
+  var storyPending = null;    // an action still waiting for its consequence
+  var storyClicks = {};       // clicks per category, for "3rd kitchen click"
+  var activeTab = 'story';    // which of the three views is showing
+
+  function twoDigit(n) { return (n < 10 ? '0' : '') + n; }
+  function storyStamp(ms) {
+    var d = new Date(ms);
+    return twoDigit(d.getHours()) + ':' + twoDigit(d.getMinutes()) + ':' + twoDigit(d.getSeconds());
+  }
+  function ordinal(n) {
+    var s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  /** Every dimension's leading value + score, AND the full value map — so the
+      ledger can quote the score of the thing that was actually clicked rather
+      than whatever happens to lead the vector. */
+  function dimSnapshot() {
+    var snap = state.affinity || (state.payload && state.payload.affinitySnapshot) || {};
+    var values = snap.dims || snap.dimensions || snap;
+    var out = {};
+    DIMENSIONS.forEach(function (d) {
+      var lead = leadingValue(values[d.key]);
+      var raw = values[d.key];
+      out[d.key] = {
+        value: lead ? lead.value : null,
+        score: (lead && typeof lead.score === 'number' && isFinite(lead.score)) ? lead.score : 0,
+        map: (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : null
+      };
+    });
+    return out;
+  }
+  /** The score of ONE named value on one dimension (e.g. category / Kitchen). */
+  function scoreOf(snapshot, dim, value) {
+    var d = snapshot && snapshot[dim];
+    if (!d) return null;
+    if (value && d.map && typeof d.map[value] === 'number') return d.map[value];
+    if (value && d.value !== value) return null;
+    return d.score;
+  }
+  function membershipList() {
+    var snap = state.affinity || (state.payload && state.payload.affinitySnapshot) || {};
+    return (snap.memberships || snap.audiences || []).slice();
+  }
+  function thetaOf(key) {
+    var c = (state.reflexConfig || {})[key] || {};
+    if (typeof c.thetaIn === 'number') return c.thetaIn;
+    var d = null;
+    DIMENSIONS.some(function (x) { if (x.key === key) { d = x; return true; } return false; });
+    return d ? d.thetaIn : 0.60;
+  }
+
+  function renderStory() {
+    var host = $('bh-story'); if (!host) return;
+    var empty = $('bh-story-empty');
+    if (empty) empty.hidden = story.length > 0;
+    host.innerHTML = story.map(function (e) {
+      return '<li class="bh-story__row' + (e.kind === 'beat' ? ' bh-story__row--beat' : '') + '">' +
+        '<span class="bh-story__t">' + esc(storyStamp(e.t)) + '</span>' +
+        '<p class="bh-story__act">' + esc(e.act) + '</p>' +
+        (e.math ? '<p class="bh-story__math">' + esc(e.math) + '</p>' : '') +
+        (e.cons ? '<p class="bh-story__cons">' + esc(e.cons) + '</p>' : '') +
+      '</li>';
+    }).join('');
+    // newest at the bottom, and the presenter never has to chase it
+    if (activeTab === 'story') panelToBottom();
+  }
+
+  function storyAdd(e) {
+    e.t = e.t || Date.now();
+    story.push(e);
+    if (story.length > 200) story.shift();
+    renderStory();
+  }
+
+  /** Open an entry: the action is known, the arithmetic and the consequence
+      are not yet. Whatever the engine does next completes it. */
+  function storyBegin(o) {
+    storyEnd(null, true);                         // never leave one half-written
+    storyPending = {
+      act: o.act,
+      weight: o.weight,
+      focus: o.focus || null,                     // the value the shopper touched
+      at: Date.now(),
+      before: dimSnapshot(),
+      memBefore: membershipList(),
+      timer: setTimeout(function () { storyEnd(null, true); }, 3200)
+    };
+  }
+
+  /** Close the open entry with whatever actually happened.
+      The snapshot is refreshed asynchronously, so a resolve that finds NOTHING
+      moved waits one beat and looks again before it says so — "nothing moved"
+      has to mean nothing moved, not "the read had not landed yet". */
+  function storyEnd(cons, force) {
+    var p = storyPending;
+    if (!p) return false;
+    var after = dimSnapshot();
+    if (p.timer) { clearTimeout(p.timer); p.timer = null; }
+    var moved = DIMENSIONS.some(function (d) {
+      return (after[d.key].score || 0) - ((p.before[d.key] || {}).score || 0) > 0.004;
+    });
+    if (!moved && p.focus && p.focus.value) {
+      moved = (scoreOf(after, p.focus.dim, p.focus.value) || 0) -
+              (scoreOf(p.before, p.focus.dim, p.focus.value) || 0) > 0.004;
+    }
+    // The reflex poll lands a beat after the batch flushes, so give it two.
+    if (!moved && !force && (p.retries || 0) < 2 && Date.now() - p.at < 5000) {
+      p.retries = (p.retries || 0) + 1;
+      p.cons = cons || p.cons;
+      p.timer = setTimeout(function () { storyEnd(p.cons); }, 700);
+      return true;                                // still ours; it lands shortly
+    }
+    storyPending = null;
+    var gained = membershipList().filter(function (m) { return p.memBefore.indexOf(m) === -1; });
+    var parts = [];
+    if (gained.length) parts.push('Entered audience “' + gained[0] + '”');
+    parts.push(cons || p.cons || 'the composition held — same items, same order, for now');
+    storyAdd({ act: p.act, math: storyMath(p, after), cons: '→ ' + parts.join(' → ') + '.' });
+    return true;
+  }
+
+  /** The arithmetic line: the weight in, the score before → after, the θ. */
+  function storyMath(p, after) {
+    // First choice: the exact value the shopper touched. "category (Kitchen &
+    // Table) 0.35 → 0.75" is a sentence about what they did; the vector's
+    // leading value may be something else entirely, and quoting that instead
+    // is how a true number ends up telling a confusing story.
+    if (p.focus && p.focus.value) {
+      var b = scoreOf(p.before, p.focus.dim, p.focus.value);
+      var a = scoreOf(after, p.focus.dim, p.focus.value);
+      // A known click ALWAYS narrates the clicked value — never the dimension
+      // leader. (A kitchen click once read "category (Garden & Outdoor)…"
+      // because concurrent scroll impressions out-moved it; a true number
+      // telling someone else's story is still a lie about the click.)
+      if (typeof a === 'number') {
+        var t = thetaOf(p.focus.dim);
+        var alsoN = 0;
+        DIMENSIONS.forEach(function (d) {
+          if (d.key !== p.focus.dim &&
+              (after[d.key].score || 0) - ((p.before[d.key] || {}).score || 0) > 0.004) alsoN++;
+        });
+        var alsoTxt = alsoN
+          ? ' Browsing moved ' + alsoN + ' other dimension' + (alsoN === 1 ? '' : 's') + ' alongside.'
+          : '';
+        if (a - (b || 0) > 0.004) {
+          return 'Each click adds weight ' + (p.weight == null ? '?' : p.weight) + ' → ' +
+            p.focus.dim + ' (' + p.focus.value + ') ' + (b || 0).toFixed(2) + ' → ' + a.toFixed(2) + ', ' +
+            (a >= t ? 'past the ' + t.toFixed(2) + ' threshold.' : 'still under the ' + t.toFixed(2) + ' threshold.') +
+            alsoTxt;
+        }
+        return 'Weight ' + (p.weight == null ? '?' : p.weight) + ' went in → ' +
+          p.focus.dim + ' (' + p.focus.value + ') holds at ' + a.toFixed(2) +
+          (a >= t
+            ? ', already past the ' + t.toFixed(2) + ' threshold — more of the same signal barely moves it.'
+            : ', the read lands in a beat — decay and saturation keep it honest.') +
+          alsoTxt;
+      }
+    }
+    var movers = [];
+    Object.keys(after).forEach(function (k) {
+      var b = (p.before[k] || {}).score || 0;
+      var a = after[k].score || 0;
+      if (a - b > 0.004) movers.push({ k: k, b: b, a: a, d: a - b });
+    });
+    if (!movers.length) {
+      if (p.weight == null) return '';
+      // "Nothing moved" is usually wrong: the signal went in and the score is
+      // simply already where it is going. Say WHICH, with the number.
+      var fdim = (p.focus && p.focus.dim) || 'category';
+      var fval = p.focus && p.focus.value;
+      var cur = (fval ? scoreOf(after, fdim, fval) : null);
+      if (cur == null) cur = (after[fdim] || {}).score || 0;
+      var ft = thetaOf(fdim);
+      return 'Weight ' + p.weight + ' went in → ' + fdim + (fval ? ' (' + fval + ')' : '') + ' holds at ' +
+        cur.toFixed(2) + (cur >= ft
+          ? ', already past the ' + ft.toFixed(2) + ' threshold — more of the same signal barely moves it.'
+          : ', still under the ' + ft.toFixed(2) + ' threshold — decay is taking it back as fast as clicks add to it.');
+    }
+    movers.sort(function (x, y) { return y.d - x.d; });
+    // one click moves several axes at once. Lead with the CATEGORY axis when it
+    // moved — it is the one the room is watching — and say honestly how many
+    // others came with it rather than pretending it was the only one.
+    var best = null;
+    movers.some(function (m) { if (m.k === 'category') { best = m; return true; } return false; });
+    if (!best) best = movers[0];
+    var th = thetaOf(best.k);
+    var lead = after[best.k].value ? ' (' + after[best.k].value + ')' : '';
+    var others = movers.length - 1;
+    return 'Weight ' + (p.weight == null ? '?' : p.weight) + ' → ' + best.k + lead + ' ' +
+      best.b.toFixed(2) + ' → ' + best.a.toFixed(2) + ', ' +
+      (best.a >= th ? 'past the ' + th.toFixed(2) + ' threshold.' : 'still under the ' + th.toFixed(2) + ' threshold.') +
+      (others ? ' ' + others + ' other dimension' + (others === 1 ? '' : 's') + ' moved with it.' : '');
+  }
+
+  /** The located consequence sentence the camera can hand back. */
+  function storyConsequence(slot, diff) {
+    if (!slot) return null;
+    var flip = null;
+    (diff && diff.flipped || []).some(function (f) { if (f.slot === slot) { flip = f; return true; } return false; });
+    var freshN = 0;
+    Object.keys((diff && diff.fresh) || {}).forEach(function (id) { if (diff.fresh[id] === slot) freshN++; });
+    var head = slotTitle(slot) + ' (' + slotWhere(slot) + ', ringed)';
+    if (flip) return head + ' swapped to ' + (flip.name || 'a new item');
+    if (freshN) return head + ' took ' + freshN + ' new pick' + (freshN === 1 ? '' : 's');
+    return head + ' is the module this switch acts on';
+  }
+
+  /* The control story: a switch has no affinity arithmetic, so its middle line
+     is the RULE it moved — stated with the numbers on screen. */
+  function controlStory(cause, diff) {
+    var k = cause.kind, act, math;
+    var deal = slotOccupant('daily_deal');
+    if (k === 'quota') {
+      var dec = null;
+      ((state.payload && state.payload.decisions) || []).some(function (d) {
+        if (d.slot_id === 'discovery_rail') { dec = d; return true; } return false;
+      });
+      var items = (dec && dec.items) || [];
+      var res = items.filter(function (i) { return i && (i.quotaReserved || i.quota_reserved); }).length;
+      act = 'Turned the discovery quota ' + (state.quotaEnabled ? 'ON' : 'OFF') + '.';
+      math = state.quotaEnabled
+        ? 'The quota holds ' + (res || 'a fixed share of the') + ' pick' + (res === 1 ? '' : 's') +
+          ' of ' + items.length + ' open for items whose affinity is near zero — the ranking never chose them.'
+        : 'With the quota off, all ' + (items.length || 'the rail’s') + ' picks are ranked on affinity alone.';
+      return { act: act, math: math };
+    }
+    if (k === 'mode') {
+      var n = ((state.payload && state.payload.decisions) || []).length;
+      act = 'Switched to ' + (state.mode === 'mission' ? 'mission' : 'browse') + ' mode.';
+      math = state.mode === 'mission'
+        ? 'Mission mode REMOVES modules: the page composes ' + n + ' of them instead of 8.'
+        : 'Browse mode composes the full page again — ' + n + ' modules.';
+      return { act: act, math: math };
+    }
+    if (k === 'vip') {
+      act = 'Cardholder offers turned ' + (state.vipOfferActive ? 'ON' : 'OFF') + '.';
+      math = state.vipOfferActive
+        ? 'The vip_offer_exclusion gate is back in force: matching items are refused before ranking, whatever their affinity.'
+        : 'The exclusion gate is lifted, so items it refused become rankable again.';
+      return { act: act, math: math };
+    }
+    if (k === 'clock') {
+      act = 'Advanced the demo clock ' + fmtOffset(state.clockOffsetMs) + ' — offer windows only.';
+      math = 'Nothing is scheduled: each offer carries its own start and end time, and the boundary is computed from them.' +
+        (deal ? ' On the floor now: ' + deal.name + '.' : '');
+      return { act: act, math: math };
+    }
+    if (k === 'focus') {
+      act = 'Opened the category ' + (cause.detail || '') + '.';
+      math = 'Navigation is a signal too — weight ' + ACTION_WEIGHT.category_click +
+        ' — and the rail follows the shopper while Spotlight for You stays affinity-driven.';
+      return { act: act, math: math };
+    }
+    if (k === 'desk') {
+      act = 'A new offer was approved at the Offer Desk.';
+      math = 'No campaign and no audience were built: an item was published with a start time and an end time.';
+      return { act: act, math: math };
+    }
+    if (k === 'stock') {
+      act = 'Availability changed on ' + (deal ? deal.name : 'the daily deal') + '.';
+      math = 'Sold out is a gate, not a delete: a shopper already holding it keeps waitlist language and her price.';
+      return { act: act, math: math };
+    }
+    return null;
+  }
+
   /* A presenter's control owes the room a LOCATED consequence: the region its
      switch acts on, whether or not the composition happened to move. */
   var CAUSE_SLOT = {
@@ -1584,8 +1894,14 @@
   function armMarks() {
     var pend = document.querySelectorAll('[data-bh-pending]');
     if (!pend.length) return;
+    // A recompose during the camera's travel can leave two observers watching
+    // the same element. The second callback must be a no-op, not a throw:
+    // classList.add(null) raises, and a raised observer callback silently drops
+    // every OTHER mark in that batch — which is how a whole page of rings once
+    // stayed armed for ever.
     var play = function (el) {
       var cls = el.getAttribute('data-bh-pending');
+      if (!cls) return;
       var delay = parseInt(el.getAttribute('data-bh-stagger'), 10) || 0;
       el.removeAttribute('data-bh-pending');
       if (delay) el.style.animationDelay = delay + 'ms';
@@ -1610,9 +1926,26 @@
     Array.prototype.forEach.call(pend, function (el) { markObserver.observe(el); });
   }
 
+  /* A scrollTop write on ANY box cancels an in-flight smooth scroll on the
+     window in Chrome — so the Glass Box's own auto-scrolls (the ledger jumping
+     to its newest line, the instrument revealing a moved bar) have to wait
+     until the camera has landed. This flag is the whole traffic rule. */
+  var cameraFlying = false;
+  var panelScrollWanted = false;
+
+  function panelToBottom() {
+    if (cameraFlying) { panelScrollWanted = true; return; }
+    var sc = $('bh-panel-scroll');
+    if (sc) sc.scrollTop = sc.scrollHeight;
+  }
+
   /** Travel to the changed region, THEN hand back so it can light up. */
   function cameraTo(el, then) {
-    var done = function () { if (then) then(); };
+    var done = function () {
+      cameraFlying = false;
+      if (panelScrollWanted) { panelScrollWanted = false; if (activeTab === 'story') panelToBottom(); }
+      if (then) then();
+    };
     if (!el) { done(); return; }
     var calm = prefersCalm();
     var r = el.getBoundingClientRect();
@@ -1620,6 +1953,7 @@
     if (r.top >= 0 && r.bottom <= vh) { setTimeout(done, 120); return; }   // already framed
     // a region taller than the frame is read from its top, never its middle
     var block = (r.height > vh - 80) ? 'start' : 'center';
+    cameraFlying = true;
     try { el.scrollIntoView({ block: block, behavior: calm ? 'auto' : 'smooth' }); }
     catch (e) { el.scrollIntoView(); }
     if (calm) { setTimeout(done, 120); return; }
@@ -1677,9 +2011,9 @@
       });
     }
 
-    // The ring says LOOK HERE; the pip says THIS CHANGED. They are not the
-    // same claim, so a control that aimed the camera gets a ring, and only a
-    // real flip gets a pip.
+    // The ring says LOOK HERE; the chip says WHAT CHANGED. Both PERSIST until
+    // this slot is recomposed again (render() rebuilds the section, which is
+    // the only honest expiry there is).
     if (!calm) {
       var ring = {};
       (changed ? diff.flipped : []).forEach(function (f) { ring[f.slot] = 1; });
@@ -1690,9 +2024,9 @@
       if (targetEl && !targetEl.hasAttribute('data-bh-pending')) targetEl.setAttribute('data-bh-pending', 'bh-slotring');
     }
 
-    // pips are structural, not decorative — they stay on in reduced-motion, and
-    // they PERSIST until the next recompose repaints the slot. No self-expiry:
-    // a presenter who arrives late must still find the marker.
+    // pips + NEW PICK badges are structural, not decorative — they stay on in
+    // reduced-motion, and they persist. No self-expiry: a presenter who arrives
+    // late must still find the marker.
     (changed ? diff.flipped : []).forEach(function (f) {
       var sec = slotSection(f.slot);
       var head = sec && sec.querySelector('.bh-slot__titles');
@@ -1703,16 +2037,79 @@
         head.appendChild(pip);
       }
     });
+    if (changed) {
+      Object.keys(diff.fresh).forEach(function (id) {
+        var el = document.querySelector('[data-bh-card][data-bh-item="' + id + '"]');
+        if (!el || el.querySelector('.bh-newpick')) return;
+        var b = document.createElement('span');
+        b.className = 'bh-newpick';
+        b.textContent = 'New pick';
+        el.appendChild(b);
+      });
+    }
 
     var msg = changed || CAUSE_SLOT[cause.kind] || cause.kind === 'mode' || cause.kind === 'vip'
       ? momentFor(diff || { fresh: {}, moved: {}, flipped: [] }, state.payload) : null;
     recomposeCause = null;
-    // recompose → travel → ring and sweep IN VIEW → the toast names it
+    // recompose → travel → dim the rest → ring, chip and sweep IN VIEW → the
+    // toast names it → the story writes down what it all meant
     cameraTo(targetEl, function () {
       armMarks();
+      slotChip(targetEl, target, diff, cause);
+      spotlightDim(targetEl);
       if (msg) momentToast(msg);
       camera.slot = target; camera.at = Date.now(); camera.msg = msg;
+      var cons = storyConsequence(target, diff);
+      // a shopper action already opened an entry — close it with what landed.
+      // A presenter control opens and closes its own, here.
+      if (!storyEnd(cons)) {
+        var cs = controlStory(cause, diff);
+        if (cs) storyAdd({ act: cs.act, math: cs.math, cons: '→ ' + (cons || 'the page held') + '.' });
+      }
     });
+  }
+
+  /** The label chip, attached to the ring, naming the change in four words. */
+  function slotChip(el, slot, diff, cause) {
+    if (!el || prefersCalm()) return;
+    // the removal note is already a sentence about itself — do not label a label
+    if (el.classList.contains('bh-gapnote')) return;
+    var old = el.querySelector('.bh-slotchip'); if (old) old.remove();
+    var flip = null;
+    (diff && diff.flipped || []).some(function (f) { if (f.slot === slot) { flip = f; return true; } return false; });
+    var freshN = 0;
+    Object.keys((diff && diff.fresh) || {}).forEach(function (id) { if (diff.fresh[id] === slot) freshN++; });
+    var what;
+    if (flip) what = slotTitle(slot) + ' swapped to ' + (flip.name || 'a new item');
+    else if (freshN) what = freshN + ' new pick' + (freshN === 1 ? '' : 's') + ' in ' + slotTitle(slot);
+    else if (cause && cause.kind) what = slotTitle(slot) + ' — the module this switch acts on';
+    else what = slotTitle(slot) + ' recomposed';
+    var chip = document.createElement('span');
+    chip.className = 'bh-slotchip';
+    chip.innerHTML = '<span class="bh-slotchip__k">changed</span><span class="bh-slotchip__v">' + esc(what) + '</span>';
+    el.appendChild(chip);
+  }
+
+  /** One beat of "look HERE": everything else dims, this stays lit. */
+  var dimTimer = null;
+  function spotlightDim(el) {
+    var veil = $('bh-dimveil');
+    if (!veil || !el || prefersCalm()) return;
+    if (dimTimer) { clearTimeout(dimTimer); dimTimer = null; }
+    Array.prototype.forEach.call(document.querySelectorAll('.bh-slot--lit'),
+      function (s) { s.classList.remove('bh-slot--lit'); });
+    el.classList.add('bh-slot--lit');
+    veil.hidden = false;
+    void veil.offsetWidth;
+    veil.classList.add('bh-dimveil--in');
+    dimTimer = setTimeout(function () {
+      veil.classList.remove('bh-dimveil--in');
+      dimTimer = setTimeout(function () {
+        veil.hidden = true;
+        el.classList.remove('bh-slot--lit');
+        dimTimer = null;
+      }, 460);
+    }, 1400);
   }
 
   /* -- boundary refresh. Never polling: one timer, aimed at nextTransitionAt. --
@@ -1830,6 +2227,12 @@
     state.pendingEvents = 0;
     state.inFlightEvents = outgoing.length;
     if (!outgoing.length) return true;
+    // Honest cause attribution: a recompose narrated as "your clicks did that"
+    // must actually contain a click — impressions alone read as browsing.
+    state.lastBatchHadClicks = outgoing.some(function (e) {
+      var a = String(e.action || '');
+      return a.indexOf('click') !== -1 || a === 'add_to_cart';
+    });
 
     var ok = true;
     while (outgoing.length) {
@@ -1953,6 +2356,12 @@
   /* ==========================================================================
    * 9 · INTERACTION WIRING
    * ======================================================================== */
+  /** The name the room can see on the card, for the ledger's ACTION line. */
+  function cardName(card) {
+    var a = card && card.querySelector('.bh-card__desc a, .bh-deal__title, h3');
+    return (a && a.textContent.trim()) || (card && card.getAttribute('data-bh-item')) || 'that item';
+  }
+
   function cardContext(el) {
     var card = el.closest('[data-bh-card]');
     if (!card) return null;
@@ -1997,6 +2406,11 @@
         } else {
           announce(kind === 'waitlist' ? 'Added to your waitlist. Your price is held.' : 'Order placed in advance.');
         }
+        storyBegin({
+          act: (kind === 'add_to_cart' ? 'Added to cart: ' : kind === 'waitlist' ? 'Joined the waitlist for: ' : 'Advance-ordered: ') +
+            cardName(ctx.el) + '.',
+          weight: ACTION_WEIGHT[kind] || 3
+        });
         postEvent(kind, { item_id: ctx.item_id, slot_id: ctx.slot_id, decision_id: ctx.decision_id, quantity: quantity });
         scheduleRefresh(600);
         return;
@@ -2006,7 +2420,12 @@
       if (open) {
         ev.preventDefault();
         var ctx2 = cardContext(open);
-        if (ctx2) { postEvent('product_click', { item_id: ctx2.item_id, slot_id: ctx2.slot_id, decision_id: ctx2.decision_id }); scheduleRefresh(600); }
+        if (ctx2) {
+          // a human's click earns the same ledger entry the Director's does
+          if (!director.running) storyBeginForCard(ctx2.el);
+          postEvent('product_click', { item_id: ctx2.item_id, slot_id: ctx2.slot_id, decision_id: ctx2.decision_id });
+          scheduleRefresh(600);
+        }
         return;
       }
 
@@ -2229,7 +2648,12 @@
       var prev = DIM_PREV[d.key];
       var moved = (typeof prev === 'number') && Math.abs(v - prev) >= 0.005;
       var crossed = moved && prev < thetaIn && v >= thetaIn;
-      if (crossed) DIM_CROSSED[d.key] = Date.now();
+      if (crossed) {
+        DIM_CROSSED[d.key] = Date.now();
+        // a threshold crossed while the presenter is on another tab must not
+        // pass unseen — the tab itself says "something happened in here"
+        if (activeTab !== 'affinity') { var dot = $('bh-tab-dot'); if (dot) dot.hidden = false; }
+      }
       DIM_PREV[d.key] = v;
       var recentCross = hot && (Date.now() - (DIM_CROSSED[d.key] || 0) < 6000);
       var cls = 'bh-dim' + (crossed ? ' bh-dim--crossed' : (moved ? ' bh-dim--moved' : ''));
@@ -2270,10 +2694,15 @@
   /* Scroll a dimension into view WITHIN the panel only — never the page. A
      panel-local scroll must not yank the storefront the room is watching. */
   function revealDim(key) {
+    // Never while the camera is in flight, and never for a bar on a tab that is
+    // not showing: a hidden element measures as a zero-rect, and "reveal" then
+    // computes a nonsense scroll that silently cancels the camera's travel.
+    if (cameraFlying || activeTab !== 'affinity') return;
     var el = document.querySelector('[data-bh-dim="' + key + '"]');
     var scroller = document.querySelector('.bh-panel__scroll');
     if (!el || !scroller) return;
     var er = el.getBoundingClientRect(), sr = scroller.getBoundingClientRect();
+    if (!er.height) return;
     if (er.top >= sr.top && er.bottom <= sr.bottom) return;   // already visible
     scroller.scrollTop += (er.top - sr.top) - (sr.height / 2 - er.height / 2);
   }
@@ -2451,10 +2880,40 @@
     lsSet(NS + 'panel', open ? '1' : '0');
   }
 
+  /* ── THE THREE VIEWS ────────────────────────────────────────────────────
+     One vertical port made the presenter scroll DOWN to press play and back UP
+     to read the instrument. Three tabs, and a transport that belongs to none of
+     them because it must be reachable from all of them. */
+  var TABS = ['story', 'affinity', 'director'];
+  function setTab(name) {
+    if (TABS.indexOf(name) === -1) name = 'story';
+    activeTab = name;
+    TABS.forEach(function (t) {
+      var b = $('bh-tab-' + t);
+      if (b) b.setAttribute('aria-selected', t === name ? 'true' : 'false');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-bh-pane]'), function (p) {
+      p.hidden = p.getAttribute('data-bh-pane') !== name;
+    });
+    // the dot exists to say "a threshold was crossed while you were elsewhere"
+    if (name === 'affinity') { var d = $('bh-tab-dot'); if (d) d.hidden = true; }
+    lsSet(NS + 'tab', name);
+    if (name === 'story') panelToBottom();
+    else if (!cameraFlying) { var sc = $('bh-panel-scroll'); if (sc) sc.scrollTop = 0; }
+  }
+  function initTabs() {
+    TABS.forEach(function (t) {
+      var b = $('bh-tab-' + t);
+      if (b) b.addEventListener('click', function () { setTab(t); });
+    });
+    setTab(lsGet(NS + 'tab') || 'story');
+  }
+
   function openExplain(slotId, btn) {
     setPanel(true);
-    // The records now live inside the collapsed Engine details — opening an
-    // explain must open its container, or the beat silently does nothing.
+    // The records now live inside the collapsed Engine details, on the DIRECTOR
+    // tab — opening an explain must open both, or the beat silently does nothing.
+    setTab('director');
     var eng = $('bh-engine'); if (eng) eng.open = true;
     Array.prototype.forEach.call(document.querySelectorAll('[data-bh-explain]'), function (b) {
       b.setAttribute('aria-expanded', b === btn ? 'true' : 'false');
@@ -2572,6 +3031,13 @@
     // and the instrument forgets what the previous visitor's bars were doing,
     // so no stale "crossed θin" badge survives the reset
     DIM_PREV = {}; DIM_CROSSED = {};
+    // a new visitor starts with a blank ledger — the previous shopper's story
+    // is not this one's evidence
+    story = []; storyClicks = {};
+    if (storyPending && storyPending.timer) clearTimeout(storyPending.timer);
+    storyPending = null;
+    renderStory();
+    var tdot = $('bh-tab-dot'); if (tdot) tdot.hidden = true;
     state.focusCategory = null;
     lastComposition = null;   // a fresh visitor's first paint is not a 'change'
     // New Viewer is the panic button: it returns the WHOLE stage to the
@@ -2669,7 +3135,9 @@
   var DIRECTOR = {
     viewGapMs: 5000,        // between the three cold-open clicks (runbook: ~5s apart)
     scrollSettleMs: 650,    // smooth-scroll to rest before the pulse
-    pulseMs: 1500,          // how long the highlight sits before the click lands
+    glideMs: 700,           // the ghost cursor's travel to its target
+    dwellMs: 250,           // hover beat before the press — the room sees the aim
+    pulseMs: 900,           // how long the highlight sits before the click lands
     afterClickMs: 1500,     // let the event flush and the bars re-read
     recomposeMs: 1900,      // let a recompose paint
     resultWaitMs: 3600,     // how long a beat waits for the camera to travel
@@ -2697,6 +3165,12 @@
     bar.hidden = false;
     var w = $('bh-caption-what'); if (w) w.textContent = what || '';
     var l = $('bh-caption-line'); if (l) l.textContent = line || '';
+    // The caption bar holds ONE line at a time; the ledger keeps them all, so
+    // nothing a presenter said is lost when the next beat overwrites it.
+    if (what && what !== '—') {
+      var last = story[story.length - 1];
+      if (!last || last.act !== what) storyAdd({ kind: 'beat', act: what, cons: line || '' });
+    }
     var b = $('bh-caption-beat');
     if (b) b.textContent = director.running && director.arc
       ? 'Beat ' + director.index + ' of ' + director.total
@@ -2729,11 +3203,79 @@
   }
   function overlayHide() { var o = $('bh-overlay'); if (o) o.hidden = true; }
 
+  /* ---- THE GHOST CURSOR --------------------------------------------------
+     An automated click with no pointer is an invisible act: the card reacts to
+     nothing, and the room reads it as the page twitching by itself. So the
+     Director gets a visible hand — it glides to the target, dwells on it, and
+     ripples at the exact instant the real .click() dispatches.
+
+     It is chrome, not input: pointer-events:none, never shown while a human is
+     driving, and it never fakes the click itself — the ripple and the event
+     happen in the same tick, on the same element. */
+  var ghost = { x: null, y: null };
+
+  function cursorPos(el) {
+    var r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 90) };
+  }
+  function cursorMove(c, x, y, ms) {
+    c.style.transition = ms
+      ? 'transform ' + ms + 'ms cubic-bezier(.36,.06,.22,1), opacity .18s ease'
+      : 'opacity .18s ease';
+    c.style.transform = 'translate3d(' + Math.round(x) + 'px,' + Math.round(y) + 'px,0)';
+    ghost.x = x; ghost.y = y;
+  }
+
+  /** Glide onto the target and dwell there. Returns when the hand has arrived. */
+  async function cursorTo(el) {
+    var c = $('bh-cursor');
+    if (!c || !el) return;
+    var calm = prefersCalm();
+    var p = cursorPos(el);
+    // A control on a tab nobody is looking at measures as a zero-rect: the hand
+    // would fly to the corner and press thin air. Never point at what is not
+    // on screen — the caller reveals it first (see directorClickControl).
+    if (!p.x && !p.y) { cursorHide(); return; }
+    // a control inside the Glass Box would otherwise be covered by the panel
+    c.classList.toggle('bh-cursor--overpanel', !!(el.closest && el.closest('#bh-panel')));
+    if (c.hidden || ghost.x == null) {
+      // first appearance: come in from mid-screen so it reads as arriving
+      c.hidden = false;
+      cursorMove(c, calm ? p.x : (window.innerWidth || 1200) / 2, calm ? p.y : (window.innerHeight || 800) * 0.62, 0);
+      void c.offsetWidth;
+      c.classList.add('bh-cursor--in');
+      await dwait(160);
+    }
+    cursorMove(c, p.x, p.y, calm ? 0 : DIRECTOR.glideMs);
+    await dwait(calm ? 120 : DIRECTOR.glideMs);
+    await dwait(DIRECTOR.dwellMs);          // the hover beat, before the press
+  }
+
+  /** The press itself: the hand dips, a coral ring leaves the tip. */
+  async function cursorPress() {
+    var c = $('bh-cursor'); if (!c) return;
+    var rip = $('bh-cursor-ripple');
+    c.classList.add('bh-cursor--press');
+    if (rip) {
+      rip.classList.remove('bh-cursor__ripple--go');
+      void rip.offsetWidth;
+      rip.classList.add('bh-cursor__ripple--go');    // never skipped: it IS the click
+    }
+    await dwait(140);
+    c.classList.remove('bh-cursor--press');
+  }
+
+  function cursorHide() {
+    var c = $('bh-cursor'); if (!c) return;
+    c.classList.remove('bh-cursor--in');
+    setTimeout(function () { if (!director.running) { c.hidden = true; ghost.x = null; } }, 260);
+  }
+
   /* ---- THE CLICK PRIMITIVES ---------------------------------------------
      Everything the Director does to the page goes through one of these, and
      each one ends in a real .click() on a real element. */
 
-  /** Highlight a card the room can see, then click it for real. */
+  /** Take the room to a card, show the hand click it, then click it for real. */
   async function directorClickCard(itemId, selector) {
     var card = document.querySelector('[data-bh-card][data-bh-item="' + itemId + '"]');
     if (!card) return false;
@@ -2747,26 +3289,64 @@
       await dwait(DIRECTOR.scrollSettleMs);
     }
     card.classList.add('bh-director-pulse');
-    await dwait(DIRECTOR.pulseMs);
     var target = card.querySelector(selector || '[data-bh-open]');
+    await cursorTo(target || card);
+    await dwait(DIRECTOR.pulseMs);
+    // the ledger opens BEFORE the event, so the "before" scores are the real ones
+    storyBeginForCard(card);
     director.actionAt = Date.now();
+    await cursorPress();
     if (target) target.click();           // ← the real click, real handler, real event
     card.classList.remove('bh-director-pulse');
     await dwait(DIRECTOR.afterClickMs);
     return !!target;
   }
 
-  /** Click one of the presenter's own controls. */
+  /** Click one of the presenter's own controls — with the same visible hand.
+      The control's own tab is brought forward first: a switch thrown on a tab
+      nobody can see is exactly the invisible act this is here to fix. The view
+      returns to wherever the presenter was once the click has landed. */
   async function directorClickControl(id, settleMs) {
     var el = $(id);
     if (!el) return false;
     // A Director-initiated New Viewer is part of a scenario, not an abort of it.
     if (id === 'bh-ops-newviewer') director.internalReset = true;
+    var pane = el.closest ? el.closest('[data-bh-pane]') : null;
+    var back = null;
+    if (pane && pane.hidden) {
+      back = activeTab;
+      setTab(pane.getAttribute('data-bh-pane'));
+      await dwait(340);
+    }
+    await cursorTo(el);
     director.actionAt = Date.now();
+    await cursorPress();
     el.click();
     director.internalReset = false;
     await dwait(settleMs == null ? DIRECTOR.recomposeMs : settleMs);
+    if (back && back !== activeTab) setTab(back);      // back to the ledger
     return true;
+  }
+
+  /** The ACTION half of a story entry, read off the card that was clicked. */
+  function storyBeginForCard(card) {
+    var id = card.getAttribute('data-bh-item');
+    var name = '', cat = '';
+    ((state.payload && state.payload.decisions) || []).some(function (d) {
+      var items = d.items || (d.item ? [d.item] : []);
+      return items.some(function (i) {
+        if (!i || (i.itemNumber || i.id) !== id) return false;
+        name = i.name || i.shortDescription || id; cat = i.category || ''; return true;
+      });
+    });
+    if (!name) name = cardName(card);
+    var key = catKey(cat) || 'this';
+    storyClicks[key] = (storyClicks[key] || 0) + 1;
+    storyBegin({
+      act: 'Clicked ' + (name || id) + ' — ' + ordinal(storyClicks[key]) + ' ' + (cat || 'product') + ' click.',
+      weight: ACTION_WEIGHT.product_click,
+      focus: cat ? { dim: 'category', value: cat } : null
+    });
   }
 
   /* ---- THE RESULT PHASE --------------------------------------------------
@@ -2782,10 +3362,31 @@
     var waited = 0;
     while (waited < DIRECTOR.resultWaitMs && camera.at <= since) { await dwait(150); waited += 150; }
     if (camera.at <= since) return false;
-    var name = (SLOT_META[camera.slot] && SLOT_META[camera.slot].title) || camera.slot;
-    caption(camera.msg || ((name || 'The page') + ' recomposed — on screen now.'), line || '');
+    // The caption says the SAME sentence the ledger just wrote — arithmetic on
+    // top, located consequence underneath — so the presenter can read either.
+    var last = null;
+    for (var i = story.length - 1; i >= 0; i--) { if (story[i].kind !== 'beat') { last = story[i]; break; } }
+    if (last && last.t >= since) {
+      captionQuiet(last.math || last.act, last.cons || line || '');
+    } else {
+      var name = slotTitle(camera.slot);
+      captionQuiet(camera.msg || (name + ' recomposed — on screen now.'), line || '');
+    }
     await dwait(DIRECTOR.resultHoldMs);
     return true;
+  }
+
+  /* The result caption is already IN the ledger — writing it there twice would
+     make the story stutter, so this one path sets the bar without re-filing. */
+  function captionQuiet(what, line) {
+    var bar = $('bh-caption'); if (!bar) return;
+    bar.hidden = false;
+    var w = $('bh-caption-what'); if (w) w.textContent = what || '';
+    var l = $('bh-caption-line'); if (l) l.textContent = line || '';
+    var b = $('bh-caption-beat');
+    if (b) b.textContent = director.running && director.arc
+      ? 'Beat ' + director.index + ' of ' + director.total
+      : (director.label || 'Demo Director');
   }
 
   /* ---- payload helpers (choosing WHAT to click, never what results) ---- */
@@ -3191,6 +3792,8 @@
     if (director.running) return;
     director.running = true; director.arc = !!isArc; director.stopping = false;
     director.paused = false; director.total = list.length; director.index = 0;
+    // the room should be reading the ledger while the arc runs, not the HUD
+    setTab('story');
     directorSetTransport();
     try {
       for (var i = 0; i < list.length; i++) {
@@ -3225,6 +3828,7 @@
     } finally {
       director.running = false; director.paused = false; director.stopping = false;
       director.skipping = false; director.label = '';
+      cursorHide();               // the hand belongs to the Director, and it is done
       directorSetTransport();
     }
   }
@@ -3267,6 +3871,7 @@
     initResizer();
     initNav();
     initOps();
+    initTabs();
     setPanel(q.get('panel') === '0' ? false : (lsGet(NS + 'panel') !== '0'));
     setInterval(tickClock, 250);
     initIdleDecay();

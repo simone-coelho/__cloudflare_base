@@ -241,16 +241,51 @@
     <button class="bh-panel__x" type="button" id="bh-panel-close">Hide</button>
   </div>
 
-  <div class="bh-panel__scroll">
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       THE TRANSPORT — sticky, ALWAYS visible, on every tab. Pressing play must
+       never require scrolling, and watching the result must never require
+       scrolling back. This is the one control a presenter reaches for mid-
+       sentence, so it sits directly under the header and never moves.
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="bh-transport">
+    <div class="bh-transport__btns">
+      <button class="bh-opsbtn bh-opsbtn--play" type="button" id="bh-dir-play">&#9654; Play full arc</button>
+      <button class="bh-opsbtn bh-opsbtn--icon" type="button" id="bh-dir-pause" title="Pause" aria-label="Pause" disabled>&#9208;</button>
+      <button class="bh-opsbtn bh-opsbtn--icon" type="button" id="bh-dir-skip" title="Skip beat" aria-label="Skip beat" disabled>&#9197;</button>
+      <button class="bh-opsbtn bh-opsbtn--icon bh-opsbtn--danger" type="button" id="bh-dir-stop" title="Stop" aria-label="Stop" disabled>&#9209;</button>
+    </div>
+    <p class="bh-transport__beat" id="bh-dir-progress">Idle &mdash; pick a beat, or play the arc.</p>
+  </div>
+
+  <!-- STORY | AFFINITY | DIRECTOR — one vertical port was making the presenter
+       scroll down to press play and back up to read the instrument. -->
+  <div class="bh-tabs" role="tablist" aria-label="Glass Box views">
+    <button class="bh-tab" type="button" role="tab" data-bh-tab="story" id="bh-tab-story" aria-selected="true">Story</button>
+    <button class="bh-tab" type="button" role="tab" data-bh-tab="affinity" id="bh-tab-affinity" aria-selected="false">Affinity<i class="bh-tab__dot" id="bh-tab-dot" hidden></i></button>
+    <button class="bh-tab" type="button" role="tab" data-bh-tab="director" id="bh-tab-director" aria-selected="false">Director</button>
+  </div>
+
+  <div class="bh-panel__scroll" id="bh-panel-scroll">
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         1 · THE AFFINITY INSTRUMENT — FIRST, because it is the demo.
-         This is the thing the room is meant to watch. It used to sit under
-         two-thirds of debug HUD, below the fold, which meant the star of the
-         demo was invisible without scrolling. Everything engineer-facing has
-         moved to "Engine details" at the bottom, collapsed.
+         TAB 1 · THE STORY — the running ledger, in the order it happened.
+         Every entry is one readable breath: ACTION → ARITHMETIC → LOCATED
+         CONSEQUENCE. Reading it aloud IS the narration; that is the whole
+         specification. Numbers come from the live snapshot and the published
+         config, never from a script.
          ═══════════════════════════════════════════════════════════════ -->
-    <section class="bh-instrument">
+    <section class="bh-pane bh-story" data-bh-pane="story">
+      <h3>What just happened <span class="bh-story__hint">read it aloud</span></h3>
+      <ol class="bh-story__list" id="bh-story"></ol>
+      <p class="bh-panel__empty" id="bh-story-empty">Nothing yet &mdash; click a product, flip a control, or play the arc.</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         TAB 2 · THE AFFINITY INSTRUMENT — the thing the room is meant to
+         watch. Everything engineer-facing lives under the Director tab's
+         "Engine details", collapsed.
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="bh-pane bh-instrument" data-bh-pane="affinity" hidden>
       <h3>Affinity &mdash; 9 live dimensions</h3>
       <div class="bh-dim__legend">
         <span><i style="background:#7FE0B0"></i>&theta;in</span>
@@ -273,15 +308,8 @@
          every effect on screen comes from the engine reacting to a real
          event on the real pipeline. Nothing here fakes a state.
          ═══════════════════════════════════════════════════════════════ -->
-    <section class="bh-dir">
-      <h3>Demo Director</h3>
-      <div class="bh-dir__transport">
-        <button class="bh-opsbtn bh-opsbtn--play" type="button" id="bh-dir-play">&#9654; Play full arc</button>
-        <button class="bh-opsbtn" type="button" id="bh-dir-pause" disabled>&#9208; Pause</button>
-        <button class="bh-opsbtn" type="button" id="bh-dir-skip" disabled>&#9197; Skip</button>
-        <button class="bh-opsbtn bh-opsbtn--danger" type="button" id="bh-dir-stop" disabled>&#9209; Stop</button>
-      </div>
-      <p class="bh-dir__progress" id="bh-dir-progress">Idle &mdash; pick a beat, or play the arc.</p>
+    <section class="bh-pane bh-dir" data-bh-pane="director" hidden>
+      <h3>Beats</h3>
       <div class="bh-dir__list" id="bh-dir-list"></div>
     </section>
 
@@ -291,7 +319,7 @@
          could not find the quota toggle. Each control now says what it is and
          what it currently IS, separately.
          ═══════════════════════════════════════════════════════════════ -->
-    <section class="bh-controls">
+    <section class="bh-pane bh-controls" data-bh-pane="director" hidden>
       <h3>Controls</h3>
 
       <div class="bh-ctlgrid">
@@ -337,7 +365,7 @@
          deliberately (and openExplain() forces it open), which is a better
          beat than having it permanently occupy the top of the panel.
          ═══════════════════════════════════════════════════════════════ -->
-    <details class="bh-engine" id="bh-engine">
+    <details class="bh-pane bh-engine" data-bh-pane="director" id="bh-engine" hidden>
       <summary><h3>Engine details</h3><span class="bh-engine__hint">clock &middot; latency &middot; decision records</span></summary>
 
       <div class="bh-ops">
@@ -402,6 +430,26 @@
 <!-- MOMENT TOAST — one at a time, top of the store area. Announces only real
      changes, in plain language, with the cause that produced them. -->
 <div class="bh-moment" id="bh-moment" hidden role="status" aria-live="polite"></div>
+
+<!-- SPOTLIGHT DIM — one-time, on camera arrival: the rest of the storefront
+     drops to ~40% for a beat while the changed module stays at full brightness,
+     then the dim lifts and the ring + its label chip stay. Presentation chrome,
+     never store UI, and skipped entirely under prefers-reduced-motion. -->
+<div class="bh-dimveil" id="bh-dimveil" hidden aria-hidden="true"></div>
+
+<!-- THE GHOST CURSOR — the Director's hand, made visible. An automated click
+     with no pointer is an invisible act: the card reacts to nothing and the
+     room reads it as the page twitching by itself. This glides to the target,
+     dwells, and ripples at the instant of the real .click(). It is presentation
+     chrome: pointer-events:none, hidden whenever the Director is idle, and it
+     never appears during a human's own interaction. -->
+<div class="bh-cursor" id="bh-cursor" hidden aria-hidden="true">
+  <span class="bh-cursor__ripple" id="bh-cursor-ripple"></span>
+  <svg width="44" height="44" viewBox="0 0 44 44" focusable="false">
+    <path d="M12 7 L12 34 L19.2 27.2 L24.2 37.8 L29.4 35.2 L24.4 24.8 L34 24.4 Z"
+          fill="#233047" stroke="#EF7A5E" stroke-width="2.2" stroke-linejoin="round"/>
+  </svg>
+</div>
 
 <div class="bh-caption" id="bh-caption" hidden aria-live="polite">
   <div class="bh-caption__inner">
