@@ -473,7 +473,9 @@ button, input, select { font: inherit; color: inherit; }
 .bh-event__title { font-size: 1.75rem; margin: 0 0 8px; }
 .bh-event__lede { margin: 0 0 6px; max-width: 62ch; }
 .bh-event__cadence { margin: 0; font-size: .9375rem; color: var(--bh-body); }
-.bh-event__body { display: grid; grid-template-columns: minmax(0,320px) minmax(0,1fr); gap: 28px; padding: 22px 28px 28px; }
+.bh-event__body { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,340px); gap: 28px; padding: 22px 28px 28px; align-items: start; }
+.bh-event__now .bh-card { max-width: 340px; }
+@media (max-width: 860px) { .bh-event__now .bh-card { margin-inline: auto; } }
 @media (max-width: 860px) { .bh-event__body { grid-template-columns: 1fr; } }
 .bh-reveal { display: inline-flex; align-items: baseline; gap: 8px; font-family: var(--bh-head); font-weight: 700; color: var(--bh-ink); margin: 0 0 10px; }
 .bh-reveal__n { font-size: 2rem; line-height: 1; }
