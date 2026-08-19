@@ -358,6 +358,168 @@ describe('spotlight_for_you — affinity, with the evergreen floor', () => {
   });
 });
 
+// ── The spotlight ROW: four tiles, not one occupant ──────────────────────────
+//
+// The customer asked for three or four items where there was one. The move is
+// only worth making if the row is composed the way the slot always was — one
+// ranking, the same gates, the evergreen floor still underneath it — so what is
+// pinned here is that the tiles are picks and not decoration:
+//   · the LEAD is byte-identical to the single occupant that used to sit alone,
+//     so `item` stays the back-compatible answer to "what did this slot choose";
+//   · every tile carries its own rankScore / rankPosition, exactly as a rail's do;
+//   · the evergreen floor fills PER TILE, so a warming visitor's own category
+//     leads the row and the floor backstops the rest of it;
+//   · the explain reports the arithmetic of the SET — chosen out of eligible out
+//     of considered — because that is the sentence the page prints on itself.
+
+describe('spotlight_for_you — the row (4 tiles)', () => {
+  const MAX = DEFAULT_COMPOSER_CONFIG.spotlightMax;
+
+  it('composes up to four affinity-ranked tiles, in rank order', () => {
+    const hot = slot(compose({ scores: KITCHEN_SHOPPER }), 'spotlight_for_you');
+
+    expect(MAX).toBe(4);
+    expect(hot.items).toBeDefined();
+    expect(hot.items!.length).toBe(4);
+
+    // Every tile is the visitor's lean, and every one of them is timely.
+    for (const it of hot.items!) {
+      expect(it.category).toBe('Kitchen & Table');
+      expect(it.offer.windowStart).not.toBeNull();
+    }
+    // Rail-shaped: positions 1..n, scores non-increasing.
+    expect(hot.items!.map((i) => i.rankPosition)).toEqual([1, 2, 3, 4]);
+    for (let i = 1; i < hot.items!.length; i++) {
+      expect(hot.items![i].rankScore).toBeLessThanOrEqual(hot.items![i - 1].rankScore);
+    }
+    // No item appears twice — a row that repeats a pick is not four picks.
+    expect(new Set(hot.items!.map((i) => i.itemNumber)).size).toBe(4);
+  });
+
+  it('★ the LEAD is byte-identical to the single occupant it replaced', () => {
+    const hot = slot(compose({ scores: KITCHEN_SHOPPER }), 'spotlight_for_you');
+    const lead = hot.items![0];
+
+    expect(hot.item?.itemNumber).toBe(lead.itemNumber);
+    expect(hot.explain.rank_position).toBe(1);
+    expect(hot.explain.rank_score).toBe(lead.rankScore);
+    expect(hot.offer?.code).toBe(lead.offer.code);
+
+    // …and the projection itself, field for field: `item` is the RailItem minus
+    // its ranking envelope, so anything still reading `item` reads what it read
+    // before the tiles arrived beside it.
+    const { offer, rankScore, rankPosition, quotaReserved, pinned, ...safe } = lead;
+    expect(safe).toEqual(hot.item);
+  });
+
+  it('a cold visitor gets FOUR evergreen picks, not one', () => {
+    const cold = slot(compose({ scores: {} }), 'spotlight_for_you');
+    expect(cold.strategy).toBe('evergreen_fallback');
+    expect(cold.items!.length).toBe(4);
+    for (const it of cold.items!) {
+      expect(it.offer.type).toBe('evergreen');
+      expect(it.offer.windowStart).toBeNull(); // always-on: no clock at all
+    }
+  });
+
+  it('the floor fills PER TILE: her category leads, the evergreen pool backstops', () => {
+    // 0.42 is below θin, so the slot is on the floor — but she is still a kitchen
+    // shopper, and the two Kitchen evergreens lead the row she gets.
+    const warming = slot(compose({ scores: WARMING_UP }), 'spotlight_for_you');
+    expect(warming.strategy).toBe('evergreen_fallback');
+    expect(warming.items!.length).toBe(4);
+    expect(warming.items![0].category).toBe('Kitchen & Table');
+    expect(warming.items![1].category).toBe('Kitchen & Table');
+    // The backstop is honest about itself: no affinity, and it says so.
+    expect(warming.items![0].rankScore).toBeGreaterThan(0);
+    expect(warming.items![3].rankScore).toBe(0);
+    for (const it of warming.items!) expect(it.offer.type).toBe('evergreen');
+  });
+
+  it('mixes lean and floor when the lean cannot fill the row', () => {
+    // Beauty's timely offers are thinned by the VIP roster, so the row is her
+    // lean plus her category's evergreen plus one backstop — a state the
+    // single-occupant slot could not express at all.
+    const beauty = slot(compose({ scores: BEAUTY_SHOPPER }), 'spotlight_for_you');
+    expect(beauty.strategy).toBe('affinity');
+    expect(beauty.items!.length).toBe(4);
+    const timely = beauty.items!.filter((i) => i.offer.windowStart !== null);
+    expect(timely.length).toBeGreaterThan(0);
+    expect(timely.length).toBeLessThan(4);
+    expect(beauty.items!.slice(0, timely.length).every((i) => i.category === 'Beauty & Wellness')).toBe(true);
+  });
+
+  it('never puts an ineligible item in the row', () => {
+    for (const scores of [{}, WARMING_UP, KITCHEN_SHOPPER, BEAUTY_SHOPPER]) {
+      const s = slot(compose({ scores }), 'spotlight_for_you');
+      for (const it of s.items!) {
+        const gates = evaluateGates(ITEMS.find((i) => i.itemNumber === it.itemNumber)!, NOW, {
+          vipOfferActive: DEFAULT_COMPOSER_CONFIG.vipOfferActive,
+          channel: DEFAULT_COMPOSER_CONFIG.channel,
+          cfg: DEFAULT_COMPOSER_CONFIG.lifecycle,
+        });
+        expect(gates.eligible, `${it.itemNumber} is in the row but ineligible`).toBe(true);
+      }
+    }
+  });
+
+  it('the explain carries the arithmetic of the SET', () => {
+    const hot = slot(compose({ scores: KITCHEN_SHOPPER }), 'spotlight_for_you');
+    const x = hot.explain;
+
+    expect(x.chosen_count).toBe(hot.items!.length);
+    expect(x.eligible_count).toBeGreaterThanOrEqual(x.chosen_count!);
+    expect(x.candidates_considered).toBeGreaterThanOrEqual(x.eligible_count!);
+    expect(x.candidates_considered).toBe(x.candidate_set.length);
+    // Every tile came from the set the record says it looked at.
+    for (const it of hot.items!) expect(x.candidate_set).toContain(it.itemNumber);
+  });
+
+  it('the counts are on the spotlight ALONE — every other record is unchanged', () => {
+    const page = compose({ scores: KITCHEN_SHOPPER });
+    for (const d of page.decisions) {
+      if (d.slot_id === 'spotlight_for_you') continue;
+      expect(d.explain.chosen_count, `${d.slot_id} grew a chosen_count`).toBeUndefined();
+      expect(d.explain.eligible_count, `${d.slot_id} grew an eligible_count`).toBeUndefined();
+    }
+  });
+
+  it('honours spotlightMax — the row length is configuration, not a constant', () => {
+    const three = slot(compose({ scores: KITCHEN_SHOPPER, config: { spotlightMax: 3 } }), 'spotlight_for_you');
+    expect(three.items!.length).toBe(3);
+    expect(three.explain.chosen_count).toBe(3);
+
+    // …and the LEAD does not move when the row gets shorter.
+    const four = slot(compose({ scores: KITCHEN_SHOPPER }), 'spotlight_for_you');
+    expect(three.item?.itemNumber).toBe(four.item?.itemNumber);
+  });
+
+  it('two visitors get different rows in the same second', () => {
+    const a = slot(compose({ visitorId: 'visitor-a', scores: KITCHEN_SHOPPER }), 'spotlight_for_you');
+    const b = slot(compose({ visitorId: 'visitor-b', scores: KITCHEN_SHOPPER }), 'spotlight_for_you');
+    const idsA = a.items!.map((i) => i.itemNumber);
+    const idsB = b.items!.map((i) => i.itemNumber);
+    expect(idsA).not.toEqual(idsB);
+    // …and each of them replays identically.
+    expect(slot(compose({ visitorId: 'visitor-a', scores: KITCHEN_SHOPPER }), 'spotlight_for_you')
+      .items!.map((i) => i.itemNumber)).toEqual(idsA);
+  });
+
+  it('exports ONE row for the row: the lead is the chosen item, the set is the candidates', () => {
+    const page = compose({ scores: KITCHEN_SHOPPER });
+    const dec = slot(page, 'spotlight_for_you');
+    const row = decisionRows(page).find((r) => r.slot_id === 'spotlight_for_you')!;
+
+    // The warehouse shape did not move: one row per DECISION, not per tile.
+    expect(decisionRows(page).filter((r) => r.slot_id === 'spotlight_for_you').length).toBe(1);
+    expect(row.chosen_item).toBe(dec.items![0].itemNumber);
+    expect(row.rank_position).toBe(1);
+    expect(row.rank_score).toBe(dec.items![0].rankScore);
+    expect(JSON.parse(row.candidate_set)).toEqual(dec.explain.candidate_set);
+    for (const it of dec.items!) expect(JSON.parse(row.candidate_set)).toContain(it.itemNumber);
+  });
+});
+
 // ── Succession: the centrepiece ──────────────────────────────────────────────
 
 describe('lifecycle succession (Beat 2f)', () => {

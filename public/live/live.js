@@ -146,7 +146,7 @@
     geo_cold_start:     { render: 'geo',      title: 'Opening picks for your area', kicker: '' },
     hero_billboard:     { render: 'hero',     title: '',                        kicker: '' },
     daily_deal:         { render: 'deal',     title: 'Today’s Bright One℠', kicker: 'One great item. One-day price. A new one tomorrow.' },
-    spotlight_for_you:  { render: 'reco',     title: 'Spotlight for You',       kicker: 'Picked for you — and it changes as you look around.' },
+    spotlight_for_you:  { render: 'spot',     title: 'Spotlight for You',       kicker: 'Picked for you — and the row re-ranks as you look around.' },
     deals_rail:         { render: 'grid',     title: 'Deals Worth the Trip',    kicker: 'Named offers, each with its own window — no hunting required.' },
     on_air_rail:        { render: 'onair',    title: 'On Air Now',              kicker: 'What our hosts are showing, and what they just showed.' },
     category_rail:      { render: 'cats',     title: 'Shop by Category',        kicker: 'Eight aisles — start anywhere.' },
@@ -902,17 +902,22 @@
     var meta = SLOT_META[dec.slot_id] || { title: dec.slot_id, kicker: '' };
     var title = (opts && opts.title) || meta.title;
     var kicker = (opts && opts.kicker !== undefined) ? opts.kicker : meta.kicker;
+    // opts.pre  — a band ABOVE the head (the spotlight's computed eyebrow)
+    // opts.note — a small line beside the title (the spotlight's count note)
+    var pre = (opts && opts.pre) || '';
+    var note = (opts && opts.note) || '';
     var head = '';
-    if (title || kicker) {
+    if (title || kicker || note) {
       head = '<div class="bh-slot__head"><div class="bh-slot__titles">' +
         (title ? '<h2 class="bh-slot__title">' + title + '</h2>' : '') +
         (kicker ? '<p class="bh-slot__kicker">' + kicker + '</p>' : '') +
+        note +
       '</div>' + explainBtn(dec) + '</div>';
     } else {
       head = '<div class="bh-slot__head"><div class="bh-slot__titles"></div>' + explainBtn(dec) + '</div>';
     }
     return '<section class="bh-slot" id="bh-slot-' + esc(dec.slot_id) + '" data-bh-slotsection="' + esc(dec.slot_id) + '" aria-label="' +
-      esc(title || dec.slot_id) + '">' + head + inner + '</section>';
+      esc(title || dec.slot_id) + '">' + pre + head + inner + '</section>';
   }
 
   function explainBtn(dec) {
@@ -1068,6 +1073,123 @@
     return slotShell(dec, '<div class="bh-rail' + (frame === 'reco' ? ' bh-rail--wide' : '') + '">' + cards + '</div>', { kicker: kicker });
   }
 
+  /* ── THE 'PICKED FOR YOU' EYEBROW ────────────────────────────────────────
+     A strip a room can read from the back, on the one slot whose whole claim is
+     "this was decided for THIS shopper" — and every word of it is computed.
+
+     There are exactly three things it can say, because there are exactly three
+     states the engine can be in:
+
+       WARM   her own signal is leading — a dial at or above its θin, or any dial
+              that has moved at all this session. The strip names the leading
+              CATEGORY value out of affinitySnapshot: the same number the bar in
+              the Glass Box is drawn from, on the highest-weighted axis the
+              composer ranks with (category, 1.0). It is a claim about HER, not a
+              restatement of the row — the row's own selector can be a different
+              dimension entirely, which is why 'why?' opens the decision record
+              rather than the strip trying to be one.
+       COLD + GEO  nothing has moved yet, but the edge told us where she is, so
+              the strip says so, with the place name the geo payload carries.
+       COLD   nothing has moved and there is no place name worth quoting. It
+              refuses to invent one and says what is true instead.
+
+     Nothing here is scripted and nothing here is a constant: change the lean and
+     the strip changes with it, which is why a change gets the same flash and the
+     same ledger line any other change on this page gets. */
+  var SPOT_TIP = 'This label is computed, never scripted: it names the live leading dimension for ' +
+    'this shopper, or the geographic prior on a first visit. The why link opens the decision record.';
+
+  /** The visitor's live lean: has anything moved, and what leads if it has. */
+  function spotlightLean() {
+    var snap = state.affinity || (state.payload && state.payload.affinitySnapshot) || {};
+    var values = snap.dims || snap.dimensions || snap;
+    var moved = false, hot = false, best = null;
+    DIMENSIONS.forEach(function (d) {
+      // sessionMission decides LAYOUT, never content — it must not make a
+      // visitor who has done nothing read as a visitor with a lean.
+      if (d.key === 'sessionMission') return;
+      var lead = leadingValue(values[d.key]);
+      if (!lead || typeof lead.score !== 'number' || !isFinite(lead.score)) return;
+      if (lead.score >= 0.005) moved = true;
+      if (lead.score >= thetaOf(d.key)) hot = true;
+      if (lead.value && (!best || lead.score > best.score)) best = { value: lead.value, score: lead.score };
+    });
+    // The CATEGORY value is what the strip names when there is one: it is the
+    // axis the room is watching and the axis the spotlight ranks on.
+    var cat = leadingValue(values.category);
+    var name = (cat && cat.value && typeof cat.score === 'number' && cat.score >= 0.005)
+      ? cat.value : (best ? best.value : null);
+    return { warm: (hot || moved) && !!name, name: name };
+  }
+
+  /** The eyebrow, as data: a reason (for the ledger) and the words on screen. */
+  function spotlightEyebrow() {
+    var lean = spotlightLean();
+    if (lean.warm) {
+      return { reason: 'leaning ' + lean.name, text: 'PICKED FOR YOU — leaning ' + lean.name + ' · decided live', why: true };
+    }
+    var loc = (geo.data && geo.data.location) || null;
+    // 'your area' is what locationLabel returns when it knows nothing worth
+    // naming — quoting it back as a place would be the page inventing one.
+    if (loc && (loc.precision === 'city' || loc.precision === 'region') && loc.label) {
+      return { reason: 'first-visit prior', text: 'FIRST VISIT — picked for your area (' + loc.label + ')', why: false };
+    }
+    return { reason: 'first-visit prior', text: 'FIRST VISIT — today’s strongest offers', why: false };
+  }
+
+  /** "{n} of {eligible} eligible offers" — the explain's own two numbers. */
+  function spotlightCount(dec) {
+    var x = dec.explain || {};
+    var n = (typeof x.chosen_count === 'number') ? x.chosen_count : (dec.items || []).length;
+    var el = (typeof x.eligible_count === 'number') ? x.eligible_count : x.candidates_considered;
+    if (!n || typeof el !== 'number' || !el) return '';
+    return n + ' of ' + el + ' eligible offers — chosen for this shopper';
+  }
+
+  function eyebrowInner(eb, slotId) {
+    return '<span class="bh-spot__eyebrow-t">' + esc(eb.text) + '</span>' +
+      (eb.why
+        ? '<span class="bh-spot__sep" aria-hidden="true">·</span>' +
+          '<button class="bh-spot__why" type="button" data-bh-explain="' + esc(slotId) + '" aria-expanded="false">why?</button>'
+        : '');
+  }
+
+  /* The geo payload is fetched alongside the first composition, so on a fast
+     first paint the strip can only say the cold truth it had at the time
+     ("today's strongest offers"). When the place name lands, the words are
+     patched in — same REASON, better facts, and deliberately not a change
+     event: nothing about the decision moved, so nothing flashes and the ledger
+     stays quiet. Without this the opening frame of Beat 1 is a coin flip. */
+  function refreshSpotlightEyebrow() {
+    var el = document.querySelector('[data-bh-spoteyebrow]');
+    if (!el) return;
+    var eb = spotlightEyebrow();
+    if (spotEyebrow && eb.text === spotEyebrow.text) return;
+    spotEyebrow = eb;
+    el.innerHTML = eyebrowInner(eb, 'spotlight_for_you');
+  }
+
+  /* The spotlight is a ROW now, not an occupant: the same card template the
+     rails use, at the same reco frame, three or four across. The eyebrow rides
+     above the title because it is the answer to the question the module asks. */
+  function renderSpotlight(dec) {
+    var items = dec.items || (dec.item ? [dec.item] : []);
+    var now = demoNow();
+    var cards = items.map(function (it) {
+      var n = norm(it, { offer: it.offer || dec.offer, now: now });
+      return n ? cardHtml(n, { slot: dec.slot_id, decisionId: dec.decision_id, frame: 'reco' }) : '';
+    }).join('');
+    var eb = spotlightEyebrow();
+    spotEyebrow = eb;
+    var strip = '<p class="bh-spot__eyebrow" data-bh-spoteyebrow data-bh-tip="' + esc(SPOT_TIP) + '">' +
+      eyebrowInner(eb, dec.slot_id) +
+    '</p>';
+    var count = spotlightCount(dec);
+    var note = count ? '<span class="bh-spot__count">' + esc(count) + '</span>' : '';
+    return slotShell(dec, '<div class="bh-rail bh-rail--wide bh-rail--spot">' + cards + '</div>',
+      { pre: strip, note: note });
+  }
+
   function renderOnAir(dec) {
     var now = demoNow();
     var leadItem = dec.item ? norm(dec.item, { offer: dec.offer, now: now, live: true }) : null;
@@ -1166,6 +1288,7 @@
     if (kind === 'onair') return renderOnAir(dec);
     if (kind === 'cats') return renderCats(dec);
     if (kind === 'event') return renderEvent(dec);
+    if (kind === 'spot') return renderSpotlight(dec);
     if (kind === 'reco') return renderRail(dec, 'reco');
     return renderRail(dec, 'square');
   }
@@ -1258,6 +1381,8 @@
       if (!j || !j.location) throw new Error('unexpected shape');
       geo.data = j;
       renderGeo();
+      // the spotlight's strip speaks for the same prior — give it the facts too
+      refreshSpotlightEyebrow();
       geoTellArrival();
       renderExplains();
     } catch (e) {
@@ -1661,6 +1786,8 @@
   var lastComposition = null;     // { slotId: { ids:[], occupant, lifecycle } }
   var recomposeCause = null;      // set by whatever triggered the fetch
   var freshCards = {};            // itemIds to sweep on this paint
+  var spotEyebrow = null;         // the strip this paint computed
+  var lastSpotEyebrow = null;     // …and the one before it, for the diff
 
   function setCause(kind, detail) { recomposeCause = { kind: kind, detail: detail || null }; }
 
@@ -1779,7 +1906,9 @@
     }
     if (flip) {
       var sn = (SLOT_META[flip.slot] && SLOT_META[flip.slot].title) || flip.slot;
-      return sn + ' changed occupant.';
+      return flip.slot === 'spotlight_for_you'
+        ? sn + ' re-ranked its row.'
+        : sn + ' changed occupant.';
     }
     return null;
   }
@@ -2141,6 +2270,15 @@
       (others ? ' ' + others + ' other dimension' + (others === 1 ? '' : 's') + ' moved with it.' : '');
   }
 
+  /* A one-occupant slot SWAPS; a row RE-RANKS. The spotlight is a row of three
+     or four now, so "swapped to" would describe a thing the room cannot see —
+     the lead moved, the other tiles moved with it, and none of them left. */
+  function flipPhrase(slot, name) {
+    return slot === 'spotlight_for_you'
+      ? 're-ranked — now leading with ' + (name || 'a new item')
+      : 'swapped to ' + (name || 'a new item');
+  }
+
   /** The located consequence sentence the camera can hand back. */
   function storyConsequence(slot, diff) {
     if (!slot) return null;
@@ -2149,7 +2287,7 @@
     var freshN = 0;
     Object.keys((diff && diff.fresh) || {}).forEach(function (id) { if (diff.fresh[id] === slot) freshN++; });
     var head = slotTitle(slot) + ' (' + slotWhere(slot) + ', ringed)';
-    if (flip) return head + ' swapped to ' + (flip.name || 'a new item');
+    if (flip) return head + ' ' + flipPhrase(slot, flip.name);
     if (freshN) return head + ' took ' + freshN + ' new pick' + (freshN === 1 ? '' : 's');
     return head + ' is the module this switch acts on';
   }
@@ -2487,8 +2625,16 @@
   function applyChangeMarks(diff) {
     var cause = recomposeCause || {};
     var calm = prefersCalm();
-    var changed = !!(diff && diff.any);
-    var target = primarySlot(diff, cause);
+    /* The spotlight's eyebrow is a decision the room can READ, so a change to it
+       is a change to this page — even on a recompose where the composition
+       itself held. (It moves for a reason the tiles may not show: her lean
+       crossing θin re-labels the row before it re-ranks it.) */
+    var eb = spotEyebrow;
+    var ebFrom = lastSpotEyebrow ? lastSpotEyebrow.reason : null;
+    var ebChanged = !!(eb && ebFrom && eb.reason !== ebFrom);
+    if (eb) lastSpotEyebrow = eb;
+    var changed = !!(diff && diff.any) || ebChanged;
+    var target = primarySlot(diff, cause) || (ebChanged ? 'spotlight_for_you' : null);
     var note = (changed && diff.removed.length) ? removalNote(diff) : null;
     var targetEl = slotSection(target);
     // a mode toggle's consequence IS the gap, so that is what the camera frames
@@ -2508,6 +2654,11 @@
         var el = document.querySelector('[data-bh-card][data-bh-item="' + id + '"]');
         if (el && !el.hasAttribute('data-bh-pending')) el.setAttribute('data-bh-pending', 'bh-moved');
       });
+    }
+    // the strip gets the same armed sweep a fresh card gets — it changed too
+    if (ebChanged && !calm) {
+      var ebEl = document.querySelector('[data-bh-spoteyebrow]');
+      if (ebEl && !ebEl.hasAttribute('data-bh-pending')) ebEl.setAttribute('data-bh-pending', 'bh-new');
     }
 
     // The ring says LOOK HERE; the chip says WHAT CHANGED. Both PERSIST until
@@ -2565,6 +2716,15 @@
         var cs = controlStory(cause, diff);
         if (cs) storyAdd({ act: cs.act, math: cs.math, cons: '→ ' + (cons || 'the page held') + '.' });
       }
+      // …and the strip's own line, in its own words, because the label the room
+      // is reading changed and the ledger must be able to account for it.
+      if (ebChanged) {
+        storyAdd({
+          act: 'The spotlight’s reason changed: ' + ebFrom + ' → ' + eb.reason,
+          math: 'The label is read from the live snapshot, not from a script — it names the leading dimension, or the geographic prior before there is one.',
+          cons: '→ ' + slotTitle('spotlight_for_you') + ' (' + slotWhere('spotlight_for_you') + ') now reads “' + eb.text + '”.'
+        });
+      }
     });
   }
 
@@ -2579,7 +2739,7 @@
     var freshN = 0;
     Object.keys((diff && diff.fresh) || {}).forEach(function (id) { if (diff.fresh[id] === slot) freshN++; });
     var what;
-    if (flip) what = slotTitle(slot) + ' swapped to ' + (flip.name || 'a new item');
+    if (flip) what = slotTitle(slot) + ' ' + flipPhrase(slot, flip.name);
     else if (freshN) what = freshN + ' new pick' + (freshN === 1 ? '' : 's') + ' in ' + slotTitle(slot);
     else if (cause && cause.kind) what = slotTitle(slot) + ' — the module this switch acts on';
     else what = slotTitle(slot) + ' recomposed';
@@ -4155,7 +4315,7 @@
       // and holds long enough to be read before the cursor even appears.
       caption('Next — clicking ' + pick.name + ' (' + (i + 1) + ' of 3)',
         i === 0 ? 'Nobody has told this page who she is. Watch the category axis.'
-                : 'Watch the category bar and the Spotlight module.');
+                : 'Watch the category bar, and the Spotlight row re-rank under its own strip.');
       await dwait(DIRECTOR.announceMs);
       await directorClickCard(pick.id);
       var r = dimReading('category');
@@ -4213,8 +4373,8 @@
       'Open an incognito window on the same URL: separate storage, so a genuinely separate visitor.');
     await dwait(brief ? DIRECTOR.briefMs : DIRECTOR.readMs);
     if (!brief) {
-      caption('Compare “Spotlight for You” and “Something New to You” across the two windows.',
-        'Several strong eligible offers, and the system choosing which offer for which customer — same slot, same second, one engine.');
+      caption('Compare the “Spotlight for You” row — its tiles and its strip — across the two windows.',
+        'Several strong eligible offers, and the system choosing which offers for which customer — same slot, same second, one engine.');
       await dwait(DIRECTOR.readMs + 3000);
     }
   }
@@ -4481,7 +4641,7 @@
   document.addEventListener('click', tipHide, true);
 
   var SCENARIOS = [
-    { key: 'stranger',   label: 'Anonymous Stranger', tip: 'Resets to a cold visitor. FIRST frames the cold-start banner — before any click, the page opens on her real geography (read at the edge, off the request) with real public census and a representative cohort. THEN clicks 3 kitchen products (announced first, ghost cursor, ~7s apart): the category bar crosses 0.60, the Spotlight swaps, and the geographic prior YIELDS to her own behavior. The no-training-period proof, and the two-speed story.',   run: scStranger },
+    { key: 'stranger',   label: 'Anonymous Stranger', tip: 'Resets to a cold visitor. FIRST frames the cold-start banner — before any click, the page opens on her real geography (read at the edge, off the request) with real public census and a representative cohort. THEN clicks 3 kitchen products (announced first, ghost cursor, ~7s apart): the category bar crosses 0.60, the Spotlight row re-ranks and its “picked for you” strip flips from the first-visit prior to her own lean, and the geographic prior YIELDS to her own behavior. The no-training-period proof, and the two-speed story.',   run: scStranger },
     { key: 'governance', label: 'Governance & quota', tip: 'Turns the discovery quota OFF — the discovery rail collapses into more-of-the-same — then back ON. The do-not-over-personalize guardrail, shown as disease then cure.',   run: scGovernance },
     { key: 'second',     label: 'Second Shopper', tip: 'Prompts you to open an incognito window at the same URL: same moment, different shopper, different page. Several eligible offers; the system picks per customer.',       run: scSecondShopper },
     { key: 'newoffer',   label: 'A New Offer Is Born', tip: 'The centerpiece. A raw feed row hits the Offer Desk, a REAL model call proposes tags (~16s — narrate over it), a human approves with one edit, and the item goes live on the floor. No campaign, no rebuild.',  run: scNewOffer },

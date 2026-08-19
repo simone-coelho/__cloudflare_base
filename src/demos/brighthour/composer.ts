@@ -218,6 +218,14 @@ export interface ComposerConfig {
   dimensionWeights: Record<string, number>;
   /** Max items in a rail slot (§A1's carousels are long; eight reads as a rail). */
   railMax: number;
+  /**
+   * How many tiles the spotlight composes. Their own `top-offers.json` carries a
+   * SET of picks, not one: a single occupant made the slot read as a hero, and
+   * "several strong eligible offers, and the system choosing which for which
+   * customer" is the claim the slot exists to make. Three to four reads as a
+   * row; one reads as a banner.
+   */
+  spotlightMax: number;
   /** §C2 step 4: how many discovery picks are RESERVED before ranking fills the rail. */
   discoveryQuota: number;
   /** A category at or above this affinity is not "discovery" any more. */
@@ -254,6 +262,7 @@ export interface ComposerConfig {
 export const DEFAULT_COMPOSER_CONFIG: ComposerConfig = {
   dimensionWeights: { ...DEFAULT_DIMENSION_WEIGHTS },
   railMax: 8,
+  spotlightMax: 4,
   discoveryQuota: 2,
   discoveryAffinityMax: 0.1,
   quotaEnabled: true,
@@ -396,6 +405,15 @@ export interface SlotExplain {
    * to one composed before focus existed.
    */
   focused?: boolean;
+  /**
+   * A slot that composes a SET rather than one occupant reports the arithmetic
+   * of that set: how many tiles it chose, out of how many candidates actually
+   * cleared the gates. `candidates_considered` is everything it LOOKED at;
+   * these two are what it could have used and what it used. Present on the
+   * spotlight only — every other slot's record is byte-identical to before.
+   */
+  chosen_count?: number;
+  eligible_count?: number;
 }
 
 export interface QueuedOffer {
@@ -429,7 +447,7 @@ export interface SlotDecision {
   decision_id: string;
   strategy: SlotStrategy;
   item: SafeItem | null;
-  /** Rail slots only — the ordered picks. */
+  /** Set-composing slots (the rails, and the spotlight row) — the ordered picks. */
   items?: RailItem[];
   offer: OfferView | null;
   explain: SlotExplain;
@@ -915,6 +933,8 @@ interface ExplainInput {
   cfg: ComposerConfig;
   /** True only where a category focus actually changed this slot. */
   focused?: boolean;
+  /** Set-composing slots only: tiles chosen, and eligible candidates available. */
+  counts?: { chosen: number; eligible: number };
 }
 
 function buildExplain(input: ExplainInput): SlotExplain {
@@ -987,6 +1007,9 @@ function buildExplain(input: ExplainInput): SlotExplain {
     // Spread rather than assigned: no focus ⇒ the key is not on the object at
     // all, and the payload is what it was before focus existed.
     ...(input.focused ? { focused: true } : {}),
+    ...(input.counts
+      ? { chosen_count: input.counts.chosen, eligible_count: input.counts.eligible }
+      : {}),
   };
 }
 
@@ -1221,39 +1244,87 @@ function isEvergreen(item: ComposerItem): boolean {
 
 /**
  * Beat 1's slot, and the `top-offers.json` homage: the top affinity dimension's
- * TIMELY offer — and, when the visitor has no affinity above θin (or nothing
- * timely survives the gates), the category's EVERGREEN entry rather than a
- * blank. Their own hand-curated file pairs exactly this way; the structure is
+ * TIMELY offers — and, when the visitor has no affinity above θin (or too few
+ * timely items survive the gates), the category's EVERGREEN entries rather than
+ * a blank. Their own hand-curated file pairs exactly this way; the structure is
  * theirs, the automation is ours.
+ *
+ * The slot composes a SET (cfg.spotlightMax, default 4), and the evergreen floor
+ * is applied PER TILE rather than to the slot as a whole: the lean fills as many
+ * tiles as it can, and the floor backfills the rest. So a cold visitor gets four
+ * category-evergreen picks, a warm one gets four from her lean, and the honest
+ * middle — three from the lean plus one evergreen backstop — is a state the slot
+ * can now actually express instead of rounding to one or the other.
+ *
+ * `item` remains the #1 pick, unchanged: the row's lead is the same item a
+ * single-occupant spotlight would have chosen, so the export row, the diff and
+ * anything else reading `item` are untouched by the tiles arriving beside it.
  */
 function composeSpotlight(ctx: SlotContext, order: number): SlotDecision {
   const top = topDimensionValue(ctx.scores, ctx.reflexConfig, ctx.cfg.dimensionWeights);
+  const max = Math.max(1, ctx.cfg.spotlightMax);
 
-  let pool: Candidate[] = [];
-  let strategy: SlotStrategy = 'evergreen_fallback';
+  // The lean: TIMELY offers carrying the visitor's leading dimension value.
+  const lean: Candidate[] = top
+    ? ctx.all.filter(
+        (c) => isTimely(c.item) && itemHasValue(c.item, top.dim, top.value, ctx.reflexConfig)
+      )
+    : [];
 
-  if (top) {
-    pool = ctx.all.filter(
-      (c) => isTimely(c.item) && itemHasValue(c.item, top.dim, top.value, ctx.reflexConfig)
-    );
-    if (pool.some((c) => c.gates.eligible)) strategy = 'affinity';
-  }
+  const leanRanked = rankPool(ctx.visitorId, 'spotlight_for_you', lean.filter((c) => c.gates.eligible));
 
-  if (strategy === 'evergreen_fallback') {
-    // The evergreen floor, narrowed to the visitor's best-known category when
-    // there is one (even below θin) — otherwise the whole evergreen pool.
+  const picks: RankedCandidate[] = leanRanked.slice(0, max);
+  const seen = new Set(picks.map((c) => c.itemId));
+
+  // The floor is consulted only when the lean could not fill the row — and when
+  // it is consulted, its candidates join the record, because they were looked at.
+  //
+  // It fills in STAGES so the existing narrowing survives the move to a row: her
+  // own category's evergreens first (which is the whole of the old behaviour, and
+  // keeps the #1 pick byte-identical to a single-occupant spotlight), then the
+  // rest of the evergreen pool as a backstop. Without the second stage a visitor
+  // whose category carries only two evergreens gets a two-tile row — the slot
+  // would shrink in the middle of the beat that is supposed to be filling it.
+  const floorStages: Candidate[][] = [];
+  if (picks.length < max) {
     const category = topValueOf(ctx.scores.category);
     const evergreens = ctx.all.filter((c) => isEvergreen(c.item));
     const inCategory = category ? evergreens.filter((c) => c.item.category === category) : [];
-    pool = inCategory.some((c) => c.gates.eligible) ? inCategory : evergreens;
+    const primary = inCategory.some((c) => c.gates.eligible) ? inCategory : evergreens;
+    floorStages.push(primary);
+    if (primary !== evergreens) {
+      const led = new Set(primary.map((c) => c.itemId));
+      floorStages.push(evergreens.filter((c) => !led.has(c.itemId)));
+    }
   }
 
-  const ranked = rankPool(ctx.visitorId, 'spotlight_for_you', pool.filter((c) => c.gates.eligible));
-  const chosen = ranked[0] ?? null;
+  const consulted: Candidate[] = [];
+  for (const stage of floorStages) {
+    if (picks.length >= max) break;
+    consulted.push(...stage);
+    for (const c of rankPool(ctx.visitorId, 'spotlight_for_you', stage.filter((s) => s.gates.eligible))) {
+      if (picks.length >= max) break;
+      if (seen.has(c.itemId)) continue;
+      seen.add(c.itemId);
+      picks.push(c);
+    }
+  }
+
+  // Everything the slot looked at, lean first, deduped — the explain's own set.
+  const pool: Candidate[] = [...lean];
+  const inPool = new Set(pool.map((c) => c.itemId));
+  for (const c of consulted) if (!inPool.has(c.itemId)) { inPool.add(c.itemId); pool.push(c); }
+
+  const items = picks.map((c, i) => railItem(c, ctx.nowMs, ctx.cfg, i + 1));
+  const chosen = picks[0] ?? null;
+  // The lead pick's provenance names the strategy: the row is `affinity` when
+  // her own lean opened it, and `evergreen_fallback` when the floor did.
+  const strategy: SlotStrategy = !chosen ? 'empty' : leanRanked.length > 0 ? 'affinity' : 'evergreen_fallback';
 
   return newDecision(ctx, 'spotlight_for_you', order, {
-    strategy: chosen ? strategy : 'empty',
+    strategy,
     item: chosen ? safeItem(chosen) : null,
+    items,
     offer: chosen ? offerView(chosen, ctx.nowMs, ctx.cfg) : null,
     explain: buildExplain({
       visitorId: ctx.visitorId,
@@ -1267,6 +1338,7 @@ function composeSpotlight(ctx: SlotContext, order: number): SlotDecision {
       configVersion: ctx.configVersion,
       engineLatencyMs: ctx.engineLatencyMs,
       cfg: ctx.cfg,
+      counts: { chosen: picks.length, eligible: pool.filter((c) => c.gates.eligible).length },
     }),
   });
 }

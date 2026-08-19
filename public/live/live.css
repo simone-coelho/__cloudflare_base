@@ -288,6 +288,43 @@ button, input, select { font: inherit; color: inherit; }
 }
 .bh-rail--wide { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 
+/* ---- the spotlight ROW ---------------------------------------------------
+   Three or four tiles where there used to be one occupant, on the same card
+   template and the same 1000×889 reco frame every other pick uses. Fixed at
+   four columns once there is room for them, so the row reads as a deliberate
+   SET rather than as however many happened to fit. */
+.bh-rail--spot { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+@media (min-width: 900px) { .bh-rail--spot { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* THE 'PICKED FOR YOU' STRIP — the one label on this page that states, in
+   plain sight, that the row under it was decided for THIS shopper. Its words
+   are computed from the live snapshot on every recompose (see live.js
+   spotlightEyebrow), so it is sized to be read from the back of a room and
+   coloured with the mark's own coral rather than the signal red. */
+.bh-spot__eyebrow {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 12px; padding: 11px 18px;
+  background: var(--bh-coral); color: #22160f;
+  font-family: var(--bh-head); font-size: 1.0625rem; font-weight: 700;
+  line-height: 1.25; letter-spacing: .02em;
+  box-shadow: 0 3px 10px rgba(10,14,22,.18);
+}
+.bh-spot__eyebrow-t { min-width: 0; }
+.bh-spot__sep { opacity: .55; }
+.bh-spot__why {
+  background: transparent; border: 0; padding: 0; cursor: pointer;
+  font-family: inherit; font-size: inherit; font-weight: 700; color: inherit;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.bh-spot__why:hover { text-decoration-thickness: 2px; }
+@media (max-width: 700px) { .bh-spot__eyebrow { font-size: .9375rem; padding: 9px 13px; } }
+
+/* the count note — the explain's own two numbers, said out loud in the head */
+.bh-spot__count {
+  font-size: .8125rem; font-weight: 600; color: var(--bh-body);
+  border-left: 2px solid var(--bh-greige-3); padding-left: 10px;
+}
+
 /* ============================================================================
    THE COLD START — the geo prior, on first paint, before any behaviour exists.
 
