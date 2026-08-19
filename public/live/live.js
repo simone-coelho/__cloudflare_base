@@ -3293,17 +3293,17 @@
 
   /* ---- PACING. Every duration the arc uses, in one place. ---- */
   var DIRECTOR = {
-    viewGapMs: 5000,        // between the three cold-open clicks (runbook: ~5s apart)
+    viewGapMs: 6500,        // between the three cold-open clicks (runbook: ~5s apart)
     scrollSettleMs: 650,    // smooth-scroll to rest before the pulse
-    glideMs: 700,           // the ghost cursor's travel to its target
-    dwellMs: 250,           // hover beat before the press — the room sees the aim
-    pulseMs: 900,           // how long the highlight sits before the click lands
-    afterClickMs: 1500,     // let the event flush and the bars re-read
-    recomposeMs: 1900,      // let a recompose paint
+    glideMs: 900,           // the ghost cursor's travel to its target
+    dwellMs: 500,           // hover beat before the press — the room sees the aim
+    pulseMs: 1300,           // how long the highlight sits before the click lands
+    afterClickMs: 2300,     // let the event flush and the bars re-read
+    recomposeMs: 2400,      // let a recompose paint
     resultWaitMs: 3600,     // how long a beat waits for the camera to travel
-    resultHoldMs: 2400,     // the ring plays IN VIEW before the beat moves on
-    beatPauseMs: 4500,      // the big pause BETWEEN beats in the full arc
-    readMs: 6000,           // time to let the room read a caption
+    resultHoldMs: 5500,     // the ring plays IN VIEW before the beat moves on
+    beatPauseMs: 7500,      // the big pause BETWEEN beats in the full arc
+    readMs: 8500,           // time to let the room read a caption
     overlayMs: 11000,       // time an overlay card stays up
     briefMs: 7000,          // scenario 3's note inside the arc
     proposePollMs: 1500,    // Offer Desk propose poll
