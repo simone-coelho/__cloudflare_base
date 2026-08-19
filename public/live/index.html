@@ -243,9 +243,103 @@
 
   <div class="bh-panel__scroll">
 
-    <!-- ops strip -->
-    <section>
-      <h3>Ops</h3>
+    <!-- ═══════════════════════════════════════════════════════════════════
+         1 · THE AFFINITY INSTRUMENT — FIRST, because it is the demo.
+         This is the thing the room is meant to watch. It used to sit under
+         two-thirds of debug HUD, below the fold, which meant the star of the
+         demo was invisible without scrolling. Everything engineer-facing has
+         moved to "Engine details" at the bottom, collapsed.
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="bh-instrument">
+      <h3>Affinity &mdash; 9 live dimensions</h3>
+      <div class="bh-dim__legend">
+        <span><i style="background:#7FE0B0"></i>&theta;in</span>
+        <span><i style="background:#8792A6"></i>&theta;out</span>
+        <span><i style="background:#EF7A5E"></i>above &theta;in</span>
+      </div>
+      <div id="bh-dims"></div>
+      <!-- memberships live RIGHT HERE: when a bar crosses θin the chip that
+           appears is the consequence, and the two must be seen together. -->
+      <div class="bh-members">
+        <span class="bh-members__k">Audience memberships</span>
+        <div id="bh-memberships"><p class="bh-panel__empty">&mdash;</p></div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         DEMO DIRECTOR — presenter-only. One button per runbook beat.
+         The Director automates CLICKS, never results: every button below
+         drives this page's own controls and this page's own cards, and
+         every effect on screen comes from the engine reacting to a real
+         event on the real pipeline. Nothing here fakes a state.
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="bh-dir">
+      <h3>Demo Director</h3>
+      <div class="bh-dir__transport">
+        <button class="bh-opsbtn bh-opsbtn--play" type="button" id="bh-dir-play">&#9654; Play full arc</button>
+        <button class="bh-opsbtn" type="button" id="bh-dir-pause" disabled>&#9208; Pause</button>
+        <button class="bh-opsbtn" type="button" id="bh-dir-skip" disabled>&#9197; Skip</button>
+        <button class="bh-opsbtn bh-opsbtn--danger" type="button" id="bh-dir-stop" disabled>&#9209; Stop</button>
+      </div>
+      <p class="bh-dir__progress" id="bh-dir-progress">Idle &mdash; pick a beat, or play the arc.</p>
+      <div class="bh-dir__list" id="bh-dir-list"></div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         3 · PRESENTER CONTROLS — big, labelled, state legible at a glance.
+         These were six identical chips lost mid-panel; on stage a presenter
+         could not find the quota toggle. Each control now says what it is and
+         what it currently IS, separately.
+         ═══════════════════════════════════════════════════════════════ -->
+    <section class="bh-controls">
+      <h3>Controls</h3>
+
+      <div class="bh-ctlgrid">
+        <button class="bh-ctl" type="button" id="bh-ops-mode" aria-pressed="false">
+          <span class="bh-ctl__label">Mode</span>
+          <span class="bh-ctl__state" id="bh-ops-mode-state">browse</span>
+        </button>
+        <button class="bh-ctl" type="button" id="bh-ops-quota" aria-pressed="true">
+          <span class="bh-ctl__label">Discovery quota</span>
+          <span class="bh-ctl__state" id="bh-ops-quota-state">on</span>
+        </button>
+        <button class="bh-ctl" type="button" id="bh-ops-vip" aria-pressed="true">
+          <span class="bh-ctl__label">Cardholder offer</span>
+          <span class="bh-ctl__state" id="bh-ops-vip-state">on</span>
+        </button>
+      </div>
+
+      <!-- Beat 2f: succession on stage. These advance the OFFER CALENDAR only.
+           Affinity decay runs on real time (demo-τ) and is deliberately NOT
+           moved by these buttons — a decay beat is played by waiting. -->
+      <div class="bh-ctlrow" role="group" aria-label="Advance demo clock (offer windows only)">
+        <span class="bh-ctlrow__k">Advance clock
+          <span class="bh-pill" id="bh-ops-offset">live</span>
+        </span>
+        <div class="bh-ctlrow__btns">
+          <button class="bh-opsbtn" type="button" id="bh-ops-clock-1h">+1h</button>
+          <button class="bh-opsbtn" type="button" id="bh-ops-clock-6h">+6h</button>
+          <button class="bh-opsbtn" type="button" id="bh-ops-clock-24h">+24h</button>
+          <button class="bh-opsbtn" type="button" id="bh-ops-clock-reset">Reset clock</button>
+        </div>
+      </div>
+
+      <div class="bh-ctlrow__btns bh-ctlrow__btns--wide">
+        <button class="bh-opsbtn bh-opsbtn--danger" type="button" id="bh-ops-newviewer">New Viewer</button>
+        <a class="bh-opsbtn bh-opsbtn--link" id="bh-ops-desk" href="/live/ops.html" target="_blank" rel="noopener">Offer Desk &#8599;</a>
+      </div>
+      <p class="bh-status" id="bh-ops-status">&mdash;</p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         4 · ENGINE DETAILS — last, and closed. This is the engineer-facing
+         HUD plus the per-slot explain records. The Glass Box beat opens it
+         deliberately (and openExplain() forces it open), which is a better
+         beat than having it permanently occupy the top of the panel.
+         ═══════════════════════════════════════════════════════════════ -->
+    <details class="bh-engine" id="bh-engine">
+      <summary><h3>Engine details</h3><span class="bh-engine__hint">clock &middot; latency &middot; decision records</span></summary>
+
       <div class="bh-ops">
         <div class="bh-ops__cell bh-ops__cell--full">
           <span class="bh-ops__k">Demo clock (presenter only)</span>
@@ -255,10 +349,6 @@
         <div class="bh-ops__cell">
           <span class="bh-ops__k">Multiplier</span>
           <span class="bh-ops__v" id="bh-ops-mult">&times;1</span>
-        </div>
-        <div class="bh-ops__cell">
-          <span class="bh-ops__k">Clock offset</span>
-          <span class="bh-ops__v" id="bh-ops-offset">live</span>
         </div>
         <div class="bh-ops__cell">
           <span class="bh-ops__k">Decision source</span>
@@ -291,54 +381,47 @@
           <span class="bh-ops__v bh-ops__v--wide" id="bh-ops-config">&mdash;</span>
         </div>
       </div>
-      <div class="bh-ops__actions">
-        <button class="bh-opsbtn" type="button" id="bh-ops-mode" aria-pressed="false">Mode: browse</button>
-        <button class="bh-opsbtn" type="button" id="bh-ops-vip" aria-pressed="true">Cardholder offer: on</button>
-        <button class="bh-opsbtn" type="button" id="bh-ops-quota" aria-pressed="true">Discovery quota: on</button>
-        <button class="bh-opsbtn bh-opsbtn--danger" type="button" id="bh-ops-newviewer">New Viewer</button>
-      </div>
 
-      <!-- Beat 2f: succession on stage. These advance the OFFER CALENDAR only.
-           Affinity decay runs on real time (demo-τ) and is deliberately NOT
-           moved by these buttons — a decay beat is played by waiting. -->
-      <div class="bh-ops__actions bh-ops__actions--clock" role="group" aria-label="Advance demo clock (offer windows only)">
-        <span class="bh-ops__grouplabel">Advance clock</span>
-        <button class="bh-opsbtn" type="button" id="bh-ops-clock-1h">+1h</button>
-        <button class="bh-opsbtn" type="button" id="bh-ops-clock-6h">+6h</button>
-        <button class="bh-opsbtn" type="button" id="bh-ops-clock-24h">+24h</button>
-        <button class="bh-opsbtn" type="button" id="bh-ops-clock-reset">Reset clock</button>
-        <a class="bh-opsbtn bh-opsbtn--link" id="bh-ops-desk" href="/live/ops.html" target="_blank" rel="noopener">Offer Desk</a>
-      </div>
-      <p class="bh-status" id="bh-ops-status">&mdash;</p>
-    </section>
-
-    <!-- the affinity instrument -->
-    <section>
-      <h3>Affinity instrument &mdash; 9 dimensions</h3>
-      <div class="bh-dim__legend">
-        <span><i style="background:#7FE0B0"></i>&theta;in</span>
-        <span><i style="background:#8792A6"></i>&theta;out</span>
-        <span><i style="background:#EF7A5E"></i>above &theta;in</span>
-      </div>
-      <div id="bh-dims"></div>
-    </section>
-
-    <!-- Beat 10: audiences the catalogue generated, not ones anybody typed -->
-    <section>
-      <h3>Audience memberships</h3>
-      <div id="bh-memberships"><p class="bh-panel__empty">&mdash;</p></div>
-    </section>
-
-    <!-- per-slot explain records -->
-    <section>
-      <h3>Decision records</h3>
+      <!-- per-slot explain records -->
+      <h4 class="bh-engine__sub">Decision records</h4>
       <div id="bh-explains"><p class="bh-panel__empty">Waiting for a decision payload&hellip;</p></div>
-    </section>
+    </details>
 
   </div>
 </aside>
 
 <button class="bh-panel-open-btn" type="button" id="bh-panel-open" hidden>Glass Box</button>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     PRESENTATION CHROME — the Director's caption bar and its overlay card.
+     Deliberately NOT store UI: this is the demo talking about itself, and it
+     is styled as the Glass Box's chrome so the room never mistakes it for
+     something the shopper would see. It carries no clock. It is laid out to
+     stop exactly where the Glass Box begins, so the two never overlap.
+     ═══════════════════════════════════════════════════════════════════ -->
+<!-- MOMENT TOAST — one at a time, top of the store area. Announces only real
+     changes, in plain language, with the cause that produced them. -->
+<div class="bh-moment" id="bh-moment" hidden role="status" aria-live="polite"></div>
+
+<div class="bh-caption" id="bh-caption" hidden aria-live="polite">
+  <div class="bh-caption__inner">
+    <span class="bh-caption__tag" id="bh-caption-beat">Demo Director</span>
+    <div class="bh-caption__text">
+      <p class="bh-caption__what" id="bh-caption-what">&mdash;</p>
+      <p class="bh-caption__line" id="bh-caption-line"></p>
+    </div>
+  </div>
+</div>
+
+<div class="bh-overlay" id="bh-overlay" hidden>
+  <div class="bh-overlay__card" role="dialog" aria-label="Demo Director detail">
+    <div class="bh-overlay__head">
+      <h2 id="bh-overlay-title">&mdash;</h2>
+      <button class="bh-panel__x" type="button" id="bh-overlay-close">Close</button>
+    </div>
+    <div class="bh-overlay__body" id="bh-overlay-body"></div>
+  </div>
+</div>
 
 <script src="/live/live.js"></script>
 </body>

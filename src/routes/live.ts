@@ -295,6 +295,13 @@ const pageSchema = z.object({
   page: z.string().optional(),
   /** Beat 9: force the layout instead of waiting for the dimension to cross θin. */
   missionOverride: z.enum(['mission', 'browse']).optional(),
+  /**
+   * The category shelf the visitor navigated into ("Shop by Category"), by its
+   * display name — 'Electronics & Tech'. The composer resolves it against the
+   * catalog and ignores anything no item carries, so a stale link composes the
+   * ordinary page instead of an empty rail.
+   */
+  focusCategory: z.string().min(1).max(64).optional(),
   sessionId: z.string().optional(),
   demoRunId: z.string().optional(),
   /** Beat 5: the presenter's quota switch — off shows the monotone page. */
@@ -371,6 +378,7 @@ liveRoutes.post('/page', async (c) => {
       reflexConfig: await reflexConfigFor(SURFACE),
       experimentIds: await getBhExperimentIds(c.env).catch(() => null),
       sessionMission: input.missionOverride,
+      focusCategory: input.focusCategory ?? null,
       page: input.page ?? 'home',
       sessionId,
       demoRunId: input.demoRunId ?? sessionId ?? null,

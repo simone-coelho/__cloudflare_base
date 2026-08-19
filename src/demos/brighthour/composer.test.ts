@@ -1258,3 +1258,101 @@ describe('Beat 14 — a vip_offer_exclusion always survives the excluded slice',
     expect(refusals).toContain('vip_offer_exclusion (final_sale)');
   });
 });
+
+// ── Category focus: making "Shop by Category" mean something ─────────────────
+
+describe('focusCategory — navigation that changes the page', () => {
+  const FOCUS = 'Electronics & Tech';
+  /** A kitchen person who has clicked into Electronics: the whole story. */
+  const focused = (overrides: Partial<ComposeInput> = {}) =>
+    compose({ scores: KITCHEN_SHOPPER, focusCategory: FOCUS, ...overrides });
+
+  it('echoes the resolved focus at the top level and on the rail', () => {
+    const page = focused();
+    expect(page.focus).toEqual({ category: FOCUS });
+    const rail = slot(page, 'category_rail');
+    expect(rail.railCategory).toBe(FOCUS);
+    expect(rail.explain.focused).toBe(true);
+    expect(rail.notes).toContain(`focused: category ${FOCUS}`);
+  });
+
+  it('fills the category rail with that shelf’s eligible items, and nothing else', () => {
+    const rail = slot(focused(), 'category_rail');
+    expect(rail.items!.length).toBeGreaterThan(0);
+    expect(rail.items!.every((i) => i.category === FOCUS)).toBe(true);
+
+    // Eligible only, and ranked — the shelf is the visitor's choice, the order
+    // inside it is still the engine's.
+    const byId = new Map(ITEMS.map((i) => [String(i.itemNumber), i]));
+    for (const i of rail.items!) {
+      expect(evaluateGates(byId.get(i.itemNumber) as never, NOW, { vipOfferActive: true }).eligible)
+        .toBe(true);
+    }
+    const scores = rail.items!.map((i) => i.rankScore);
+    for (let i = 1; i < scores.length; i++) expect(scores[i - 1]).toBeGreaterThanOrEqual(scores[i]);
+  });
+
+  it('partitions the deals rail — focused first, the rest still there, order stable', () => {
+    const unfocusedItems = slot(compose({ scores: KITCHEN_SHOPPER }), 'deals_rail').items!;
+    const items = slot(focused(), 'deals_rail').items!;
+
+    // Nothing is hidden: the rail is the same length and the same membership as
+    // the unfocused rail would allow — it is a partition, not a filter.
+    // Focused half leads — BELOW the pin, which outranks everything including a
+    // navigation choice (§C2 layer 2 is still layer 2).
+    const body = items[0].pinned ? items.slice(1) : items;
+    const inFocus = body.filter((i) => i.category === FOCUS);
+    const others = body.filter((i) => i.category !== FOCUS);
+    expect(inFocus.length).toBeGreaterThan(0);
+    expect(others.length).toBeGreaterThan(0);
+
+    const firstOther = body.findIndex((i) => i.category !== FOCUS);
+    const lastFocused = body.map((i) => i.category).lastIndexOf(FOCUS);
+    expect(lastFocused).toBeLessThan(firstOther);
+    for (const half of [inFocus, others]) {
+      for (let i = 1; i < half.length; i++) {
+        expect(half[i - 1].rankScore).toBeGreaterThanOrEqual(half[i].rankScore);
+      }
+    }
+    // A pin still outranks the focus — precedence is unchanged.
+    if (unfocusedItems[0].pinned) expect(items[0].itemNumber).toBe(unfocusedItems[0].itemNumber);
+    expect(slot(focused(), 'deals_rail').explain.focused).toBe(true);
+  });
+
+  it('does NOT leak into the spotlight, the discovery rail or the billboard', () => {
+    const plain = compose({ scores: KITCHEN_SHOPPER });
+    const page = focused();
+    for (const slotId of ['hero_billboard', 'daily_deal', 'spotlight_for_you', 'discovery_rail'] as SlotId[]) {
+      expect(JSON.stringify(slot(page, slotId))).toBe(JSON.stringify(slot(plain, slotId)));
+      expect(slot(page, slotId).explain.focused).toBeUndefined();
+    }
+    // The story: she clicked into Electronics, and her spotlight still knows
+    // she cooks.
+    expect(slot(page, 'spotlight_for_you').item!.category).toBe('Kitchen & Table');
+  });
+
+  it('absent focus is byte-identical to before it existed', () => {
+    const plain = compose({ scores: KITCHEN_SHOPPER });
+    expect(plain.focus).toBeNull();
+    expect(JSON.stringify(plain)).toBe(
+      JSON.stringify(compose({ scores: KITCHEN_SHOPPER, focusCategory: null }))
+    );
+    // No slot carries the flag when nothing was focused.
+    expect(JSON.stringify(plain)).not.toContain('"focused"');
+    expect(plain.decisions.every((d) => d.explain.focused === undefined)).toBe(true);
+  });
+
+  it('ignores a category no item carries — a stale link is not an empty rail', () => {
+    const plain = compose({ scores: KITCHEN_SHOPPER });
+    const stale = compose({ scores: KITCHEN_SHOPPER, focusCategory: 'Sporting Goods' });
+    expect(stale.focus).toBeNull();
+    expect(JSON.stringify(stale)).toBe(JSON.stringify(plain));
+  });
+
+  it('overrules affinity for the rail, for a visitor whose affinity says otherwise', () => {
+    const byAffinity = slot(compose({ scores: KITCHEN_SHOPPER }), 'category_rail');
+    const byClick = slot(focused(), 'category_rail');
+    expect(byAffinity.railCategory).toBe('Kitchen & Table');
+    expect(byClick.railCategory).toBe(FOCUS);
+  });
+});

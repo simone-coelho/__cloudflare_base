@@ -535,6 +535,268 @@ button, input, select { font: inherit; color: inherit; }
 /* an advanced clock is a LOUD state — it must never be mistaken for live */
 .bh-ops__v--hot { color: var(--bh-coral); font-weight: 700; }
 
+/* ── PRESENTER-FIRST PANEL ────────────────────────────────────────────────
+   Order in the panel is a stage decision, not a taxonomy: instrument first
+   (it is what the room watches), Director second (it is what the presenter
+   drives), controls third, engineer HUD last and closed. */
+
+/* 1 · the instrument. Labels stay LARGE (they are read from across a room);
+   the spacing between them is what got tightened, so all nine bars AND the
+   Director strip below them clear the fold on a 1280×800 presenter laptop. */
+.bh-instrument .bh-dim { margin: 0 0 8px; }
+.bh-instrument .bh-dim__row { font-size: 12.5px; margin-bottom: 3px; }
+.bh-instrument .bh-dim__name { font-size: 13.5px; font-weight: 700; color: #EAF0FA; }
+.bh-instrument .bh-dim__val { font-size: 12.5px; }
+.bh-instrument .bh-dim__track { height: 11px; }
+.bh-instrument .bh-dim__tau { font-size: 9.5px; margin-top: 2px; }
+.bh-instrument .bh-dim__legend { margin-bottom: 8px; }
+.bh-instrument > h3 { margin-bottom: 7px; }
+.bh-instrument { padding-bottom: 10px; }
+
+/* A CHANGE must be an event you cannot miss. The bar flashes on any move; a
+   θin crossing gets the loud one. Both are outline/colour only — the track
+   never resizes, so nothing below it shifts. */
+@keyframes bh-dim-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(127,224,176,.0); }
+  30%  { box-shadow: 0 0 0 4px rgba(127,224,176,.55); }
+  100% { box-shadow: 0 0 0 0 rgba(127,224,176,0); }
+}
+@keyframes bh-dim-cross {
+  0%   { box-shadow: 0 0 0 0 rgba(239,122,94,0); }
+  25%  { box-shadow: 0 0 0 6px rgba(239,122,94,.7); }
+  100% { box-shadow: 0 0 0 0 rgba(239,122,94,0); }
+}
+.bh-dim--moved .bh-dim__track { animation: bh-dim-flash .85s ease-out 1; }
+.bh-dim--crossed .bh-dim__track { animation: bh-dim-cross 1s ease-out 3; }
+.bh-dim--crossed .bh-dim__name { color: var(--bh-coral); }
+/* the crossing badge — says the word, next to the bar that earned it */
+.bh-dim__crossed {
+  margin-left: 6px; background: var(--bh-coral); color: #22160f;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 5px; white-space: nowrap;
+}
+
+.bh-members { margin-top: 8px; padding-top: 8px; border-top: 1px solid #2C3852; }
+.bh-members__k {
+  display: block; font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: #8FA1BF; margin-bottom: 5px; font-weight: 700;
+}
+.bh-members .bh-panel__empty { margin: 0; font-size: 11.5px; }
+/* the Director must clear the fold on a presenter laptop, so its own top
+   padding is trimmed rather than the instrument's legibility */
+.bh-dir { padding-top: 10px; }
+
+/* 3 · controls — a label and its CURRENT STATE, never one merged string */
+.bh-ctlgrid { display: grid; gap: 8px; margin-bottom: 12px; }
+.bh-ctl {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: #182238; color: #E9E7E2; border: 1px solid #4A5876; border-radius: 0;
+  padding: 10px 12px; cursor: pointer; font-family: var(--bh-text); width: 100%;
+}
+.bh-ctl:hover { background: #22304C; }
+.bh-ctl__label { font-size: 13px; font-weight: 700; }
+.bh-ctl__state {
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  padding: 3px 9px; background: #33405A; color: #C7D3E6; min-width: 62px; text-align: center;
+}
+/* ON is the loud state; OFF is deliberately quiet — the presenter reads the
+   difference at a glance instead of parsing two similar sentences. */
+.bh-ctl[aria-pressed="true"] .bh-ctl__state { background: var(--bh-coral); color: #22160f; }
+.bh-ctl[aria-pressed="true"] { border-color: var(--bh-coral); }
+
+.bh-ctlrow { margin-bottom: 10px; }
+.bh-ctlrow__k {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+  font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #8FA1BF; font-weight: 700;
+}
+.bh-ctlrow__btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.bh-ctlrow__btns--wide { margin-top: 12px; }
+/* the presenter-visible clock cue — the only clock reading outside Engine details */
+.bh-pill {
+  background: #33405A; color: #C7D3E6; padding: 2px 8px; letter-spacing: .04em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-transform: none;
+}
+.bh-pill.bh-ops__v--hot { background: var(--bh-coral); color: #22160f; }
+
+/* 4 · engine details — closed by default, and obviously openable */
+.bh-engine { padding: 14px 0; border-bottom: 1px solid #2C3852; }
+.bh-engine > summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: 8px; }
+.bh-engine > summary::-webkit-details-marker { display: none; }
+.bh-engine > summary::before {
+  content: '▸'; color: #8FA1BF; font-size: 11px; transition: transform .15s ease;
+}
+.bh-engine[open] > summary::before { content: '▾'; }
+.bh-engine > summary h3 { display: inline; margin: 0; }
+.bh-engine__hint { font-size: 10.5px; color: #6F8099; }
+.bh-engine .bh-ops { margin-top: 12px; }
+.bh-engine__sub {
+  font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #9FB0CC;
+  margin: 16px 0 8px; font-weight: 700;
+}
+
+/* ── DEMO DIRECTOR ───────────────────────────────────────────────────────── */
+.bh-dir__transport { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.bh-opsbtn--play { background: var(--bh-coral); color: #22160f; border-color: var(--bh-coral); }
+.bh-opsbtn--play:hover { background: #F08D72; }
+.bh-opsbtn[disabled] { opacity: .4; cursor: not-allowed; }
+.bh-dir__progress {
+  margin: 0 0 10px; font-size: 11.5px; color: #9FB0CC;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.bh-dir__list { display: grid; gap: 6px; }
+.bh-dirbtn {
+  text-align: left; background: #182238; color: #E9E7E2; border: 1px solid #33405A;
+  border-radius: 0; padding: 7px 10px; font-size: 12px; cursor: pointer;
+  font-family: var(--bh-text); display: flex; gap: 8px; align-items: baseline;
+}
+.bh-dirbtn:hover:not([disabled]) { background: #22304C; border-color: #4A5876; }
+.bh-dirbtn[disabled] { opacity: .4; cursor: not-allowed; }
+.bh-dirbtn__n {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #8FA1BF; font-size: 11px; flex: none;
+}
+/* the beat currently on stage */
+.bh-dirbtn--active { border-color: var(--bh-coral); background: #2A2038; color: #FFFFFF; }
+.bh-dirbtn--done .bh-dirbtn__n { color: #7FE0B0; }
+
+/* THE PULSE — the Director showing the room which card it is about to click.
+   Outline-only so it never changes the card's box: a highlight must not move
+   the page it is highlighting. */
+@keyframes bh-pulse {
+  0%   { outline-color: rgba(239,122,94,0); box-shadow: 0 0 0 0 rgba(239,122,94,.55); }
+  35%  { outline-color: rgba(239,122,94,1); box-shadow: 0 0 0 10px rgba(239,122,94,0); }
+  100% { outline-color: rgba(239,122,94,.9); box-shadow: 0 0 0 0 rgba(239,122,94,0); }
+}
+.bh-director-pulse {
+  outline: 3px solid var(--bh-coral); outline-offset: 2px;
+  animation: bh-pulse .7s ease-out 2;
+  position: relative; z-index: 2;
+}
+
+/* ── CHANGE-HIGHLIGHTING ──────────────────────────────────────────────────
+   Marks are applied ONLY from a true diff. Outline and shadow only: a card
+   that lights up must not resize, or the highlight moves the page it is
+   highlighting and every other card twitches. */
+@keyframes bh-new-sweep {
+  0%   { box-shadow: 0 0 0 0 rgba(239,122,94,.0); outline-color: rgba(239,122,94,0); }
+  20%  { box-shadow: 0 0 0 6px rgba(239,122,94,.35); outline-color: rgba(239,122,94,1); }
+  100% { box-shadow: 0 0 0 0 rgba(239,122,94,0); outline-color: rgba(239,122,94,0); }
+}
+.bh-new { outline: 2px solid transparent; outline-offset: 2px; animation: bh-new-sweep 2s ease-out 1; }
+@keyframes bh-moved-cue {
+  0%   { transform: translateX(-6px); }
+  100% { transform: translateX(0); }
+}
+.bh-moved { animation: bh-moved-cue .45s ease-out 1; }
+/* structural, so it survives reduced-motion */
+.bh-pip {
+  display: inline-block; margin-left: 8px; vertical-align: middle;
+  background: var(--bh-coral); color: #22160f; font-size: 10px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; padding: 2px 6px;
+}
+
+/* the moment toast — Coach-style, one at a time, top of the store area */
+.bh-moment {
+  position: fixed; top: 16px; left: 50%; transform: translate(-50%, -12px);
+  z-index: 195; max-width: min(680px, 88vw);
+  background: #1A2436; color: #FFFFFF; border-left: 3px solid var(--bh-coral);
+  padding: 11px 18px; font-family: var(--bh-head); font-size: 15px; line-height: 1.35;
+  box-shadow: 0 10px 30px rgba(10,14,22,.36); opacity: 0;
+  transition: opacity .22s ease, transform .22s ease; pointer-events: none;
+}
+.bh-moment[hidden] { display: none; }
+.bh-moment--in { opacity: 1; transform: translate(-50%, 0); }
+body.bh-panel-open .bh-moment { left: calc((100% - var(--bh-panel-w)) / 2); }
+@media (max-width: 1100px) { body.bh-panel-open .bh-moment { left: 50%; } }
+
+/* the category-focus chip on the rail that followed the shopper */
+.bh-focus {
+  display: inline-flex; align-items: center; gap: 8px; margin-left: 10px;
+  background: var(--bh-ink); color: #FFFFFF; font-family: var(--bh-text);
+  font-size: .8125rem; font-weight: 700; padding: 4px 6px 4px 10px; vertical-align: middle;
+}
+.bh-focus__x {
+  background: transparent; border: 0; color: #FFFFFF; cursor: pointer;
+  font-size: 12px; line-height: 1; padding: 3px 5px;
+}
+.bh-focus__x:hover { background: rgba(255,255,255,.16); }
+
+/* plain-language explain sentence — the record stays beneath it, dimmed */
+.bh-xp__plain {
+  margin: 0 0 10px; color: #FFFFFF; font-family: var(--bh-head);
+  font-size: 13.5px; line-height: 1.4;
+  border-left: 2px solid var(--bh-coral); padding-left: 9px;
+}
+.bh-xp__body .bh-kv, .bh-xp__body .bh-excl__meta { opacity: .72; }
+
+/* ── CAPTION BAR (presentation chrome, never store UI) ────────────────────
+   Stops exactly where the Glass Box starts — the same rule the body padding
+   uses — so a caption can never sit on top of the panel. */
+.bh-caption {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 185;
+  background: #141C2C; color: #E9E7E2; border-top: 3px solid var(--bh-coral);
+  box-shadow: 0 -8px 28px rgba(10,14,22,.34);
+}
+.bh-caption[hidden] { display: none; }
+body.bh-panel-open .bh-caption { right: var(--bh-panel-w); }
+@media (max-width: 1100px) { body.bh-panel-open .bh-caption { right: 0; } }
+.bh-caption__inner {
+  max-width: var(--bh-shell); margin: 0 auto; padding: 12px 20px 14px;
+  display: flex; gap: 14px; align-items: flex-start;
+}
+.bh-caption__tag {
+  flex: none; margin-top: 2px; background: var(--bh-coral); color: #22160f;
+  font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  padding: 4px 8px; white-space: nowrap;
+}
+.bh-caption__text { min-width: 0; }
+.bh-caption__what { margin: 0; font-size: 13px; color: #9FB0CC; font-weight: 600; }
+/* the talk track — this is the sentence the presenter says out loud */
+.bh-caption__line {
+  margin: 3px 0 0; font-family: var(--bh-head); font-size: 1.0625rem; color: #FFFFFF;
+  line-height: 1.35;
+}
+.bh-caption__line:empty { display: none; }
+
+/* ── OVERLAY (proposal summary · export rows) ─────────────────────────────── */
+.bh-overlay {
+  position: fixed; inset: 0; z-index: 210; background: rgba(10,14,22,.62);
+  display: flex; align-items: center; justify-content: center; padding: 28px;
+}
+.bh-overlay[hidden] { display: none; }
+body.bh-panel-open .bh-overlay { right: var(--bh-panel-w); }
+@media (max-width: 1100px) { body.bh-panel-open .bh-overlay { right: 0; } }
+.bh-overlay__card {
+  background: #1A2436; color: #E9E7E2; border: 1px solid #33405A;
+  border-top: 3px solid var(--bh-coral); width: min(940px, 100%); max-height: 82vh;
+  display: flex; flex-direction: column;
+}
+.bh-overlay__head {
+  padding: 13px 16px; border-bottom: 1px solid #33405A;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.bh-overlay__head h2 { font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #FFFFFF; }
+.bh-overlay__body { overflow: auto; padding: 14px 16px 18px; font-size: 12.5px; }
+.bh-tags { display: grid; gap: 8px; }
+.bh-tag {
+  display: grid; grid-template-columns: 132px 1fr auto; gap: 10px; align-items: baseline;
+  padding: 8px 10px; background: #141C2C; border: 1px solid #2C3852;
+}
+.bh-tag--edited { border-color: var(--bh-coral); }
+.bh-tag--rejected { opacity: .5; }
+.bh-tag__k { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #8FA1BF; }
+.bh-tag__v { color: #FFFFFF; font-weight: 600; }
+.bh-tag__c { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; color: #9FB0CC; }
+.bh-tag__r { grid-column: 1 / -1; color: #9FB0CC; font-size: 11.5px; margin: 0; }
+.bh-rows { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.bh-rows th, .bh-rows td {
+  text-align: left; padding: 7px 8px; border-bottom: 1px solid #2C3852; vertical-align: top;
+}
+.bh-rows th { color: #8FA1BF; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.bh-rows td { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #E9E7E2; }
+.bh-rows__scroll { overflow-x: auto; }
+.bh-rows .bh-rows__fail { color: #F0A08C; }
+
 /* the affinity instrument — 9 dimensions with θ markers */
 .bh-dim { margin: 0 0 9px; }
 .bh-dim__row { display: flex; justify-content: space-between; gap: 8px; font-size: 11.5px; margin-bottom: 3px; }

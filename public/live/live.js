@@ -1185,6 +1185,8 @@
        a toggle, a boundary refresh, and a WebSocket push. Offer windows only:
        affinity decay is read on real time by the server and must stay that way. */
     clockOffsetMs: 0,
+    /* the category the shopper navigated into, echoed back by the engine */
+    focusCategory: null,
     ws: null,
     wsAttempts: 0,
     boundaryTimer: null,
@@ -1240,7 +1242,10 @@
       missionOverride: state.mode,
       vipOfferActive: state.vipOfferActive,
       quotaEnabled: state.quotaEnabled,
-      clockOffsetMs: state.clockOffsetMs
+      clockOffsetMs: state.clockOffsetMs,
+      // Sent whether or not this deployment honours it yet; the label on screen
+      // is driven by what comes BACK, never by what we asked for.
+      focusCategory: state.focusCategory || undefined
     });
     var payload = null;
     // ?mock=1 forces the offline payload — the storefront still presents if the
@@ -1298,10 +1303,136 @@
     scheduleBoundary();
   }
 
+  /* ══════════════════════════════════════════════════════════════════════
+   * CHANGE-HIGHLIGHTING — what changed, and why it changed.
+   *
+   * A page that silently repaints has told the room nothing. This diffs the
+   * NEW composition against the previous one, per slot, and marks only what
+   * genuinely moved: new occupants, reordered cards, flipped slots. The diff
+   * is the authority — if nothing changed, nothing lights up, and no toast
+   * fires. That is the whole discipline: never celebrate a non-event.
+   *
+   * The CAUSE is not inferred from the data; it is recorded by whoever asked
+   * for the recompose (a click batch, a clock advance, a focus, a toggle),
+   * because only the caller knows why.
+   * ═══════════════════════════════════════════════════════════════════ */
+  var lastComposition = null;     // { slotId: { ids:[], occupant, lifecycle } }
+  var recomposeCause = null;      // set by whatever triggered the fetch
+  var freshCards = {};            // itemIds to sweep on this paint
+
+  function setCause(kind, detail) { recomposeCause = { kind: kind, detail: detail || null }; }
+
+  function compositionOf(p) {
+    var map = {};
+    ((p && p.decisions) || []).forEach(function (d) {
+      var items = d.items || (d.item ? [d.item] : []);
+      map[d.slot_id] = {
+        ids: items.map(function (i) { return i && (i.itemNumber || i.id); }).filter(Boolean),
+        occupant: d.item ? (d.item.itemNumber || d.item.id) : null,
+        name: d.item ? (d.item.name || d.item.shortDescription || '') : '',
+        lifecycle: (d.offer && d.offer.lifecycleState) || null
+      };
+    });
+    return map;
+  }
+
+  /** True diff: which cards are new, which moved, which slots flipped. */
+  function diffComposition(prev, next) {
+    var out = { fresh: {}, moved: {}, flipped: [], any: false };
+    if (!prev) return out;                       // first paint is not a change
+    Object.keys(next).forEach(function (slot) {
+      var a = prev[slot], b = next[slot];
+      if (!a) return;
+      b.ids.forEach(function (id, i) {
+        var was = a.ids.indexOf(id);
+        if (was === -1) { out.fresh[id] = slot; out.any = true; }
+        else if (was !== i) { out.moved[id] = slot; out.any = true; }
+      });
+      if (a.occupant && b.occupant && a.occupant !== b.occupant) {
+        out.flipped.push({ slot: slot, from: a.occupant, to: b.occupant, name: b.name, wasName: a.name });
+        out.any = true;
+      }
+    });
+    return out;
+  }
+
+  /* ---- MOMENT TOAST: one at a time, plain language, with its cause ---- */
+  var toastTimer = null;
+  function momentToast(text) {
+    var host = $('bh-moment'); if (!host || !text) return;
+    host.textContent = text;
+    host.hidden = false;
+    host.classList.remove('bh-moment--in');
+    void host.offsetWidth;                        // restart the entrance
+    host.classList.add('bh-moment--in');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      host.classList.remove('bh-moment--in');
+      host.hidden = true;
+    }, 6000);
+  }
+
+  /** The sentence for what just happened — cause first, effect named. */
+  function momentFor(diff, p) {
+    var c = recomposeCause || {};
+    var flip = diff.flipped[0];
+
+    if (c.kind === 'clock' && flip) {
+      return 'Today’s Bright One changed — the window closed, the successor took the slot.';
+    }
+    if (c.kind === 'focus' && c.detail) {
+      // Only claim the focus landed if the ENGINE says it landed. A toast that
+      // announces a refocus the server ignored is the page lying to the room.
+      var fr = p && (p.focus || p.focusCategory);
+      var got = fr && typeof fr === 'object' ? (fr.category || fr.value) : fr;
+      return got ? c.detail + ' rail focused — you asked for it.' : null;
+    }
+    if (c.kind === 'desk' && flip) {
+      return 'A new offer went live — approved at the desk, now on the floor.';
+    }
+    if (c.kind === 'quota') {
+      return state.quotaEnabled
+        ? 'Discovery picks are back — a share of the page is held open on purpose.'
+        : 'Discovery quota off — the page collapsed toward what this shopper already likes.';
+    }
+    if (c.kind === 'mode') {
+      return state.mode === 'mission'
+        ? 'Mission mode — modules removed, not added.'
+        : 'Browse mode — the full page is back.';
+    }
+    if (c.kind === 'vip') {
+      return state.vipOfferActive
+        ? 'Cardholder offers on — the exclusion rule is back in force.'
+        : 'Cardholder offers off — previously refused items became rankable.';
+    }
+    // a signal-driven recompose: name the slot that moved and the reason
+    if (c.kind === 'signal') {
+      var lead = dimReading('category');
+      var slotName = flip ? ((SLOT_META[flip.slot] && SLOT_META[flip.slot].title) || flip.slot) : null;
+      if (slotName && lead && lead.value) {
+        return slotName + ' now leans ' + lead.value + ' — your clicks did that.';
+      }
+      if (Object.keys(diff.fresh).length && lead && lead.value) {
+        return 'The page re-ranked toward ' + lead.value + ' — your clicks did that.';
+      }
+    }
+    if (flip) {
+      var sn = (SLOT_META[flip.slot] && SLOT_META[flip.slot].title) || flip.slot;
+      return sn + ' changed occupant.';
+    }
+    return null;
+  }
+
   function render() {
     var p = state.payload;
     var host = $('bh-slots');
     if (!p || !host) return;
+
+    // diff BEFORE the repaint, so the marks can ride the new DOM
+    var nextComp = compositionOf(p);
+    var diff = diffComposition(lastComposition, nextComp);
+    freshCards = diff.fresh;
+    lastComposition = nextComp;
     // Re-evaluated per render, so the Glass Box reports the fallback status of
     // the payload ON SCREEN — not a flag latched by some earlier one.
     DERIVED.used = false; DERIVED.note = '';
@@ -1319,8 +1450,93 @@
     pruneImpressions();
     wireCards();
     observeImpressions();
+    applyFocusLabel();
+    applyChangeMarks(diff);
     var lr = $('bh-live-region');
     if (lr) lr.textContent = decs.length + ' sections updated.';
+  }
+
+  /* ── CATEGORY FOCUS ──────────────────────────────────────────────────────
+     Clicking a category is real navigation: the rail follows the shopper.
+     The Spotlight deliberately does NOT follow — it stays affinity-driven,
+     and that contrast is the point. "The rail followed you; your Spotlight
+     still knows you're a kitchen person."
+
+     The server param may not be live yet. We always send it, and we only
+     claim focus on screen when the payload ECHOES it back — an unhonoured
+     request must never be labelled as if it worked. */
+  function focusCategory(key) {
+    // The engine matches against the item's own category STRING ("Kitchen &
+    // Table"), not this page's internal tile key ("kitchen"). Send what the
+    // catalog actually says, or the request is silently ignored.
+    var label = (CATS[key] && CATS[key].label) || key;
+    state.focusCategory = label || null;
+    setCause('focus', label);
+    fetchPage().then(function () {
+      var rail = $('bh-slot-category_rail');
+      if (rail) rail.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+  }
+
+  function clearFocus() {
+    if (!state.focusCategory) return;
+    state.focusCategory = null;
+    setCause('focus-clear');
+    fetchPage();
+  }
+
+  /** The "Showing: X ✕" chip — only when the engine actually honoured it. */
+  function applyFocusLabel() {
+    var p = state.payload || {};
+    // The engine echoes an object — focus: { category: 'Kitchen & Table' }.
+    // Accept a bare string too, so a future shape change degrades quietly.
+    var raw = p.focus || p.focusCategory || null;
+    var echoed = raw && typeof raw === 'object' ? (raw.category || raw.value || null) : raw;
+    var sec = $('bh-slot-category_rail');
+    if (!sec) return;
+    var titles = sec.querySelector('.bh-slot__titles');
+    if (!titles) return;
+    var old = titles.querySelector('.bh-focus'); if (old) old.remove();
+    if (!echoed) return;
+    var label = (CATS[echoed] && CATS[echoed].label) || String(echoed);
+    var chip = document.createElement('span');
+    chip.className = 'bh-focus';
+    chip.innerHTML = 'Showing: ' + esc(label) +
+      ' <button type="button" class="bh-focus__x" data-bh-clearfocus aria-label="Clear category focus">&#10005;</button>';
+    titles.appendChild(chip);
+  }
+
+  /** Paint the diff onto the new DOM. Nothing changed ⇒ nothing painted. */
+  function applyChangeMarks(diff) {
+    if (!diff || !diff.any) { recomposeCause = null; return; }
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!calm) {
+      Object.keys(diff.fresh).forEach(function (id) {
+        var el = document.querySelector('[data-bh-card][data-bh-item="' + id + '"]');
+        if (el) { el.classList.add('bh-new'); setTimeout(function () { el.classList.remove('bh-new'); }, 2100); }
+      });
+      Object.keys(diff.moved).forEach(function (id) {
+        var el = document.querySelector('[data-bh-card][data-bh-item="' + id + '"]');
+        if (el) { el.classList.add('bh-moved'); setTimeout(function () { el.classList.remove('bh-moved'); }, 1400); }
+      });
+    }
+    // pips are structural, not decorative — they stay on in reduced-motion
+    diff.flipped.forEach(function (f) {
+      var sec = document.getElementById('bh-slot-' + f.slot);
+      var head = sec && sec.querySelector('.bh-slot__titles');
+      if (head && !head.querySelector('.bh-pip')) {
+        var pip = document.createElement('span');
+        pip.className = 'bh-pip';
+        pip.textContent = 'changed';
+        head.appendChild(pip);
+        setTimeout(function () { if (pip.parentNode) pip.parentNode.removeChild(pip); }, 9000);
+      }
+    });
+
+    var msg = momentFor(diff, state.payload);
+    if (msg) momentToast(msg);
+    recomposeCause = null;
   }
 
   /* -- boundary refresh. Never polling: one timer, aimed at nextTransitionAt. --
@@ -1345,8 +1561,11 @@
     state.boundaryTimer = setTimeout(function () { fetchPage(); }, real);
   }
 
+  /* A refresh scheduled after a shopper action: the cause is the SIGNAL,
+     unless something more specific already claimed it this cycle. */
   function scheduleRefresh(ms) {
     if (state.refreshTimer) clearTimeout(state.refreshTimer);
+    if (!recomposeCause) setCause('signal');
     state.refreshTimer = setTimeout(function () { fetchPage(); }, ms || 450);
   }
 
@@ -1617,10 +1836,17 @@
 
       var catLink = ev.target.closest('[data-bh-cat]');
       if (catLink) {
-        postEvent('category_click', { category: catLink.getAttribute('data-bh-cat') });
-        scheduleRefresh(600);
+        ev.preventDefault();
+        var key = catLink.getAttribute('data-bh-cat');
+        // The click is still a real signal FIRST — navigating to a category is
+        // evidence about this shopper, and the engine gets it either way.
+        postEvent('category_click', { category: key });
+        focusCategory(key);
         return;
       }
+
+      var cf = ev.target.closest('[data-bh-clearfocus]');
+      if (cf) { clearFocus(); return; }
 
       var xb = ev.target.closest('[data-bh-explain]');
       if (xb) { openExplain(xb.getAttribute('data-bh-explain'), xb); }
@@ -1736,12 +1962,15 @@
     var cfg = null;
     (p.decisions || []).some(function (d) { if (d.explain && d.explain.config_version) { cfg = d.explain.config_version; return true; } return false; });
     set('bh-ops-config', cfg || p.config_version || '—');
-    var mode = $('bh-ops-mode');
-    if (mode) { mode.textContent = 'Mode: ' + state.mode; mode.setAttribute('aria-pressed', state.mode === 'mission' ? 'true' : 'false'); }
-    var vip = $('bh-ops-vip');
-    if (vip) { vip.textContent = 'Cardholder offer: ' + (state.vipOfferActive ? 'on' : 'off'); vip.setAttribute('aria-pressed', state.vipOfferActive ? 'true' : 'false'); }
-    var quota = $('bh-ops-quota');
-    if (quota) { quota.textContent = 'Discovery quota: ' + (state.quotaEnabled ? 'on' : 'off'); quota.setAttribute('aria-pressed', state.quotaEnabled ? 'true' : 'false'); }
+    // Label and state are separate elements now: the presenter reads WHAT the
+    // control is and WHERE it currently sits without parsing a sentence.
+    var ctl = function (btnId, stateId, on, word) {
+      var b = $(btnId); if (b) b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      var s = $(stateId); if (s) s.textContent = word;
+    };
+    ctl('bh-ops-mode', 'bh-ops-mode-state', state.mode === 'mission', state.mode);
+    ctl('bh-ops-vip', 'bh-ops-vip-state', state.vipOfferActive, state.vipOfferActive ? 'on' : 'off');
+    ctl('bh-ops-quota', 'bh-ops-quota-state', state.quotaEnabled, state.quotaEnabled ? 'on' : 'off');
     var st = $('bh-ops-status');
     if (st) {
       st.textContent = 'slots rendered: ' + ((p.decisions || []).length) +
@@ -1780,8 +2009,16 @@
     return Math.round(ms / 1000) + 's';
   }
 
+  /* Last painted value per dimension, so a repaint can tell what MOVED.
+     Reset by New Viewer — a cold visitor must not inherit the old one's
+     "crossed θin" badge. */
+  var DIM_PREV = {};
+  var DIM_CROSSED = {};
+  var DIM_MOVED_KEY = null;
+
   function renderDims() {
     var host = $('bh-dims'); if (!host) return;
+    DIM_MOVED_KEY = null;
     var p = state.payload || {};
     // state.affinity is the freshest read (reflex poll after telemetry); the
     // payload's snapshot is the fallback.
@@ -1807,9 +2044,23 @@
         ? (lead.value ? esc(lead.value) + ' · ' : '') + (typeof lead.score === 'number' ? lead.score.toFixed(2) : '—') +
           (lead.others ? ' <span class="bh-dim__more">+' + lead.others + '</span>' : '')
         : '<span class="bh-dim__cold">no signal yet</span>';
-      return '<div class="bh-dim">' +
+      // What CHANGED since the last paint. A demo whose star exhibit moves
+      // silently is a demo nobody watches — so a move flashes, and a θin
+      // crossing is louder still and says the word next to the bar.
+      var prev = DIM_PREV[d.key];
+      var moved = (typeof prev === 'number') && Math.abs(v - prev) >= 0.005;
+      var crossed = moved && prev < thetaIn && v >= thetaIn;
+      if (crossed) DIM_CROSSED[d.key] = Date.now();
+      DIM_PREV[d.key] = v;
+      var recentCross = hot && (Date.now() - (DIM_CROSSED[d.key] || 0) < 6000);
+      var cls = 'bh-dim' + (crossed ? ' bh-dim--crossed' : (moved ? ' bh-dim--moved' : ''));
+      if (moved) DIM_MOVED_KEY = d.key;
+
+      return '<div class="' + cls + '" data-bh-dim="' + esc(d.key) + '">' +
         '<div class="bh-dim__row">' +
-          '<span class="bh-dim__name">' + esc(d.label) + '</span>' +
+          '<span class="bh-dim__name">' + esc(d.label) +
+            (recentCross ? '<span class="bh-dim__crossed">crossed &theta;in</span>' : '') +
+          '</span>' +
           '<span class="bh-dim__val">' + readout + '</span>' +
         '</div>' +
         '<div class="bh-dim__track">' +
@@ -1827,8 +2078,24 @@
     if (memHost) {
       memHost.innerHTML = mem.length
         ? mem.map(function (m) { return '<span class="bh-mem">' + esc(m) + '</span>'; }).join('')
-        : '<p class="bh-panel__empty">No audience memberships yet — the catalogue generates them as affinity crosses θin.</p>';
+        : '<p class="bh-panel__empty">None yet — they appear as affinity crosses θin.</p>';
     }
+
+    // If the bar that moved is scrolled out of the panel's viewport, bring it
+    // back. The instrument is at the top of the panel precisely so this is
+    // rarely needed — but during a long arc the presenter may have scrolled.
+    if (DIM_MOVED_KEY) revealDim(DIM_MOVED_KEY);
+  }
+
+  /* Scroll a dimension into view WITHIN the panel only — never the page. A
+     panel-local scroll must not yank the storefront the room is watching. */
+  function revealDim(key) {
+    var el = document.querySelector('[data-bh-dim="' + key + '"]');
+    var scroller = document.querySelector('.bh-panel__scroll');
+    if (!el || !scroller) return;
+    var er = el.getBoundingClientRect(), sr = scroller.getBoundingClientRect();
+    if (er.top >= sr.top && er.bottom <= sr.bottom) return;   // already visible
+    scroller.scrollTop += (er.top - sr.top) - (sr.height / 2 - er.height / 2);
   }
 
   function gateHtml(g, fail) {
@@ -1846,6 +2113,65 @@
   function isVipExclusion(g) {
     var s = (typeof g === 'string') ? g : JSON.stringify(g || '');
     return /vip_offer_exclusion/i.test(s);
+  }
+
+  /* ── THE GLASS BOX, IN ENGLISH ───────────────────────────────────────────
+     The record was always true and always unreadable. This templates ONE
+     sentence out of the same fields — no new facts, no softening, and every
+     number in the sentence is the number in the record underneath it. If a
+     case isn't recognised, it says the plain thing about rank rather than
+     inventing a story. */
+  function humanGate(g) {
+    var s = String(g || '');
+    var name = s.split(' ')[0];
+    var why = (s.match(/\(([^)]+)\)/) || [])[1] || '';
+    var MAP = {
+      vip_offer_exclusion: 'a cardholder-offer rule excludes it',
+      availability: 'it is not available',
+      window_open: 'its offer window is not open',
+      financing_conflict: 'its financing terms conflict',
+      channel: 'it is not published to this channel'
+    };
+    var base = MAP[name] || (name.replace(/_/g, ' ') + ' refused it');
+    return why ? base + ' (' + why.replace(/_/g, ' ') + ')' : base;
+  }
+
+  function plainExplain(d, x, excluded) {
+    var slotName = (SLOT_META[d.slot_id] && SLOT_META[d.slot_id].title) || d.slot_id;
+
+    if (x.pinned) {
+      return 'A merchandiser reserved this slot — ranking never ran.';
+    }
+    if (x.quota_reserved) {
+      return 'Held for discovery: this shopper has no affinity here, and that is deliberate.';
+    }
+    // waitlist retention — the item stayed for THIS shopper though it sold out
+    var retained = x.retained || x.retention || (d.item && d.item.urgencyState === 'waitlist');
+    if (retained && (d.item && d.item.urgencyState === 'waitlist')) {
+      return 'Sold out, but this shopper wanted it — kept at their price on the waitlist.';
+    }
+    if (x.focused || (state.focusCategory && d.slot_id === 'category_rail')) {
+      return 'You asked for this category.';
+    }
+    // the refusal — the beat worth clicking on
+    var top = (excluded || [])[0];
+    if (top && (top.gates_failed || []).length) {
+      var scored = top.dimension_scores || {};
+      var best = Object.keys(scored).sort(function (a, b) { return (scored[b] || 0) - (scored[a] || 0); })[0];
+      var aff = top.affinity != null ? top.affinity : (best ? scored[best] : null);
+      return 'Scored highest for this shopper' +
+        (aff != null ? ' (' + Number(aff).toFixed(2) + ')' : '') +
+        ', but a merchandising rule refused it: ' + humanGate(top.gates_failed[0]) + '.';
+    }
+    if ((x.gates_failed || []).length && x.rank_position == null) {
+      return 'Nothing could fill ' + slotName + ' right now — ' + humanGate(x.gates_failed[0]) + '.';
+    }
+    if (typeof x.rank_position === 'number') {
+      var n = x.candidates_considered;
+      return 'Ranked first' + (n ? ' of ' + n + ' eligible offers' : '') + ' for this shopper' +
+        (typeof x.rank_score === 'number' ? ' (score ' + Number(x.rank_score).toFixed(2) + ')' : '') + '.';
+    }
+    return 'Chosen by ' + (d.strategy || 'the composer') + '.';
   }
 
   function renderExplains() {
@@ -1898,6 +2224,9 @@
           '<span>' + badgeText + '</span>' +
         '</button>' +
         '<div class="bh-xp__body" hidden>' +
+          // ONE human sentence, first — the record beneath it is the proof, not
+          // the explanation. A room reads the sentence; an engineer reads both.
+          '<p class="bh-xp__plain">' + plainExplain(d, x, excluded) + '</p>' +
           (fails.length ? '<div>' + fails.map(function (g) { return gateHtml(g, true); }).join('') + '</div>' : '') +
           ((x.gates_passed || []).length ? '<div>' + x.gates_passed.map(function (g) { return gateHtml(g, false); }).join('') + '</div>' : '') +
           '<div style="margin:8px 0 6px">' +
@@ -1944,6 +2273,9 @@
 
   function openExplain(slotId, btn) {
     setPanel(true);
+    // The records now live inside the collapsed Engine details — opening an
+    // explain must open its container, or the beat silently does nothing.
+    var eng = $('bh-engine'); if (eng) eng.open = true;
     Array.prototype.forEach.call(document.querySelectorAll('[data-bh-explain]'), function (b) {
       b.setAttribute('aria-expanded', b === btn ? 'true' : 'false');
     });
@@ -2033,6 +2365,16 @@
   }
 
   function newViewer() {
+    // New Viewer is the reset for every wedged state — including a Director
+    // scenario still mid-flight. It must never leave an arc running against a
+    // visitor that no longer exists.
+    //
+    // Unless the Director pressed it ITSELF: the cold open opens by resetting
+    // the visitor, and a scenario must not be killed by its own first move.
+    if (typeof director !== 'undefined' && director.running && !director.internalReset) {
+      directorStop();
+      overlayHide(); captionHide();
+    }
     clearOwnKeys();
     state.visitorId = mintVisitorId();
     state.sessionId = mintSessionId();
@@ -2047,6 +2389,11 @@
     state.affinity = null;      // a new viewer starts cold, and must LOOK cold
     affinityAt = 0;
     affinityReadAt = 0;
+    // and the instrument forgets what the previous visitor's bars were doing,
+    // so no stale "crossed θin" badge survives the reset
+    DIM_PREV = {}; DIM_CROSSED = {};
+    state.focusCategory = null;
+    lastComposition = null;   // a fresh visitor's first paint is not a 'change'
     // New Viewer is the panic button: it returns the WHOLE stage to the
     // known-good cold open, the offer calendar included. A presenter who has
     // travelled +24h and then resets the viewer should not be left composing
@@ -2067,6 +2414,7 @@
      played by waiting out demo-τ, never by pressing a button here. */
   function advanceClock(ms) {
     state.clockOffsetMs += ms;
+    setCause('clock');
     renderOps();
     announce('Demo clock ' + fmtOffset(state.clockOffsetMs) + ' — offer windows only.');
     fetchPage();
@@ -2096,16 +2444,19 @@
     var mode = $('bh-ops-mode');
     if (mode) mode.addEventListener('click', function () {
       state.mode = state.mode === 'mission' ? 'browse' : 'mission';
+      setCause('mode');
       renderOps(); fetchPage();
     });
     var vip = $('bh-ops-vip');
     if (vip) vip.addEventListener('click', function () {
       state.vipOfferActive = !state.vipOfferActive;
+      setCause('vip');
       renderOps(); fetchPage();
     });
     var quota = $('bh-ops-quota');
     if (quota) quota.addEventListener('click', function () {
       state.quotaEnabled = !state.quotaEnabled;
+      setCause('quota');
       renderOps(); fetchPage();
     });
     var nv = $('bh-ops-newviewer');
@@ -2117,7 +2468,581 @@
   }
 
   /* ==========================================================================
-   * 12 · BOOT
+   * 12 · THE DEMO DIRECTOR
+   *
+   * One button per runbook beat, plus the full arc, so the presenter can talk
+   * instead of clicking. The house rule is absolute and everything below obeys
+   * it: THE DIRECTOR AUTOMATES CLICKS, NEVER RESULTS.
+   *
+   * Concretely — it calls .click() on the page's OWN buttons and the page's OWN
+   * cards, and lets the existing handlers do what they always do. It never
+   * writes an affinity score, never sets a slot's occupant, never fakes a
+   * state. Every effect the room sees is the engine reacting to a real event on
+   * the real pipeline, which is the only reason any of it is worth showing.
+   *
+   * The Offer Desk beat is the one place it calls an API directly (the store
+   * page has no desk UI) — and it calls the SAME /live/ops-api the desk's own
+   * buttons call, with the same payloads.
+   * ======================================================================== */
+
+  /* ---- PACING. Every duration the arc uses, in one place. ---- */
+  var DIRECTOR = {
+    viewGapMs: 5000,        // between the three cold-open clicks (runbook: ~5s apart)
+    scrollSettleMs: 650,    // smooth-scroll to rest before the pulse
+    pulseMs: 1500,          // how long the highlight sits before the click lands
+    afterClickMs: 1500,     // let the event flush and the bars re-read
+    recomposeMs: 1900,      // let a recompose paint
+    beatPauseMs: 4500,      // the big pause BETWEEN beats in the full arc
+    readMs: 6000,           // time to let the room read a caption
+    overlayMs: 11000,       // time an overlay card stays up
+    briefMs: 7000,          // scenario 3's note inside the arc
+    proposePollMs: 1500,    // Offer Desk propose poll
+    proposeTimeoutMs: 60000 // the model call is slow; do not give up early
+  };
+
+  var STOP = { director: 'stop' };
+  var SKIP = { director: 'skip' };
+
+  var director = {
+    running: false, paused: false, stopping: false, skipping: false,
+    arc: false, index: 0, total: 0, label: '', done: {}
+  };
+
+  /* ---- caption bar: what is happening + the line the presenter says ---- */
+  function caption(what, line) {
+    var bar = $('bh-caption');
+    if (!bar) return;
+    bar.hidden = false;
+    var w = $('bh-caption-what'); if (w) w.textContent = what || '';
+    var l = $('bh-caption-line'); if (l) l.textContent = line || '';
+    var b = $('bh-caption-beat');
+    if (b) b.textContent = director.running && director.arc
+      ? 'Beat ' + director.index + ' of ' + director.total
+      : (director.label || 'Demo Director');
+  }
+  function captionHide() { var b = $('bh-caption'); if (b) b.hidden = true; }
+
+  /* ---- a sleep that Pause actually pauses and Stop actually stops ---- */
+  function dwait(ms) {
+    return new Promise(function (resolve, reject) {
+      var left = ms;
+      (function tick() {
+        if (director.stopping) return reject(STOP);
+        if (director.skipping) return reject(SKIP);
+        if (left <= 0) return resolve();
+        setTimeout(function () {
+          if (!director.paused) left -= 120;
+          tick();
+        }, 120);
+      })();
+    });
+  }
+
+  /* ---- overlay card (proposal summary · export rows) ---- */
+  function overlay(title, html) {
+    var o = $('bh-overlay'); if (!o) return;
+    var t = $('bh-overlay-title'); if (t) t.textContent = title;
+    var b = $('bh-overlay-body'); if (b) b.innerHTML = html;
+    o.hidden = false;
+  }
+  function overlayHide() { var o = $('bh-overlay'); if (o) o.hidden = true; }
+
+  /* ---- THE CLICK PRIMITIVES ---------------------------------------------
+     Everything the Director does to the page goes through one of these, and
+     each one ends in a real .click() on a real element. */
+
+  /** Highlight a card the room can see, then click it for real. */
+  async function directorClickCard(itemId, selector) {
+    var card = document.querySelector('[data-bh-card][data-bh-item="' + itemId + '"]');
+    if (!card) return false;
+    // Only travel if we have to. Every scroll drags real cards through the
+    // impression threshold, and those views are counted — so the Director
+    // holds still when the card it wants is already on screen.
+    var r = card.getBoundingClientRect();
+    var visible = r.top >= 0 && r.bottom <= (window.innerHeight || 0);
+    if (!visible) {
+      card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      await dwait(DIRECTOR.scrollSettleMs);
+    }
+    card.classList.add('bh-director-pulse');
+    await dwait(DIRECTOR.pulseMs);
+    var target = card.querySelector(selector || '[data-bh-open]');
+    if (target) target.click();           // ← the real click, real handler, real event
+    card.classList.remove('bh-director-pulse');
+    await dwait(DIRECTOR.afterClickMs);
+    return !!target;
+  }
+
+  /** Click one of the presenter's own controls. */
+  async function directorClickControl(id, settleMs) {
+    var el = $(id);
+    if (!el) return false;
+    // A Director-initiated New Viewer is part of a scenario, not an abort of it.
+    if (id === 'bh-ops-newviewer') director.internalReset = true;
+    el.click();
+    director.internalReset = false;
+    await dwait(settleMs == null ? DIRECTOR.recomposeMs : settleMs);
+    return true;
+  }
+
+  /* ---- payload helpers (choosing WHAT to click, never what results) ---- */
+
+  /**
+   * Three cards of one category, taken from the SAME rail wherever possible.
+   *
+   * This matters more than it looks. The impression observer is real, and a
+   * long smooth scroll across the page genuinely puts a dozen unrelated cards
+   * through 50% of the viewport — which the engine correctly counts as views,
+   * and the leading category becomes whatever the scroll flew over rather than
+   * what the Director actually clicked. Staying inside one rail is both the
+   * honest fix and what a presenter would really do: they scroll to the kitchen
+   * rail once, then click three things in it.
+   */
+  function itemsOnScreenByCat(catKeyWanted, limit) {
+    var p = state.payload; if (!p) return [];
+    var bySlot = {}, order = [];
+    (p.decisions || []).forEach(function (d) {
+      var items = d.items || (d.item ? [d.item] : []);
+      items.forEach(function (raw) {
+        var id = raw && (raw.itemNumber || raw.id);
+        if (!id) return;
+        if (catKey(raw.category) !== catKeyWanted) return;
+        if (!document.querySelector('[data-bh-card][data-bh-item="' + id + '"]')) return;
+        if (!bySlot[d.slot_id]) { bySlot[d.slot_id] = []; order.push(d.slot_id); }
+        if (!bySlot[d.slot_id].some(function (x) { return x.id === id; })) {
+          bySlot[d.slot_id].push({ id: id, name: raw.name || raw.shortDescription || id, slot: d.slot_id });
+        }
+      });
+    });
+    // the rail with the most of this category wins — fewest unrelated cards
+    // travelled past, and the tightest, most legible sequence on screen
+    var best = null;
+    order.forEach(function (s) { if (!best || bySlot[s].length > bySlot[best].length) best = s; });
+    if (best && bySlot[best].length >= (limit || 3)) return bySlot[best].slice(0, limit || 3);
+    // not enough in any single rail — fall back to the flat list
+    var flat = [];
+    order.forEach(function (s) { bySlot[s].forEach(function (it) { flat.push(it); }); });
+    return limit ? flat.slice(0, limit) : flat;
+  }
+
+  function slotOccupant(slotId) {
+    var p = state.payload; if (!p) return null;
+    var d = (p.decisions || []).find(function (x) { return x.slot_id === slotId; });
+    if (!d || !d.item) return null;
+    return {
+      id: d.item.itemNumber || d.item.id,
+      name: d.item.name || d.item.shortDescription || '',
+      queued: d.queued || null,
+      decision: d
+    };
+  }
+
+  /** The live reading of one dimension, for a caption that quotes the screen. */
+  function dimReading(key) {
+    var snap = state.affinity || (state.payload && state.payload.affinitySnapshot) || {};
+    var values = snap.dims || snap.dimensions || snap;
+    var lead = leadingValue(values[key]);
+    if (!lead || typeof lead.score !== 'number') return null;
+    var cfg = (state.reflexConfig || {})[key] || {};
+    var thetaIn = typeof cfg.thetaIn === 'number' ? cfg.thetaIn : 0.60;
+    return { value: lead.value, score: lead.score, thetaIn: thetaIn, hot: lead.score >= thetaIn };
+  }
+
+  async function opsApi(path, opts) {
+    var res = await fetchWithTimeout('/live/ops-api' + path,
+      Object.assign({ credentials: 'omit', cache: 'no-store' }, opts || {}), 65000);
+    return await res.json();
+  }
+
+  /* ---- THE NINE BEATS ---------------------------------------------------
+     Captions carry the runbook's own talk track. Banned vocabulary (pressure,
+     countdowns, scarcity, social proof) appears in none of them. */
+
+  async function scStranger() {
+    caption('Resetting to a cold, anonymous visitor…', '');
+    await directorClickControl('bh-ops-newviewer', DIRECTOR.recomposeMs);
+    await dwait(900);
+
+    var picks = itemsOnScreenByCat('kitchen', 3);
+    if (picks.length < 3) {
+      caption('Not enough Kitchen & Table cards on screen to run the cold open.',
+        'Scroll the storefront to the kitchen rails, or run New Viewer and try again.');
+      await dwait(DIRECTOR.readMs);
+      return;
+    }
+
+    for (var i = 0; i < picks.length; i++) {
+      caption('Click ' + (i + 1) + ' of 3 — ' + picks[i].name,
+        i === 0 ? 'Nobody has told this page who she is. Watch the category axis.' : '');
+      await directorClickCard(picks[i].id);
+      var r = dimReading('category');
+      if (r) {
+        caption('Click ' + (i + 1) + ' of 3 registered — category ' + r.score.toFixed(2) +
+          ' (θin ' + r.thetaIn.toFixed(2) + ')', '');
+      }
+      if (i < picks.length - 1) await dwait(Math.max(0, DIRECTOR.viewGapMs - DIRECTOR.afterClickMs));
+    }
+
+    await dwait(1200);
+    var fin = dimReading('category');
+    caption(fin
+      ? 'category — ' + (fin.value || 'Kitchen & Table') + ' · ' + fin.score.toFixed(2) +
+        (fin.hot ? ' — above θin ' + fin.thetaIn.toFixed(2) : ' — still under θin ' + fin.thetaIn.toFixed(2))
+      : 'Three interactions registered.',
+      'Three interactions, about fifteen seconds, fully anonymous. No login, no history, no training period.');
+    await dwait(DIRECTOR.readMs);
+  }
+
+  async function scGovernance() {
+    caption('Turning the discovery quota OFF…',
+      'A fixed share of this page is held open for things the ranking would never pick.');
+    await directorClickControl('bh-ops-quota');
+    await dwait(DIRECTOR.readMs - 1500);
+    caption('Quota off — “Something New to You” collapses into more of the same.',
+      'Over-personalization is a failure mode we engineered against, not a promise.');
+    await dwait(DIRECTOR.readMs);
+    caption('Turning the quota back ON…', '');
+    await directorClickControl('bh-ops-quota');
+    caption('The reserved picks return — flagged quota_reserved, with affinity near zero.',
+      'The merchandiser’s billboard outranks the model, and part of the page is held open on purpose.');
+    await dwait(DIRECTOR.readMs);
+  }
+
+  async function scSecondShopper(brief) {
+    caption('Second shopper — this one is yours to open.',
+      'Open an incognito window on the same URL: separate storage, so a genuinely separate visitor.');
+    await dwait(brief ? DIRECTOR.briefMs : DIRECTOR.readMs);
+    if (!brief) {
+      caption('Compare “Spotlight for You” and “Something New to You” across the two windows.',
+        'Several strong eligible offers, and the system choosing which offer for which customer — same slot, same second, one engine.');
+      await dwait(DIRECTOR.readMs + 3000);
+    }
+  }
+
+  async function scNewOffer() {
+    caption('Offer Desk — putting the tray back to its clean state…', '');
+    var reset = await opsApi('/reset', { method: 'POST' });
+    if (!reset || !reset.ok) {
+      caption('The Offer Desk API did not answer.', 'Skip this beat — do not open the desk if it is not working.');
+      await dwait(DIRECTOR.readMs); return;
+    }
+    var staged = (reset.records || []).filter(function (r) { return r.state === 'staged'; });
+    var target = staged[0];
+    if (!target) { caption('Nothing staged in the tray.', 'Reset the desk and try again.'); await dwait(DIRECTOR.readMs); return; }
+
+    caption('A raw feed row arrives: ' + target.staged.name + ' — title, price, one image. Nothing else.',
+      'This is what your vendor feed actually gives you.');
+    await dwait(DIRECTOR.readMs);
+
+    caption('Proposing tags — this is a real model call, and it takes a moment…',
+      'The model is reading the item — the title, the copy, the price, nothing else.');
+    var t0 = Date.now();
+    var prop = await opsApi('/propose/' + encodeURIComponent(target.itemNumber), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    var tookS = ((Date.now() - t0) / 1000).toFixed(1);
+    if (!prop || !prop.ok || !prop.record || !prop.record.proposal) {
+      caption('The proposal did not come back.', 'Use the pre-proposed card, or skip to the succession beat.');
+      await dwait(DIRECTOR.readMs); return;
+    }
+
+    var pr = prop.record.proposal;
+    var tags = pr.tags || [];
+    var rows = tags.map(function (t) {
+      var edited = t.key === 'offerCode';
+      var rejected = t.key === 'occasion';
+      return '<div class="bh-tag' + (edited ? ' bh-tag--edited' : '') + (rejected ? ' bh-tag--rejected' : '') + '">' +
+        '<span class="bh-tag__k">' + esc(t.label || t.key) + '</span>' +
+        '<span class="bh-tag__v">' + esc(t.value) + '</span>' +
+        '<span class="bh-tag__c">' + (typeof t.confidence === 'number' ? t.confidence.toFixed(2) : '—') +
+          (t.rejectable ? '' : ' · load-bearing') + '</span>' +
+        (t.rationale ? '<p class="bh-tag__r">' + esc(t.rationale) + '</p>' : '') +
+      '</div>';
+    }).join('');
+    overlay('Proposed tags — ' + (pr.proposedBy === 'ai' ? (pr.model || 'model') : 'deterministic fallback') +
+      ' · ' + tookS + 's',
+      '<div class="bh-tags">' + rows + '</div>');
+    caption('Every tag comes back with a value, a confidence and its reasoning.',
+      pr.proposedBy === 'ai'
+        ? 'That is a real model call — ' + tookS + ' seconds, reading the item itself.'
+        : 'No model key on this deployment — these are proposed tags from the deterministic fallback.');
+    await dwait(DIRECTOR.overlayMs);
+
+    caption('Approving with one edit: offer construct → Today’s Bright One℠, and Occasion rejected.',
+      'The offer construct came back low-confidence. A human decides that one.');
+    var appr = await opsApi('/approve/' + encodeURIComponent(target.itemNumber), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        approvedBy: 'Demo Director',
+        edits: { offerCode: 'TBO' },
+        rejects: ['occasion'],
+        window: { startInMinutes: 0, durationHours: 1 }
+      })
+    });
+    overlayHide();
+    if (!appr || !appr.ok) {
+      caption('The approval was refused: ' + ((appr && appr.error) || 'unknown'),
+        'Load-bearing tags are edited, never rejected — that is the desk working as designed.');
+      await dwait(DIRECTOR.readMs); return;
+    }
+    await dwait(1200);
+
+    caption('Window set: starts now, runs one hour. No campaign, no audience, no page.',
+      'You didn’t build a campaign. You published an item with a start time and an end time.');
+    await dwait(DIRECTOR.readMs - 1200);
+
+    setCause('desk');
+    await fetchPage();
+    await dwait(DIRECTOR.recomposeMs);
+    var occ = slotOccupant('daily_deal');
+    caption(occ ? 'On the floor now: ' + occ.name + ' (' + occ.id + ')' : 'Recomposed.',
+      'Your product data already has that field. We just made the page read it.');
+    await dwait(DIRECTOR.readMs);
+  }
+
+  async function scTimePasses() {
+    var before = slotOccupant('daily_deal');
+    caption(before ? 'Today’s Bright One℠ is ' + before.name : 'Reading the daily deal…',
+      before && before.queued ? 'The next one is already in preview, waiting for its window to open.' : '');
+    await dwait(DIRECTOR.readMs);
+
+    caption('Advancing the demo clock 24 hours — offer windows only…', '');
+    await directorClickControl('bh-ops-clock-24h', DIRECTOR.recomposeMs + 900);
+
+    var after = slotOccupant('daily_deal');
+    if (before && after && before.id !== after.id) {
+      caption(before.name + ' → ' + after.name,
+        'Nobody scheduled that. The window is the gate; the boundary is computed.');
+    } else {
+      caption('Clock advanced.', 'The window is the gate, and the boundary is computed from the item’s own end time.');
+    }
+    await dwait(DIRECTOR.readMs + 2000);
+  }
+
+  async function scSoldOut() {
+    var cat = dimReading('category');
+    if (!cat || !cat.hot) {
+      caption('This beat needs a visitor who is already above θin.',
+        'Run “Anonymous Stranger” first — retention only fires for a shopper the engine already knows.');
+      await dwait(DIRECTOR.readMs);
+      return;
+    }
+    var occ = slotOccupant('daily_deal');
+    if (!occ) { caption('No daily-deal occupant to sell out.', ''); await dwait(DIRECTOR.readMs); return; }
+
+    caption('Selling out ' + occ.name + ' mid-session…', '');
+    var out = await opsApi('/soldout/' + encodeURIComponent(occ.id), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    if (!out || !out.ok) {
+      caption('The sell-out call did not answer.', 'Skip this beat.');
+      await dwait(DIRECTOR.readMs); return;
+    }
+    await fetchPage();
+    await dwait(DIRECTOR.recomposeMs);
+
+    var now = slotOccupant('daily_deal');
+    var retained = now && now.id === occ.id;
+    caption(retained
+      ? 'This visitor keeps the item — waitlist language, price untouched.'
+      : 'This slot moved to the next eligible occupant: ' + (now ? now.name : '—'),
+      'Same event, two different right answers — and the waitlist holds her price, because that is your published rule, not our default.');
+    await dwait(DIRECTOR.readMs + 2500);
+
+    caption('Restocking…', '');
+    await opsApi('/restock/' + encodeURIComponent(occ.id), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    await fetchPage();
+    await dwait(DIRECTOR.recomposeMs);
+  }
+
+  async function scGlassBox() {
+    var eng = $('bh-engine'); if (eng) eng.open = true;
+    var btns = Array.prototype.slice.call(document.querySelectorAll('[data-bh-explain]'));
+    if (!btns.length) { caption('No explain records on screen yet.', 'Let the page compose once, then retry.'); await dwait(DIRECTOR.readMs); return; }
+    caption('Opening the decision record…', '');
+    btns[0].click();
+    await dwait(1600);
+    caption('Refused candidates are hoisted to the top — a high-affinity item, refused.',
+      'That is the engine refusing a click it would probably have won, because your merchandising rule outranks the model.');
+    await dwait(DIRECTOR.readMs + 2000);
+    caption('Turning the cardholder offer off — the refusal disappears and the item becomes rankable.', '');
+    await directorClickControl('bh-ops-vip');
+    await dwait(1400);
+    caption('And back on — the refusal returns.',
+      'Precedence is real, and it is visible.');
+    await directorClickControl('bh-ops-vip');
+    await dwait(DIRECTOR.readMs);
+  }
+
+  async function scExperiment() {
+    var eng = $('bh-engine'); if (eng) eng.open = true;
+    var x = state.payload && state.payload.experiment;
+    if (!x || !x.variationKey) {
+      caption('No experiment assignment on this payload.',
+        'The experiment_id, variation_id and campaign_id columns are in the row regardless.');
+      await dwait(DIRECTOR.readMs); return;
+    }
+    revealDim('category');
+    var el = $('bh-ops-experiment');
+    if (el) { el.classList.add('bh-ops__v--hot'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+    caption('This visitor is in “' + x.variationKey + '”, decided by ' + (x.source || 'the platform') + '.',
+      'The experiment is not a picture of an experiment. It is the same platform your team would run it in.');
+    await dwait(DIRECTOR.readMs);
+    var deal = slotOccupant('daily_deal');
+    caption('The offer copy on Today’s Bright One℠ matches the arm' + (deal ? ' — ' + deal.name : '') + '.',
+      'Both arms say the same true thing about the same window, in two registers. Neither invents pressure.');
+    await dwait(DIRECTOR.readMs);
+    if (el) el.classList.remove('bh-ops__v--hot');
+  }
+
+  async function scReceipts() {
+    caption('Pulling this visitor’s decision rows out of the warehouse…', '');
+    var res = await fetchWithTimeout(
+      '/live/api/decisions/export?limit=5&parse=1&visitorId=' + encodeURIComponent(state.visitorId),
+      { credentials: 'omit', cache: 'no-store' }, 20000);
+    var j = await res.json();
+    var rows = (j && (j.rows || j.decisions)) || [];
+    if (!rows.length) {
+      caption('No rows came back yet.',
+        'Rows are written off the response path — load the page once more, wait two seconds, retry.');
+      await dwait(DIRECTOR.readMs); return;
+    }
+    var body = '<div class="bh-rows__scroll"><table class="bh-rows"><thead><tr>' +
+      '<th>slot</th><th>item</th><th>offer window</th><th>gates failed</th><th>experiment</th>' +
+      '</tr></thead><tbody>' +
+      rows.map(function (r) {
+        var win = r.offer_window_start
+          ? String(r.offer_window_start).replace('T', ' ').replace('.000Z', 'Z') + '<br>→ ' +
+            String(r.offer_window_end || '').replace('T', ' ').replace('.000Z', 'Z')
+          : (r.offer_lifecycle_state || '—');
+        var gates = (r.gates_failed || []).length
+          ? '<span class="bh-rows__fail">' + esc((r.gates_failed || []).join(', ')) + '</span>' : '—';
+        var exp = r.experiment_id ? esc(r.experiment_id) + '<br>' + esc(r.variation_id || '') : '—';
+        return '<tr><td>' + esc(r.slot_id) + '</td><td>' + esc(r.chosen_item || '—') + '</td>' +
+          '<td>' + win + '</td><td>' + gates + '</td><td>' + exp + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    overlay('Decision rows — ' + rows.length + ' of this visitor’s, straight from the export', body);
+    caption('One row per slot decision. The reason is in the row, not in a dashboard we own.',
+      'We hand you the rows; you compute the lift. We will never present our own uplift number as the proof.');
+    await dwait(DIRECTOR.overlayMs + 3000);
+    overlayHide();
+  }
+
+  var SCENARIOS = [
+    { key: 'stranger',   label: 'Anonymous Stranger',   run: scStranger },
+    { key: 'governance', label: 'Governance & quota',   run: scGovernance },
+    { key: 'second',     label: 'Second Shopper',       run: scSecondShopper },
+    { key: 'newoffer',   label: 'A New Offer Is Born',  run: scNewOffer },
+    { key: 'time',       label: 'Time Passes',          run: scTimePasses },
+    { key: 'soldout',    label: 'Sold Out Mid-Session', run: scSoldOut },
+    { key: 'glassbox',   label: 'The Glass Box',        run: scGlassBox },
+    { key: 'experiment', label: 'Experiment on Top',    run: scExperiment },
+    { key: 'receipts',   label: 'The Receipts',         run: scReceipts }
+  ];
+
+  /* ---- transport ---- */
+  function directorRenderList() {
+    var host = $('bh-dir-list'); if (!host) return;
+    host.innerHTML = SCENARIOS.map(function (s, i) {
+      return '<button class="bh-dirbtn' + (director.done[s.key] ? ' bh-dirbtn--done' : '') +
+        (director.label === s.label && director.running ? ' bh-dirbtn--active' : '') +
+        '" type="button" data-bh-scenario="' + s.key + '"' + (director.running ? ' disabled' : '') + '>' +
+        '<span class="bh-dirbtn__n">' + (i + 1) + '</span><span>' + esc(s.label) + '</span></button>';
+    }).join('');
+  }
+
+  function directorSetTransport() {
+    var on = director.running;
+    var p = $('bh-dir-play'); if (p) p.disabled = on;
+    ['bh-dir-pause', 'bh-dir-skip', 'bh-dir-stop'].forEach(function (id) {
+      var b = $(id); if (b) b.disabled = !on;
+    });
+    var pz = $('bh-dir-pause');
+    if (pz) pz.textContent = director.paused ? '▶ Resume' : '⏸ Pause';
+    var prog = $('bh-dir-progress');
+    if (prog) {
+      prog.textContent = !on
+        ? 'Idle — pick a beat, or play the arc.'
+        : (director.arc ? 'Beat ' + director.index + ' of ' + director.total + ' — ' : '') +
+          director.label + (director.paused ? '  ⏸ paused' : '');
+    }
+    directorRenderList();
+  }
+
+  async function directorRun(list, isArc) {
+    if (director.running) return;
+    director.running = true; director.arc = !!isArc; director.stopping = false;
+    director.paused = false; director.total = list.length; director.index = 0;
+    directorSetTransport();
+    try {
+      for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        director.index = i + 1; director.label = s.label; director.skipping = false;
+        directorSetTransport();
+        try {
+          // scenario 3 is a note, not an automation — keep it short inside the arc
+          await (s.key === 'second' ? scSecondShopper(isArc) : s.run());
+          director.done[s.key] = true;
+        } catch (e) {
+          if (e === STOP) throw e;
+          if (e !== SKIP) {
+            console.error('Director beat failed', s.key, e);
+            caption('That beat did not complete.', 'Move on, or run it again on its own.');
+            await dwait(2500).catch(function () {});
+          }
+        }
+        overlayHide();
+        if (isArc && i < list.length - 1) {
+          director.skipping = false;
+          caption('—', '');
+          await dwait(DIRECTOR.beatPauseMs);
+        }
+      }
+      if (isArc) caption('That is the arc.',
+        'You don’t have a recommendations problem. You have a decisioning-under-expiry problem.');
+      else captionHide();
+    } catch (e) {
+      if (e === STOP) { captionHide(); overlayHide(); }
+      else console.error('Director stopped', e);
+    } finally {
+      director.running = false; director.paused = false; director.stopping = false;
+      director.skipping = false; director.label = '';
+      directorSetTransport();
+    }
+  }
+
+  function directorStop() {
+    director.stopping = true; director.paused = false;
+  }
+
+  function initDirector() {
+    directorRenderList();
+    directorSetTransport();
+    var host = $('bh-dir-list');
+    if (host) host.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-bh-scenario]');
+      if (!b || director.running) return;
+      var s = SCENARIOS.find(function (x) { return x.key === b.getAttribute('data-bh-scenario'); });
+      if (s) directorRun([s], false);
+    });
+    var play = $('bh-dir-play');
+    if (play) play.addEventListener('click', function () { directorRun(SCENARIOS, true); });
+    var pause = $('bh-dir-pause');
+    if (pause) pause.addEventListener('click', function () {
+      director.paused = !director.paused; directorSetTransport();
+    });
+    var skip = $('bh-dir-skip');
+    if (skip) skip.addEventListener('click', function () { director.skipping = true; director.paused = false; });
+    var stop = $('bh-dir-stop');
+    if (stop) stop.addEventListener('click', directorStop);
+    var oc = $('bh-overlay-close');
+    if (oc) oc.addEventListener('click', overlayHide);
+  }
+
+  /* ==========================================================================
+   * 13 · BOOT
    * ======================================================================== */
   function boot() {
     var q = new URLSearchParams(location.search);
@@ -2129,6 +3054,7 @@
     setPanel(q.get('panel') === '0' ? false : (lsGet(NS + 'panel') !== '0'));
     setInterval(tickClock, 250);
     initIdleDecay();
+    initDirector();
     fetchPage().then(function () { connectWs(); });
     window.BrightHour = state;   // presenter console handle
   }

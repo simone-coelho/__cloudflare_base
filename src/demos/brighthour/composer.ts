@@ -390,6 +390,12 @@ export interface SlotExplain {
   engine_latency_ms: number;
   /** Payload-only detail (never a column): who was refused, and by which rule. */
   excluded: ExcludedCandidate[];
+  /**
+   * Present (and true) only on a slot the visitor's category focus actually
+   * changed. Absent everywhere else, so a page with no focus is byte-identical
+   * to one composed before focus existed.
+   */
+  focused?: boolean;
 }
 
 export interface QueuedOffer {
@@ -435,6 +441,12 @@ export interface SlotDecision {
   notes?: string[];
   /** Beat 13 — present on the slot under experiment, absent everywhere else. */
   experiment?: SlotExperiment;
+  /**
+   * category_rail only: the shelf this rail is actually showing, so the client
+   * can write "Showing: Electronics & Tech" from the decision rather than from
+   * the link. Present whether the shelf came from a focus or from affinity.
+   */
+  railCategory?: string;
   /** Non-clock messaging when a takeover slot has no live occupant. */
   message?: string;
   /** The successor sitting in preview (Beat 2: "tomorrow's TBO"). */
@@ -453,6 +465,14 @@ export interface ComposedPage {
   demoClock: { multiplier: number };
   sessionMission: SessionMission;
   moduleCount: number;
+  /**
+   * The category the visitor navigated INTO, echoed back so the page can label
+   * the rail ("Showing: Electronics & Tech") from the server's own answer
+   * rather than from the href it happened to click. Null when the visitor is
+   * browsing the homepage at large — and null is also what an unrecognized
+   * category resolves to, so a bad link degrades to the ordinary page.
+   */
+  focus: { category: string } | null;
   decisions: SlotDecision[];
   /** Closed-form soonest lifecycle boundary — what scheduling consumes. */
   nextTransitionAt: number | null;
@@ -473,6 +493,19 @@ export interface ComposeInput {
   reflexConfig?: ReflexConfig;
   /** Explicit override; absent ⇒ derived from the sessionMission dimension. */
   sessionMission?: SessionMission;
+  /**
+   * The category the visitor navigated into — one of the catalog's eight
+   * shelves. Their own "Shop by Category" tiles are an anchor-scroll illusion:
+   * every tile lands on the same rails with the same products. This makes the
+   * navigation mean something WITHOUT throwing away what the engine knows: the
+   * category rail becomes that shelf and the deals rail leads with it, while
+   * the spotlight stays affinity-driven. That contrast is the point — you
+   * clicked into Electronics, and your spotlight still knows you cook.
+   *
+   * Ignored (null) when no item in the catalog carries it, so a stale link
+   * degrades to the ordinary page rather than an empty rail.
+   */
+  focusCategory?: string | null;
   config?: Partial<ComposerConfig>;
   page?: string;
   sessionId?: string | null;
@@ -851,6 +884,8 @@ interface ExplainInput {
   configVersion: string;
   engineLatencyMs: number;
   cfg: ComposerConfig;
+  /** True only where a category focus actually changed this slot. */
+  focused?: boolean;
 }
 
 function buildExplain(input: ExplainInput): SlotExplain {
@@ -920,6 +955,9 @@ function buildExplain(input: ExplainInput): SlotExplain {
     config_version: input.configVersion,
     engine_latency_ms: input.engineLatencyMs,
     excluded,
+    // Spread rather than assigned: no focus ⇒ the key is not on the object at
+    // all, and the payload is what it was before focus existed.
+    ...(input.focused ? { focused: true } : {}),
   };
 }
 
@@ -943,6 +981,8 @@ interface SlotContext {
   sessionId: string | null;
   /** Beat 13's assignment for this visitor — governs the daily_deal slot only. */
   experiment: BhAssignment | null;
+  /** The shelf the visitor navigated into, already resolved against the catalog. */
+  focusCategory: string | null;
 }
 
 function newDecision(
@@ -1233,7 +1273,18 @@ function composeDealsRail(ctx: SlotContext, order: number): SlotDecision {
   const pin = pins[0] ?? null;
 
   const rest = ranked.filter((c) => !pin || c.itemId !== pin.itemId);
-  const picks = (pin ? [pin, ...rest] : rest).slice(0, ctx.cfg.railMax);
+  // Category focus is a PARTITION, not a filter: the focused shelf leads, the
+  // rest of the deals still follow in rank order. Hiding them would turn a
+  // navigation choice into a blindfold — and the visitor came to a deals rail.
+  // Stable both sides: rank order is preserved inside each half, so the only
+  // thing focus changes is which half comes first.
+  const focused = ctx.focusCategory
+    ? [
+        ...rest.filter((c) => str(c.item.category) === ctx.focusCategory),
+        ...rest.filter((c) => str(c.item.category) !== ctx.focusCategory),
+      ]
+    : rest;
+  const picks = (pin ? [pin, ...focused] : focused).slice(0, ctx.cfg.railMax);
 
   const items = picks.map((c, i) =>
     railItem(c, ctx.nowMs, ctx.cfg, i + 1, { pinned: pin != null && i === 0 })
@@ -1258,6 +1309,7 @@ function composeDealsRail(ctx: SlotContext, order: number): SlotDecision {
       configVersion: ctx.configVersion,
       engineLatencyMs: ctx.engineLatencyMs,
       cfg: ctx.cfg,
+      focused: ctx.focusCategory != null,
     }),
   });
 }
@@ -1336,8 +1388,17 @@ function hostAffinityLead(ctx: SlotContext): string | null {
 
 // ── Slot 6: category_rail ────────────────────────────────────────────────────
 
+/**
+ * The rail that answers "Shop by Category".
+ *
+ * Precedence: the shelf the visitor navigated INTO wins over the shelf her
+ * affinity would have chosen — a click is a stated intent, and an engine that
+ * overrules it is the anchor-scroll illusion with extra steps. Ranking inside
+ * the rail is still hers. With no focus, nothing changes: top category
+ * affinity, then the deterministic per-visitor pick for a cold session.
+ */
 function composeCategoryRail(ctx: SlotContext, order: number): SlotDecision {
-  let category = topValueOf(ctx.scores.category);
+  let category = ctx.focusCategory ?? topValueOf(ctx.scores.category);
 
   if (!category) {
     // Cold visitor: a deterministic, visitor-specific category off the tie-break
@@ -1357,7 +1418,7 @@ function composeCategoryRail(ctx: SlotContext, order: number): SlotDecision {
   const items = picks.map((c, i) => railItem(c, ctx.nowMs, ctx.cfg, i + 1));
   const chosen = picks[0] ?? null;
 
-  return newDecision(ctx, 'category_rail', order, {
+  const decision = newDecision(ctx, 'category_rail', order, {
     strategy: chosen ? (ctx.scores.category ? 'affinity' : 'rank') : 'empty',
     item: chosen ? safeItem(chosen) : null,
     items,
@@ -1374,8 +1435,17 @@ function composeCategoryRail(ctx: SlotContext, order: number): SlotDecision {
       configVersion: ctx.configVersion,
       engineLatencyMs: ctx.engineLatencyMs,
       cfg: ctx.cfg,
+      focused: ctx.focusCategory != null,
     }),
   });
+
+  // The rail names the shelf it is showing, whether the visitor chose it or her
+  // affinity did — the client labels from this, not from the href it clicked.
+  if (category) {
+    decision.railCategory = category;
+    if (ctx.focusCategory) decision.notes = [`focused: category ${category}`];
+  }
+  return decision;
 }
 
 // ── Slot 7: event_module (the nested reveal) ─────────────────────────────────
@@ -1506,6 +1576,21 @@ function composeDiscoveryRail(ctx: SlotContext, order: number): SlotDecision {
 
 // ── The composer ─────────────────────────────────────────────────────────────
 
+/**
+ * The focus, resolved against the catalog. A category no candidate carries is
+ * ignored (null) — matching is exact on the display name, which is what both
+ * the tiles and the `category` dimension already use, so nothing has to agree
+ * on a second spelling.
+ */
+export function resolveFocusCategory(
+  requested: string | null | undefined,
+  candidates: readonly { item: ComposerItem }[]
+): string | null {
+  const wanted = typeof requested === 'string' ? requested.trim() : '';
+  if (!wanted) return null;
+  return candidates.some((c) => str(c.item.category) === wanted) ? wanted : null;
+}
+
 /** mission vs browse — an explicit override, else the θin on the dimension. */
 export function resolveMission(
   scores: DimensionScores,
@@ -1559,6 +1644,11 @@ export function composePage(input: ComposeInput): ComposedPage {
   const mission = resolveMission(scores, reflexConfig, input.sessionMission);
   const slots = mission === 'mission' ? MISSION_SLOT_IDS : BROWSE_SLOT_IDS;
 
+  // Resolve the focus against the catalog rather than trusting the caller: a
+  // category no item carries is not a focus, it is a stale link, and it
+  // resolves to null so the page composes exactly as it would have anyway.
+  const focusCategory = resolveFocusCategory(input.focusCategory, all);
+
   const ctx: SlotContext = {
     visitorId: input.visitorId,
     nowMs,
@@ -1576,6 +1666,7 @@ export function composePage(input: ComposeInput): ComposedPage {
     // Beat 13's seam: pure and synchronous, so composePage stays replayable.
     // The ids are whatever the route read from KV — null before launch.
     experiment: chooseFraming(input.visitorId, input.experimentIds ?? null),
+    focusCategory,
   };
 
   const decisions = slots.map((slotId, i) => SLOT_BUILDERS[slotId](ctx, i + 1));
@@ -1604,6 +1695,7 @@ export function composePage(input: ComposeInput): ComposedPage {
     demoClock: { multiplier: input.clockMultiplier ?? 1 },
     sessionMission: mission,
     moduleCount: decisions.length,
+    focus: focusCategory ? { category: focusCategory } : null,
     decisions,
     nextTransitionAt: nextTransitionAt(input.items, nowMs, cfg.lifecycle),
     affinitySnapshot: { dims: scores, memberships: [...(input.memberships ?? [])] },
