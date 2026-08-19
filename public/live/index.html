@@ -238,7 +238,7 @@
 <aside class="bh-panel" id="bh-panel" data-presenter="true" aria-label="Glass Box — decision inspector (presenter only)">
   <div class="bh-panel__head">
     <h2>Glass Box</h2>
-    <button class="bh-panel__x" type="button" id="bh-panel-close">Hide</button>
+    <button class="bh-panel__x" type="button" id="bh-panel-close" data-bh-tip="Hides the Glass Box. The small button that appears bottom-right brings it back.">Hide</button>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════
@@ -249,10 +249,10 @@
        ═══════════════════════════════════════════════════════════════════ -->
   <div class="bh-transport">
     <div class="bh-transport__btns">
-      <button class="bh-opsbtn bh-opsbtn--play" type="button" id="bh-dir-play">&#9654; Play full arc</button>
-      <button class="bh-opsbtn bh-opsbtn--icon" type="button" id="bh-dir-pause" title="Pause" aria-label="Pause" disabled>&#9208;</button>
-      <button class="bh-opsbtn bh-opsbtn--icon" type="button" id="bh-dir-skip" title="Skip beat" aria-label="Skip beat" disabled>&#9197;</button>
-      <button class="bh-opsbtn bh-opsbtn--icon bh-opsbtn--danger" type="button" id="bh-dir-stop" title="Stop" aria-label="Stop" disabled>&#9209;</button>
+      <button class="bh-opsbtn bh-opsbtn--play" type="button" id="bh-dir-play" data-bh-tip="Runs all 9 beats hands-off (~7 min of machine time). Each beat announces what it will do, the ghost cursor clicks it, the camera moves to what changed, and the Story tab explains the arithmetic. Pause anytime — everything on screen holds.">&#9654; Play full arc</button>
+      <button class="bh-opsbtn bh-opsbtn--icon" type="button" id="bh-dir-pause" data-bh-tip="Freezes the arc mid-beat. Rings, story and captions stay exactly as they are. Resume picks up where it stopped." title="Pause" aria-label="Pause" disabled>&#9208;</button>
+      <button class="bh-opsbtn bh-opsbtn--icon" type="button" id="bh-dir-skip" data-bh-tip="Abandons the current beat and moves to the next one." title="Skip beat" aria-label="Skip beat" disabled>&#9197;</button>
+      <button class="bh-opsbtn bh-opsbtn--icon bh-opsbtn--danger" type="button" id="bh-dir-stop" data-bh-tip="Stops the arc entirely. You can then drive by hand — every manual click gets the same camera and story treatment." title="Stop" aria-label="Stop" disabled>&#9209;</button>
     </div>
     <p class="bh-transport__beat" id="bh-dir-progress">Idle &mdash; pick a beat, or play the arc.</p>
   </div>
@@ -260,9 +260,9 @@
   <!-- STORY | AFFINITY | DIRECTOR — one vertical port was making the presenter
        scroll down to press play and back up to read the instrument. -->
   <div class="bh-tabs" role="tablist" aria-label="Glass Box views">
-    <button class="bh-tab" type="button" role="tab" data-bh-tab="story" id="bh-tab-story" aria-selected="true">Story</button>
-    <button class="bh-tab" type="button" role="tab" data-bh-tab="affinity" id="bh-tab-affinity" aria-selected="false">Affinity<i class="bh-tab__dot" id="bh-tab-dot" hidden></i></button>
-    <button class="bh-tab" type="button" role="tab" data-bh-tab="director" id="bh-tab-director" aria-selected="false">Director</button>
+    <button class="bh-tab" type="button" role="tab" data-bh-tab="story" id="bh-tab-story" data-bh-tip="The teleprompter: every action explained — what was clicked, the weight it added, the score against its threshold, and what changed where on the page. Newest on top. Written to be read aloud." aria-selected="true">Story</button>
+    <button class="bh-tab" type="button" role="tab" data-bh-tab="affinity" id="bh-tab-affinity" data-bh-tip="The nine dials this shopper is scored on. Behavior raises them (view +1, click +2, cart +3), time decays them. Crossing 0.60 enters an audience; falling below 0.45 leaves it." aria-selected="false">Affinity<i class="bh-tab__dot" id="bh-tab-dot" hidden></i></button>
+    <button class="bh-tab" type="button" role="tab" data-bh-tab="director" id="bh-tab-director" data-bh-tip="The nine demo beats plus the live controls: mode, quota, cardholder rule, and the offer clock." aria-selected="false">Director</button>
   </div>
 
   <div class="bh-panel__scroll" id="bh-panel-scroll">
@@ -323,15 +323,15 @@
       <h3>Controls</h3>
 
       <div class="bh-ctlgrid">
-        <button class="bh-ctl" type="button" id="bh-ops-mode" aria-pressed="false">
+        <button class="bh-ctl" type="button" id="bh-ops-mode" data-bh-tip="Session intent. BROWSE = she is wandering: all 8 modules, discovery-rich. MISSION = she knows what she wants: the page removes modules and collapses to 4. In production this is inferred from behavior; here you set it." aria-pressed="false">
           <span class="bh-ctl__label">Mode</span>
           <span class="bh-ctl__state" id="bh-ops-mode-state">browse</span>
         </button>
-        <button class="bh-ctl" type="button" id="bh-ops-quota" aria-pressed="true">
+        <button class="bh-ctl" type="button" id="bh-ops-quota" data-bh-tip="The anti-echo-chamber guardrail. ON: the discovery rail reserves seats for items this shopper has shown NO interest in — deliberate awareness. OFF: ranking takes every seat and the page collapses toward more of what she already likes." aria-pressed="true">
           <span class="bh-ctl__label">Discovery quota</span>
           <span class="bh-ctl__state" id="bh-ops-quota-state">on</span>
         </button>
-        <button class="bh-ctl" type="button" id="bh-ops-vip" aria-pressed="true">
+        <button class="bh-ctl" type="button" id="bh-ops-vip" data-bh-tip="A business-rule gate modeled on card-promotion exclusions: Final Sale and Clearance items are refused the promoted slot even when they score highest — the glass box shows the refusal. OFF lifts the rule. Proves merchandising rules outrank the model." aria-pressed="true">
           <span class="bh-ctl__label">Cardholder offer</span>
           <span class="bh-ctl__state" id="bh-ops-vip-state">on</span>
         </button>
@@ -345,16 +345,16 @@
           <span class="bh-pill" id="bh-ops-offset">live</span>
         </span>
         <div class="bh-ctlrow__btns">
-          <button class="bh-opsbtn" type="button" id="bh-ops-clock-1h">+1h</button>
-          <button class="bh-opsbtn" type="button" id="bh-ops-clock-6h">+6h</button>
-          <button class="bh-opsbtn" type="button" id="bh-ops-clock-24h">+24h</button>
-          <button class="bh-opsbtn" type="button" id="bh-ops-clock-reset">Reset clock</button>
+          <button class="bh-opsbtn" type="button" id="bh-ops-clock-1h" data-bh-tip="Advances the OFFER clock one hour. Offer windows open and expire; affinity decay is untouched (it runs on real time). +1h rarely changes anything visible.">+1h</button>
+          <button class="bh-opsbtn" type="button" id="bh-ops-clock-6h" data-bh-tip="Advances the offer clock six hours — moves the 120-hour event to its next reveal.">+6h</button>
+          <button class="bh-opsbtn" type="button" id="bh-ops-clock-24h" data-bh-tip="Advances the offer clock a full day — the daily deal expires and its queued successor takes the slot automatically. The succession beat.">+24h</button>
+          <button class="bh-opsbtn" type="button" id="bh-ops-clock-reset" data-bh-tip="Back to live time.">Reset clock</button>
         </div>
       </div>
 
       <div class="bh-ctlrow__btns bh-ctlrow__btns--wide">
-        <button class="bh-opsbtn bh-opsbtn--danger" type="button" id="bh-ops-newviewer">New Viewer</button>
-        <a class="bh-opsbtn bh-opsbtn--link" id="bh-ops-desk" href="/live/ops.html" target="_blank" rel="noopener">Offer Desk &#8599;</a>
+        <button class="bh-opsbtn bh-opsbtn--danger" type="button" id="bh-ops-newviewer" data-bh-tip="A brand-new anonymous shopper: all dials to zero, story cleared, clock live. The total reset — safe at any moment.">New Viewer</button>
+        <a class="bh-opsbtn bh-opsbtn--link" id="bh-ops-desk" data-bh-tip="The merchandiser back office: stage a raw item, let the AI propose tags with confidences, approve with your edits, and watch it go live on the sales floor with a start and end time." href="/live/ops.html" target="_blank" rel="noopener">Offer Desk &#8599;</a>
       </div>
       <p class="bh-status" id="bh-ops-status">&mdash;</p>
     </section>

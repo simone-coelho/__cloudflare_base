@@ -1053,3 +1053,12 @@ body.bh-panel-open .bh-overlay { right: var(--bh-panel-w); }
 @media (max-width: 1100px) {
   .bh-panel { width: min(96vw, 420px); box-shadow: -8px 0 24px rgba(0,0,0,.35); }
 }
+
+/* tooltips — the explainer, attached to the controls */
+.bh-tipbox {
+  display: none; position: fixed; z-index: 400; max-width: 300px;
+  background: #FFFFFF; color: #233047; border: 1px solid #A3A29A;
+  border-left: 3px solid #EF7A5E; box-shadow: 0 8px 24px rgba(10,14,22,.28);
+  padding: 10px 12px; font-size: 13.5px; line-height: 1.45;
+  font-family: var(--bh-body, inherit); pointer-events: none;
+}

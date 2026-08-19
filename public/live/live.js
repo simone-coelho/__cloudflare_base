@@ -2771,6 +2771,19 @@
   var DIM_CROSSED = {};
   var DIM_MOVED_KEY = null;
 
+
+  /* Hover explanations for the nine dials — the explainer, attached to the UI. */
+  var DIM_TIPS = {
+    category: 'What she shops — kitchen vs jewelry vs garden. The broadest dial. Demo decay ~90s; production ~14 days.',
+    subcategory: 'The sharper cut inside a category — cookware vs cutlery. Fades faster than category.',
+    brandPersonality: 'Her taste in brand character — artisan, value-workhorse, heritage. Slow dial: taste outlives sessions.',
+    priceBand: 'Her price posture — entry, core, elevated, premium. The slowest dial: posture is a trait, not a mood.',
+    offerTypeAffinity: 'Does she chase constructs — daily deals, events — or shop evergreen value? Feeds which offer types rank for her.',
+    urgencyResponsiveness: 'Does time-limited framing move her? Fast dial, fades in a day: urgency response is a mood. Governs whether she sees time language at all.',
+    hostAffinity: 'Which presenter she follows. Live-commerce native: parasocial loyalty is real and durable.',
+    sessionMission: 'Wandering or on-a-mission — drives LAYOUT (8 modules vs 4), not content. Session-scoped: resets every visit.',
+    mediaAffinity: 'Watch-to-buy vs read-to-buy. Decides whether video rails outrank grids for her.'
+  };
   function renderDims() {
     var host = $('bh-dims'); if (!host) return;
     DIM_MOVED_KEY = null;
@@ -2820,7 +2833,8 @@
       if (moved) DIM_MOVED_KEY = d.key;
       var flashDelay = moved ? (flashN++ * 150) : 0;
 
-      return '<div class="' + cls + '" data-bh-dim="' + esc(d.key) + '">' +
+      return '<div class="' + cls + '" data-bh-dim="' + esc(d.key) + '"' +
+        (DIM_TIPS[d.key] ? ' data-bh-tip="' + esc(DIM_TIPS[d.key]) + '"' : '') + '>' +
         '<div class="bh-dim__row">' +
           '<span class="bh-dim__name">' + esc(d.label) +
             (recentCross ? '<span class="bh-dim__crossed">crossed &theta;in</span>' : '') +
@@ -3999,16 +4013,58 @@
     overlayHide();
   }
 
+
+  /* ==========================================================================
+   * TOOLTIPS — hover/focus explanations for every control (data-bh-tip).
+   * One fixed singleton, clamped to the viewport, placed to the LEFT of
+   * panel controls (the panel hugs the right edge) and above elsewhere.
+   * ======================================================================== */
+  var tipBox = null, tipFor = null;
+  function tipShow(el) {
+    var text = el.getAttribute('data-bh-tip'); if (!text) return;
+    if (!tipBox) {
+      tipBox = document.createElement('div');
+      tipBox.className = 'bh-tipbox';
+      tipBox.setAttribute('role', 'tooltip');
+      document.body.appendChild(tipBox);
+    }
+    tipFor = el;
+    tipBox.textContent = text;
+    tipBox.style.display = 'block';
+    var r = el.getBoundingClientRect(), tw = 300;
+    tipBox.style.maxWidth = tw + 'px';
+    var bw = Math.min(tw, tipBox.offsetWidth), bh = tipBox.offsetHeight;
+    var inPanel = !!el.closest('#bh-panel');
+    var x, y;
+    if (inPanel) { x = r.left - bw - 12; y = r.top + r.height / 2 - bh / 2; }
+    else { x = r.left + r.width / 2 - bw / 2; y = r.top - bh - 10; }
+    x = Math.max(8, Math.min(x, window.innerWidth - bw - 8));
+    y = Math.max(8, Math.min(y, window.innerHeight - bh - 8));
+    tipBox.style.left = x + 'px'; tipBox.style.top = y + 'px';
+  }
+  function tipHide() { if (tipBox) tipBox.style.display = 'none'; tipFor = null; }
+  document.addEventListener('mouseover', function (e) {
+    var el = e.target.closest && e.target.closest('[data-bh-tip]');
+    if (el && el !== tipFor) tipShow(el); else if (!el && tipFor) tipHide();
+  });
+  document.addEventListener('focusin', function (e) {
+    var el = e.target.closest && e.target.closest('[data-bh-tip]');
+    if (el) tipShow(el);
+  });
+  document.addEventListener('focusout', tipHide);
+  window.addEventListener('scroll', tipHide, true);
+  document.addEventListener('click', tipHide, true);
+
   var SCENARIOS = [
-    { key: 'stranger',   label: 'Anonymous Stranger',   run: scStranger },
-    { key: 'governance', label: 'Governance & quota',   run: scGovernance },
-    { key: 'second',     label: 'Second Shopper',       run: scSecondShopper },
-    { key: 'newoffer',   label: 'A New Offer Is Born',  run: scNewOffer },
-    { key: 'time',       label: 'Time Passes',          run: scTimePasses },
-    { key: 'soldout',    label: 'Sold Out Mid-Session', run: scSoldOut },
-    { key: 'glassbox',   label: 'The Glass Box',        run: scGlassBox },
-    { key: 'experiment', label: 'Experiment on Top',    run: scExperiment },
-    { key: 'receipts',   label: 'The Receipts',         run: scReceipts }
+    { key: 'stranger',   label: 'Anonymous Stranger', tip: 'Resets to a cold visitor, then clicks 3 kitchen products (announced first, ghost cursor, ~7s apart). Watch the category bar cross 0.60 and the Spotlight module swap. The no-training-period proof.',   run: scStranger },
+    { key: 'governance', label: 'Governance & quota', tip: 'Turns the discovery quota OFF — the discovery rail collapses into more-of-the-same — then back ON. The do-not-over-personalize guardrail, shown as disease then cure.',   run: scGovernance },
+    { key: 'second',     label: 'Second Shopper', tip: 'Prompts you to open an incognito window at the same URL: same moment, different shopper, different page. Several eligible offers; the system picks per customer.',       run: scSecondShopper },
+    { key: 'newoffer',   label: 'A New Offer Is Born', tip: 'The centerpiece. A raw feed row hits the Offer Desk, a REAL model call proposes tags (~16s — narrate over it), a human approves with one edit, and the item goes live on the floor. No campaign, no rebuild.',  run: scNewOffer },
+    { key: 'time',       label: 'Time Passes', tip: 'Presses +24h. The daily deal window closes and the queued successor takes the slot on its own — the every-morning manual rebuild, gone.',          run: scTimePasses },
+    { key: 'soldout',    label: 'Sold Out Mid-Session', tip: 'Sells out the featured item. This window (interested shopper) keeps it as Waitlist at her price; a fresh visitor gets the replacement. Run after A New Offer Is Born.', run: scSoldOut },
+    { key: 'glassbox',   label: 'The Glass Box', tip: 'Opens the explain record on a refused item: highest score on the page, excluded by the cardholder rule — vip_offer_exclusion (final_sale). Rules outrank the model, visibly.',        run: scGlassBox },
+    { key: 'experiment', label: 'Experiment on Top', tip: 'Shows the live 50/50 framing experiment: which arm this visitor is in (bucketed by the real SDK) and the offer copy it controls. Its ID rides on every decision row.',    run: scExperiment },
+    { key: 'receipts',   label: 'The Receipts', tip: 'Opens the warehouse export: one row per decision — gates, scores, offer window, experiment IDs. We hand you the rows; you compute the lift.',         run: scReceipts }
   ];
 
   /* ---- transport ---- */
@@ -4017,7 +4073,8 @@
     host.innerHTML = SCENARIOS.map(function (s, i) {
       return '<button class="bh-dirbtn' + (director.done[s.key] ? ' bh-dirbtn--done' : '') +
         (director.label === s.label && director.running ? ' bh-dirbtn--active' : '') +
-        '" type="button" data-bh-scenario="' + s.key + '"' + (director.running ? ' disabled' : '') + '>' +
+        '" type="button" data-bh-scenario="' + s.key + '"' +
+        (s.tip ? ' data-bh-tip="' + esc(s.tip) + '"' : '') + (director.running ? ' disabled' : '') + '>' +
         '<span class="bh-dirbtn__n">' + (i + 1) + '</span><span>' + esc(s.label) + '</span></button>';
     }).join('');
   }
