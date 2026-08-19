@@ -1019,7 +1019,10 @@
           '<span class="bh-window"><span class="bh-window__dot" aria-hidden="true"></span>' + esc(lang) + '</span>' +
         '</div>' +
         (n.brand ? '<p class="bh-deal__brand">' + esc(n.brand) + '</p>' : '') +
-        '<h3 class="bh-deal__name">' + esc(n.name) + '</h3>' +
+        // the daily deal is a product like any other: its name opens it, which
+        // is also the only handle the Director has on this slot. Without it the
+        // Director could pick this item and then silently click nothing.
+        '<h3 class="bh-deal__name"><a href="#bh-main" data-bh-open>' + esc(n.name) + '</a></h3>' +
         (n.blurb ? '<p class="bh-deal__blurb">' + esc(n.blurb) + '</p>' : '') +
         '<div class="bh-deal__price">' + priceHtml(n) + '</div>' +
         starsHtml(n) +
@@ -1554,6 +1557,15 @@
     discovery_rail:    'lower down the page'
   };
   function slotTitle(id) { return (SLOT_META[id] && SLOT_META[id].title) || id || 'the page'; }
+  /** Where on the page a slot lives, in the words a presenter would actually
+      use out loud — so the ledger line and the ring agree about the location. */
+  function pagePlace(slotId) {
+    var sec = document.getElementById('bh-slot-' + slotId);
+    var docH = document.documentElement.scrollHeight || 0;
+    if (!sec || !docH) return 'on this page';
+    var f = (sec.offsetTop + sec.offsetHeight / 2) / docH;
+    return f < 0.28 ? 'near the top' : (f < 0.62 ? 'mid-page' : 'further down');
+  }
   function slotWhere(id) { return SLOT_WHERE[id] || 'on the page'; }
 
   /* ══════════════════════════════════════════════════════════════════════
@@ -1639,16 +1651,28 @@
     var host = $('bh-story'); if (!host) return;
     var empty = $('bh-story-empty');
     if (empty) empty.hidden = story.length > 0;
-    host.innerHTML = story.map(function (e) {
-      return '<li class="bh-story__row' + (e.kind === 'beat' ? ' bh-story__row--beat' : '') + '">' +
+    // REVERSE-CHRONOLOGICAL: the newest entry is the FIRST row, and every older
+    // one is pushed down. `story` itself stays in true chronological order —
+    // storyEnd, directorResult and the beat de-duper all read its tail — so only
+    // the rendering is flipped, never the data.
+    // Render from a timestamp-sorted copy: caption entries join the array late
+    // (when the next caption replaces them) carrying their original show-time,
+    // so ARRAY order is not TIME order. The data array stays untouched.
+    var view = story.slice().sort(function (a, b) { return (a.t || 0) - (b.t || 0); });
+    var rows = [];
+    for (var i = view.length - 1; i >= 0; i--) {
+      var e = view[i];
+      rows.push('<li class="bh-story__row' + (e.kind === 'beat' ? ' bh-story__row--beat' : '') + '">' +
         '<span class="bh-story__t">' + esc(storyStamp(e.t)) + '</span>' +
         '<p class="bh-story__act">' + esc(e.act) + '</p>' +
         (e.math ? '<p class="bh-story__math">' + esc(e.math) + '</p>' : '') +
         (e.cons ? '<p class="bh-story__cons">' + esc(e.cons) + '</p>' : '') +
-      '</li>';
-    }).join('');
-    // newest at the bottom, and the presenter never has to chase it
-    if (activeTab === 'story') panelToBottom();
+      '</li>');
+    }
+    host.innerHTML = rows.join('');
+    // newest at the TOP, so the feed's resting position IS the latest line and
+    // the presenter never has to chase it downwards
+    if (activeTab === 'story') panelToNewest();
   }
 
   function storyAdd(e) {
@@ -1933,26 +1957,162 @@
   var cameraFlying = false;
   var panelScrollWanted = false;
 
-  function panelToBottom() {
+  /* The ledger reads newest-first, so "show me the newest line" is scrollTop 0. */
+  function panelToNewest() {
     if (cameraFlying) { panelScrollWanted = true; return; }
     var sc = $('bh-panel-scroll');
-    if (sc) sc.scrollTop = sc.scrollHeight;
+    if (sc) sc.scrollTop = 0;
+  }
+
+  /* ── WHAT THE ROOM CAN ACTUALLY SEE ──────────────────────────────────────
+     "Inside the viewport" is not the same as "on screen". The caption bar owns
+     a fixed strip along the bottom, the moment toast owns one along the top,
+     and the Glass Box owns the right edge. A rect that clears all three is a
+     rect a person in the room can genuinely look at — and it is the only test
+     the Director is allowed to click on. */
+  function usableFrame() {
+    var vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    var f = { top: 0, left: 0, right: vw, bottom: vh };
+    var toast = $('bh-moment');
+    if (toast && !toast.hidden) {
+      var tr = toast.getBoundingClientRect();
+      if (tr.height) f.top = Math.max(f.top, tr.bottom + 8);
+    }
+    var cap = $('bh-caption');
+    if (cap && !cap.hidden) {
+      var cr = cap.getBoundingClientRect();
+      if (cr.height) f.bottom = Math.min(f.bottom, cr.top - 8);
+    }
+    var panel = $('bh-panel');
+    if (panel && !panel.hidden) {
+      var pr = panel.getBoundingClientRect();
+      if (pr.width && pr.left > 0) f.right = Math.min(f.right, pr.left - 8);
+    }
+    return f;
+  }
+  function rectInside(r, f) {
+    return !!r && r.width > 0 && r.height > 0 &&
+      r.top >= f.top - 1 && r.bottom <= f.bottom + 1 &&
+      r.left >= f.left - 1 && r.right <= f.right + 1;
+  }
+
+  /** Every ancestor that can hide `el` by scrolling — BOTH axes. A rail that
+      scrolls its own X is exactly the blindness this exists to end: the window
+      can be perfectly positioned while the card sits 400px off to the right of
+      its own scroller, invisible, and getting clicked. */
+  function scrollParents(el) {
+    var out = [], p = el && el.parentElement;
+    while (p && p !== document.body && p !== document.documentElement) {
+      var cs = getComputedStyle(p);
+      var sx = (cs.overflowX === 'auto' || cs.overflowX === 'scroll') && p.scrollWidth > p.clientWidth + 1;
+      var sy = (cs.overflowY === 'auto' || cs.overflowY === 'scroll') && p.scrollHeight > p.clientHeight + 1;
+      if (sx || sy) out.push(p);
+      p = p.parentElement;
+    }
+    return out;
+  }
+
+  /** Return only once EVERY scroller involved has actually stopped — the window
+      and each container, on both axes. A guessed duration is how the hand ends
+      up gliding to a rect that has already moved out from under it. */
+  async function scrollsAtRest(boxes, maxMs) {
+    var read = function () {
+      var v = [Math.round(window.pageXOffset || 0), Math.round(window.pageYOffset || 0)];
+      (boxes || []).forEach(function (b) { v.push(Math.round(b.scrollLeft), Math.round(b.scrollTop)); });
+      return v.join(',');
+    };
+    var last = null, still = 0, waited = 0, cap = maxMs || 1800;
+    while (waited < cap) {
+      var now = read();
+      if (now === last) still++; else { still = 0; last = now; }
+      if (still >= 2 && waited >= 240) return;
+      await dwait(80); waited += 80;
+    }
+  }
+
+  /** Put `el` WHOLLY inside the lookable frame — its own scrollers first (so a
+      card off to the right of a rail comes to the middle of that rail), then the
+      window — and hand back only once everything has come to rest.
+
+      This is the entire answer to "it clicked products that were never shown".
+      The old choreography scrolled the window on a fixed 650ms timer, never
+      touched a container's scrollLeft at all, and then measured: a still-moving
+      smooth scroll or an off-to-the-right card both yielded a stale rect, the
+      hand glided to the screen edge, and the click landed on something nobody
+      could see.
+
+      Returns { ok, rect }. ok:false means we could NOT frame it — and the caller
+      must refuse to click rather than press thin air. */
+  async function bringIntoView(el, opts) {
+    if (!el) return { ok: false, rect: null, why: 'no element' };
+    var o = opts || {};
+    var behavior = prefersCalm() ? 'auto' : 'smooth';
+    var boxes = scrollParents(el);
+    var sec = (el.closest && el.closest('.bh-slot')) || null;
+    var head = (!o.noHead && sec) ? sec.querySelector('.bh-slot__head') : null;
+    var pad = 10;
+
+    for (var pass = 0; pass < 2; pass++) {
+      var f = usableFrame();
+      var r = el.getBoundingClientRect();
+      // 1 · the containers: centre the card on the inline axis, leave the block
+      //     axis alone (the window pass owns that, and it knows about the bars)
+      if (boxes.length || r.left < f.left || r.right > f.right) {
+        try { el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: pass ? 'auto' : behavior }); }
+        catch (e) { try { el.scrollIntoView(); } catch (e2) {} }
+        await scrollsAtRest(boxes, 1800);
+      }
+      // 2 · the window: the card, and — when there is room for both — the slot
+      //     header above it, so the room reads WHERE before it reads WHAT
+      f = usableFrame();
+      r = el.getBoundingClientRect();
+      var availH = f.bottom - f.top;
+      var wantTop;
+      if (r.height >= availH - pad * 2) {
+        wantTop = f.top + pad;                       // taller than the band: read it from its top
+      } else {
+        var lead = 0;
+        if (head) {
+          var hr = head.getBoundingClientRect();
+          if (hr.height) lead = Math.max(0, r.top - hr.top);
+        }
+        wantTop = (lead && lead + r.height <= availH - pad * 2)
+          ? f.top + pad + lead
+          : f.top + Math.max(pad, (availH - r.height) / 2);
+      }
+      var dy = Math.round(r.top - wantTop);
+      if (Math.abs(dy) > 2) {
+        try { window.scrollBy({ top: dy, behavior: pass ? 'auto' : behavior }); }
+        catch (e3) { window.scrollBy(0, dy); }
+        await scrollsAtRest(boxes, 1800);
+      }
+      var out = el.getBoundingClientRect();
+      if (rectInside(out, usableFrame())) return { ok: true, rect: out };
+      // The frame moved under us mid-flight (a toast appeared, a recompose
+      // reflowed the page). One corrective pass — then we fail loudly.
+    }
+    return { ok: false, rect: el.getBoundingClientRect(), why: 'could not frame' };
   }
 
   /** Travel to the changed region, THEN hand back so it can light up. */
   function cameraTo(el, then) {
     var done = function () {
       cameraFlying = false;
-      if (panelScrollWanted) { panelScrollWanted = false; if (activeTab === 'story') panelToBottom(); }
+      if (panelScrollWanted) { panelScrollWanted = false; if (activeTab === 'story') panelToNewest(); }
       if (then) then();
     };
     if (!el) { done(); return; }
     var calm = prefersCalm();
     var r = el.getBoundingClientRect();
-    var vh = window.innerHeight || document.documentElement.clientHeight || 0;
-    if (r.top >= 0 && r.bottom <= vh) { setTimeout(done, 120); return; }   // already framed
-    // a region taller than the frame is read from its top, never its middle
-    var block = (r.height > vh - 80) ? 'start' : 'center';
+    var f = usableFrame();
+    if (rectInside(r, f)) { setTimeout(done, 120); return; }               // already framed
+    // A TALL SLOT IS READ FROM ITS TOP. Cards are tall and narrow, so a rail of
+    // five almost fills the frame — and "centering" it shows a wall of card-mass
+    // with the header (the WHERE) scrolled off above. Anything over ~65% of the
+    // lookable band aligns top instead, and scroll-margin-top keeps the title
+    // clear of the toast.
+    var block = (r.height > (f.bottom - f.top) * 0.65) ? 'start' : 'center';
     cameraFlying = true;
     try { el.scrollIntoView({ block: block, behavior: calm ? 'auto' : 'smooth' }); }
     catch (e) { el.scrollIntoView(); }
@@ -2898,7 +3058,7 @@
     // the dot exists to say "a threshold was crossed while you were elsewhere"
     if (name === 'affinity') { var d = $('bh-tab-dot'); if (d) d.hidden = true; }
     lsSet(NS + 'tab', name);
-    if (name === 'story') panelToBottom();
+    if (name === 'story') panelToNewest();
     else if (!cameraFlying) { var sc = $('bh-panel-scroll'); if (sc) sc.scrollTop = 0; }
   }
   function initTabs() {
@@ -3275,32 +3435,101 @@
      Everything the Director does to the page goes through one of these, and
      each one ends in a real .click() on a real element. */
 
-  /** Take the room to a card, show the hand click it, then click it for real. */
+  /** Take the room to a card, show the hand click it, then click it for real.
+
+      ORDER MATTERS, and it is the whole fix: ring the widget → scroll every
+      scroller that could be hiding the card (window vertically, containers
+      horizontally) → wait for all of them to STOP → measure → only then move the
+      hand → press. A click on an element the room cannot see is a bug, and it
+      fails loudly here rather than silently on stage. */
   async function directorClickCard(itemId, selector) {
     var card = document.querySelector('[data-bh-card][data-bh-item="' + itemId + '"]');
-    if (!card) return false;
-    // Only travel if we have to. Every scroll drags real cards through the
-    // impression threshold, and those views are counted — so the Director
-    // holds still when the card it wants is already on screen.
-    var r = card.getBoundingClientRect();
-    var visible = r.top >= 0 && r.bottom <= (window.innerHeight || 0);
-    if (!visible) {
-      card.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      await dwait(DIRECTOR.scrollSettleMs);
+    var target = card && card.querySelector(selector || '[data-bh-open]');
+    if (!target) {
+      // A recompose between beats can carry the chosen item off the page. That
+      // used to be a SILENT no-click — the caption said "click 3 of 3" and
+      // nothing happened. Say so.
+      console.warn('[BrightHour Director] skipped a click: item no longer on the page',
+        { item: itemId, cardFound: !!card });
+      return false;
     }
-    card.classList.add('bh-director-pulse');
-    var target = card.querySelector(selector || '[data-bh-open]');
-    await cursorTo(target || card);
-    await dwait(DIRECTOR.pulseMs);
-    // the ledger opens BEFORE the event, so the "before" scores are the real ones
-    storyBeginForCard(card);
-    director.actionAt = Date.now();
-    await cursorPress();
-    if (target) target.click();           // ← the real click, real handler, real event
-    card.classList.remove('bh-director-pulse');
-    await dwait(DIRECTOR.afterClickMs);
-    return !!target;
+    var sec = (card.closest && card.closest('.bh-slot')) || null;
+    // THE ATTENTION RING: the room's eyes arrive before the cursor does. Navy
+    // and dashed, so it can never be read as the coral "this just changed".
+    if (sec && !prefersCalm()) sec.classList.add('bh-aimring');
+    try {
+      // Only travel if we have to — every scroll drags real cards through the
+      // impression threshold and those views are counted. But "have to" now
+      // means WHOLLY inside the lookable frame, containers included.
+      var framed = { ok: rectInside(target.getBoundingClientRect(), usableFrame()) &&
+                         rectInside(card.getBoundingClientRect(), usableFrame()),
+                     rect: target.getBoundingClientRect() };
+      if (!framed.ok) framed = await bringIntoView(card);
+      // the card is framed; the thing we press lives inside it, so verify that
+      var tr = target.getBoundingClientRect();
+      if (!framed.ok || !rectInside(tr, usableFrame())) {
+        framed = await bringIntoView(target, { noHead: true });   // one re-scroll, aimed at the target
+        tr = target.getBoundingClientRect();
+      }
+      if (!rectInside(tr, usableFrame())) {
+        // ASSERT: never click what nobody can see.
+        console.error('[BrightHour Director] REFUSED to click an off-screen target — ' +
+          'this is a bug in the click choreography, not a beat.',
+          { item: itemId, rect: tr, frame: usableFrame(), why: framed.why || 'not contained' });
+        return false;
+      }
+
+      card.classList.add('bh-director-pulse');
+      await cursorTo(target);
+      await dwait(DIRECTOR.pulseMs);
+      // Last look before the press. Nothing should have moved — but if a late
+      // reflow nudged the target, re-aim so the ripple lands ON the card rather
+      // than where the card used to be.
+      var now = target.getBoundingClientRect();
+      if (!rectInside(now, usableFrame())) {
+        console.error('[BrightHour Director] target left the frame between aim and press',
+          { item: itemId, rect: now, frame: usableFrame() });
+        card.classList.remove('bh-director-pulse');
+        return false;
+      }
+      if (Math.abs(now.left - tr.left) > 4 || Math.abs(now.top - tr.top) > 4) await cursorTo(target);
+      // the ledger opens BEFORE the event, so the "before" scores are the real ones
+      storyBeginForCard(card);
+      director.actionAt = Date.now();
+      directorAudit(itemId, target);
+      await cursorPress();
+      target.click();                     // ← the real click, real handler, real event
+      card.classList.remove('bh-director-pulse');
+      await dwait(DIRECTOR.afterClickMs);
+      return true;
+    } finally {
+      if (sec) sec.classList.remove('bh-aimring');
+    }
   }
+
+  /* The proof, kept where a harness (or a suspicious presenter) can read it: at
+     every press, where the hand was, where the target was, and whether the two
+     were inside the lookable frame. */
+  function directorAudit(itemId, target) {
+    var r = target.getBoundingClientRect(), f = usableFrame();
+    var rec = {
+      item: itemId, t: Date.now(),
+      cursor: { x: ghost.x, y: ghost.y },
+      rect: { top: r.top, left: r.left, bottom: r.bottom, right: r.right },
+      frame: f,
+      inFrame: rectInside(r, f),
+      cursorOnTarget: ghost.x != null &&
+        ghost.x >= r.left && ghost.x <= r.right && ghost.y >= r.top && ghost.y <= r.bottom
+    };
+    (window.__bhClicks = window.__bhClicks || []).push(rec);
+    if (!rec.inFrame || !rec.cursorOnTarget) {
+      console.error('[BrightHour Director] click landed off-target or off-screen', rec);
+    }
+    return rec;
+  }
+  // one named handle so a headless harness can exercise the click choreography
+  // in isolation — same code path the arc uses, no test-only branch inside it
+  window.__bhClickCard = directorClickCard;
 
   /** Click one of the presenter's own controls — with the same visible hand.
       The control's own tab is brought forward first: a switch thrown on a tab
@@ -3342,8 +3571,13 @@
     if (!name) name = cardName(card);
     var key = catKey(cat) || 'this';
     storyClicks[key] = (storyClicks[key] || 0) + 1;
+    // WHERE, in the same words as the ring the room just watched: the entry
+    // names the very widget the attention ring was drawn around.
+    var sec = (card.closest && card.closest('.bh-slot')) || null;
+    var slotId = (sec && sec.getAttribute('data-bh-slotsection')) || card.getAttribute('data-bh-slot') || '';
+    var where = slotId ? ' in ' + slotTitle(slotId) + ', ' + pagePlace(slotId) : '';
     storyBegin({
-      act: 'Clicked ' + (name || id) + ' — ' + ordinal(storyClicks[key]) + ' ' + (cat || 'product') + ' click.',
+      act: 'Clicked ' + (name || id) + where + ' — ' + ordinal(storyClicks[key]) + ' ' + (cat || 'product') + ' click.',
       weight: ACTION_WEIGHT.product_click,
       focus: cat ? { dim: 'category', value: cat } : null
     });
@@ -3475,10 +3709,23 @@
       return;
     }
 
+    var clicked = {};
     for (var i = 0; i < picks.length; i++) {
-      caption('Click ' + (i + 1) + ' of 3 — ' + picks[i].name,
+      // RE-RESOLVE AT CLICK TIME. The three ids were chosen before the first
+      // click, and every recompose in between can carry one of them off the
+      // page — which presented to the room as "Click 3 of 3" followed by
+      // nothing happening at all. If the pick has gone, take another kitchen
+      // card that is genuinely on the page and has not been clicked yet.
+      var pick = picks[i];
+      if (clicked[pick.id] || !document.querySelector('[data-bh-card][data-bh-item="' + pick.id + '"]')) {
+        var fresh = itemsOnScreenByCat('kitchen', 8).filter(function (x) { return !clicked[x.id]; });
+        if (!fresh.length) break;
+        pick = fresh[0];
+      }
+      clicked[pick.id] = 1;
+      caption('Click ' + (i + 1) + ' of 3 — ' + pick.name,
         i === 0 ? 'Nobody has told this page who she is. Watch the category axis.' : '');
-      await directorClickCard(picks[i].id);
+      await directorClickCard(pick.id);
       var r = dimReading('category');
       var reading = r
         ? 'category ' + r.score.toFixed(2) + ' (θin ' + r.thetaIn.toFixed(2) + ')'

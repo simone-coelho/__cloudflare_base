@@ -274,6 +274,8 @@ button, input, select { font: inherit; color: inherit; }
 .bh-deal__media { background: var(--bh-packshot); border: 1px solid var(--bh-greige-2); }
 .bh-deal__brand { font-size: .875rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--bh-ink); margin: 0 0 6px; }
 .bh-deal__name { font-size: 1.625rem; margin: 0 0 10px; }
+.bh-deal__name a { color: inherit; text-decoration: none; }
+.bh-deal__name a:hover { text-decoration: underline; }
 .bh-deal__blurb { margin: 0 0 18px; max-width: 56ch; }
 .bh-deal__meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 0 0 16px; }
 .bh-deal__actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 18px; }
@@ -294,7 +296,7 @@ button, input, select { font: inherit; color: inherit; }
 .bh-card {
   position: relative;                 /* the NEW PICK badge anchors here */
   display: flex; flex-direction: column;
-  background: var(--bh-white); border: 1px solid var(--bh-greige-2); padding: 12px;
+  background: var(--bh-white); border: 1px solid var(--bh-greige-2); padding: 10px;
 }
 .bh-card:hover { border-color: var(--bh-border); }
 
@@ -333,16 +335,18 @@ button, input, select { font: inherit; color: inherit; }
    matches the card copy and rides the text resizer's family, not its size */
 .bh-frame svg text { font-family: var(--bh-text); font-weight: 500; }
 
-.bh-card__body { display: flex; flex-direction: column; flex: 1 1 auto; padding-top: 10px; }
-.bh-card__brand { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--bh-ink); margin: 0 0 4px; }
+.bh-card__body { display: flex; flex-direction: column; flex: 1 1 auto; padding-top: 8px; }
+.bh-card__brand { font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--bh-ink); margin: 0 0 2px; }
+/* two lines, not three (density pass): the third line of a description has
+   never been the sale, and it cost the room a slot header's worth of frame */
 .bh-card__desc {
-  margin: 0 0 10px; font-size: .9375rem; color: var(--bh-body);
-  display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical;
+  margin: 0 0 6px; font-size: .875rem; line-height: 1.4; color: var(--bh-body);
+  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .bh-card__desc a { color: var(--bh-body); text-decoration: none; }
 .bh-card__desc a:hover { text-decoration: underline; }
-.bh-card__foot { margin-top: auto; padding-top: 10px; }
+.bh-card__foot { margin-top: auto; padding-top: 7px; }
 
 /* ---- badges (A5): style from the CODE, text from the merchandiser label ---- */
 .bh-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 8px; min-height: 0; }
@@ -404,6 +408,35 @@ button, input, select { font: inherit; color: inherit; }
 }
 .bh-qty button:hover { background: var(--bh-greige-1); }
 .bh-qty__val { min-width: 44px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: var(--bh-ink); border-inline: 1px solid var(--bh-border); }
+
+/* ============================================================================
+   DENSITY PASS — GRID CARDS ONLY
+   A rail of five 700px cards fills a 900px viewport by itself, so framing one
+   showed a wall of card-mass with the slot header scrolled off above it. Every
+   rule below tightens RHYTHM — paddings, margins, control heights, type scale
+   — inside .bh-card only, so the daily-deal block and the hero keep their
+   generous sizing and every design token is untouched.
+
+   NOTHING here touches .bh-frame: aspect-ratio still governs, so grid cards
+   stay exactly 1:1 and reco tiles exactly 0.889. That is the whole point of
+   putting the ratio on the frame instead of on the card.
+   ========================================================================== */
+.bh-card .bh-badges { margin: 6px 0 5px; }
+.bh-card .bh-badge { padding: 3px 7px; }
+.bh-card .bh-onair__aired { margin: 0 0 4px; }
+.bh-card .bh-price { margin: 0 0 2px; }
+.bh-card .bh-price__sell { font-size: 1.125rem; }
+.bh-card .bh-price__compare { font-size: .75rem; margin: 0 0 2px; }
+.bh-card .bh-paylines { margin: 0 0 5px; }
+.bh-card .bh-payline { font-size: .8125rem; line-height: 1.35; }
+.bh-card .bh-rating { margin: 3px 0 6px; gap: 6px; }
+.bh-card .bh-stars { font-size: 15px; letter-spacing: 3px; }
+.bh-card .bh-avail { font-size: .75rem; margin: 0 0 6px; }
+/* the stepper keeps a comfortable target (A9's 50+ affordance) — 36px, not 40 */
+.bh-card .bh-qty { margin: 0 0 7px; }
+.bh-card .bh-qty button { width: 36px; min-height: 36px; font-size: 1.125rem; }
+.bh-card .bh-qty__val { min-width: 40px; }
+.bh-card .bh-btn { padding: 9px 12px; font-size: .9375rem; }
 
 /* ---- category tiles ---- */
 .bh-cats { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
@@ -763,6 +796,26 @@ button, input, select { font: inherit; color: inherit; }
   box-shadow: 0 0 0 7px rgba(239,122,94,.20);
   animation: bh-slot-ring 1.1s ease-out 1;
 }
+/* THE ATTENTION RING — where the action is ABOUT to happen. Drawn around the
+   whole widget the instant a Director click phase opens, so the room's eyes
+   arrive before the cursor does, and removed the moment the phase ends (the
+   camera's coral ring may then replace it).
+
+   Deliberately NOT coral and deliberately dashed: "look here next" and "this
+   just changed" are two different statements, and a room that cannot tell them
+   apart learns nothing from either. Ink/navy, same outline geometry as the
+   coral ring so neither can widen the page it is ringing. */
+@keyframes bh-aim-ring {
+  0%   { outline-color: rgba(35,48,71,0);   box-shadow: 0 0 0 0 rgba(35,48,71,0); }
+  100% { outline-color: rgba(35,48,71,.95); box-shadow: 0 0 0 8px rgba(35,48,71,.13); }
+}
+.bh-aimring {
+  position: relative; z-index: 2;
+  outline: 3px dashed #233047; outline-offset: 6px;
+  box-shadow: 0 0 0 8px rgba(35,48,71,.13);
+  animation: bh-aim-ring .45s ease-out 1;
+}
+
 /* the label chip, ATTACHED to the ring — says what changed, and stays */
 .bh-slotchip {
   position: absolute; top: -13px; left: 14px; z-index: 3;
