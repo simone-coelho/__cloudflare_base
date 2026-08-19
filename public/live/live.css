@@ -214,7 +214,10 @@ button, input, select { font: inherit; color: inherit; }
    SLOTS
    ========================================================================== */
 .bh-main { display: block; }
-.bh-slot { margin: 0 0 40px; scroll-margin-top: 20px; }
+/* scroll-margin clears the moment toast's band (fixed, top 16px, ~56px tall):
+   when the camera lands a tall slot at its TOP, the toast must not sit on the
+   very title it is naming. */
+.bh-slot { margin: 0 0 40px; scroll-margin-top: 88px; }
 .bh-slot__head {
   display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
   flex-wrap: wrap; margin: 0 0 14px;
@@ -688,6 +691,32 @@ button, input, select { font: inherit; color: inherit; }
   100% { transform: translateX(0); }
 }
 .bh-moved { animation: bh-moved-cue .45s ease-out 1; }
+
+/* THE CAMERA'S RING — the whole slot, once the camera has actually put it on
+   screen. Outline-only, and its offset (6px) sits inside the shell's 20px
+   gutter, so a ring can never widen the page it is ringing. */
+@keyframes bh-slot-ring {
+  0%   { outline-color: rgba(239,122,94,0); }
+  10%  { outline-color: rgba(239,122,94,1); }
+  72%  { outline-color: rgba(239,122,94,1); }
+  100% { outline-color: rgba(239,122,94,0); }
+}
+.bh-slotring {
+  outline: 3px solid rgba(239,122,94,0); outline-offset: 6px;
+  animation: bh-slot-ring 2.5s ease-out 1;
+}
+/* Armed, not playing: a mark waits here until it intersects the viewport, so
+   nothing can expire off-screen while the presenter is still talking. The
+   Director's pre-click pulse is exempt — it is a pointer, not a change mark. */
+[data-bh-pending]:not(.bh-director-pulse) { animation: none !important; }
+
+/* a module that LEFT — the removal stated where it happened */
+.bh-gapnote {
+  margin: 0 0 40px; padding: 12px 16px; scroll-margin-top: 88px;
+  background: var(--bh-greige-1); border-left: 3px solid var(--bh-coral);
+  font-family: var(--bh-head); font-size: 14px; color: var(--bh-ink);
+}
+
 /* structural, so it survives reduced-motion */
 .bh-pip {
   display: inline-block; margin-left: 8px; vertical-align: middle;

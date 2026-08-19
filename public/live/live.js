@@ -1338,7 +1338,7 @@
 
   /** True diff: which cards are new, which moved, which slots flipped. */
   function diffComposition(prev, next) {
-    var out = { fresh: {}, moved: {}, flipped: [], any: false };
+    var out = { fresh: {}, moved: {}, flipped: [], added: [], removed: [], gapBefore: null, any: false };
     if (!prev) return out;                       // first paint is not a change
     Object.keys(next).forEach(function (slot) {
       var a = prev[slot], b = next[slot];
@@ -1353,6 +1353,19 @@
         out.any = true;
       }
     });
+    // A module that ARRIVED or LEFT is a change too — mission mode removes
+    // whole slots, and a page that quietly loses three modules has told the
+    // room nothing. gapBefore is the surviving slot the removal happened
+    // above, so the camera has somewhere true to point.
+    var prevKeys = Object.keys(prev);
+    out.added = Object.keys(next).filter(function (s) { return !prev[s]; });
+    out.removed = prevKeys.filter(function (s) { return !next[s]; });
+    if (out.added.length || out.removed.length) out.any = true;
+    if (out.removed.length) {
+      for (var k = prevKeys.indexOf(out.removed[0]) + 1; k < prevKeys.length; k++) {
+        if (next[prevKeys[k]]) { out.gapBefore = prevKeys[k]; break; }
+      }
+    }
     return out;
   }
 
@@ -1389,6 +1402,11 @@
     }
     if (c.kind === 'desk' && flip) {
       return 'A new offer went live — approved at the desk, now on the floor.';
+    }
+    if (c.kind === 'stock') {
+      return flip
+        ? 'Today’s Bright One moved to the next eligible item.'
+        : 'Availability changed — this visitor keeps the item, in waitlist language.';
     }
     if (c.kind === 'quota') {
       return state.quotaEnabled
@@ -1471,11 +1489,11 @@
     // catalog actually says, or the request is silently ignored.
     var label = (CATS[key] && CATS[key].label) || key;
     state.focusCategory = label || null;
+    // The camera owns the travel now (CAUSE_SLOT.focus → category_rail): it
+    // scrolls the rail into frame and rings it once it is there. A second
+    // scrollIntoView here would fight it and land the room mid-flight.
     setCause('focus', label);
-    fetchPage().then(function () {
-      var rail = $('bh-slot-category_rail');
-      if (rail) rail.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    });
+    fetchPage();
   }
 
   function clearFocus() {
@@ -1506,37 +1524,195 @@
     titles.appendChild(chip);
   }
 
+  /* ══════════════════════════════════════════════════════════════════════
+   * THE CAMERA — no change may happen off-screen.
+   *
+   * A highlight that plays below the fold is worse than no highlight: the
+   * page announces a change in a toast while the room is looking at the
+   * wrong six hundred pixels, and the demo reads as "nothing happened".
+   *
+   * So two rules, and everything below is one of them:
+   *   1. Every recompose that genuinely changed something TRAVELS — the
+   *      primary changed region is scrolled into view before it lights up.
+   *   2. Nothing lights up until it is actually on screen. Marks are ARMED
+   *      (data-bh-pending) and played by an IntersectionObserver, so a
+   *      presenter who scrolls there late still sees the animation instead
+   *      of a timer that expired while they were talking.
+   * ═══════════════════════════════════════════════════════════════════ */
+
+  /* A presenter's control owes the room a LOCATED consequence: the region its
+     switch acts on, whether or not the composition happened to move. */
+  var CAUSE_SLOT = {
+    quota: 'discovery_rail',
+    clock: 'daily_deal',
+    desk:  'daily_deal',
+    stock: 'daily_deal',
+    focus: 'category_rail'
+  };
+
+  var camera = { slot: null, at: 0, msg: null };
+  var markObserver = null;
+
+  function prefersCalm() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  function slotSection(id) { return id ? document.getElementById('bh-slot-' + id) : null; }
+
+  /** Where the room must look: the control's own region, else flipped >
+      fresh > reordered > newly arrived. */
+  function primarySlot(diff, cause) {
+    var want = cause && CAUSE_SLOT[cause.kind];
+    if (want && slotSection(want)) return want;
+    if (!diff) return null;
+    // a mode toggle's consequence is the module that left or came back, which
+    // outranks any re-ranking that rode along with it
+    if (cause && cause.kind === 'mode' && diff.added.length) return diff.added[0];
+    if (diff.flipped.length) return diff.flipped[0].slot;
+    var busiest = function (map) {
+      var counts = {}, best = null;
+      Object.keys(map).forEach(function (id) {
+        var s = map[id];
+        counts[s] = (counts[s] || 0) + 1;
+        if (!best || counts[s] > counts[best]) best = s;
+      });
+      return best;
+    };
+    return busiest(diff.fresh) || busiest(diff.moved) || (diff.added && diff.added[0]) || null;
+  }
+
+  /** Play a mark only once its element is genuinely intersecting the viewport. */
+  function armMarks() {
+    var pend = document.querySelectorAll('[data-bh-pending]');
+    if (!pend.length) return;
+    var play = function (el) {
+      var cls = el.getAttribute('data-bh-pending');
+      var delay = parseInt(el.getAttribute('data-bh-stagger'), 10) || 0;
+      el.removeAttribute('data-bh-pending');
+      if (delay) el.style.animationDelay = delay + 'ms';
+      el.classList.add(cls);
+    };
+    if (!('IntersectionObserver' in window)) {
+      Array.prototype.forEach.call(pend, play);
+      return;
+    }
+    if (markObserver) markObserver.disconnect();
+    markObserver = new IntersectionObserver(function (entries, obs) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        // a slot taller than the viewport can never reach a high ratio, so a
+        // substantial slice of it counts as "on screen" too
+        var slice = e.intersectionRect ? e.intersectionRect.height : 0;
+        if (e.intersectionRatio < 0.15 && slice < 160) return;
+        obs.unobserve(e.target);
+        play(e.target);
+      });
+    }, { threshold: [0, 0.15, 0.5] });
+    Array.prototype.forEach.call(pend, function (el) { markObserver.observe(el); });
+  }
+
+  /** Travel to the changed region, THEN hand back so it can light up. */
+  function cameraTo(el, then) {
+    var done = function () { if (then) then(); };
+    if (!el) { done(); return; }
+    var calm = prefersCalm();
+    var r = el.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    if (r.top >= 0 && r.bottom <= vh) { setTimeout(done, 120); return; }   // already framed
+    // a region taller than the frame is read from its top, never its middle
+    var block = (r.height > vh - 80) ? 'start' : 'center';
+    try { el.scrollIntoView({ block: block, behavior: calm ? 'auto' : 'smooth' }); }
+    catch (e) { el.scrollIntoView(); }
+    if (calm) { setTimeout(done, 120); return; }
+    // Hand back when the travel has actually STOPPED, not on a guessed
+    // duration: a smooth scroll's length depends on how far it had to go, and
+    // a ring that starts mid-flight is a ring the room watches slide away.
+    var last = -1, still = 0, waited = 0;
+    (function settle() {
+      var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+      if (y === last) still++; else { still = 0; last = y; }
+      if ((still >= 2 && waited >= 270) || waited >= 1500) { done(); return; }
+      waited += 90;
+      setTimeout(settle, 90);
+    })();
+  }
+
+  /** A module that LEFT still owes the room a visible, located fact. */
+  function removalNote(diff) {
+    var host = $('bh-slots');
+    if (!host || !diff.removed.length) return null;
+    var note = document.createElement('div');
+    note.className = 'bh-gapnote';
+    note.textContent = diff.removed.length === 1
+      ? ((SLOT_META[diff.removed[0]] && SLOT_META[diff.removed[0]].title) || diff.removed[0]) + ' was removed from this page.'
+      : diff.removed.length + ' modules were removed from this page.';
+    var before = slotSection(diff.gapBefore);
+    if (before) host.insertBefore(note, before); else host.appendChild(note);
+    return note;
+  }
+
   /** Paint the diff onto the new DOM. Nothing changed ⇒ nothing painted. */
   function applyChangeMarks(diff) {
-    if (!diff || !diff.any) { recomposeCause = null; return; }
-    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var cause = recomposeCause || {};
+    var calm = prefersCalm();
+    var changed = !!(diff && diff.any);
+    var target = primarySlot(diff, cause);
+    var note = (changed && diff.removed.length) ? removalNote(diff) : null;
+    var targetEl = slotSection(target);
+    // a mode toggle's consequence IS the gap, so that is what the camera frames
+    if (note && (cause.kind === 'mode' || !targetEl)) { targetEl = note; target = null; }
+    if (!changed && !targetEl) { recomposeCause = null; return; }
 
-    if (!calm) {
+    if (changed && !calm) {
+      // staggered ~150ms so several fresh cards read as a cascade, not a strobe
+      var n = 0;
       Object.keys(diff.fresh).forEach(function (id) {
         var el = document.querySelector('[data-bh-card][data-bh-item="' + id + '"]');
-        if (el) { el.classList.add('bh-new'); setTimeout(function () { el.classList.remove('bh-new'); }, 2100); }
+        if (!el) return;
+        el.setAttribute('data-bh-pending', 'bh-new');
+        el.setAttribute('data-bh-stagger', String((n++) * 150));
       });
       Object.keys(diff.moved).forEach(function (id) {
         var el = document.querySelector('[data-bh-card][data-bh-item="' + id + '"]');
-        if (el) { el.classList.add('bh-moved'); setTimeout(function () { el.classList.remove('bh-moved'); }, 1400); }
+        if (el && !el.hasAttribute('data-bh-pending')) el.setAttribute('data-bh-pending', 'bh-moved');
       });
     }
-    // pips are structural, not decorative — they stay on in reduced-motion
-    diff.flipped.forEach(function (f) {
-      var sec = document.getElementById('bh-slot-' + f.slot);
+
+    // The ring says LOOK HERE; the pip says THIS CHANGED. They are not the
+    // same claim, so a control that aimed the camera gets a ring, and only a
+    // real flip gets a pip.
+    if (!calm) {
+      var ring = {};
+      (changed ? diff.flipped : []).forEach(function (f) { ring[f.slot] = 1; });
+      Object.keys(ring).forEach(function (s) {
+        var sec = slotSection(s);
+        if (sec) sec.setAttribute('data-bh-pending', 'bh-slotring');
+      });
+      if (targetEl && !targetEl.hasAttribute('data-bh-pending')) targetEl.setAttribute('data-bh-pending', 'bh-slotring');
+    }
+
+    // pips are structural, not decorative — they stay on in reduced-motion, and
+    // they PERSIST until the next recompose repaints the slot. No self-expiry:
+    // a presenter who arrives late must still find the marker.
+    (changed ? diff.flipped : []).forEach(function (f) {
+      var sec = slotSection(f.slot);
       var head = sec && sec.querySelector('.bh-slot__titles');
       if (head && !head.querySelector('.bh-pip')) {
         var pip = document.createElement('span');
         pip.className = 'bh-pip';
         pip.textContent = 'changed';
         head.appendChild(pip);
-        setTimeout(function () { if (pip.parentNode) pip.parentNode.removeChild(pip); }, 9000);
       }
     });
 
-    var msg = momentFor(diff, state.payload);
-    if (msg) momentToast(msg);
+    var msg = changed || CAUSE_SLOT[cause.kind] || cause.kind === 'mode' || cause.kind === 'vip'
+      ? momentFor(diff || { fresh: {}, moved: {}, flipped: [] }, state.payload) : null;
     recomposeCause = null;
+    // recompose → travel → ring and sweep IN VIEW → the toast names it
+    cameraTo(targetEl, function () {
+      armMarks();
+      if (msg) momentToast(msg);
+      camera.slot = target; camera.at = Date.now(); camera.msg = msg;
+    });
   }
 
   /* -- boundary refresh. Never polling: one timer, aimed at nextTransitionAt. --
@@ -2025,6 +2201,9 @@
     var snap = state.affinity || p.affinitySnapshot || {};
     var values = snap.dims || snap.dimensions || snap;
     var cfg = state.reflexConfig || {};
+    // Several bars moving at once must read as a cascade, not a strobe: each
+    // flash starts ~150ms after the one above it.
+    var flashN = 0;
 
     host.innerHTML = DIMENSIONS.map(function (d) {
       // θ and τ come from the ENGINE's own config when it reports it — the panel
@@ -2055,6 +2234,7 @@
       var recentCross = hot && (Date.now() - (DIM_CROSSED[d.key] || 0) < 6000);
       var cls = 'bh-dim' + (crossed ? ' bh-dim--crossed' : (moved ? ' bh-dim--moved' : ''));
       if (moved) DIM_MOVED_KEY = d.key;
+      var flashDelay = moved ? (flashN++ * 150) : 0;
 
       return '<div class="' + cls + '" data-bh-dim="' + esc(d.key) + '">' +
         '<div class="bh-dim__row">' +
@@ -2063,7 +2243,7 @@
           '</span>' +
           '<span class="bh-dim__val">' + readout + '</span>' +
         '</div>' +
-        '<div class="bh-dim__track">' +
+        '<div class="bh-dim__track"' + (flashDelay ? ' style="animation-delay:' + flashDelay + 'ms"' : '') + '>' +
           '<div class="bh-dim__bar' + (hot ? ' bh-dim__bar--hot' : '') + '" style="width:' + (Math.max(0, Math.min(1, v)) * 100).toFixed(1) + '%"></div>' +
           '<div class="bh-dim__theta bh-dim__theta--out" style="left:' + (thetaOut * 100).toFixed(1) + '%"></div>' +
           '<div class="bh-dim__theta bh-dim__theta--in" style="left:' + (thetaIn * 100).toFixed(1) + '%"></div>' +
@@ -2492,6 +2672,8 @@
     pulseMs: 1500,          // how long the highlight sits before the click lands
     afterClickMs: 1500,     // let the event flush and the bars re-read
     recomposeMs: 1900,      // let a recompose paint
+    resultWaitMs: 3600,     // how long a beat waits for the camera to travel
+    resultHoldMs: 2400,     // the ring plays IN VIEW before the beat moves on
     beatPauseMs: 4500,      // the big pause BETWEEN beats in the full arc
     readMs: 6000,           // time to let the room read a caption
     overlayMs: 11000,       // time an overlay card stays up
@@ -2505,7 +2687,7 @@
 
   var director = {
     running: false, paused: false, stopping: false, skipping: false,
-    arc: false, index: 0, total: 0, label: '', done: {}
+    arc: false, index: 0, total: 0, label: '', done: {}, actionAt: 0
   };
 
   /* ---- caption bar: what is happening + the line the presenter says ---- */
@@ -2567,6 +2749,7 @@
     card.classList.add('bh-director-pulse');
     await dwait(DIRECTOR.pulseMs);
     var target = card.querySelector(selector || '[data-bh-open]');
+    director.actionAt = Date.now();
     if (target) target.click();           // ← the real click, real handler, real event
     card.classList.remove('bh-director-pulse');
     await dwait(DIRECTOR.afterClickMs);
@@ -2579,9 +2762,29 @@
     if (!el) return false;
     // A Director-initiated New Viewer is part of a scenario, not an abort of it.
     if (id === 'bh-ops-newviewer') director.internalReset = true;
+    director.actionAt = Date.now();
     el.click();
     director.internalReset = false;
     await dwait(settleMs == null ? DIRECTOR.recomposeMs : settleMs);
+    return true;
+  }
+
+  /* ---- THE RESULT PHASE --------------------------------------------------
+     A click is only half a beat. The other half is the room SEEING what the
+     click did: the camera travelling to the region that changed, the ring
+     playing while it is on screen, and the caption naming it.
+
+     Nothing here fabricates a result. It waits for the real recompose, reads
+     what the camera actually framed, and if nothing changed it says nothing —
+     the discipline is still never celebrate a non-event. */
+  async function directorResult(line) {
+    var since = director.actionAt || 0;
+    var waited = 0;
+    while (waited < DIRECTOR.resultWaitMs && camera.at <= since) { await dwait(150); waited += 150; }
+    if (camera.at <= since) return false;
+    var name = (SLOT_META[camera.slot] && SLOT_META[camera.slot].title) || camera.slot;
+    caption(camera.msg || ((name || 'The page') + ' recomposed — on screen now.'), line || '');
+    await dwait(DIRECTOR.resultHoldMs);
     return true;
   }
 
@@ -2676,11 +2879,15 @@
         i === 0 ? 'Nobody has told this page who she is. Watch the category axis.' : '');
       await directorClickCard(picks[i].id);
       var r = dimReading('category');
-      if (r) {
-        caption('Click ' + (i + 1) + ' of 3 registered — category ' + r.score.toFixed(2) +
-          ' (θin ' + r.thetaIn.toFixed(2) + ')', '');
+      var reading = r
+        ? 'category ' + r.score.toFixed(2) + ' (θin ' + r.thetaIn.toFixed(2) + ')'
+        : '';
+      if (r) caption('Click ' + (i + 1) + ' of 3 registered — ' + reading, '');
+      // the result phase: the camera takes the room to what the click moved
+      await directorResult(reading);
+      if (i < picks.length - 1) {
+        await dwait(Math.max(0, DIRECTOR.viewGapMs - DIRECTOR.afterClickMs - DIRECTOR.resultHoldMs));
       }
-      if (i < picks.length - 1) await dwait(Math.max(0, DIRECTOR.viewGapMs - DIRECTOR.afterClickMs));
     }
 
     await dwait(1200);
@@ -2697,12 +2904,13 @@
     caption('Turning the discovery quota OFF…',
       'A fixed share of this page is held open for things the ranking would never pick.');
     await directorClickControl('bh-ops-quota');
-    await dwait(DIRECTOR.readMs - 1500);
+    await directorResult('Watch “Something New to You” — that is the region the switch acts on.');
     caption('Quota off — “Something New to You” collapses into more of the same.',
       'Over-personalization is a failure mode we engineered against, not a promise.');
     await dwait(DIRECTOR.readMs);
     caption('Turning the quota back ON…', '');
     await directorClickControl('bh-ops-quota');
+    await directorResult('The reserved share of the page is back.');
     caption('The reserved picks return — flagged quota_reserved, with affinity near zero.',
       'The merchandiser’s billboard outranks the model, and part of the page is held open on purpose.');
     await dwait(DIRECTOR.readMs);
@@ -2792,7 +3000,9 @@
     await dwait(DIRECTOR.readMs - 1200);
 
     setCause('desk');
+    director.actionAt = Date.now();
     await fetchPage();
+    await directorResult('Approved at the desk, now on the floor.');
     await dwait(DIRECTOR.recomposeMs);
     var occ = slotOccupant('daily_deal');
     caption(occ ? 'On the floor now: ' + occ.name + ' (' + occ.id + ')' : 'Recomposed.',
@@ -2808,6 +3018,7 @@
 
     caption('Advancing the demo clock 24 hours — offer windows only…', '');
     await directorClickControl('bh-ops-clock-24h', DIRECTOR.recomposeMs + 900);
+    await directorResult('Today’s Bright One℠ — the slot the calendar acts on.');
 
     var after = slotOccupant('daily_deal');
     if (before && after && before.id !== after.id) {
@@ -2838,7 +3049,10 @@
       caption('The sell-out call did not answer.', 'Skip this beat.');
       await dwait(DIRECTOR.readMs); return;
     }
+    setCause('stock');
+    director.actionAt = Date.now();
     await fetchPage();
+    await directorResult('Same event, read against this visitor’s own state.');
     await dwait(DIRECTOR.recomposeMs);
 
     var now = slotOccupant('daily_deal');
@@ -2853,6 +3067,8 @@
     await opsApi('/restock/' + encodeURIComponent(occ.id), {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
     });
+    setCause('stock');
+    director.actionAt = Date.now();
     await fetchPage();
     await dwait(DIRECTOR.recomposeMs);
   }
