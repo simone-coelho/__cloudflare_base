@@ -52,7 +52,6 @@
 import type { Env } from '@/types/env';
 import type { PersonalizationUpdate } from './PersonalizationWebSocket';
 import {
-  DEFAULT_REFLEX_CONFIG,
   apply as applyReflex,
   attributesFrom as reflexAttributes,
   emptyState,
@@ -84,6 +83,14 @@ import {
   updateOdpRing,
   upsertOdpProfile,
 } from '@/services/odpLoop';
+import {
+  DEFAULT_SURFACE,
+  audienceKeyPrefixFor,
+  catalogServiceFor,
+  reflexConfigFor,
+  resolveSurface,
+  type DemoSurface,
+} from '@/demos/registry';
 
 /**
  * Storage key `'affinity'` — exactly the record doc 16 §6 / the P2 spec mandates.
@@ -115,6 +122,10 @@ export interface PipelineRecord {
   sessionId: string;
   firstSeen: number;
   sessionCount: number;
+  /** Demo surface this shopper object belongs to (@/demos/registry). ABSENT ⇒
+      'coach' — every record written before the multi-surface split is retail's.
+      Persisted because the alarm/snapshot paths have no event to resolve from. */
+  surface?: DemoSurface;
 }
 
 interface IngestOutcome {
@@ -164,6 +175,16 @@ function catalog(): CatalogService {
   return (_catalog = _catalog ?? new CatalogService());
 }
 
+/**
+ * The catalog a surface scores against. The default surface keeps the isolate-wide
+ * instance above (same object, same graph); other surfaces resolve their own
+ * memoized CatalogService from the registry — this is what makes the trust gate
+ * below surface-aware instead of dropping every foreign product id (P4).
+ */
+async function catalogFor(surface: DemoSurface): Promise<CatalogService> {
+  return surface === DEFAULT_SURFACE ? catalog() : catalogServiceFor(surface);
+}
+
 export class ShopperReflex {
   private state: DurableObjectState;
   private env: Env;
@@ -172,7 +193,7 @@ export class ShopperReflex {
   private affinity: AffinityRecord | null = null;
   private pipeline: PipelineRecord | null = null;
   private loaded = false;
-  private seeded = false;
+  private seeded = new Set<DemoSurface>();
 
   /** Serializes ingest/alarm runs — the reducer is strictly sequential even when
       awaits on KV/ODP would otherwise let events interleave. */
@@ -344,6 +365,7 @@ export class ShopperReflex {
       ...(typeof src.anonymousId === 'string' ? { anonymousId: src.anonymousId } : {}),
       data: src.data && typeof src.data === 'object' ? src.data : {},
       source: typeof src.source === 'string' ? src.source : 'ws',
+      ...(typeof src.surface === 'string' ? { surface: src.surface } : {}),
       // Advisory only — ingest() stamps its own arrival time (§4).
       timestamp: typeof src.timestamp === 'number' ? src.timestamp : Date.now(),
     };
@@ -365,11 +387,21 @@ export class ShopperReflex {
       };
     }
 
+    // Which demo posted this — resolved from the event alone (explicit field, else
+    // `source`, else coach), so the trust gate below can consult the RIGHT catalog
+    // before any storage read.
+    const surface = resolveSurface({
+      source: event.source,
+      surface: event.surface ?? (event.data as Record<string, unknown> | undefined)?.surface as string | undefined,
+    });
+    const surfaceCatalog = await catalogFor(surface);
+    const cfg = await reflexConfigFor(surface);
+
     // Trust & abuse (§12): validate referenced products against the in-memory
     // catalog index — an unknown productId is dropped and counted, never scored.
     const data = event.data ?? {};
     const pid = data.productId ?? data.product_id ?? data.sku;
-    const product = pid != null ? catalog().getProduct(String(pid)) : undefined;
+    const product = pid != null ? surfaceCatalog.getProduct(String(pid)) : undefined;
     if (pid != null && !product) {
       this.dropped.unknownProduct++;
       return {
@@ -386,10 +418,9 @@ export class ShopperReflex {
     }
 
     await this.load();
-    await this.ensureSeeded();
+    await this.ensureSeeded(surface);
     const connectors = getConnectors(this.env); // fresh per run — mirrors the per-request triad
 
-    const cfg = DEFAULT_REFLEX_CONFIG;
     const aff: AffinityRecord = this.affinity ?? {
       shopperId: event.userId,
       reflex: emptyState(cfg),
@@ -406,11 +437,14 @@ export class ShopperReflex {
       sessionId: crypto.randomUUID(), // vuid = SHA-256(this) — session-derived until cutover (§8)
       firstSeen: now,
       sessionCount: 0,
+      // Only non-default surfaces are tagged, so a retail record's stored bytes
+      // are exactly what they were before the split.
+      ...(surface === DEFAULT_SURFACE ? {} : { surface }),
     };
 
     // 1. Behavioral counters — the SAME accrual the request path runs.
     const attributes = { ...pipe.attributes };
-    applyEventToAttributes(attributes, event, catalog());
+    applyEventToAttributes(attributes, event, surfaceCatalog);
     const engagementScore = calculateEngagementScore(attributes);
 
     // 2. The pure core (§4): decay-then-accumulate + hysteresis evaluation.
@@ -436,6 +470,7 @@ export class ShopperReflex {
       anonymousId: event.anonymousId,
       attributes: ctxAttrs,
       segments: pipe.segments,
+      surface, // qualification evaluates only THIS surface's audiences
     };
     const journeyStage = deriveStage(qualCtx);
     ctxAttrs.journey_stage = journeyStage;
@@ -483,8 +518,16 @@ export class ShopperReflex {
     }
 
     // 5. Union (local ∪ reflex ∪ ODP seed) + change detection — same triggers.
+    // The surface namespace is applied to the core's membership keys here so they
+    // match the generated audience keys (prefix '' for coach ⇒ same array).
+    const prefix = audienceKeyPrefixFor(surface);
+    const reflexAudiences = reflex
+      ? prefix
+        ? reflex.state.audiences.map((k) => prefix + k)
+        : reflex.state.audiences
+      : [];
     const newSegments = Array.from(
-      new Set([...localSegments, ...(reflex ? reflex.state.audiences : []), ...odpSeed])
+      new Set([...localSegments, ...reflexAudiences, ...odpSeed])
     );
     const segmentsChanged = hasSegmentChanges(pipe.segments, newSegments);
     const stageChanged = pipe.journeyStage !== journeyStage;
@@ -506,6 +549,7 @@ export class ShopperReflex {
       sessionId: pipe.sessionId,
       firstSeen: pipe.firstSeen,
       sessionCount: pipe.sessionCount + 1,
+      ...(surface === DEFAULT_SURFACE ? {} : { surface }),
     };
 
     // 7. Changed? → decide + push over the DO's OWN sockets, in the same object.
@@ -552,7 +596,9 @@ export class ShopperReflex {
   ): Promise<PersonalizationUpdate> {
     const aff = this.affinity!;
     const pipe = this.pipeline!;
-    const cfg = DEFAULT_REFLEX_CONFIG;
+    const surface = this.surface();
+    const cfg = await reflexConfigFor(surface);
+    const surfaceCatalog = await catalogFor(surface);
     const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
 
     const attributes: Record<string, any> = { ...RETAIL_SIGNAL_DEFAULTS, ...pipe.attributes };
@@ -586,8 +632,8 @@ export class ShopperReflex {
       typeof pipe.attributes.viewed_product_line === 'string'
         ? pipe.attributes.viewed_product_line
         : undefined;
-    const recommendations = catalog().getRecommendations({ line: anchorLine }, pipe.segments, 8);
-    const sortOrder = catalog()
+    const recommendations = surfaceCatalog.getRecommendations({ line: anchorLine }, pipe.segments, 8);
+    const sortOrder = surfaceCatalog
       .sortForSegments(null, pipe.segments, pipe.attributes)
       .slice(0, 24)
       .map((p) => p.id);
@@ -645,7 +691,7 @@ export class ShopperReflex {
       this.affinity.reflex,
       this.affinity.lastSeen,
       now,
-      DEFAULT_REFLEX_CONFIG,
+      await reflexConfigFor(this.surface()),
       this.retentionMs()
     );
     await this.state.storage.setAlarm(at);
@@ -656,7 +702,8 @@ export class ShopperReflex {
       await this.load();
       if (!this.affinity) return; // already erased
       const now = Date.now();
-      const cfg = DEFAULT_REFLEX_CONFIG;
+      const surface = this.surface();
+      const cfg = await reflexConfigFor(surface);
 
       // Retention (§12): idle past N days with no live sockets → self-expire.
       if (now - this.affinity.lastSeen >= this.retentionMs() && this.state.getWebSockets().length === 0) {
@@ -674,7 +721,7 @@ export class ShopperReflex {
 
       const exited = res.changes.exited.length > 0 || res.changes.entered.length > 0;
       if (exited && this.pipeline) {
-        await this.ensureSeeded();
+        await this.ensureSeeded(surface);
         const connectors = getConnectors(this.env);
         // Re-run the qualification tail with the decayed memberships — the union
         // shrinks, decisions revert, and the "they wandered off" push goes out.
@@ -683,6 +730,7 @@ export class ShopperReflex {
           userId: this.affinity.shopperId,
           attributes: ctxAttrs,
           segments: this.pipeline.segments,
+          surface,
         };
         const journeyStage = deriveStage(qualCtx);
         ctxAttrs.journey_stage = journeyStage;
@@ -706,7 +754,14 @@ export class ShopperReflex {
           ));
           this.affinity = { ...this.affinity, odpSeed, odpSeedAt };
         }
-        const newSegments = Array.from(new Set([...localSegments, ...res.state.audiences, ...odpSeed]));
+        const prefix = audienceKeyPrefixFor(surface);
+        const newSegments = Array.from(
+          new Set([
+            ...localSegments,
+            ...(prefix ? res.state.audiences.map((k) => prefix + k) : res.state.audiences),
+            ...odpSeed,
+          ])
+        );
         const changed =
           hasSegmentChanges(this.pipeline.segments, newSegments) ||
           this.pipeline.journeyStage !== journeyStage;
@@ -731,7 +786,7 @@ export class ShopperReflex {
 
   private async handleSnapshot(): Promise<Response> {
     await this.load();
-    const cfg = DEFAULT_REFLEX_CONFIG;
+    const cfg = await reflexConfigFor(this.surface());
     const now = Date.now();
     return json({
       ok: true,
@@ -770,14 +825,19 @@ export class ShopperReflex {
   }
 
   /** Same audiences the request path seeds (idempotent; version-gated to one KV read). */
-  private async ensureSeeded(): Promise<void> {
-    if (this.seeded) return;
+  private async ensureSeeded(surface: DemoSurface = DEFAULT_SURFACE): Promise<void> {
+    if (this.seeded.has(surface)) return;
     try {
-      await ensureAudiencesSeeded(this.env, catalog());
-      this.seeded = true;
+      await ensureAudiencesSeeded(this.env, await catalogFor(surface), surface);
+      this.seeded.add(surface);
     } catch (error) {
       console.error('ShopperReflex: audience seeding failed:', error);
     }
+  }
+
+  /** The surface this shopper object belongs to (persisted; absent ⇒ coach). */
+  private surface(): DemoSurface {
+    return this.pipeline?.surface ?? DEFAULT_SURFACE;
   }
 
   private allowIngest(now: number): boolean {

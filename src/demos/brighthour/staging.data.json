@@ -1,0 +1,44 @@
+{
+  "_meta": {
+    "brand": "The Bright Hour",
+    "surface": "brighthour",
+    "version": "brighthour-staging-v1",
+    "generatedFor": "Beat 2a — the incoming tray (docs/qvc/QVC-Site-Recon-Demo-Design.md §C4 Beat 2)",
+    "provenance": "Wholly fictional. Brands, items, prices and copy are invented for the demo.",
+    "sparsityNote": "This is what a vendor feed row actually carries: an item number, a title, a price, one line of copy — and a category hint that is sometimes absent and sometimes WRONG. Everything the decisioning engine needs (subcategory, brandPersonality, occasion, priceBand, the offer construct) is missing, which is the whole point of Beat 2b: the model proposes it, a merchandiser approves it.",
+    "windowNote": "Staged rows carry NO window. The window is chosen by the human at approval time (Beat 2c) and stored on the Offer Desk record — never here.",
+    "itemCount": 3
+  },
+  "items": [
+    {
+      "itemNumber": "B551204",
+      "name": "Copperline 9-Qt Enamel Dutch Oven — Harvest Red",
+      "brandName": "Copperline",
+      "price_usd": 89.99,
+      "shortDescription": "Nine quarts of enameled cast iron in a deep autumn red, cooktop to table.",
+      "categoryHint": null,
+      "source": "vendor_feed",
+      "receivedOffsetHours": -0.5
+    },
+    {
+      "itemNumber": "B551788",
+      "name": "Lumen House Arc Floor Lamp, Brushed Brass",
+      "brandName": "Lumen House",
+      "price_usd": 168.0,
+      "shortDescription": "A sweeping arc lamp with a weighted marble base and a linen drum shade.",
+      "categoryHint": "Electronics & Tech",
+      "source": "vendor_feed",
+      "receivedOffsetHours": -0.3
+    },
+    {
+      "itemNumber": "B552061",
+      "name": "Vireo Fine Freshwater Pearl Drop Earrings",
+      "brandName": "Vireo Fine",
+      "price_usd": 34.98,
+      "shortDescription": "Cultured freshwater pearls on sterling silver leverbacks.",
+      "categoryHint": "Jewelry",
+      "source": "vendor_feed",
+      "receivedOffsetHours": -0.1
+    }
+  ]
+}

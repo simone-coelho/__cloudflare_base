@@ -33,7 +33,6 @@ import {
 import { CATALOG_FLAG_KEYS } from '@/connectors/DecisionProvider';
 import { SEED_AUDIENCES } from '@/data/seed-audiences';
 import {
-  DEFAULT_REFLEX_CONFIG,
   apply as applyReflex,
   attributesFrom as reflexAttributes,
   extractTouches,
@@ -46,6 +45,15 @@ import {
   regenerateCatalogAudiences,
 } from '@/reflex/audienceGenerator';
 import { odpEnabled, refreshOdpSeedIfDue, updateOdpRing } from '@/services/odpLoop';
+import {
+  DEFAULT_SURFACE,
+  audgenMarkerFor,
+  audienceKeyPrefixFor,
+  catalogServiceFor,
+  reflexConfigFor,
+  resolveSurface,
+  type DemoSurface,
+} from '@/demos/registry';
 
 export interface ActionEvent {
   type:
@@ -64,6 +72,9 @@ export interface ActionEvent {
   data: Record<string, any>;
   timestamp: number;
   source: string;
+  /** Demo surface this event belongs to. Absent ⇒ resolved from `source`, and
+      absent there too ⇒ the default surface (coach). See @/demos/registry. */
+  surface?: string;
 }
 
 export interface UserProfile {
@@ -258,19 +269,30 @@ export function hasSegmentChanges(oldSegments: string[], newSegments: string[]):
  * the generated set so the hot path pays ONE KV read; the diff
  * (regenerateCatalogAudiences) runs only when the catalog or generator config
  * actually changed — and never clobbers pinned/human edits.
+ *
+ * Multi-surface (PH build spec §3): each surface owns its OWN version marker and
+ * its own archive scope, so two demos regenerating over one store cannot archive
+ * each other's audiences on alternating passes. The Coach launch seeds belong to
+ * the default surface and are seeded only on its pass.
  */
-export async function ensureAudiencesSeeded(env: Env, catalogService: CatalogService): Promise<void> {
+export async function ensureAudiencesSeeded(
+  env: Env,
+  catalogService: CatalogService,
+  surface: DemoSurface = DEFAULT_SURFACE
+): Promise<void> {
   const store = new KvAudienceStore(env);
-  await store.seed(SEED_AUDIENCES);
+  if (surface === DEFAULT_SURFACE) await store.seed(SEED_AUDIENCES);
   const generated = generateAffinityAudiences(
     catalogService.getAllProducts() as unknown as Array<Record<string, unknown>>,
-    DEFAULT_REFLEX_CONFIG,
-    DEFAULT_GENERATOR_CONFIG
+    await reflexConfigFor(surface),
+    surface === DEFAULT_SURFACE
+      ? DEFAULT_GENERATOR_CONFIG
+      : { ...DEFAULT_GENERATOR_CONFIG, surface, keyPrefix: audienceKeyPrefixFor(surface) }
   );
   const setHash = generated.map((d) => `${d.key}:${d.generatorHash}`).join('|');
-  const MARKER = 'reflex:audgen:v1';
+  const MARKER = audgenMarkerFor(surface);
   if ((await env.CACHE.get(MARKER)) === setHash) return;
-  const s = await regenerateCatalogAudiences(store, generated);
+  const s = await regenerateCatalogAudiences(store, generated, surface);
   await env.CACHE.put(MARKER, setHash);
   console.log(
     `[reflex] catalog audiences regenerated: +${s.published.length} ~${s.updated.length} −${s.archived.length}` +
@@ -284,8 +306,9 @@ export class RealtimeSegmentEngine {
   private sessionManager: SessionManager;
   private featureVariableManager: FeatureVariableManager;
   private catalogService: CatalogService;
-  /** Audiences are seeded once per engine instance (idempotent on the store regardless). */
-  private seeded = false;
+  /** Audiences are seeded once per engine instance PER SURFACE (idempotent on the
+      store regardless). */
+  private seeded = new Set<DemoSurface>();
 
   constructor(
     env: Env,
@@ -307,20 +330,45 @@ export class RealtimeSegmentEngine {
    * live) always has the seed audiences plus any Opal-created ones to evaluate.
    * Delegates to the exported ensureAudiencesSeeded (shared with the P2 DO).
    */
-  private async ensureSeeded(): Promise<void> {
-    if (this.seeded) return;
+  private async ensureSeeded(surface: DemoSurface = DEFAULT_SURFACE): Promise<void> {
+    if (this.seeded.has(surface)) return;
     try {
-      await ensureAudiencesSeeded(this.env, this.catalogService);
-      this.seeded = true;
+      await ensureAudiencesSeeded(this.env, await this.catalogFor(surface), surface);
+      this.seeded.add(surface);
     } catch (error) {
       console.error('Error seeding audiences:', error);
     }
   }
 
+  /** The surface an event belongs to — explicit field, else `source`, else coach. */
+  private surfaceOf(event: ActionEvent): DemoSurface {
+    return resolveSurface({
+      source: event.source,
+      surface: event.surface ?? (event.data as Record<string, unknown> | undefined)?.surface as string | undefined,
+    });
+  }
+
+  /**
+   * The catalog this surface scores against. The default surface keeps the
+   * instance built in the constructor — same object, same graph, same order — so
+   * nothing about the retail path moves; other surfaces resolve a memoized
+   * per-surface CatalogService from the registry.
+   */
+  private async catalogFor(surface: DemoSurface): Promise<CatalogService> {
+    return surface === DEFAULT_SURFACE ? this.catalogService : catalogServiceFor(surface);
+  }
+
   async processActionEvent(event: ActionEvent, sessionId?: string): Promise<PersonalizationUpdate | null> {
     try {
-      // 0. Seed Coach launch audiences idempotently (cold sessions qualify on first event).
-      await this.ensureSeeded();
+      // 0. Resolve the demo surface this event belongs to, then seed THAT surface's
+      // audiences idempotently (cold sessions qualify on first event). Everything
+      // below reads the surface's catalog + reflex config; 'coach' resolves to the
+      // exact objects this method used before the multi-surface split.
+      const surface = this.surfaceOf(event);
+      const catalogService = await this.catalogFor(surface);
+      const reflexConfig = await reflexConfigFor(surface);
+      const audiencePrefix = audienceKeyPrefixFor(surface);
+      await this.ensureSeeded(surface);
 
       // 1. Get or create session
       const currentSessionId = sessionId || this.sessionManager.generateSessionId();
@@ -350,7 +398,7 @@ export class RealtimeSegmentEngine {
 
       // 2. Apply this event's retail signals to a fresh attribute snapshot.
       const newAttributes = { ...sessionData.attributes };
-      applyEventToAttributes(newAttributes, event, this.catalogService);
+      applyEventToAttributes(newAttributes, event, catalogService);
       const newEngagementScore = calculateEngagementScore(newAttributes);
 
       // 2.5 Edge Affinity Reflex (doc 16): decayed per-dimension affinity via the
@@ -362,18 +410,18 @@ export class RealtimeSegmentEngine {
       if (reflexOn) {
         const data = event.data ?? {};
         const pid = data.productId ?? data.product_id ?? data.sku;
-        const product = pid ? this.catalogService.getProduct(String(pid)) : undefined;
+        const product = pid ? catalogService.getProduct(String(pid)) : undefined;
         const action = String(data.action ?? data.eventName ?? event.type);
         reflex = applyReflex(
           sessionData.reflex,
           {
             action,
             touches: product
-              ? extractTouches(product as unknown as Record<string, unknown>, DEFAULT_REFLEX_CONFIG)
+              ? extractTouches(product as unknown as Record<string, unknown>, reflexConfig)
               : [],
           },
           nowMs,
-          DEFAULT_REFLEX_CONFIG
+          reflexConfig
         );
       }
 
@@ -384,11 +432,12 @@ export class RealtimeSegmentEngine {
         newAttributes,
         sessionData.segments
       );
+      ctx.surface = surface; // qualification evaluates only THIS surface's audiences
       const journeyStage = deriveStage(ctx);
       ctx.attributes.journey_stage = journeyStage; // stage is itself an audience attribute
       // Reflex scores are computed FRESH into the context (never persisted — they
       // decay by construction), so store-published affinity audiences can gte them.
-      if (reflex) Object.assign(ctx.attributes, reflexAttributes(reflex.state, nowMs, DEFAULT_REFLEX_CONFIG));
+      if (reflex) Object.assign(ctx.attributes, reflexAttributes(reflex.state, nowMs, reflexConfig));
       const localSegments = await this.connectors.segments.fetchQualifiedSegments(event.userId, ctx);
       // ODP loop (doc 16 §8): seed/refresh the session's LIVE ODP-qualified audiences.
       // Additive + hard-capped (1.5s in fetchOdpAudiences) — ODP can only ever ADD;
@@ -413,9 +462,17 @@ export class RealtimeSegmentEngine {
       }
       // Union: local evaluation ∪ live reflex memberships ∪ ODP-confirmed seed —
       // any enter/exit drives the same change-detect → persist → decide → push loop.
+      // The reflex core names memberships from the catalog alone; the surface
+      // namespace is applied HERE so they match the generated audience keys
+      // (prefix '' for coach ⇒ the same array, untouched).
+      const reflexAudiences = reflex
+        ? audiencePrefix
+          ? reflex.state.audiences.map((k) => audiencePrefix + k)
+          : reflex.state.audiences
+        : [];
       const newSegments = Array.from(new Set([
         ...localSegments,
-        ...(reflex ? reflex.state.audiences : []),
+        ...reflexAudiences,
         ...odpSeed,
       ]));
 
@@ -428,6 +485,7 @@ export class RealtimeSegmentEngine {
         await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
           ...sessionData,
           attributes: newAttributes,
+          surface,
           reflex: reflex ? reflex.state : sessionData.reflex,
           odpSeed,
           odpSeedAt,
@@ -446,6 +504,7 @@ export class RealtimeSegmentEngine {
       await this.sessionManager.createOrUpdateSession(currentSessionId, event.userId, {
         ...sessionData,
         attributes: newAttributes,
+        surface,
         reflex: reflex ? reflex.state : sessionData.reflex,
         odpSeed,
         odpSeedAt,
@@ -482,7 +541,7 @@ export class RealtimeSegmentEngine {
           // Live affinity payload for the Affinity Instrument (dims use original
           // catalog value names; changed = this event's explain records).
           affinity: reflex
-            ? { ...reflexSnapshot(reflex.state, nowMs, DEFAULT_REFLEX_CONFIG), changed: reflex.changes.explain, odpConfirmed: odpSeed }
+            ? { ...reflexSnapshot(reflex.state, nowMs, reflexConfig), changed: reflex.changes.explain, odpConfirmed: odpSeed }
             : undefined,
           cookies: personalizationConfig.cookieUpdates,
           cookieHeaders: personalizationConfig.cookieHeaders,
@@ -561,12 +620,19 @@ export class RealtimeSegmentEngine {
   // the ShopperReflex DO runs the identical pipeline — see the P2 seam block above.
 
   private async getPersonalizationConfig(sessionData: SessionData, sessionId: string): Promise<PersonalizationConfig> {
+    // The session remembers which demo it belongs to (absent ⇒ coach), so the
+    // config path resolves the same catalog/config the event path scored with.
+    const surface = resolveSurface({ surface: sessionData.surface });
+    const catalogService = await this.catalogFor(surface);
     const attributes = { ...RETAIL_SIGNAL_DEFAULTS, ...sessionData.attributes };
     // Live affinity reads for the decision layer (doc 16 §10 choreography):
     // computed FRESH from the reflex state — they decay by construction, so they
     // are never persisted; the decision sees the score as of THIS moment.
     if ((this.env.REFLEX_ENABLED ?? 'true') !== 'false' && sessionData.reflex) {
-      Object.assign(attributes, reflexAttributes(sessionData.reflex, Date.now(), DEFAULT_REFLEX_CONFIG));
+      Object.assign(
+        attributes,
+        reflexAttributes(sessionData.reflex, Date.now(), await reflexConfigFor(surface))
+      );
     }
 
     const userAttributes = {
@@ -605,12 +671,12 @@ export class RealtimeSegmentEngine {
       typeof sessionData.attributes.viewed_product_line === 'string'
         ? sessionData.attributes.viewed_product_line
         : undefined;
-    const recommendations = this.catalogService.getRecommendations(
+    const recommendations = catalogService.getRecommendations(
       { line: anchorLine },
       sessionData.segments,
       8
     );
-    const sortOrder = this.catalogService
+    const sortOrder = catalogService
       .sortForSegments(null, sessionData.segments, sessionData.attributes)
       .slice(0, 24)
       .map((p) => p.id);
@@ -673,10 +739,11 @@ export class RealtimeSegmentEngine {
 
   // Get user segments for external API calls
   async getUserSegments(userId: string): Promise<string[]> {
-    await this.ensureSeeded();
-
     // Prefer the live session context if one exists, so segments reflect accrued signals.
     const sessionData = await this.sessionManager.getSessionByUserId(userId);
+    const surface = resolveSurface({ surface: sessionData?.surface });
+    await this.ensureSeeded(surface);
+
     const attributes = sessionData?.attributes ?? {};
     const segments = sessionData?.segments ?? [];
     const ctx = this.buildQualificationContext(
@@ -685,6 +752,7 @@ export class RealtimeSegmentEngine {
       attributes,
       segments
     );
+    ctx.surface = surface;
     ctx.attributes.journey_stage = deriveStage(ctx);
     return this.connectors.segments.fetchQualifiedSegments(userId, ctx);
   }
@@ -799,12 +867,12 @@ export class RealtimeSegmentEngine {
    * Get personalization configuration for current session
    */
   async getSessionPersonalizationConfig(sessionId: string): Promise<PersonalizationConfig | null> {
-    await this.ensureSeeded();
-
     const sessionData = await this.sessionManager.getSession(sessionId);
     if (!sessionData) {
+      await this.ensureSeeded();
       return null;
     }
+    await this.ensureSeeded(resolveSurface({ surface: sessionData.surface }));
 
     return this.getPersonalizationConfig(sessionData, sessionId);
   }

@@ -1,0 +1,118 @@
+# Optimizely Data Platform Documentation
+
+> Documentation for Optimizely Data Platform
+
+## Guides
+- [Get started with ODP](https://docs.developers.optimizely.com/optimizely-data-platform/docs/welcome.md): Welcome to the Optimizely Data Platform (ODP) developer documentation.
+- [Implement the ODP JavaScript tag](https://docs.developers.optimizely.com/optimizely-data-platform/docs/implement-the-odp-javascript-tag.md): The Optimizely Data Platform (ODP) JavaScript tag helps you track your website events (like page views) and customer information.
+- [Import historical data](https://docs.developers.optimizely.com/optimizely-data-platform/docs/import-data.md): Optimizely Data Platform (ODP) centralizes your customer, product, order, event and custom data, which you can import via CSV, Amazon S3, the ODP APIs or the Optimizely Commerce Cloud integration.
+- [Import data using CSV](https://docs.developers.optimizely.com/optimizely-data-platform/docs/import-data-using-csv.md): You can import your customer, product, order, event and custom data into Optimizely Data Platform (ODP) using CSV files. You should use this method for historical data uploads rather than ongoing data synchronization.
+- [Import/export data using Amazon S3](https://docs.developers.optimizely.com/optimizely-data-platform/docs/import-data-using-amazon-s3.md): You can import and export your customer, product, order, event, and custom data into Optimizely Data Platform (ODP) using Amazon S3.
+- [Import data from Optimizely Commerce Connect 13 or 14](https://docs.developers.optimizely.com/optimizely-data-platform/docs/import-data-from-optimizely-commerce-cloud.md): Import your customer list, product catalog, and order data from Optimizely Commerce Connect 13 or 14 into Optimizely Data Platform (ODP).
+- [Import data using the ODP APIs](https://docs.developers.optimizely.com/optimizely-data-platform/docs/import-data-using-the-odp-api.md): You can import your customer, product, order, event and custom data into Optimizely Data Platform (ODP) using the ODP APIs. We recommend this method for ongoing data syncing to ODP.
+- [Optimizely Data Platform structure](https://docs.developers.optimizely.com/optimizely-data-platform/docs/odp-data-structure.md): Optimizely Data Platform (ODP) stores customer data in objects and fields that relate to various events (actions customers take). This data is segregated via different ODP accounts.
+- [Customers](https://docs.developers.optimizely.com/optimizely-data-platform/docs/thebasics-customers.md): This topic describes customers and how to identify them in Optimizely Data Platform (ODP).
+- [Identifiers](https://docs.developers.optimizely.com/optimizely-data-platform/docs/thebasics-identifiers.md): Create fields that identify customers, including messaging identifiers that you can then use to contact a customer in a campaign channel in Optimizely Data Platform (ODP).
+- [Consent](https://docs.developers.optimizely.com/optimizely-data-platform/docs/thebasics-consent.md): Describes customer consent in Optimizely Data Platform (ODP).
+- [Lists](https://docs.developers.optimizely.com/optimizely-data-platform/docs/thebasics-lists.md): This topic describes messaging lists and how to manage customer's communication preferences via Optimizely Data Platform's (ODP) Lists APIs.
+- [Events](https://docs.developers.optimizely.com/optimizely-data-platform/docs/thebasics-events.md): Describes events in Optimizely Data Platform (ODP).
+- [Objects and fields](https://docs.developers.optimizely.com/optimizely-data-platform/docs/thebasics-objects-fields.md): This topic describes fields for storing custom metadata in Optimizely Data Platform (ODP).
+- [Products](https://docs.developers.optimizely.com/optimizely-data-platform/docs/usecase-products.md): How to store and upload product data in Optimizely Data Platform (ODP) for an ecommerce use case.
+- [Orders](https://docs.developers.optimizely.com/optimizely-data-platform/docs/usecase-orders.md): Learn about orders in Optimizely Data Platform (ODP) and how to send order data to ODP.
+- [Loyalty and rewards](https://docs.developers.optimizely.com/optimizely-data-platform/docs/usecase-loyalty-and-rewards.md): How to map external data that tracks loyalty points, rewards, and referrals to the Optimizely Data Platform (ODP) schema.
+- [Get started with the ODP Web SDK](https://docs.developers.optimizely.com/optimizely-data-platform/docs/get-started-with-web-sdk.md): How to set up the Web SDK to track events and customer information using Optimizely Data Platform (ODP).
+- [Customers](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-customers.md): How to send customer data to Optimizely Data Platform (ODP) using the Web SDK.
+- [Subscription lists](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-messaging-lists.md): How to subscribe and unsubscribe identifiers from subscription Lists in Optimizely Data Platform (ODP) using the Web SDK.
+- [Consent](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-consent.md): How to update a customer's consent for receiving marketing communication in Optimizely Data Platform (ODP) using the Web SDK.
+- [Anonymize](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-anonymize.md): How to reset the cookie identifier associated with a customer's browser in Optimizely Data Platform (ODP) using the Web SDK.
+- [Legacy subscribe (consent) function](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-legacy-consent-function.md): How to update customer consent via the legacy consent function in Optimizely Data Platform (ODP) using the Web SDK.
+- [Legacy attribute function](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-legacy-attribute-function.md): How to update customer records via the legacy attribute function in Optimizely Data Platform (ODP) using the Web SDK.
+- [Events](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-events.md): Describes events for the Optimizely Data Platform (ODP) Web SDK.
+- [Custom events](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-custom-events.md): You can create custom events in Optimizely Data Platform (ODP) to account for events and fields that are specific to your site and customer experience.
+- [Objects and fields](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-objects-fields.md)
+- [Web push](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-web-push.md): This topic describes web push initialization in Optimizely Data Platform (ODP).
+- [Web modals and embeds](https://docs.developers.optimizely.com/optimizely-data-platform/docs/websdk-web-modals-embeds.md): How to trigger custom scenarios for your web content using Optimizely Data Platform (ODP) Web SDK.
+- [Get started with the ODP React Native SDK](https://docs.developers.optimizely.com/optimizely-data-platform/docs/get-started-with-react-native-sdk.md): This topic describes how to connect your React Native mobile app with the Optimizely Data Platform (ODP) SDK module.
+- [Install and initialize](https://docs.developers.optimizely.com/optimizely-data-platform/docs/reactnativesdk-install-initialize.md): Describes how to set up the Optimizely Data Platform (ODP) SDK module in your React Native application.
+- [Push notifications](https://docs.developers.optimizely.com/optimizely-data-platform/docs/reactnativesdk-push-notifications.md): How to configure push notifications to your mobile device for an Optimizely Data Platform (ODP) campaign.
+- [Advanced push notifications](https://docs.developers.optimizely.com/optimizely-data-platform/docs/reactnativesdk-advanced-push-notifications.md): How to configure more advanced features of push notifications to your mobile device for an Optimizely Data Platform (ODP) campaign.
+- [Customers](https://docs.developers.optimizely.com/optimizely-data-platform/docs/reactnativesdk-customers.md): How to update customer information and identifiers with the Optimizely Data Platform (ODP) React Native SDK.
+- [Events](https://docs.developers.optimizely.com/optimizely-data-platform/docs/reactnativesdk-events.md): This topic describes how send events using the Optimizely Data Platform (ODP) React Native SDK.
+- [API Usage](https://docs.developers.optimizely.com/optimizely-data-platform/docs/realtimesegments-api-usage.md): Learn how to use the Optimizely Data Platform (ODP) Real-Time Segment API.
+- [Real-time segments definition](https://docs.developers.optimizely.com/optimizely-data-platform/docs/realtimesegments-defining-real-time-segments.md): This topic describes the major concepts and building blocks of a real-time segment in Optimizely Data Platform (ODP).
+- [Roadmap to master real-time segments](https://docs.developers.optimizely.com/optimizely-data-platform/docs/realtimesegments-roadmap-for-mastering-real-time-segments.md): This topic describes how to work with real-time segments in Optimizely Data Platform (ODP).
+- [Passthrough audiences](https://docs.developers.optimizely.com/optimizely-data-platform/docs/passthrough-segments.md)
+- [Import audiences without disqualify events](https://docs.developers.optimizely.com/optimizely-data-platform/docs/external-systems-that-cant-produce-disqualify-events.md): Optimize audience management with Optimizely Data Platform (ODP) by seamlessly integrating external systems that cannot generate disqualify events.
+- [Core Concepts](https://docs.developers.optimizely.com/optimizely-data-platform/docs/core-concepts.md): Get started with GraphQL.
+- [Forming calls with GraphQL](https://docs.developers.optimizely.com/optimizely-data-platform/docs/forming-calls-with-graphql.md): Learn how to authenticate to the Optimizely Data Platform's (ODP's) GraphQL API and GraphQL Explore, then learn how to create and run queries.
+- [Query real-time segments](https://docs.developers.optimizely.com/optimizely-data-platform/docs/realtimesegments-querying-real-time-segments.md): This topic describes how to query real-time segments via Optimizely Data Platform's (ODP's) GraphQL API.
+- [Filter Examples](https://docs.developers.optimizely.com/optimizely-data-platform/docs/filter-examples.md): This topic describes two examples of filtering to find specific customers with Optimizely Data Platform's (ODP's) GraphQL API.
+- [Facet queries](https://docs.developers.optimizely.com/optimizely-data-platform/docs/facet-queries.md): Use facet queries in Optimizely Data Platform's (ODP's) GraphQL API to view aggregated sets of customer data.
+- [Query list subscriptions](https://docs.developers.optimizely.com/optimizely-data-platform/docs/list-subscription-querying.md): Use GraphQL to query list subscriptions for a specific customer.
+- [ODP + Commerce Connect 14](https://docs.developers.optimizely.com/optimizely-data-platform/docs/commerce-connect-14-odp.md): Export data from Commerce Connect 14 and import it into Optimizely Data Platform (ODP) (for Commerce Connect 14.13.0)
+- [ODP + Commerce Connect 13](https://docs.developers.optimizely.com/optimizely-data-platform/docs/commerce-connect-13-odp.md): Export multisite Commerce Connect 13 data to Optimizely Data Platform (ODP)
+- [ODP + CMS](https://docs.developers.optimizely.com/optimizely-data-platform/docs/odp-cms-1.md): How to integrate Optimizely Data Platform with Optimizely Content Management System (PaaS) or (SaaS)
+- [ODP + Content Recommendations](https://docs.developers.optimizely.com/optimizely-data-platform/docs/odp-content-recommendations.md): How to integrate Optimizely Data Platform with Optimizely Content Recommendations
+- [Configure real-time audiences to personalize CMS](https://docs.developers.optimizely.com/optimizely-data-platform/docs/odp-cms.md): Configure real-time CMS personalization with Optimizely Data Platform (ODP) to enhance user experiences and drive engagement.
+- [Configure Real-Time Audiences for Web Experimentation](https://docs.developers.optimizely.com/optimizely-data-platform/docs/odp-experimentation.md): You can integrate Optimizely Web Experimentation with Optimizely Data Platform (ODP) to use real-time segments from ODP as audiences in your Optimizely Web Experimentation experiments.
+
+## API Reference
+- [Optimizely Data Platform REST APIs](https://docs.developers.optimizely.com/optimizely-data-platform/reference/introduction.md): Introduces the Optimizely Data Platform (ODP) APIs to integrate your customer data with ODP.
+- [Authentication](https://docs.developers.optimizely.com/optimizely-data-platform/reference/authentication.md): How to authenticate with the Optimizely Data Platform (ODP) APIs.
+- [Batch requests](https://docs.developers.optimizely.com/optimizely-data-platform/reference/batch-requests.md): Upload large amounts of data to the Optimizely Data Platform (ODP) APIs in bulk.
+- [Rate limits](https://docs.developers.optimizely.com/optimizely-data-platform/reference/rate-limits.md): Rate limits on the Optimizely Data Platform (ODP) REST API.
+- [ODP GraphQL and ODP REST API use cases](https://docs.developers.optimizely.com/optimizely-data-platform/reference/odp-graphql-and-odp-rest-api-use-cases.md): Best scenarios for using either ODP GraphQL or ODP REST APIs.
+- [Consent (Legacy)](https://docs.developers.optimizely.com/optimizely-data-platform/reference/consent-legacy-2.md): Updates marketing consent information for one or more customers.
+- [Update consent](https://docs.developers.optimizely.com/optimizely-data-platform/reference/update-consent-2.md): Updates marketing consent information for multiple customers.
+- [Get consent](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-consent-1.md): Get marketing consent information for a customer.
+- [Get Customer Information](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-customer-information-1.md): Get the attributes and identifiers associated with a customer.
+- [Create and update customers](https://docs.developers.optimizely.com/optimizely-data-platform/reference/createupdate-customers-1.md): Update the attributes and identifiers of a customer.
+- [Upload events](https://docs.developers.optimizely.com/optimizely-data-platform/reference/upload-events-1.md): Upload customer actions (events) to Optimizely Data Platform (ODP).
+- [Overview](https://docs.developers.optimizely.com/optimizely-data-platform/reference/exports-overview.md): Introduction to the Exports API and how to determine when your Start Export Job POST has completed.
+- [Filtering](https://docs.developers.optimizely.com/optimizely-data-platform/reference/filtering.md): How to format the filtering section in the payload of the ODP Exports APIs.
+- [Start Export Job](https://docs.developers.optimizely.com/optimizely-data-platform/reference/export-5.md): Export data from Optimizely to Amazon S3.
+- [Get Export Job Status](https://docs.developers.optimizely.com/optimizely-data-platform/reference/getexportjobstatus-5.md): Fetch the status of an export request.
+- [Segment Member Export](https://docs.developers.optimizely.com/optimizely-data-platform/reference/segment-member-export.md)
+- [Start Export Job](https://docs.developers.optimizely.com/optimizely-data-platform/reference/start-export-job.md): Export segment members from Optimizely to Amazon S3.
+- [Get Segment Export Job Status](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-export-job-status.md): Fetch the status of a segment export request.
+- [Get Subscription Status](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-subscription-status-1.md): Get the subscription status of a customer identifier to an Optimizely Data Platform (ODP) list.
+- [Subscribe/Unsubscribe](https://docs.developers.optimizely.com/optimizely-data-platform/reference/subscribeunsubscribe-1.md): Subscribe or unsubscribe a customer identifier to or from an Optimizely Data Platform (ODP) list.
+- [Get Lists](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-lists-1.md): Get all lists associated with an Optimizely Data Platform (ODP) account.
+- [Create List](https://docs.developers.optimizely.com/optimizely-data-platform/reference/create-list-1.md): Create a new list within an Optimizely Data Platform (ODP) account.
+- [Order Purchase/Return/Refund/Cancellation](https://docs.developers.optimizely.com/optimizely-data-platform/reference/order-returnrefund-1.md): Upload an order purchase/return/refund/cancellation event to Optimizely Data Platform (ODP).
+- [Update Object](https://docs.developers.optimizely.com/optimizely-data-platform/reference/update-object-1.md): Update an object (for example, Concert Tickets or Reviews). Use the Objects endpoint to update the top-level order summary fields without generating events.
+- [Update Products](https://docs.developers.optimizely.com/optimizely-data-platform/reference/update-products-1.md): Update products with new metadata as your inventory updates.
+- [Overview](https://docs.developers.optimizely.com/optimizely-data-platform/reference/recommendations-overview.md)
+- [Get Recommended Products](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-recommended-products-1.md): Get recommendations for a customer or product.
+- [Compliance](https://docs.developers.optimizely.com/optimizely-data-platform/reference/compliance-1.md)
+- [GDPR delete request](https://docs.developers.optimizely.com/optimizely-data-platform/reference/gdpr-delete.md): Send a GDPR compliance delete request for a customer.
+- [CCPA delete request](https://docs.developers.optimizely.com/optimizely-data-platform/reference/ccpa-delete.md): Send a CCPA compliance delete request for a customer.
+- [CCPA opt-out request](https://docs.developers.optimizely.com/optimizely-data-platform/reference/ccpa-optout.md): Send a CCPA compliance opt-out request for a customer.
+- [LGPD delete request](https://docs.developers.optimizely.com/optimizely-data-platform/reference/lgpd-delete.md): Send an LGPD compliance delete request for a customer.
+- [GDPR request status](https://docs.developers.optimizely.com/optimizely-data-platform/reference/gdpr-status.md): Get the status of a previous GDPR compliance delete request (by request ID).
+- [CCPA request status](https://docs.developers.optimizely.com/optimizely-data-platform/reference/ccpa-status.md): Get the status of a previous CCPA compliance delete or opt-out request (by request ID).
+- [LGPD request status](https://docs.developers.optimizely.com/optimizely-data-platform/reference/lgpd-status.md): Get the status of a previous LGPD compliance delete request (by request ID).
+- [Object schema](https://docs.developers.optimizely.com/optimizely-data-platform/reference/object-schema.md)
+- [Create object](https://docs.developers.optimizely.com/optimizely-data-platform/reference/create-object-1.md): Create a new Object within Optimizely Data Platform (ODP), define its fields and how it relates to other objects.
+- [List objects](https://docs.developers.optimizely.com/optimizely-data-platform/reference/list-objects-1.md): List the details of all objects within an Optimizely Data Platform (ODP) account.
+- [Get object](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-object-1.md): List the details of a specific object in an Optimizely Data Platform (ODP) account.
+- [Fields schema](https://docs.developers.optimizely.com/optimizely-data-platform/reference/fields-schema.md)
+- [Create field](https://docs.developers.optimizely.com/optimizely-data-platform/reference/create-field-1.md): Create a field on an object in Optimizely Data Platform (ODP).
+- [List fields](https://docs.developers.optimizely.com/optimizely-data-platform/reference/list-fields-1.md): List the details of all fields for a specific object.
+- [Get field](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-field-1.md): List the details of a single field for a specific object.
+- [Relationships schema](https://docs.developers.optimizely.com/optimizely-data-platform/reference/relationships-schema.md)
+- [Create relationship](https://docs.developers.optimizely.com/optimizely-data-platform/reference/create-relationship-1.md): Create a relation between objects in Optimizely Data Platform (ODP).
+- [List relations](https://docs.developers.optimizely.com/optimizely-data-platform/reference/list-relations-1.md): List the details of all relationships of a specific object.
+- [Get relation](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-relation-1.md): List the details of a single relationship of a specific object.
+- [Update reachability](https://docs.developers.optimizely.com/optimizely-data-platform/reference/update-reachability-1.md): Update reachability for a messaging identifier.
+- [Get reachability](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-reachability-1.md): Retrieve reachability information for a specific identifier.
+- [Create identifier](https://docs.developers.optimizely.com/optimizely-data-platform/reference/create-identifier-1.md): Create an identifier in Optimizely Data Platform (ODP) to use for user resolution.
+- [Update identifier metadata](https://docs.developers.optimizely.com/optimizely-data-platform/reference/update-identifier-metadata-1.md): Update metadata for an identifier.
+- [Get identifier metadata](https://docs.developers.optimizely.com/optimizely-data-platform/reference/get-identifier-metadata-1.md): Retrieve metadata for an identifier in Optimizely Data Platform (ODP).
+- [List segments](https://docs.developers.optimizely.com/optimizely-data-platform/reference/realtimesegments_listsegments.md): Lists all the real-time segments for an account.
+- [Get segment](https://docs.developers.optimizely.com/optimizely-data-platform/reference/realtimesegments_getsegment.md): Returns the schema of a requested segment. Note: this does not return the list of members in the segment.
+- [Delete segment](https://docs.developers.optimizely.com/optimizely-data-platform/reference/realtimesegments_uninstallsegment.md): Removes the requested segment. Note: this does not delete the members of the segment.
+- [Create segment](https://docs.developers.optimizely.com/optimizely-data-platform/reference/realtimesegments_createsegment-1.md): Create a new segment.
+- [Update segment](https://docs.developers.optimizely.com/optimizely-data-platform/reference/realtimesegments_installsegment.md): Modify the parameters of an existing segment.
+- [Validate segment](https://docs.developers.optimizely.com/optimizely-data-platform/reference/realtimesegments_validatesegment.md): Validate segment definition.
+- [Using ODP's GraphQL Endpoint](https://docs.developers.optimizely.com/optimizely-data-platform/reference/using-zaius-graphql-endpoint.md)

@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Bright Hour — Live Shopping</title>
+<meta name="description" content="The Bright Hour — a live-shopping storefront running on Optimizely edge personalization. Demo surface.">
+<meta name="robots" content="noindex, nofollow">
+<!--
+  THE BRIGHT HOUR — storefront (demo surface)
+  Design law: docs/qvc/QVC-Site-Recon-Demo-Design.md  Part B1 · A6 · A9 · A15 · C4 · D2 · D3
+  Route: /live  (Cloudflare Workers static assets, html_handling auto → /live/ → this file)
+
+  Isolation contract: this page mints its OWN visitor id (bh_visitor_id), posts every
+  request with credentials:'omit', and its reset clears only bh_* keys. It never reads
+  or writes opt_* keys and no other demo's session travels with its requests.
+-->
+<link rel="preconnect" href="/">
+<link rel="stylesheet" href="/live/live.css">
+</head>
+<body>
+
+<a class="bh-skip" href="#bh-main">Skip to main content</a>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MASTHEAD
+     ═══════════════════════════════════════════════════════════════════════ -->
+<header class="bh-masthead">
+
+  <!-- utility bar: the text-size adjuster lives here, always reachable (A9 ★) -->
+  <div class="bh-utility">
+    <div class="bh-shell">
+      <ul class="bh-utility__list">
+        <li><a href="#bh-slot-on_air_rail">Watch BH Live</a></li>
+        <li><a href="#bh-slot-deals_rail">Deals</a></li>
+        <li><a href="#bh-footer-help">Customer Service</a></li>
+        <li><a href="#bh-footer-card">The Bright Card&reg;</a></li>
+      </ul>
+
+      <div class="bh-resizer">
+        <span class="bh-resizer__label" id="bh-resizer-label">Adjust Text Size</span>
+        <div class="bh-resizer__ctl" role="group" aria-labelledby="bh-resizer-label">
+          <button type="button" id="bh-text-smaller" aria-label="Decrease text size">&minus;</button>
+          <span class="bh-resizer__val" id="bh-text-value">16 px</span>
+          <button type="button" id="bh-text-larger" aria-label="Increase text size">&plus;</button>
+        </div>
+        <span class="bh-sr-only" id="bh-text-announce" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- logo · search · account / cart -->
+  <div class="bh-masthead__main">
+    <a class="bh-logo" href="/live/" aria-label="The Bright Hour — home">
+      <!-- BH roundel: coral-led mark (the mark's dominant colour), ink horizon. -->
+      <svg width="46" height="46" viewBox="0 0 44 44" aria-hidden="true" focusable="false">
+        <circle cx="22" cy="22" r="21" fill="#FBEFE9"></circle>
+        <g stroke="#EF7A5E" stroke-width="2.6" stroke-linecap="round">
+          <line x1="22" y1="4.6" x2="22" y2="8.6"></line>
+          <line x1="33.3" y1="10.7" x2="30.5" y2="13.5"></line>
+          <line x1="39.4" y1="22" x2="35.4" y2="22"></line>
+          <line x1="10.7" y1="10.7" x2="13.5" y2="13.5"></line>
+          <line x1="4.6" y1="22" x2="8.6" y2="22"></line>
+        </g>
+        <circle cx="22" cy="22" r="10.4" fill="#EF7A5E"></circle>
+        <path d="M6.5 30.4 H37.5" stroke="#233047" stroke-width="3.1" stroke-linecap="round"></path>
+      </svg>
+      <span class="bh-logo__word">
+        <span class="bh-logo__name">The Bright Hour</span>
+        <span class="bh-logo__tag">Where the good stuff comes to light.</span>
+      </span>
+    </a>
+
+    <form class="bh-search" role="search" id="bh-search-form">
+      <label class="bh-sr-only" for="bh-search-input">Search The Bright Hour</label>
+      <input id="bh-search-input" type="search" name="q" placeholder="Enter Keyword or Item #" autocomplete="off">
+      <button class="bh-btn bh-btn--primary" type="submit">Search</button>
+    </form>
+
+    <div class="bh-acct">
+      <a class="bh-icon-btn" href="#bh-footer-help">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="8" r="3.6"></circle><path d="M4.5 20c0-3.9 3.4-6.4 7.5-6.4s7.5 2.5 7.5 6.4"></path>
+        </svg>
+        <span>Account</span>
+      </a>
+      <button class="bh-icon-btn" type="button" id="bh-cart-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" focusable="false">
+          <path d="M3.5 5h2.2l2.1 10.2h9.6l1.9-7.4H6.4"></path><circle cx="9.4" cy="19" r="1.5"></circle><circle cx="16.9" cy="19" r="1.5"></circle>
+        </svg>
+        <span>Cart (<span id="bh-cart-count">0</span>)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- primary nav: the named-construct dropdowns -->
+  <nav class="bh-nav" aria-label="Primary">
+    <div class="bh-nav__row">
+
+      <div class="bh-nav__item">
+        <button class="bh-nav__toggle" type="button" id="bh-nav-deals" aria-expanded="false" aria-controls="bh-menu-deals">
+          Today&rsquo;s Bright One&#8480; &amp; Deals
+          <svg class="bh-nav__caret" width="11" height="7" viewBox="0 0 11 7" aria-hidden="true" focusable="false"><path d="M1 1.2 5.5 5.6 10 1.2" fill="none" stroke="currentColor" stroke-width="1.8"></path></svg>
+        </button>
+        <div class="bh-nav__menu" id="bh-menu-deals" hidden>
+          <h3>Named offers</h3>
+          <ul>
+            <li><a href="#bh-slot-daily_deal">Today&rsquo;s Bright One&#8480;</a></li>
+            <li><a href="#bh-slot-deals_rail">BH2 Nightly Deal</a></li>
+            <li><a href="#bh-slot-event_module">The Harvest Kitchen Event</a></li>
+            <li><a href="#bh-slot-event_module">The 120-Hour Reveal</a></li>
+            <li><a href="#bh-slot-deals_rail">Lunch Hour Steals</a></li>
+            <li><a href="#bh-slot-deals_rail">Primetime Steals&#8480;</a></li>
+            <li><a href="#bh-slot-deals_rail">Deal Drop</a></li>
+            <li><a href="#bh-slot-deals_rail">Weekend Bonus Value&#8480;</a></li>
+            <li><a href="#bh-slot-deals_rail">One Time Only Price</a></li>
+            <li><a href="#bh-slot-deals_rail">Online Only Deal</a></li>
+            <li><a href="#bh-slot-deals_rail">Final Sale</a></li>
+            <li><a href="#bh-slot-deals_rail">Last Chance &amp; Clearance</a></li>
+          </ul>
+          <h3>Price labels</h3>
+          <ul>
+            <li><a href="#bh-footer-legal">Comparable Retail Value</a></li>
+            <li><a href="#bh-footer-legal">Our Price</a></li>
+            <li><a href="#bh-footer-legal">Bright Pay&reg; Offers</a></li>
+          </ul>
+          <p class="bh-nav__note">Each offer is a named construct with its own start and end time. Nothing here is a generic sale.</p>
+        </div>
+      </div>
+
+      <div class="bh-nav__item">
+        <button class="bh-nav__toggle" type="button" id="bh-nav-watch" aria-expanded="false" aria-controls="bh-menu-watch">
+          Watch
+          <svg class="bh-nav__caret" width="11" height="7" viewBox="0 0 11 7" aria-hidden="true" focusable="false"><path d="M1 1.2 5.5 5.6 10 1.2" fill="none" stroke="currentColor" stroke-width="1.8"></path></svg>
+        </button>
+        <div class="bh-nav__menu" id="bh-menu-watch" hidden>
+          <h3>On the air</h3>
+          <ul>
+            <li><a href="#bh-slot-on_air_rail">Item On Air</a></li>
+            <li><a href="#bh-slot-on_air_rail">Items Recently On Air</a></li>
+            <li><a href="#bh-slot-on_air_rail">Watch BH Live</a></li>
+            <li><a href="#bh-slot-on_air_rail">Watch BH2</a></li>
+          </ul>
+          <h3>Plan your day</h3>
+          <ul>
+            <li><a href="#bh-slot-on_air_rail">Program Guide</a></li>
+            <li><a href="#bh-slot-on_air_rail">Livestreams</a></li>
+            <li><a href="#bh-slot-on_air_rail">Meet Our Hosts</a></li>
+            <li><a href="#bh-slot-discovery_rail">My Feed Experience</a></li>
+          </ul>
+          <p class="bh-nav__note">Set a show reminder and we&rsquo;ll have the items ready when it starts &mdash; not after.</p>
+        </div>
+      </div>
+
+      <a class="bh-nav__link" href="#bh-slot-spotlight_for_you">Your Picks</a>
+      <a class="bh-nav__link" href="#bh-slot-discovery_rail">New</a>
+      <a class="bh-nav__link" href="#bh-slot-category_rail">Shop by Category</a>
+      <a class="bh-nav__link" href="#bh-slot-deals_rail">Clearance</a>
+      <a class="bh-nav__link" href="#bh-footer-card">The Bright Card&reg;</a>
+    </div>
+  </nav>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     MAIN — every slot below is rendered from the decision payload.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<main id="bh-main" class="bh-main bh-shell" tabindex="-1">
+  <h1 class="bh-sr-only">The Bright Hour &mdash; today&rsquo;s offers</h1>
+  <div id="bh-slots"></div>
+  <p class="bh-sr-only" id="bh-live-region" role="status" aria-live="polite"></p>
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     FOOTER — merchandising register above, flat formal register below.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<footer class="bh-footer">
+  <div class="bh-shell">
+    <div class="bh-footer__cols">
+      <div id="bh-footer-help">
+        <h3>Customer Service</h3>
+        <ul>
+          <li><a href="#bh-footer-legal">Order Status</a></li>
+          <li><a href="#bh-footer-legal">Returns &amp; Exchanges</a></li>
+          <li><a href="#bh-footer-legal">Shipping &amp; Handling</a></li>
+          <li><a href="#bh-footer-legal">Bright Pay&reg; FAQs</a></li>
+          <li><a href="#bh-footer-legal">Contact Us</a></li>
+        </ul>
+      </div>
+      <div id="bh-footer-card">
+        <h3>The Bright Card&reg;</h3>
+        <ul>
+          <li><a href="#bh-footer-legal">5 Bright Payments, every day</a></li>
+          <li><a href="#bh-footer-legal">12+ Cardholder Savings Events a year</a></li>
+          <li><a href="#bh-footer-legal">Early access to named offers</a></li>
+          <li><a href="#bh-footer-legal">No annual fee</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Watch</h3>
+        <ul>
+          <li><a href="#bh-slot-on_air_rail">BH Live</a></li>
+          <li><a href="#bh-slot-on_air_rail">BH2</a></li>
+          <li><a href="#bh-slot-on_air_rail">Program Guide</a></li>
+          <li><a href="#bh-slot-on_air_rail">Meet Our Hosts</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Shop with confidence</h3>
+        <div class="bh-trust">
+          <span>Free Returns on most items</span>
+          <span>Bright Pay&reg; available</span>
+          <span>Waitlist holds your price</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="bh-tagline">Come for the hour. Stay for the find.</p>
+
+    <p class="bh-legal" id="bh-footer-legal">
+      The Bright Hour is a fictional retailer created solely for product demonstration. Brand names, item
+      numbers, prices, offer windows, availability states, ratings and review counts shown on this page are
+      illustrative and do not describe goods offered for sale. Comparable Retail Value is a comparison price
+      and is not necessarily a former selling price of any item. Bright Pay&reg; installment terms are subject
+      to approval, are limited to six installments, and are not available in combination with Bright Card&reg;
+      Special Financing. Items designated Final Sale are not returnable. Waitlist orders preserve the price in
+      effect at the time the order is placed and are charged only if and when the item becomes available.
+      Cardholder offer exclusions apply to As Is, Clearance, Clearance Sale, Final Sale, Last Chance and
+      Lunch Hour Steals merchandise, and to Waitlist orders.
+    </p>
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     THE GLASS BOX — presenter surface.
+     Everything inside data-presenter is ops-only. The single real ticking clock
+     on this page lives in this panel and nowhere else.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<aside class="bh-panel" id="bh-panel" data-presenter="true" aria-label="Glass Box — decision inspector (presenter only)">
+  <div class="bh-panel__head">
+    <h2>Glass Box</h2>
+    <button class="bh-panel__x" type="button" id="bh-panel-close">Hide</button>
+  </div>
+
+  <div class="bh-panel__scroll">
+
+    <!-- ops strip -->
+    <section>
+      <h3>Ops</h3>
+      <div class="bh-ops">
+        <div class="bh-ops__cell bh-ops__cell--full">
+          <span class="bh-ops__k">Demo clock (presenter only)</span>
+          <span class="bh-clock" id="bh-ops-clock">--:--:--</span>
+          <span class="bh-ops__v bh-ops__v--wide" id="bh-ops-clock-iso">&mdash;</span>
+        </div>
+        <div class="bh-ops__cell">
+          <span class="bh-ops__k">Multiplier</span>
+          <span class="bh-ops__v" id="bh-ops-mult">&times;1</span>
+        </div>
+        <div class="bh-ops__cell">
+          <span class="bh-ops__k">Clock offset</span>
+          <span class="bh-ops__v" id="bh-ops-offset">live</span>
+        </div>
+        <div class="bh-ops__cell">
+          <span class="bh-ops__k">Decision source</span>
+          <span class="bh-ops__v" id="bh-ops-source">&mdash;</span>
+        </div>
+        <div class="bh-ops__cell bh-ops__cell--full">
+          <span class="bh-ops__k">nextTransitionAt</span>
+          <span class="bh-ops__v bh-ops__v--wide" id="bh-ops-next">&mdash;</span>
+        </div>
+        <div class="bh-ops__cell">
+          <span class="bh-ops__k">Engine latency</span>
+          <span class="bh-ops__v" id="bh-ops-latency">&mdash;</span>
+        </div>
+        <div class="bh-ops__cell">
+          <span class="bh-ops__k">Push</span>
+          <span class="bh-ops__v" id="bh-ops-push">&mdash;</span>
+        </div>
+        <div class="bh-ops__cell bh-ops__cell--full">
+          <span class="bh-ops__k">Visitor</span>
+          <span class="bh-ops__v bh-ops__v--wide" id="bh-ops-visitor">&mdash;</span>
+        </div>
+        <!-- Beat 13: the live assignment, so the arm on screen is evidence
+             rather than assertion before the real results URL is opened. -->
+        <div class="bh-ops__cell bh-ops__cell--full">
+          <span class="bh-ops__k">Experiment</span>
+          <span class="bh-ops__v bh-ops__v--wide" id="bh-ops-experiment">&mdash;</span>
+        </div>
+        <div class="bh-ops__cell bh-ops__cell--full">
+          <span class="bh-ops__k">config_version</span>
+          <span class="bh-ops__v bh-ops__v--wide" id="bh-ops-config">&mdash;</span>
+        </div>
+      </div>
+      <div class="bh-ops__actions">
+        <button class="bh-opsbtn" type="button" id="bh-ops-mode" aria-pressed="false">Mode: browse</button>
+        <button class="bh-opsbtn" type="button" id="bh-ops-vip" aria-pressed="true">Cardholder offer: on</button>
+        <button class="bh-opsbtn" type="button" id="bh-ops-quota" aria-pressed="true">Discovery quota: on</button>
+        <button class="bh-opsbtn bh-opsbtn--danger" type="button" id="bh-ops-newviewer">New Viewer</button>
+      </div>
+
+      <!-- Beat 2f: succession on stage. These advance the OFFER CALENDAR only.
+           Affinity decay runs on real time (demo-τ) and is deliberately NOT
+           moved by these buttons — a decay beat is played by waiting. -->
+      <div class="bh-ops__actions bh-ops__actions--clock" role="group" aria-label="Advance demo clock (offer windows only)">
+        <span class="bh-ops__grouplabel">Advance clock</span>
+        <button class="bh-opsbtn" type="button" id="bh-ops-clock-1h">+1h</button>
+        <button class="bh-opsbtn" type="button" id="bh-ops-clock-6h">+6h</button>
+        <button class="bh-opsbtn" type="button" id="bh-ops-clock-24h">+24h</button>
+        <button class="bh-opsbtn" type="button" id="bh-ops-clock-reset">Reset clock</button>
+        <a class="bh-opsbtn bh-opsbtn--link" id="bh-ops-desk" href="/live/ops.html" target="_blank" rel="noopener">Offer Desk</a>
+      </div>
+      <p class="bh-status" id="bh-ops-status">&mdash;</p>
+    </section>
+
+    <!-- the affinity instrument -->
+    <section>
+      <h3>Affinity instrument &mdash; 9 dimensions</h3>
+      <div class="bh-dim__legend">
+        <span><i style="background:#7FE0B0"></i>&theta;in</span>
+        <span><i style="background:#8792A6"></i>&theta;out</span>
+        <span><i style="background:#EF7A5E"></i>above &theta;in</span>
+      </div>
+      <div id="bh-dims"></div>
+    </section>
+
+    <!-- Beat 10: audiences the catalogue generated, not ones anybody typed -->
+    <section>
+      <h3>Audience memberships</h3>
+      <div id="bh-memberships"><p class="bh-panel__empty">&mdash;</p></div>
+    </section>
+
+    <!-- per-slot explain records -->
+    <section>
+      <h3>Decision records</h3>
+      <div id="bh-explains"><p class="bh-panel__empty">Waiting for a decision payload&hellip;</p></div>
+    </section>
+
+  </div>
+</aside>
+
+<button class="bh-panel-open-btn" type="button" id="bh-panel-open" hidden>Glass Box</button>
+
+<script src="/live/live.js"></script>
+</body>
+</html>

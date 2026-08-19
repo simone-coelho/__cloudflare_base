@@ -23,6 +23,11 @@ export interface AudienceDef {
   evaluation: 'realtime' | 'batch';
   /** 'catalog' = emitted by the Edge Affinity Reflex audience generator (doc 16 §5). */
   source: 'opal_nl' | 'manual' | 'seed' | 'catalog';
+  /** Demo surface this audience belongs to. ABSENT means 'coach' — every audience
+      written before the multi-surface split is the retail demo's by definition.
+      Scopes regeneration's archive pass (one surface may never archive another's)
+      and qualification (a surface only evaluates its own audiences). */
+  surface?: string;
   createdAt: number;
   /** Human override: a pinned audience is NEVER touched by generator regeneration. */
   pinned?: boolean;
@@ -57,6 +62,9 @@ export interface QualificationContext {
   anonymousId?: string;
   attributes: Record<string, any>; // mirrors SessionData.attributes + catalog signals
   segments: SegmentKey[]; // segments already on the profile
+  /** Demo surface this qualification belongs to. Absent = evaluate every published
+      audience (the pre-split behavior); set = evaluate only that surface's. */
+  surface?: string;
 }
 
 /** Mirrors an Optimizely OptimizelyDecision (the subset the storefront needs). */

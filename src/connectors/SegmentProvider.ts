@@ -35,8 +35,19 @@ export class MockSegmentProvider implements SegmentProvider {
   async fetchQualifiedSegments(userId: string, ctx?: QualificationContext): Promise<SegmentKey[]> {
     const audiences = await this.store.listPublished(); // seed + Opal-created, all here
     const context = ctx ?? { userId, attributes: {}, segments: [] };
+    // Surface scoping (multi-demo isolation): when the caller declares a surface,
+    // only THAT surface's audiences are evaluated — otherwise counter-based
+    // audiences from one demo ('product_views gte 3') qualify the other demo's
+    // shoppers. An untagged audience is the default surface's by definition, so a
+    // coach context evaluates exactly the set it always did.
+    const surface = context.surface;
     return audiences
-      .filter((a) => a.evaluation === 'realtime' && evaluateCondition(a.conditions, context.attributes))
+      .filter(
+        (a) =>
+          a.evaluation === 'realtime' &&
+          (surface === undefined || (a.surface ?? 'coach') === surface) &&
+          evaluateCondition(a.conditions, context.attributes)
+      )
       .map((a) => a.key);
   }
 

@@ -28,6 +28,8 @@ import { funnelRoutes } from '@/routes/funnel';
 import { funnelSimRoutes } from '@/routes/funnelSim';
 import { experimentRoutes } from '@/routes/experiment'; // A/B + CMAB workstream (owner: ab-cmab)
 import { signalRoutes } from '@/routes/signals'; // Signal-Led Moment DETECT layer (owner: ab-cmab)
+import { liveRoutes } from '@/routes/live'; // The Bright Hour storefront API (docs/qvc)
+import { liveOpsRoutes } from '@/routes/liveOps'; // The Bright Hour Offer Desk (Beat 2)
 
 import { routeAgentRequest } from 'agents';
 
@@ -78,6 +80,14 @@ app.route('/funnel', funnelRoutes);
 app.route('/funnel/sim', funnelSimRoutes);
 app.route('/experiment', experimentRoutes); // A/B + CMAB (owner: ab-cmab)
 app.route('/signals', signalRoutes); // Signal-Led Moment DETECT layer (owner: ab-cmab)
+// The Bright Hour demo surface. The PAGE is static assets at /live (same
+// mechanism as every other demo); this is only its data plane, so the mount is
+// namespaced under /live/api and touches no existing route.
+app.route('/live/api', liveRoutes);
+// The Offer Desk (Beat 2) — the operator surface at /live/ops.html. Its own
+// mount so the storefront's data plane and the desk's never share a handler;
+// every write it makes lands under the `bh:offerdesk:` KV prefix.
+app.route('/live/ops-api', liveOpsRoutes);
 
 // API info endpoint - moved to /api-info so root can serve static files
 app.get('/api-info', (c) => {

@@ -7,6 +7,9 @@ export interface SessionData {
   anonymousId?: string;
   segments: string[];
   attributes: Record<string, any>;
+  /** Demo surface this session belongs to (@/demos/registry). ABSENT ⇒ 'coach' —
+      every session written before the multi-surface split is the retail demo's. */
+  surface?: string;
   /** Edge Affinity Reflex state (doc 16) — raw (R, tLast) per dimension·value.
       P0 hosting: rides the session; relocates into the ShopperReflex DO in P2. */
   reflex?: ReflexState;
@@ -58,6 +61,8 @@ const sessionDataSchema = z.object({
   anonymousId: z.string().optional(),
   segments: z.array(z.string()),
   attributes: z.record(z.string(), z.any()),
+  // Declared or .parse() silently STRIPS it on every read/write (same trap as reflex).
+  surface: z.string().optional(),
   // Reflex state must be declared or .parse() silently STRIPS it on every read/write.
   reflex: z.any().optional(),
   odpSeed: z.array(z.string()).optional(),
@@ -111,6 +116,7 @@ export class SessionManager {
           ...existingSession?.attributes,
           ...data.attributes
         },
+        surface: data.surface ?? existingSession?.surface,
         reflex: data.reflex ?? existingSession?.reflex,
         odpSeed: data.odpSeed ?? existingSession?.odpSeed,
         odpSeedAt: data.odpSeedAt ?? existingSession?.odpSeedAt,

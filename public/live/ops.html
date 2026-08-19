@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Offer Desk — The Bright Hour</title>
+<meta name="description" content="Merchandising operations: incoming items, proposed tags, human approval, window scheduling." />
+<style>
+  /* Tokens are the storefront's (public/live/live.css §B1 palette). The page is
+     deliberately plainer than the shop: this is a work surface, not a shelf. */
+  :root {
+    --bh-ink: #233047;
+    --bh-coral: #EF7A5E;
+    --bh-coral-tint: #FBEFE9;
+    --bh-coral-edge: #F3A18C;
+    --bh-body: #484842;
+    --bh-signal: #D8322E;
+    --bh-greige-1: #F8F7F5;
+    --bh-greige-2: #EDEBE7;
+    --bh-greige-3: #DCD9D3;
+    --bh-border: #A3A29A;
+    --bh-success: #146B52;
+    --bh-gold: #F2C744;
+    --bh-white: #FFFFFF;
+    --bh-head: 'Hanken Grotesk', 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --bh-text: 'Figtree', 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bh-greige-1); color: var(--bh-body);
+    font-family: var(--bh-text); font-size: 16px; line-height: 1.5;
+  }
+  h1, h2, h3 { font-family: var(--bh-head); color: var(--bh-ink); margin: 0; font-weight: 700; line-height: 1.2; }
+  a { color: var(--bh-ink); }
+  :focus-visible { outline: 3px solid var(--bh-ink); outline-offset: 2px; }
+
+  .masthead { background: var(--bh-ink); color: var(--bh-white); padding: 14px 24px; }
+  .masthead__row { max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .masthead h1 { color: var(--bh-white); font-size: 1.25rem; }
+  .masthead__tag { font-size: .8125rem; opacity: .82; }
+  .masthead__spacer { flex: 1 1 auto; }
+  .masthead a { color: var(--bh-white); }
+
+  .shell { max-width: 1180px; margin: 0 auto; padding: 24px; }
+
+  .bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--bh-white); border: 1px solid var(--bh-greige-3);
+    padding: 12px 16px; margin-bottom: 20px;
+  }
+  .bar__clock { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--bh-ink); }
+  .bar__spacer { flex: 1 1 auto; }
+
+  .btn {
+    font-family: var(--bh-text); font-size: .9375rem; font-weight: 600; line-height: 1.2;
+    border-radius: 0; border: 1px solid var(--bh-ink); padding: 9px 16px; cursor: pointer;
+    background: var(--bh-white); color: var(--bh-ink);
+  }
+  .btn--primary { background: var(--bh-ink); color: var(--bh-white); }
+  .btn--primary:hover { background: #16203a; }
+  .btn--secondary { background: var(--bh-coral-tint); border-color: var(--bh-coral-edge); }
+  .btn--quiet { border-color: var(--bh-border); color: var(--bh-body); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .note { font-size: .8125rem; color: var(--bh-body); }
+  .note--model { border-left: 3px solid var(--bh-coral); padding-left: 10px; }
+
+  .card { background: var(--bh-white); border: 1px solid var(--bh-greige-3); margin-bottom: 20px; }
+  .card__head { display: flex; gap: 16px; align-items: flex-start; padding: 16px 18px; border-bottom: 1px solid var(--bh-greige-2); flex-wrap: wrap; }
+  .card__title { font-size: 1.0625rem; }
+  .card__meta { font-size: .8125rem; color: var(--bh-body); }
+  .card__price { font-family: var(--bh-head); font-weight: 700; color: var(--bh-ink); font-size: 1.125rem; }
+  .card__spacer { flex: 1 1 auto; }
+  .card__body { padding: 16px 18px; }
+
+  .feedrow {
+    background: var(--bh-greige-1); border: 1px dashed var(--bh-border);
+    padding: 10px 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .8125rem; color: var(--bh-body); overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+  }
+  .flag { color: var(--bh-signal); font-weight: 600; }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .chip {
+    border: 1px solid var(--bh-greige-3); background: var(--bh-greige-1); color: var(--bh-body);
+    border-radius: 4px; padding: 3px 9px; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em;
+  }
+  .chip--done { border-color: var(--bh-ink); color: var(--bh-ink); background: var(--bh-white); }
+  .chip--now { background: var(--bh-ink); color: var(--bh-white); border-color: var(--bh-ink); }
+  .chip--live { background: var(--bh-success); border-color: var(--bh-success); color: var(--bh-white); }
+  .chip--expired { background: var(--bh-greige-2); border-color: var(--bh-border); color: var(--bh-body); }
+  .chip--sep { border: 0; background: none; padding: 0 2px; color: var(--bh-border); }
+
+  table.tags { width: 100%; border-collapse: collapse; font-size: .9375rem; }
+  table.tags th {
+    text-align: left; font-family: var(--bh-head); color: var(--bh-ink); font-size: .75rem;
+    text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid var(--bh-greige-3); padding: 8px 10px 8px 0;
+  }
+  table.tags td { border-bottom: 1px solid var(--bh-greige-2); padding: 10px 10px 10px 0; vertical-align: top; }
+  table.tags tr.rejected td { opacity: .45; text-decoration: line-through; }
+  .tagname { font-weight: 600; color: var(--bh-ink); white-space: nowrap; }
+  .rationale { font-size: .8125rem; color: var(--bh-body); max-width: 34ch; }
+  .source { font-size: .6875rem; text-transform: uppercase; letter-spacing: .04em; color: var(--bh-body); }
+
+  select, input[type="text"], input[type="number"] {
+    font-family: var(--bh-text); font-size: .9375rem; border-radius: 0;
+    border: 1px solid var(--bh-border); padding: 6px 8px; background: var(--bh-white); color: var(--bh-body); max-width: 22ch;
+  }
+  select.edited { border-color: var(--bh-coral); border-width: 2px; background: var(--bh-coral-tint); }
+
+  .conf { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .conf__bar { width: 72px; height: 8px; background: var(--bh-greige-2); border: 1px solid var(--bh-greige-3); }
+  .conf__fill { height: 100%; background: var(--bh-ink); }
+  .conf__fill--low { background: var(--bh-coral); }
+  .conf__num { font-variant-numeric: tabular-nums; font-size: .8125rem; font-weight: 600; color: var(--bh-ink); }
+
+  .reject { font-size: .8125rem; display: inline-flex; gap: 5px; align-items: center; color: var(--bh-body); }
+
+  .window { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--bh-greige-2); }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--bh-ink); font-weight: 700; }
+
+  .approved {
+    background: var(--bh-coral-tint); border: 1px solid var(--bh-coral-edge); padding: 12px 14px; margin-top: 16px; font-size: .875rem;
+  }
+  .approved strong { color: var(--bh-ink); }
+  .approved code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .8125rem; }
+
+  /* ---- Live catalog controls (Beat 8's trigger) ---- */
+  .strip { background: var(--bh-white); border: 1px solid var(--bh-greige-3); margin-bottom: 20px; }
+  .strip__head {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    padding: 12px 16px; border-bottom: 1px solid var(--bh-greige-2);
+  }
+  .strip__head h2 { font-size: .9375rem; }
+  .strip__body { padding: 8px 16px 14px; }
+  table.floor { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  table.floor th {
+    text-align: left; font-family: var(--bh-head); color: var(--bh-ink); font-size: .6875rem;
+    text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid var(--bh-greige-3); padding: 6px 10px 6px 0;
+  }
+  table.floor td { border-bottom: 1px solid var(--bh-greige-2); padding: 7px 10px 7px 0; vertical-align: middle; }
+  table.floor tr.out td { background: #FFF7F5; }
+  .slotname { font-size: .6875rem; text-transform: uppercase; letter-spacing: .04em; color: var(--bh-body); white-space: nowrap; }
+  .itemno { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .8125rem; color: var(--bh-ink); }
+  .state { border-radius: 4px; padding: 2px 8px; font-size: .6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+  .state--in { background: var(--bh-greige-1); color: var(--bh-body); border: 1px solid var(--bh-greige-3); }
+  .state--out { background: var(--bh-signal); color: var(--bh-white); }
+  .state--wait { background: var(--bh-lowstock-bg); color: var(--bh-lowstock-fg); border: 1px solid var(--bh-lowstock-fg); }
+  .btn--sm { padding: 5px 11px; font-size: .8125rem; }
+  .manual { display: flex; gap: 8px; align-items: flex-end; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--bh-greige-2); flex-wrap: wrap; }
+
+  .err { background: #FFF1F0; border: 1px solid var(--bh-signal); color: #8a1b18; padding: 10px 12px; margin-top: 12px; font-size: .875rem; }
+  .hint-conflict { background: #FFF9E6; border: 1px solid var(--bh-gold); padding: 8px 12px; margin: 12px 0; font-size: .875rem; }
+  .muted { color: var(--bh-body); font-size: .875rem; }
+</style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead__row">
+      <div>
+        <h1>Offer Desk</h1>
+        <div class="masthead__tag">The Bright Hour &middot; merchandising operations</div>
+      </div>
+      <div class="masthead__spacer"></div>
+      <a href="/live/" target="_blank" rel="noopener">Open the storefront &rarr;</a>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="bar">
+      <span class="bar__clock" id="clock">&mdash;</span>
+      <span class="note" id="clock-note"></span>
+      <span class="bar__spacer"></span>
+      <span class="note note--model" id="model-note"></span>
+      <button class="btn btn--quiet" id="reset">Reset tray</button>
+    </div>
+
+    <p class="muted" id="intro">
+      Items arrive from the vendor feed with a title, a price and one line of copy. The desk proposes the
+      tags the decisioning engine needs, with a confidence and a reason for each. Nothing is published
+      until a person approves it &mdash; and what they changed is kept on the record.
+    </p>
+
+    <section class="strip" id="floor-strip">
+      <div class="strip__head">
+        <h2>Live catalog controls</h2>
+        <span class="note">
+          What is on the floor right now. Selling an item out changes one fact — availability —
+          and the page reacts: a visitor who wanted it keeps it on the waitlist at the same price,
+          everyone else gets the next eligible offer.
+        </span>
+      </div>
+      <div class="strip__body" id="floor"></div>
+    </section>
+
+    <div id="tray"></div>
+  </main>
+
+  <script src="/live/ops.js"></script>
+</body>
+</html>

@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegmentEngine';
 import { getConnectors } from '@/connectors';
-import { DEFAULT_REFLEX_CONFIG, snapshot as reflexSnapshot } from '@/reflex/core';
+import { snapshot as reflexSnapshot } from '@/reflex/core';
+import { reflexConfigFor, resolveSurface } from '@/demos/registry';
 import { forwardEventToOdp, mapActionToOdp, odpEnabled, upsertOdpProfile } from '@/services/odpLoop';
 import { CatalogService } from '@/services/CatalogService';
 import { z } from 'zod';
@@ -59,6 +60,10 @@ const actionEventSchema = z.object({
   anonymousId: z.string().optional(),
   data: z.record(z.string(), z.any()),
   source: z.string(),
+  // Which demo posted this (@/demos/registry). Optional and stripped-if-absent:
+  // the engine falls back to `source`, and then to the default surface (coach),
+  // so every existing client is unaffected.
+  surface: z.string().optional(),
   timestamp: z.number().optional()
 });
 
@@ -248,7 +253,13 @@ realtimeRoutes.get('/reflex', async (c) => {
 
     const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
     const { sessionData } = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
-    const cfg = DEFAULT_REFLEX_CONFIG;
+    // Surface-aware tuning (@/demos/registry): an explicit ?surface= wins, else
+    // the session remembers which demo it belongs to, else DEFAULT_SURFACE.
+    // With both absent, reflexConfigFor('coach') returns DEFAULT_REFLEX_CONFIG
+    // BY IDENTITY — every pre-existing caller gets a byte-identical response.
+    const cfg = await reflexConfigFor(
+      resolveSurface({ surface: c.req.query('surface') ?? sessionData.surface })
+    );
     const now = Date.now();
     return c.json({
       ok: true,

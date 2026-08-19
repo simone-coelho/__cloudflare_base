@@ -1,5 +1,62 @@
-import optimizely from '@optimizely/optimizely-sdk';
+/**
+ * The LITE build, not the default entry — and that distinction is the whole fix.
+ *
+ * `@optimizely/optimizely-sdk`'s "." export resolves to the BROWSER bundle under
+ * the Workers export conditions, and that bundle touches `window.addEventListener`,
+ * `window.localStorage` and `window.navigator` (3 references; the lite bundle has
+ * 0). So every `createInstance` in this file used to throw `window is not defined`
+ * at the edge, get swallowed by the catch below, and hand back a MOCK client —
+ * silently, on every request, in production. The subpath `/lite` is Optimizely's
+ * own edge build (the shape their Cloudflare Workers starter kit uses): no
+ * datafile manager, no browser event processor, datafile injected by the caller
+ * and events delivered through a dispatcher you supply. This service already
+ * fetched and KV-cached the datafile itself, so the architecture always matched
+ * the lite contract — only the import was wrong.
+ */
+import optimizely from '@optimizely/optimizely-sdk/lite';
 import type { Env } from '@/types/env';
+
+/**
+ * A logger that keeps real SDK errors and drops ONE expected class of noise.
+ *
+ * `FeatureVariableManager` probes eight demo feature keys (hero_content,
+ * ui_theme, …) that intentionally do not exist in this project — it owns local
+ * fallback values for exactly that case, and has always relied on the answer
+ * being "not enabled, no variables". Under the old (broken) mock client those
+ * probes were silent; against the real datafile the SDK logs a red ERROR per
+ * probe per request, which on a demo night is a console full of alarming lines
+ * describing normal, designed behaviour. The absence is expected, so it is
+ * logged at debug volume; everything else still surfaces.
+ */
+function quietLogger(): { log: (level: number, message: string) => void } {
+  return {
+    log: (level: number, message: string) => {
+      if (/is not in datafile/i.test(message)) return;
+      if (level >= 3) console.error(`[optimizely] ${message}`);
+    },
+  };
+}
+
+/**
+ * Deliver impressions/conversions with `fetch`, since the lite build ships a
+ * no-op dispatcher by default. Fire-and-forget on purpose: measurement must
+ * never sit in front of a decision the shopper is waiting on.
+ */
+function fetchEventDispatcher(): {
+  dispatchEvent: (event: any, callback?: (response: { statusCode: number }) => void) => void;
+} {
+  return {
+    dispatchEvent: (event: any, callback?: (response: { statusCode: number }) => void) => {
+      void fetch(event.url, {
+        method: event.httpVerb || 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event.params),
+      })
+        .then((res) => callback?.({ statusCode: res.status }))
+        .catch(() => callback?.({ statusCode: 0 }));
+    },
+  };
+}
 
 export interface OptimizelyConfig {
   sdkKey: string;
@@ -41,19 +98,26 @@ export class OptimizelyService {
         
         this.optimizelyClient = optimizely.createInstance({
           datafile: this.datafile,
+          eventDispatcher: fetchEventDispatcher(),
           errorHandler: {
             handleError: (error: any) => {
               console.error('Optimizely error:', error);
             },
           },
-          logger: optimizely.logging.createLogger({
-            logLevel: optimizely.enums.LOG_LEVEL.ERROR,
-          }),
+          logger: quietLogger(),
         });
-        
-        console.log('Optimizely client initialized successfully');
+
+        // The lite build takes a static datafile, so this settles immediately —
+        // but a client that failed to build must not be mistaken for a working
+        // one, which is exactly the failure mode this whole file used to have.
+        if (this.optimizelyClient?.onReady) {
+          await this.optimizelyClient.onReady({ timeout: 5000 }).catch(() => undefined);
+        }
+        if (!this.optimizelyClient) throw new Error('createInstance returned null');
+
+        console.log('Optimizely client initialized successfully (lite/edge build)');
       }
-      
+
       this.initialized = true;
     } catch (error) {
       console.error('Failed to initialize Optimizely, falling back to mock client:', error);
@@ -61,7 +125,12 @@ export class OptimizelyService {
       this.initialized = true;
     }
   }
-  
+
+  /**
+   * The labeled DEGRADED path: no SDK key configured, or the real client failed
+   * to build. Everything it answers is inert — false, null, {} — so a caller can
+   * never mistake a fallback for a decision.
+   */
   private initializeMockClient(): void {
     // Create a mock client for development without a real SDK key
     this.optimizelyClient = {
@@ -280,6 +349,53 @@ export class OptimizelyService {
     } catch (error) {
       console.error('Error getting all feature variables:', error);
       return {};
+    }
+  }
+
+  /**
+   * Decide ONE flag through the real SDK — the FX-native call (`decide`), which
+   * is what carries a rule key and a variation key back out.
+   *
+   * Returns null rather than a fabricated decision whenever the real client is
+   * not available (no SDK key, datafile fetch failed, mock fallback in force).
+   * A caller that needs a decision anyway must choose its own degraded path
+   * EXPLICITLY; this method will not quietly answer 'control'.
+   *
+   * `sendImpression` defaults to false: a decision read on a page that
+   * recomposes on a timer must not mint an impression every poll.
+   */
+  async decide(
+    flagKey: string,
+    userId: string,
+    userAttributes: UserAttributes = {},
+    sendImpression = false
+  ): Promise<{
+    flagKey: string;
+    enabled: boolean;
+    variationKey: string | null;
+    ruleKey: string | null;
+    variables: Record<string, any>;
+  } | null> {
+    await this.initialize();
+    try {
+      if (typeof this.optimizelyClient?.createUserContext !== 'function') return null;
+      const user = this.optimizelyClient.createUserContext(userId, userAttributes);
+      if (!user) return null;
+      const options = sendImpression
+        ? []
+        : [optimizely.OptimizelyDecideOption.DISABLE_DECISION_EVENT];
+      const d = user.decide(flagKey, options);
+      if (!d) return null;
+      return {
+        flagKey: d.flagKey ?? flagKey,
+        enabled: !!d.enabled,
+        variationKey: d.variationKey ?? null,
+        ruleKey: d.ruleKey ?? null,
+        variables: (d.variables as Record<string, any>) ?? {},
+      };
+    } catch (error) {
+      console.error(`Error deciding flag ${flagKey}:`, error);
+      return null;
     }
   }
 

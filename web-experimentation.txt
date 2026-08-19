@@ -1,0 +1,233 @@
+# Web Experimentation Documentation
+
+> Documentation for Web Experimentation
+
+## Guides
+- [Get started with Optimizely Web Experimentation JavaScript API](https://docs.developers.optimizely.com/web-experimentation/docs/getting-started.md): How to get started with Web Experimentation.
+- [JavaScript execution](https://docs.developers.optimizely.com/web-experimentation/docs/javascript-execution.md): This topic describes the timing of when JavaScript code is executed.
+- [Dynamic websites](https://docs.developers.optimizely.com/web-experimentation/docs/dynamic-websites.md): This topic describes Optimizely's support of single-page applications.
+- [Query parameters](https://docs.developers.optimizely.com/web-experimentation/docs/query-parameters.md): You can use URL parameters to modify the execution of Optimizely Web Experimentation on your page.
+- [Troubleshoot issues](https://docs.developers.optimizely.com/web-experimentation/docs/troubleshooting.md): Describes the steps to take if you need to troubleshoot Optimizely Web Experimentation or Optimizely Personalization.
+- [How bucketing works](https://docs.developers.optimizely.com/web-experimentation/docs/how-bucketing-works.md): Describes how Optimizely Web Experimentation assigns users to a variation.
+- [A/B testing for React and Gatsby](https://docs.developers.optimizely.com/web-experimentation/docs/ab-testing-for-react-applications-and-gatsby.md): Best practices for creating stable selectors in React applications, including Gatsby, for reliable A/B testing in Optimizely Web Experimentation
+- [Code samples](https://docs.developers.optimizely.com/web-experimentation/docs/code-samples.md): Introduction of code samples provided by Optimizely.
+- [Custom event tracking](https://docs.developers.optimizely.com/web-experimentation/docs/custom-event-tracking.md): Shows code samples you can use to track events after specific user actions.
+- [Custom audience targeting](https://docs.developers.optimizely.com/web-experimentation/docs/custom-audience-targeting.md): Shows code samples in the Custom JS Audience Condition.
+- [Advanced experiment configuration](https://docs.developers.optimizely.com/web-experimentation/docs/advanced-experiment-configuration.md): Code samples you can use to help advanced use cases in Optimizely Web Experimentation.
+- [Page activation](https://docs.developers.optimizely.com/web-experimentation/docs/page-activation.md): Describes how to use polling and callback to activate a page.
+- [Snippet deactivation](https://docs.developers.optimizely.com/web-experimentation/docs/snippet-deactivation.md): Describes how to deactivate the snippet to ensure the Optimizely Web Experimentation snippet does not send events from the wrong domain.
+- [Helper functions](https://docs.developers.optimizely.com/web-experimentation/docs/helper-functions.md): Describes how to run experiments using helper functions.
+- [Optimizely Web Experimentation REST API](https://docs.developers.optimizely.com/web-experimentation/docs/rest-api-introduction.md): Introduces the Optimizely Web Experimentation REST API.
+- [Get started with the Optimizely Web Experimentation REST API](https://docs.developers.optimizely.com/web-experimentation/docs/rest-api-getting-started.md): Describes how to get started with Optimizely Web Experimentation REST API
+- [Audience conditions](https://docs.developers.optimizely.com/web-experimentation/docs/audience-conditions.md): This topic describes audience conditions for Optimizely Web Experimentation.
+- [API Conventions](https://docs.developers.optimizely.com/web-experimentation/docs/api-conventions.md): This topic describes conventions used for Optimizely's REST API.
+- [API reference overview](https://docs.developers.optimizely.com/web-experimentation/docs/api-reference.md): Describes more information about Optimizely Web Experimentation version 2 REST API.
+- [OAuth 2.0](https://docs.developers.optimizely.com/web-experimentation/docs/oauth-20.md): Describes how to let users authorize third-party applications to access Optimizely Web Experimentation data using the REST API.
+- [Grant types](https://docs.developers.optimizely.com/web-experimentation/docs/grant-types.md): Describes the two grant types that Optimizely supports: authorization code grant and implicit grant.
+- [Personal access token](https://docs.developers.optimizely.com/web-experimentation/docs/personal-access-token.md): Generate your personal access token from the Optimizely application and use it to authenticate with the REST API.
+- [Registration](https://docs.developers.optimizely.com/web-experimentation/docs/registration.md): This topic describes how to register an application with Optimizely Web Experimentation.
+- [Redirection](https://docs.developers.optimizely.com/web-experimentation/docs/redirection.md): This topic describes the information that will be included in an HTTP GET request that Optimizely Web Experimentation sends if a user accepts or rejects authorization.
+- [Authorization code](https://docs.developers.optimizely.com/web-experimentation/docs/authorization-code.md): This topic describes how to exchange an authorization code for an access token on Optimizely's authorization server.
+- [Refresh tokens](https://docs.developers.optimizely.com/web-experimentation/docs/refresh-tokens.md): Describes how to exchange a refresh token for an access token on Optimizely's authorization server.
+- [Authentication](https://docs.developers.optimizely.com/web-experimentation/docs/authentication.md): Describes how to access the REST API using your access token provided in the authorization response.
+- [Deletion](https://docs.developers.optimizely.com/web-experimentation/docs/deletion.md): This topic describes how to delete your application.
+- [Event API](https://docs.developers.optimizely.com/web-experimentation/docs/event-api.md): Describes how to send event data to Optimizely logging servers.
+- [Customer Behavior](https://docs.developers.optimizely.com/web-experimentation/docs/customer-behavior.md): This topic introduces Optimizely Personalization and how to track customer behavior.
+- [Query objects](https://docs.developers.optimizely.com/web-experimentation/docs/query-objects.md): This topic describes how to build a JSON object to create a behavioral query in Optimizely Personalization.
+- [JavaScript API use cases](https://docs.developers.optimizely.com/web-experimentation/docs/personalization-use-cases.md): This topic describes use cases on why you would want to build behavioral queries when running Optimizely Personalization.
+- [Event objects](https://docs.developers.optimizely.com/web-experimentation/docs/event-objects.md): Describes events, which are one of the core concepts of Optimizely Personalization. In the context of customer behavior, these events are exposed as JavaScript objects.
+- [Customer Profiles](https://docs.developers.optimizely.com/web-experimentation/docs/customer-profiles.md): Describes Dynamic Customer Profiles (DCP), which are a collection of your customers' attributes.
+- [List attributes](https://docs.developers.optimizely.com/web-experimentation/docs/list-attributes.md): How to create list attributes, which let you target users who are part of an audience you have already defined somewhere outside of Optimizely Web Experimentation.
+- [React server-side rendering and hydration](https://docs.developers.optimizely.com/web-experimentation/docs/react-server-side-rendering-and-hydration.md): How to implement Optimizely Web Experimentation within React applications using server-side rendering and hydration
+- [Use markers to control activation](https://docs.developers.optimizely.com/web-experimentation/docs/use-markers-for-controlled-activation.md): How to use markers to control activation of Optimizely Web Experimentation experiments in React applications with server-side rendering and hydration
+- [Content Delivery Networks](https://docs.developers.optimizely.com/web-experimentation/docs/content-delivery-networks.md): How to use content delivery networks (CDN) with Optimizely Web Experimentation and Optimizely Personalization
+- [Transport Layer Security](https://docs.developers.optimizely.com/web-experimentation/docs/transport-layer-security.md): Describes Transport Layer Security (TLS) encryption for Optimizely Web Experimentation and Optimizely Personalization
+- [Page load speed](https://docs.developers.optimizely.com/web-experimentation/docs/page-load-speed.md): How Optimizely Web Experimentation and Optimizely Personalization affect page load speed
+- [Content delivery network cookie creation](https://docs.developers.optimizely.com/web-experimentation/docs/content-delivery-network-cookie-creation.md): How to configure cookie creation with Akamai for Optimizely Web Experimentation and Optimizely Personalization
+- [Self-host with Fastly](https://docs.developers.optimizely.com/web-experimentation/docs/self-hosting-for-fastly-users.md): How to set up self-hosting with Fastly for Optimizely Web Experimentation
+- [Self-host with Cloudflare](https://docs.developers.optimizely.com/web-experimentation/docs/self-hosting-with-cloudflare.md): How to set up self-hosting with Cloudflare for Optimizely Web Experimentation
+- [Self-host with Akamai](https://docs.developers.optimizely.com/web-experimentation/docs/self-host-with-akamai.md): How to set up self-hosting with Akamai for Optimizely Web Experimentation
+- [Self-host with Amazon CloudFront](https://docs.developers.optimizely.com/web-experimentation/docs/self-host-with-amazon-cloudfront.md): How to self-host with Amazon CloudFront for Optimizely Web Experimentation
+- [Snippet integrity check with Cloudflare](https://docs.developers.optimizely.com/web-experimentation/docs/snippet-integrity-check-with-cloudflare.md): How to create a system that verifies the integrity of your Optimizely Web Experimentation snippet using Cloudflare Workers
+- [Snippet integrity check with Akamai](https://docs.developers.optimizely.com/web-experimentation/docs/snippet-integrity-check-with-akamai.md): How to create a system that verifies the integrity of your Optimizely Web Experimentation snippet using Akamai EdgeWorkers
+- [Configure real-time audiences for Web Experimentation](https://docs.developers.optimizely.com/web-experimentation/docs/configure-real-time-segments-for-web-experimentation.md): You can integrate Optimizely Web Experimentation with Optimizely Data Platform (ODP) to use real-time audiences from ODP in your Optimizely Web Experimentation experiments.
+- [Enable an integration](https://docs.developers.optimizely.com/web-experimentation/docs/integrations.md): Describes how to build an app using Optimizely APIs.
+- [App types](https://docs.developers.optimizely.com/web-experimentation/docs/integration-types.md): This topic describes the various categories of Optimizely apps.
+- [Become a technology partner with Optimizely](https://docs.developers.optimizely.com/web-experimentation/docs/technology-partners.md): Describes how to become a Technology Partner with Optimizely to help support your integration.
+- [Apps maintained by third-parties](https://docs.developers.optimizely.com/web-experimentation/docs/integrations-maintained-by-third-parties.md): This topic describes how to integrate several third-party applications, gain insights into how visitors behave in specific experiments and variations, and identify experiments and variations based on the analytics strings listed in third-party integration reports and data.
+- [Google Analytics 4](https://docs.developers.optimizely.com/web-experimentation/docs/google-analytics-4.md): Describes the integrations available for Google Analytics 4 and Optimizely Web Experimentation
+- [Integrate Google Analytics 4 (GA4)](https://docs.developers.optimizely.com/web-experimentation/docs/integrate-google-analytics-4-ga4.md): Track your Optimizely Web Experimentation events in Google Analytics 4 (GA4) and export variations in an experiment as audiences in GA4.
+- [Integrate Google Analytics 4 with Google Tag Manager](https://docs.developers.optimizely.com/web-experimentation/docs/integrate-ga4-gtm.md): Enable Optimizely Web Experimentation's built-in Google Analytics 4 integration with Google Tag Manager.
+- [Configure Report Generation](https://docs.developers.optimizely.com/web-experimentation/docs/configure-report-generation.md): Track your Optimizely Web Experimentation events in Google Analytics 4 (GA4) and export variations in an experiment as audiences in GA4.
+- [Integrate Google Analytics 4 audiences](https://docs.developers.optimizely.com/web-experimentation/docs/integrate-ga4-audiences.md): How to import your Google Analytics 4 (GA4) audiences to Optimizely Web Experimentation.
+- [Create segments in Google Analytics 4](https://docs.developers.optimizely.com/web-experimentation/docs/create-segments-in-ga4.md): Use Google Analytics 4 (GA4) to capture and analyze traffic data across your websites and applications.
+- [Analytics apps](https://docs.developers.optimizely.com/web-experimentation/docs/analytics-integrations.md): This topic describes how to enable applications to pass Optimizely Web Experimentation and Optimizely Personalization data to your analytics platform, compare data between Optimizely and analytics platforms like (Google Analytics 4), and use other custom analytics integrations
+- [Create custom analytics integration](https://docs.developers.optimizely.com/web-experimentation/docs/create-custom-analytics-integration.md): Describes how to create and enable a new custom integration and troubleshoot common and potential issues
+- [Integrate Adobe Analytics](https://docs.developers.optimizely.com/web-experimentation/docs/integrate-adobe-analytics.md): Describes how to integrate Adobe Analytics to read experiment data from Optimizely Web Experimentation and set up custom conversion variables and traffic variables.
+- [Integrate AT Internet](https://docs.developers.optimizely.com/web-experimentation/docs/configure-at-internet.md): Describes how to integrate AT Internet with Optimizely Web Experimentation and gain insights into how visitors behave in specific experiments and variations.
+- [Integrate BlueKai](https://docs.developers.optimizely.com/web-experimentation/docs/configure-bluekai.md): Describes how to set up your BlueKai JS Return tag to make segment data available client-side and access your BlueKai Campaign list in Optimizely Web Experimentation and Optimizely Personalization to create audiences and target experiences.
+- [Integrate Clarity](https://docs.developers.optimizely.com/web-experimentation/docs/configure-clarity.md): Integrate Clarity with Optimizely Web Experimentation to view your experiment results and analyze how users interact with your website.
+- [Integrate FullStory](https://docs.developers.optimizely.com/web-experimentation/docs/configure-fullstory.md): Integrate Optimizely Web Experimentation and FullStory to analyze how users interact with your Optimizely experiments and ideas for new experiments to run.
+- [Integrate Hotjar](https://docs.developers.optimizely.com/web-experimentation/docs/configure-hotjar.md): Describes how to tag Hotjar recordings with Optimizely experiment and campaign data, create specific Hotjar Heatmaps for your experiment and campaign, and integrate Hotjar with Optimizely Web Experimentation and Optimizely Personalization for Hotjar Heatmaps & Recordings
+- [Integrate Mixpanel](https://docs.developers.optimizely.com/web-experimentation/docs/configure-mixpanel.md): Integrate Optimizely Web Experimentation and Optimizely Personalization with Mixpanel to read data from and see reporting on Optimizely experiments and campaigns in Mixpanel.
+- [Integrate Qualaroo](https://docs.developers.optimizely.com/web-experimentation/docs/configure-qualaroo.md): Describes how to integrate Qualaroo with Optimizely Web Experimentation.
+- [Audience apps](https://docs.developers.optimizely.com/web-experimentation/docs/audience-integrations.md): List of audience apps available in Optimizely Web Experimentation.
+- [Integrate Adobe Audience Manager](https://docs.developers.optimizely.com/web-experimentation/docs/integrate-adobe-audience-manager.md): Enable the Adobe Audience Manager integration in Optimizely Web Experimentation and Optimizely Personalization to create new audiences.
+- [Integrate Demandbase](https://docs.developers.optimizely.com/web-experimentation/docs/configure-demandbase.md): Integrate Optimizely Web Experimentation with Demandbase to create targeted B2B audiences and deliver personalized content
+- [Integrate Google Ads](https://docs.developers.optimizely.com/web-experimentation/docs/configure-google-ads.md): How to integrate Google Ads with Optimizely Web Experimentation, create Optimizely audiences based on ad campaigns and ad groups from Google Ads, target experiments based on your Google Ads referral data, and create personalized landing pages for your ads.
+- [Integrate Salesforce DMP](https://docs.developers.optimizely.com/web-experimentation/docs/configure-krux.md): This topic describes how to enable the Salesforce DMP integration in Optimizely Web Experimentation and Optimizely Personalization and create new audiences
+- [Integrate Lotame DMP](https://docs.developers.optimizely.com/web-experimentation/docs/configure-lotame-dmp.md): Integrate Optimizely Web Experimentation and Optimizely Personalization with Lotame DMP to target audiences
+- [Integrate Lytics](https://docs.developers.optimizely.com/web-experimentation/docs/configure-lytics.md): Integrate Optimizely Web Experimentation and Optimizely Personalization with Lytics to target the predictive audiences from Lytics in your experiments.
+- [Integrate Tealium AudienceStream](https://docs.developers.optimizely.com/web-experimentation/docs/configure-tealium-audiencestream.md): Integrate Optimizely Web Experimentation with Tealium AudienceStream to target experiments.
+- [Integrate Asana](https://docs.developers.optimizely.com/web-experimentation/docs/configure-asana.md): The Asana integration is designed for Optimizely Web Experimentation clients who manage the tasks related to designing and implementing an experiment in Asana, and want an easy way to preview and update their Asana tickets from Optimizely Web Experimentation.
+- [Integrate Jira](https://docs.developers.optimizely.com/web-experimentation/docs/configure-jira.md): This topic describes how to configure your organization's Jira integration, connect your Optimizely Web Experimentation account to your Jira account, link and unlink experiments to Jira tickets, and disconnect your Jira authorization from your Optimizely Web Experimentation account.
+- [Use a CMS or ecommerce platform with the Optimizely snippet](https://docs.developers.optimizely.com/web-experimentation/docs/implement-the-snippet-on-a-cms-or-e-commerce-platform.md): Describes how to implement the Optimizely snippet with a CMS or ecommerce platform
+- [Capture Shopify checkout events](https://docs.developers.optimizely.com/web-experimentation/docs/capture-shopify-checkout-events.md): Configure a Shopify custom pixel to track `checkout_started` and `checkout_completed` events as conversion metrics in Optimizely Web Experimentation.
+- [Use a tag manager with Optimizely snippet](https://docs.developers.optimizely.com/web-experimentation/docs/implement-the-snippet-with-a-tag-manager.md): Describes how to evaluate tradeoffs of implementing Optimizely inside or outside of a tag manager.
+- [Use Signal with Optimizely snippet](https://docs.developers.optimizely.com/web-experimentation/docs/implement-the-snippet-with-signal.md): This topic describes how to implement the Optimizely snippet if you use Signal and use Signal's preconfigured tag templates to integrate Optimizely Web Experimentation.
+- [Use Tealium iQ with Optimizely snippet](https://docs.developers.optimizely.com/web-experimentation/docs/implement-the-snippet-with-tealium-iq.md): Describes how to use Tealium IQ with the Optimizely snippet
+- [Experience templates](https://docs.developers.optimizely.com/web-experimentation/docs/templates.md): How to use experience templates (formerly Extensions) in Optimizely Web Experimentation and Optimizely Performance Edge.
+- [Fields](https://docs.developers.optimizely.com/web-experimentation/docs/fields.md): Describes the fields you must edit to create a new template in Optimizely Web Experimentation and Optimizely Personalization
+- [HTML](https://docs.developers.optimizely.com/web-experimentation/docs/html.md): How to use the HTML box in the Template Builder for Optimizely Web Experimentation and Optimizely Personalization
+- [CSS](https://docs.developers.optimizely.com/web-experimentation/docs/css.md): How to use the CSS field in the Template Builder for Optimizely Web Experimentation and Optimizely Personalization
+- [Apply JS](https://docs.developers.optimizely.com/web-experimentation/docs/apply-js.md): How to use the Apply JS code section of the Template Builder for Optimizely Web Experimentation and Optimizely Personalization
+- [Reset JS](https://docs.developers.optimizely.com/web-experimentation/docs/reset-js.md): How to use the Reset JS code section of the Template Builder for Optimizely Web Experimentation and Optimizely Personalization
+- [Dynamic Customer Profile Service (DCP)](https://docs.developers.optimizely.com/web-experimentation/docs/dcp.md): This topic describes the REST API of Dynamic Customer Profile Service.
+- [Installation instructions](https://docs.developers.optimizely.com/web-experimentation/docs/installation-instructions.md): How to install and set up Optimizely Edge Delivery.
+
+## API Reference
+- [JavaScript API](https://docs.developers.optimizely.com/web-experimentation/reference/javascript-api.md): The Optimizely Web Experimentation JavaScript API has many useful functions that can be used to control Optimizely Web Experimentation.
+- [Push](https://docs.developers.optimizely.com/web-experimentation/reference/push.md): This topic describes the `optimizely.push` API function that updates the state of Optimizely Web Experimentation in the browser.
+- [Activate](https://docs.developers.optimizely.com/web-experimentation/reference/activate.md): Activate the Optimizely Web Experimentation snippet.
+- [Cookie expiration](https://docs.developers.optimizely.com/web-experimentation/reference/cookie-expiration.md): Specify the number of days before the Optimizely Web Experimentation visitor cookies is set to expire.
+- [Add listener](https://docs.developers.optimizely.com/web-experimentation/reference/add-listener.md): Use `addListener` to hook into Optimizely Web Experimentation lifecycle and analytics events from the snippet. This API gives you visibility into when Optimizely initializes, activates content, or assigns variations so you can react with custom code.
+- [Bucket visitor](https://docs.developers.optimizely.com/web-experimentation/reference/bucket-visitor.md): Bucket the visitor into a given variation ID or index.
+- [Cookie domain](https://docs.developers.optimizely.com/web-experimentation/reference/cookie-domain.md): Instruct Optimizely Web Experimentation to set its cookies on a specific subdomain instead of the default domain.
+- [Event](https://docs.developers.optimizely.com/web-experimentation/reference/event.md): Track custom events in Optimizely Web Experimentation.
+- [Disable cross origin](https://docs.developers.optimizely.com/web-experimentation/reference/disable-cross-origin.md): Disable cross-origin tracking of visitor data.
+- [Disable](https://docs.developers.optimizely.com/web-experimentation/reference/disable.md): Disable Optimizely Web Experimentation entirely.
+- [Hold events](https://docs.developers.optimizely.com/web-experimentation/reference/hold-events.md): Instruct the Optimizely Web Experimentation snippet to hold and enqueue events.
+- [Extend cookie lifetime](https://docs.developers.optimizely.com/web-experimentation/reference/extend-cookie-lifetime.md): Disable or enable the automatic lifetime extension of the visitor ID cookie.
+- [Log](https://docs.developers.optimizely.com/web-experimentation/reference/log.md): Print execution logic to your browser's console.
+- [Opt out](https://docs.developers.optimizely.com/web-experimentation/reference/opt-out.md): Opt a visitor out of Optimizely Web Experimentation tracking by disabling Optimizely.
+- [Page](https://docs.developers.optimizely.com/web-experimentation/reference/page.md): The page method tracks the visitor's current context on a website.
+- [Send events](https://docs.developers.optimizely.com/web-experimentation/reference/send-events.md): Instruct the Optimizely Web Experimentation snippet to release queued events.
+- [Wait for origin sync](https://docs.developers.optimizely.com/web-experimentation/reference/wait-for-origins.md): Wait for data to be received from other origins before Optimizely Web Experimentation activates.
+- [User](https://docs.developers.optimizely.com/web-experimentation/reference/user.md): Record the user's values for any number of dimensions or custom attributes
+- [Tags](https://docs.developers.optimizely.com/web-experimentation/reference/tags.md): How to set tags in Optimizely Web Experimentation.
+- [Behavior](https://docs.developers.optimizely.com/web-experimentation/reference/behavior.md): Describes behavior API functions in Optimizely Personalization.
+- [DCP](https://docs.developers.optimizely.com/web-experimentation/reference/dynamic-customer-profiles.md): Describes Dynamic Customer Profile (DCP) API functions
+- [jQuery](https://docs.developers.optimizely.com/web-experimentation/reference/jquery.md): The jQuery function returns a jQuery object if jQuery is bundled in Optimizely Web Experimentation.
+- [Data](https://docs.developers.optimizely.com/web-experimentation/reference/data.md): Returns an object exposing the static data fields. These fields are the same for all visitors on all page loads until you modify your project.
+- [State](https://docs.developers.optimizely.com/web-experimentation/reference/state.md): Returns a module exposing several functions to access information about the current visitor's state in Optimizely Web Experimentation.
+- [Utils](https://docs.developers.optimizely.com/web-experimentation/reference/utilities.md): Returns a utils object that includes useful functions for developing experiences.
+- [Visitor](https://docs.developers.optimizely.com/web-experimentation/reference/visitor.md): Optimizely Web Experimentation uses visitor attributes for targeting and segmentation.
+- [Visitor ID](https://docs.developers.optimizely.com/web-experimentation/reference/visitor-id.md): Get the visitor ID assigned by Optimizely Web Experimentation.
+- [Get started with Experimentation REST API](https://docs.developers.optimizely.com/web-experimentation/reference/overview.md): Describes how to get started using the Optimizely Experimentation REST API for your Web Experimentation project.
+- [List Projects](https://docs.developers.optimizely.com/web-experimentation/reference/list_projects.md): Get a list of all the Projects in your account, with associated metadata
+- [Create a Project](https://docs.developers.optimizely.com/web-experimentation/reference/create_project.md): Create a new Project in your account
+- [Read a Project](https://docs.developers.optimizely.com/web-experimentation/reference/get_project.md): Get all the properties of a single Project
+- [Update a Project](https://docs.developers.optimizely.com/web-experimentation/reference/update_project.md): Update a Project
+- [List Campaigns](https://docs.developers.optimizely.com/web-experimentation/reference/list_campaigns.md): Get a list of all the Campaigns in a Project
+- [Create a Campaign](https://docs.developers.optimizely.com/web-experimentation/reference/create_campaign.md): Create a new Campaign in your account
+- [Archive a Campaign](https://docs.developers.optimizely.com/web-experimentation/reference/delete_campaign.md): Archive Campaign by ID
+- [Read a Campaign](https://docs.developers.optimizely.com/web-experimentation/reference/get_campaign.md): Get metadata for a single Campaign
+- [Update a Campaign](https://docs.developers.optimizely.com/web-experimentation/reference/update_campaign.md): Update a campaign's metadata.
+- [Get Campaign results](https://docs.developers.optimizely.com/web-experimentation/reference/get_campaign_results.md): Get results for a Campaign
+- [Get a sharable link for the campaign's results page](https://docs.developers.optimizely.com/web-experimentation/reference/get_campaign_results_share_link.md): This link allows read-only access for anyone to view the results, even if they don't have an Optimizely account. Because anyone can use the link, be careful where you share it.
+- [Get Campaign results as a CSV](https://docs.developers.optimizely.com/web-experimentation/reference/get_campaign_results_csv.md): Get results for a Campaign as a CSV
+- [List Experiments](https://docs.developers.optimizely.com/web-experimentation/reference/list_experiments.md): Get a list of all the Experiments by Project or Campaign. Either the <code>project_id</code> or <code>campaign_id</code> query parameter is required.
+- [Create an Experiment](https://docs.developers.optimizely.com/web-experimentation/reference/create_experiment.md): Create an Experiment in a Project
+- [Archive an Experiment](https://docs.developers.optimizely.com/web-experimentation/reference/delete_experiment.md): Archive Experiment by ID
+- [Read an Experiment](https://docs.developers.optimizely.com/web-experimentation/reference/get_experiment.md): Get metadata for a single Experiment
+- [Update an Experiment](https://docs.developers.optimizely.com/web-experimentation/reference/update_experiment.md): Update an experiment by ID.
+- [Get Experiment results](https://docs.developers.optimizely.com/web-experimentation/reference/get_experiment_results.md): Get results for a single Experiment
+- [Get a sharable link for the experiment's results page](https://docs.developers.optimizely.com/web-experimentation/reference/get_experiment_results_share_link.md): This link allows read-only access for anyone to view the results, even if they don't have an Optimizely account. Because anyone can use the link, be careful where you share it.
+- [Get Experiment results time series](https://docs.developers.optimizely.com/web-experimentation/reference/get_experiment_timeseries.md): Get results time series for a single Experiment
+- [Get Experiment results as a CSV](https://docs.developers.optimizely.com/web-experimentation/reference/get_experiment_results_csv.md): Get results for a single Experiment as a CSV
+- [List Audiences](https://docs.developers.optimizely.com/web-experimentation/reference/list_audiences.md): List Audiences for a Project
+- [Create an Audience](https://docs.developers.optimizely.com/web-experimentation/reference/create_audience.md): Create an Audience for a Project
+- [Read an Audience](https://docs.developers.optimizely.com/web-experimentation/reference/get_audience.md): Get metadata for a single Audience
+- [Update an Audience](https://docs.developers.optimizely.com/web-experimentation/reference/update_audience.md): Update an Audience for a Project
+- [List Pages](https://docs.developers.optimizely.com/web-experimentation/reference/list_pages.md): List all Pages for a Project
+- [Create a Page](https://docs.developers.optimizely.com/web-experimentation/reference/create_page.md): Create a new Page in a provided Project
+- [Archived a Page](https://docs.developers.optimizely.com/web-experimentation/reference/delete_page.md): Archive a Page within a Project by ID
+- [Read a page](https://docs.developers.optimizely.com/web-experimentation/reference/get_page.md): Get metadata for a single Page.
+- [Update a Page](https://docs.developers.optimizely.com/web-experimentation/reference/update_page.md): Update a Page in a provided Project
+- [List all Events](https://docs.developers.optimizely.com/web-experimentation/reference/list_events.md): Get all Events for a Project. This endpoint lists all types of Events including Pageview Events which are stored as Pages. You can also get Goal objects from Optimizely Classic by setting the include_classic parameter to true.
+- [Get Event by ID](https://docs.developers.optimizely.com/web-experimentation/reference/get_event.md): Get Event by ID
+- [Create an In-Page Event](https://docs.developers.optimizely.com/web-experimentation/reference/create_in_page_event.md): Create an Event that occurs in the context of a Page, such as measuring clicks
+- [Archive an In-Page Event](https://docs.developers.optimizely.com/web-experimentation/reference/delete_in_page_event.md): Archive an In-Page Event
+- [Update an In-Page Event](https://docs.developers.optimizely.com/web-experimentation/reference/update_in_page_event.md): Update an Event that occurs in the context of a Page, such as measuring clicks
+- [Create a Custom Event](https://docs.developers.optimizely.com/web-experimentation/reference/create_custom_event.md): Create a Custom Event in a provided Project
+- [Archive a Custom Event](https://docs.developers.optimizely.com/web-experimentation/reference/delete_custom_event.md): Archive a Custom Event
+- [Update a Custom Event](https://docs.developers.optimizely.com/web-experimentation/reference/update_custom_event.md): Update a Custom Event
+- [List Attributes](https://docs.developers.optimizely.com/web-experimentation/reference/list_attributes.md): List Attributes under a Project
+- [Create an Attribute](https://docs.developers.optimizely.com/web-experimentation/reference/create_attribute.md): Create an Attribue
+- [Archive an Attribute](https://docs.developers.optimizely.com/web-experimentation/reference/delete_attribute.md): Archive Attribute by ID
+- [Read an Attribute](https://docs.developers.optimizely.com/web-experimentation/reference/get_attribute.md): Get Attribute by ID
+- [Update an Attribute](https://docs.developers.optimizely.com/web-experimentation/reference/update_attribute.md): Update an Attribute by ID
+- [List Exclusion Groups](https://docs.developers.optimizely.com/web-experimentation/reference/list_groups.md): List Exclusion Groups under a Project
+- [Create an Exclusion Group](https://docs.developers.optimizely.com/web-experimentation/reference/create_group.md): Create a new Exclusion Group in a provided project
+- [Archive an Exclusion Group](https://docs.developers.optimizely.com/web-experimentation/reference/delete_group.md): Archive an Exclusion Group by ID
+- [Get an Exclusion Group](https://docs.developers.optimizely.com/web-experimentation/reference/get_group.md): Get an Exclusion Group by ID
+- [Update an Exclusion Group](https://docs.developers.optimizely.com/web-experimentation/reference/update_group.md): Update an exclusion group by ID.
+- [List Extensions](https://docs.developers.optimizely.com/web-experimentation/reference/list_extensions.md): List Extensions under a project
+- [Create an Extension](https://docs.developers.optimizely.com/web-experimentation/reference/create_extension.md): Create a new Extension in a provided project
+- [Archive an Extension](https://docs.developers.optimizely.com/web-experimentation/reference/delete_extension.md): Archive an Extension by ID
+- [Get an Extension](https://docs.developers.optimizely.com/web-experimentation/reference/get_extension.md): Get an Extension by ID
+- [Update an Extension](https://docs.developers.optimizely.com/web-experimentation/reference/update_extension.md): Update an extension by ID.
+- [Get Plan & Usage information for all products](https://docs.developers.optimizely.com/web-experimentation/reference/get_plan.md): Get Plan & Usage information for all products, only accessible for Administrators on the account
+- [Get a list of Scheduled Jobs](https://docs.developers.optimizely.com/web-experimentation/reference/list_scheduled_jobs.md): Get the list of Scheduled Jobs that belong to your account
+- [Create a Scheduled Job](https://docs.developers.optimizely.com/web-experimentation/reference/create_scheduled_job.md): Create a Scheduled Job
+- [Archive a Scheduled Job](https://docs.developers.optimizely.com/web-experimentation/reference/delete_scheduled_job.md): Archive a Scheduled Job by ID
+- [Get a Scheduled Job](https://docs.developers.optimizely.com/web-experimentation/reference/get_scheduled_job.md): Get a Scheduled Job by ID
+- [Update a Scheduled Job](https://docs.developers.optimizely.com/web-experimentation/reference/update_scheduled_job.md): Update a Scheduled Job by ID
+- [Get current User information](https://docs.developers.optimizely.com/web-experimentation/reference/get_me.md): Get current User information
+- [Get list attributes by project](https://docs.developers.optimizely.com/web-experimentation/reference/list_list_attributes.md): Get all of the List Attributes that have been created in a given project.
+- [Create a List Attribute](https://docs.developers.optimizely.com/web-experimentation/reference/create_list_attribute.md): Create a List Attribue with provided `name`, `list_type` and `key_field`. Fields `description` and `list_content` are optional.
+- [Archive a List Attribute](https://docs.developers.optimizely.com/web-experimentation/reference/archive_list_attribute.md): Archive List Attribute by ID
+- [Read a List Attribute](https://docs.developers.optimizely.com/web-experimentation/reference/get_list_attribute.md): Get metadata for a single List Attribute.
+- [Update a List Attribute](https://docs.developers.optimizely.com/web-experimentation/reference/update_list_attribute.md): Overwrite the List Attribute with the provided id. Required arguments are identical to creating a new List Attribute.
+- [Read all the Sections in a Multivariate Test](https://docs.developers.optimizely.com/web-experimentation/reference/get_experiment_sections.md): Get a list of all Sections in a Multivariate Test
+- [Create a new Section in a Multivariate Test](https://docs.developers.optimizely.com/web-experimentation/reference/create_section.md): Add a new Section to the Multivariate Test specified by `experiment_id`
+- [Archive a Section by ID](https://docs.developers.optimizely.com/web-experimentation/reference/delete_section.md): Archive a Section by ID within the specified Multivariate Test
+- [Read a Section of a Multivariate Test](https://docs.developers.optimizely.com/web-experimentation/reference/get_section.md): Get metadata for a single Multivariate Test Section
+- [Update a Section by ID](https://docs.developers.optimizely.com/web-experimentation/reference/update_section.md): (Beta) Update a section by ID within the specified multivariate test.
+- [Get Features by Project](https://docs.developers.optimizely.com/web-experimentation/reference/list_features.md): Get all of the Features that have been created in a given Project. Note this endpoint is incompatible with Full Stack Targeted Rollouts projects (default in accounts created after July 2020) and with non-legacy Full Stack projects (default in projects created after February 2021). See the compatible API at https://library.optimizely.com/docs/api/flags/v1/index.html#tag/Flags.
+- [Create a Feature](https://docs.developers.optimizely.com/web-experimentation/reference/create_feature.md): Create a Feature
+- [Archive a Feature](https://docs.developers.optimizely.com/web-experimentation/reference/delete_feature.md): Archive a Feature
+- [Read a Feature](https://docs.developers.optimizely.com/web-experimentation/reference/get_feature.md): Get metadata for a single Feature. Note this endpoint is incompatible with Full Stack Targeted Rollouts projects (default in accounts created after July 2020) and with non-legacy Full Stack projects (default in projects created after February 2021). See the compatible API at https://library.optimizely.com/docs/api/flags/v1/index.html#tag/Flags.
+- [Update a Feature](https://docs.developers.optimizely.com/web-experimentation/reference/update_feature.md): Update a feature by ID.
+- [List Subject Access Requests by data source and status](https://docs.developers.optimizely.com/web-experimentation/reference/list_sar_requests_by_team.md): Get a list of Subject Access Requests by data source and status
+- [Update a Subject Access Request](https://docs.developers.optimizely.com/web-experimentation/reference/update_sar_request.md): Update a Subject Access Request by ID
+- [Update a Subject Access Request](https://docs.developers.optimizely.com/web-experimentation/reference/update_sar_request_by_post.md): Update a Subject Access Request by ID
+- [List Subject Access Requests](https://docs.developers.optimizely.com/web-experimentation/reference/list_sar_requests_by_account.md): Fetch Subject Access Requests submitted from your account
+- [Create a Subject Access Request](https://docs.developers.optimizely.com/web-experimentation/reference/create_sar_request.md): Create a Subject Access Request
+- [Get Subject Access Request](https://docs.developers.optimizely.com/web-experimentation/reference/get_sar_request.md): Get Subject Access Requests by request id
+- [Get Environments by Project](https://docs.developers.optimizely.com/web-experimentation/reference/list_environments.md): Get all of the Environments that have been created in a given Project
+- [Create an Environment](https://docs.developers.optimizely.com/web-experimentation/reference/create_environment.md): Create an Environment in a provided Project
+- [Archive an Environment](https://docs.developers.optimizely.com/web-experimentation/reference/delete_environment.md): Archive an Environment
+- [Read an Environment](https://docs.developers.optimizely.com/web-experimentation/reference/get_environment.md): Get all the properties of a single Environment
+- [Update an Environment](https://docs.developers.optimizely.com/web-experimentation/reference/update_environment.md): Update an Environment by ID
+- [Read the datafile of an Environment](https://docs.developers.optimizely.com/web-experimentation/reference/get_datafile.md): Get the datafile for an Environment. The <a href="https://docs.developers.optimizely.com/full-stack/docs/example-datafile">Datafile</a> is a JSON string that describes to the Full Stack SDK all the experiments and features running in a given environment and dependent entities like audiences and attributes. Normally, you won't need to interact with the datafile directly. The SDK exposes methods that operate on it internally.
+- [Search](https://docs.developers.optimizely.com/web-experimentation/reference/get_search_results.md): Search for entities in your account by text string
+- [Retrieve changes for a project.](https://docs.developers.optimizely.com/web-experimentation/reference/list_change_history.md): Get a list of changes for a given project using optional filters.
+- [Get bucketing information for a visitor](https://docs.developers.optimizely.com/web-experimentation/reference/get_bucketing_history.md): Get a list of experiments within a project a visitor has been exposed to
+- [Get AWS credentials to access experimentation events export data.](https://docs.developers.optimizely.com/web-experimentation/reference/get_enriched_events_export_credentials.md): Get temporary credentials for experimentation events export data hosted on AWS.
+- [Get GCP credentials to access experimentation events export data.](https://docs.developers.optimizely.com/web-experimentation/reference/get_gcp_e3_credentials.md): Get a temporary access token for experimentation events export data hosted on GCP. The credentials are valid for one hour.
+- [Get Impressions Usage](https://docs.developers.optimizely.com/web-experimentation/reference/get_impressions_usage_request.md): Get Impressions Usage by account id
+- [List Collaborators](https://docs.developers.optimizely.com/web-experimentation/reference/list_collaborators.md): List all the Collaborators on your account, or filter by project_id to list Collaborators on a specific project
+- [Invite Collaborators](https://docs.developers.optimizely.com/web-experimentation/reference/create_collaborators.md): Invite collaborators to specific projects on an account
+- [List Collaborators who have not yet accepted the invitations](https://docs.developers.optimizely.com/web-experimentation/reference/list_invitations.md): List Collaborators who are yet to accept the invitations.
+- [Summaries of Experiments and Campaigns](https://docs.developers.optimizely.com/web-experimentation/reference/get_experiment_summaries.md): Summaries of Experiments and Campaigns in a Project
+- [Get Experiment Result's Report](https://docs.developers.optimizely.com/web-experimentation/reference/get_experiment_report.md): Gets the outcome of the experiment as inferred by the Optimizely system upon the evaluation of variations that may or may not have reached statistical significance.
+- [Get Webhooks by Project](https://docs.developers.optimizely.com/web-experimentation/reference/list_webhooks.md): Get all of the Webhooks that have been created in a given Project
+- [Create a Webhook](https://docs.developers.optimizely.com/web-experimentation/reference/create_webhook.md): Create a Webhook in a provided Project
+- [Delete a Webhook](https://docs.developers.optimizely.com/web-experimentation/reference/delete_webhook.md): Delete an Webhook
+- [Read a Webhook](https://docs.developers.optimizely.com/web-experimentation/reference/get_webhook.md): Get all the properties of a single Webhook
+- [Update a Webhook](https://docs.developers.optimizely.com/web-experimentation/reference/update_webhook.md): Update a webhook by ID
+- [Download a CSV with all current catalog data](https://docs.developers.optimizely.com/web-experimentation/reference/get_recs_catalog_csv.md): Download a CSV with all current catalog data
+- [Download a CSV with all computed recommendations output data](https://docs.developers.optimizely.com/web-experimentation/reference/get_recs_output_csv.md): Download a CSV with all computed recommendations output data
+- [Download a CSV with summary stats data](https://docs.developers.optimizely.com/web-experimentation/reference/get_recs_stats_csv.md): Download a CSV with summary stats data
+- [Get Holdout results as a CSV](https://docs.developers.optimizely.com/web-experimentation/reference/get_holdout_results_csv.md): Get results for a Holdout as a CSV

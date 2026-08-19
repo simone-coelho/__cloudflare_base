@@ -123,6 +123,10 @@ OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/RLCQEiLW3ifgVH5f
 # the KV session, WebSocket on the relay DO; today's behavior) | 'do' (opt-in —
 # socket + state + alarms co-located in the per-shopper ShopperReflex DO).
 REFLEX_HOST = "session"
+# Bright Hour demo (surface 'brighthour', /live): demo-clock time compression.
+# 1 = real time; e.g. 360 plays a 24h offer window in 4 minutes. Real ISO
+# timestamps are preserved everywhere — only the clock scales (house honesty rule).
+BRIGHTHOUR_CLOCK_MULTIPLIER = "1"
 
 # Static assets configuration
 [assets]

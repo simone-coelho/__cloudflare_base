@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Behavioral Targeting and Intelligence — Solution &amp; Algorithm</title>
+<style>
+  :root{
+    --paper:#f7f4ef;
+    --paper-2:#efe9e0;
+    --ink:#1a1a1a;
+    --ink-soft:#5a544c;
+    --line:#ddd5c9;
+    --line-soft:#e8e1d6;
+    --mag:#c2185b;
+    --mag-tint:#f7e3ec;
+    --mag-deep:#8e1145;
+    --slate:#5b6b7a;
+    --slate-tint:#e5e9ec;
+    --gold:#c99a3f;
+    --teal:#1f7a6d;
+    --teal-tint:#dcefec;
+    --paint-a:#e8ccd6;
+    --paint-b:#cdd8dd;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:.001ms!important;transition-duration:.001ms!important;}
+  }
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 26px 120px;}
+  .display{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;letter-spacing:-.02em;}
+  .mono{font-family:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;}
+
+  /* ---------- hero ---------- */
+  header.hero{padding:70px 0 34px;border-bottom:2px solid var(--ink);}
+  .eyebrow{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--mag);margin:0 0 22px;font-weight:600;}
+  h1{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;letter-spacing:-.03em;
+    font-size:clamp(38px,6.6vw,66px);line-height:1;margin:0 0 20px;}
+  h1 .swap{color:var(--mag);}
+  .dek{font-size:20px;color:var(--ink-soft);max-width:62ch;margin:0;}
+  .readmeta{display:flex;gap:22px;flex-wrap:wrap;margin-top:26px;
+    font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ink-soft);}
+  .readmeta span{display:flex;align-items:center;gap:7px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--mag);}
+  .dot.s{background:var(--slate);}
+  .dot.g{background:var(--gold);}
+
+  /* ---------- thesis ---------- */
+  .thesis{margin:52px 0;padding:34px 34px 34px 30px;background:var(--ink);color:var(--paper);
+    border-radius:4px;position:relative;overflow:hidden;}
+  .thesis::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--mag);}
+  .thesis p{margin:0;font-size:23px;line-height:1.4;font-weight:400;}
+  .thesis .hl{color:#ffd9e6;font-style:italic;}
+  .thesis .foot{font-family:ui-monospace,monospace;font-size:12px;color:#b7b0a6;
+    margin-top:16px;text-transform:uppercase;letter-spacing:.08em;}
+
+  /* ---------- sections ---------- */
+  section{margin:66px 0;}
+  .snum{font-family:ui-monospace,monospace;font-size:12px;color:var(--mag);
+    letter-spacing:.14em;font-weight:600;}
+  h2{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;letter-spacing:-.02em;
+    font-size:clamp(26px,3.6vw,36px);line-height:1.08;margin:6px 0 20px;}
+  h3{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:20px;
+    letter-spacing:-.01em;margin:34px 0 12px;}
+  p{max-width:70ch;margin:0 0 18px;}
+  strong{font-weight:700;}
+  em{font-style:italic;}
+  .kbd{font-family:ui-monospace,monospace;font-size:.82em;background:var(--paper-2);
+    border:1px solid var(--line);padding:1px 6px;border-radius:3px;}
+  a{color:var(--mag-deep);text-decoration:underline;text-decoration-thickness:1px;
+    text-underline-offset:3px;text-decoration-color:rgba(194,24,91,.45);}
+  a:hover{text-decoration-color:var(--mag);}
+  ul.plain{margin:0 0 18px;padding-left:20px;max-width:70ch;}
+  ul.plain li{margin-bottom:9px;}
+  ul.plain li::marker{color:var(--mag);}
+
+  /* ================= FRAME-WALL WIDGET ================= */
+  .stage{border:2px solid var(--ink);border-radius:6px;overflow:hidden;margin:8px 0 10px;
+    background:var(--paper);box-shadow:0 20px 50px -30px rgba(0,0,0,.4);}
+  .stage-top{background:var(--ink);color:var(--paper);padding:16px 20px;
+    display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;}
+  .stage-top .t{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:15px;
+    letter-spacing:.02em;display:flex;align-items:center;gap:10px;}
+  .browserdots{display:flex;gap:6px;}
+  .browserdots i{width:9px;height:9px;border-radius:50%;background:#4a4a4a;display:block;}
+
+  .persona-bar{display:flex;gap:0;background:var(--paper-2);border-bottom:2px solid var(--ink);flex-wrap:wrap;}
+  .persona-bar button{flex:1 1 140px;min-width:120px;background:transparent;border:none;
+    border-right:1px solid var(--line);cursor:pointer;padding:14px 12px;text-align:left;
+    font-family:inherit;transition:background .18s;color:var(--ink);}
+  .persona-bar button:last-child{border-right:none;}
+  .persona-bar button:hover{background:#fff;}
+  .persona-bar button.on{background:var(--mag);color:#fff;}
+  .persona-bar button.on .pl{color:#ffd9e6;}
+  .persona-bar .pn{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:14px;display:block;}
+  .persona-bar .pl{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--ink-soft);
+    letter-spacing:.03em;margin-top:3px;display:block;}
+  .persona-bar button:focus-visible{outline:3px solid var(--gold);outline-offset:-3px;}
+
+  .thermo{padding:14px 20px;background:#fff;border-bottom:1px solid var(--line);
+    display:flex;gap:18px;align-items:center;flex-wrap:wrap;}
+  .thermo .lbl{font-family:ui-monospace,monospace;font-size:10px;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--ink-soft);}
+  .therm-set{display:flex;gap:16px;flex-wrap:wrap;flex:1;}
+  .therm{display:flex;align-items:center;gap:8px;min-width:132px;flex:1;}
+  .therm .name{font-family:ui-monospace,monospace;font-size:11px;width:64px;color:var(--ink);}
+  .therm .track{flex:1;height:7px;background:var(--paper-2);border-radius:4px;overflow:hidden;}
+  .therm .fill{height:100%;width:8%;background:var(--slate);border-radius:4px;
+    transition:width .6s cubic-bezier(.22,1,.36,1),background .4s;}
+  .therm .fill.hot{background:var(--mag);}
+  .therm .pct{font-family:ui-monospace,monospace;font-size:10px;color:var(--ink-soft);width:30px;text-align:right;}
+
+  .wall{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--line);padding:2px;}
+  .frame{background:#fff;position:relative;min-height:96px;padding:16px 16px 14px;
+    display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;}
+  .frame.wide{grid-column:1 / -1;min-height:78px;}
+  .frame .ftag{font-family:ui-monospace,monospace;font-size:9.5px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--ink-soft);display:flex;justify-content:space-between;
+    align-items:center;gap:8px;}
+  .frame .locked{color:var(--slate);border:1px solid var(--slate-tint);background:var(--slate-tint);
+    padding:1px 6px;border-radius:20px;font-size:8.5px;}
+  .frame .carousel-tag{color:var(--teal);border:1px solid var(--teal-tint);background:var(--teal-tint);
+    padding:1px 6px;border-radius:20px;font-size:8.5px;}
+  .swatch{height:34px;border-radius:3px;margin:10px 0;background:linear-gradient(120deg,var(--paint-a),var(--paint-b));
+    transition:background .5s;position:relative;overflow:hidden;}
+  .swatch::after{content:"";position:absolute;inset:0;background:
+    repeating-linear-gradient(45deg,transparent,transparent 9px,rgba(255,255,255,.35) 9px,rgba(255,255,255,.35) 10px);
+    opacity:.5;}
+  .frame .pick{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:13.5px;
+    line-height:1.25;margin:0;transition:opacity .35s;}
+  .frame .cid{font-family:ui-monospace,monospace;font-size:10px;color:var(--mag);font-weight:600;}
+  .frame .why{font-size:11.5px;color:var(--ink-soft);line-height:1.35;margin-top:5px;
+    font-family:"Helvetica Neue",Arial,sans-serif;}
+  .frame.def .cid{color:var(--slate);}
+  .frame.def .swatch{background:linear-gradient(120deg,#dfe4e8,#eef1f3);}
+  .frame.pulse{animation:framepulse .6s ease;}
+  @keyframes framepulse{0%{background:var(--mag-tint);}100%{background:#fff;}}
+  .frame.def.pulse{animation:framepulsedef .6s ease;}
+  @keyframes framepulsedef{0%{background:var(--slate-tint);}100%{background:#fff;}}
+
+  /* carousel row inside a frame */
+  .carousel{display:flex;gap:6px;margin:8px 0 4px;}
+  .cslide{flex:1;height:30px;border-radius:3px;position:relative;display:flex;align-items:flex-end;
+    justify-content:flex-start;padding:3px 4px;font-family:ui-monospace,monospace;font-size:8px;
+    color:rgba(0,0,0,.55);font-weight:600;transition:all .5s cubic-bezier(.22,1,.36,1);overflow:hidden;}
+  .cslide .ord{position:absolute;top:2px;left:3px;font-size:8px;color:rgba(0,0,0,.4);}
+  .cslide.lead{outline:2px solid var(--teal);outline-offset:-2px;box-shadow:0 0 0 3px var(--teal-tint);}
+
+  .msgout{background:var(--ink);color:#d7f0e2;padding:14px 18px;font-family:ui-monospace,monospace;
+    font-size:12px;line-height:1.7;overflow-x:auto;white-space:nowrap;}
+  .msgout .mk{color:#6fb4d8;}
+  .msgout .mv{color:#ffd9e6;}
+  .msgout .mo{color:#f0c869;}
+  .msgout .mc{color:#8a8a8a;}
+  .msgout.block{white-space:pre;border-radius:6px;margin:14px 0;padding:16px 20px;
+    font-size:12.5px;line-height:1.7;}
+  .stage-note{padding:12px 20px;background:var(--paper-2);font-size:12.5px;color:var(--ink-soft);
+    font-family:ui-monospace,monospace;letter-spacing:.02em;display:flex;gap:9px;align-items:baseline;}
+  .stage-note b{color:var(--ink);font-weight:600;}
+  .caption{font-size:14px;color:var(--ink-soft);margin:14px 0 0;max-width:72ch;}
+
+  /* ---------- netflix analogy row ---------- */
+  .analogy{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--line);
+    border:2px solid var(--ink);border-radius:6px;overflow:hidden;margin:14px 0;}
+  .analogy .col{background:#fff;padding:22px;}
+  .analogy .col h4{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:15px;
+    margin:0 0 14px;letter-spacing:-.01em;}
+  .thumbstack{display:flex;flex-direction:column;gap:9px;}
+  .thumb{display:flex;gap:12px;align-items:center;padding:9px;border:1px solid var(--line-soft);
+    border-radius:4px;background:var(--paper);}
+  .thumb .img{width:52px;height:34px;border-radius:3px;flex-shrink:0;}
+  .thumb .who{font-family:ui-monospace,monospace;font-size:10px;color:var(--ink-soft);
+    text-transform:uppercase;letter-spacing:.08em;}
+  .thumb .lbl{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:13px;}
+
+  /* ---------- five steps ---------- */
+  ol.steps{list-style:none;counter-reset:st;padding:0;margin:0;}
+  ol.steps>li{counter-increment:st;display:grid;grid-template-columns:56px 1fr;gap:0 20px;
+    padding:22px 0;border-top:1px solid var(--line-soft);}
+  ol.steps>li:first-child{border-top:none;}
+  ol.steps>li::before{content:counter(st);font-family:"Helvetica Neue",Arial,sans-serif;
+    font-weight:800;font-size:30px;color:var(--mag);line-height:1;}
+  ol.steps h3{margin:0 0 6px;font-size:17px;}
+  ol.steps p{margin:0;font-size:15.5px;}
+
+  /* ---------- content forms strip ---------- */
+  .forms{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;}
+  .formcard{border:1px solid var(--line);border-radius:6px;padding:16px 14px;background:#fff;text-align:left;}
+  .formcard .ficon{width:34px;height:34px;border-radius:6px;display:grid;place-items:center;
+    font-family:ui-monospace,monospace;font-size:15px;font-weight:700;margin-bottom:10px;color:#fff;}
+  .formcard .fname{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:13.5px;}
+  .formcard .fdesc{font-size:12.5px;color:var(--ink-soft);margin-top:4px;line-height:1.4;}
+  @media(max-width:620px){.forms{grid-template-columns:1fr 1fr;}}
+
+  /* ================= THREE KINDS OF ORDERING WIDGET ================= */
+  .ordwidget{border:2px solid var(--ink);border-radius:6px;overflow:hidden;margin:14px 0;background:#fff;}
+  .ord-tabs{display:flex;background:var(--paper-2);border-bottom:2px solid var(--ink);}
+  .ord-tabs button{flex:1;background:transparent;border:none;border-right:1px solid var(--line);
+    padding:15px 14px;cursor:pointer;font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;
+    font-size:13.5px;color:var(--ink-soft);transition:all .18s;text-align:left;position:relative;}
+  .ord-tabs button:last-child{border-right:none;}
+  .ord-tabs button.on{background:#fff;color:var(--ink);}
+  .ord-tabs button.on.t-live{box-shadow:inset 0 -3px 0 var(--teal);}
+  .ord-tabs button.on.t-build{box-shadow:inset 0 -3px 0 var(--mag);}
+  .ord-tabs button.on.t-future{box-shadow:inset 0 -3px 0 var(--gold);}
+  .ord-tabs button:focus-visible{outline:3px solid var(--gold);outline-offset:-3px;}
+  .ord-tabs .otag{display:block;font-family:ui-monospace,monospace;font-weight:600;font-size:9.5px;
+    letter-spacing:.06em;margin-top:6px;text-transform:uppercase;}
+  .ord-tabs .otag.live{color:var(--teal);}
+  .ord-tabs .otag.build{color:var(--mag);}
+  .ord-tabs .otag.future{color:var(--gold);}
+
+  .ord-body{padding:26px 24px;display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:start;}
+  @media(max-width:720px){.ord-body{grid-template-columns:1fr;}}
+  .ord-body .oh{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:19px;margin:0 0 8px;}
+  .ord-body p{font-size:14.5px;margin:0 0 12px;max-width:none;}
+  .ord-status{font-family:ui-monospace,monospace;font-size:11px;padding:6px 12px;border-radius:20px;
+    display:inline-block;letter-spacing:.04em;font-weight:600;}
+  .ord-status.live{background:var(--teal-tint);color:var(--teal);}
+  .ord-status.build{background:var(--mag-tint);color:var(--mag-deep);}
+  .ord-status.future{background:#fbf1dc;color:#8a6516;}
+
+  /* mini page demo for ordering */
+  .minipage{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--paper-2);}
+  .minipage .mp-top{background:var(--ink);height:16px;}
+  .mprow{padding:5px;display:flex;flex-direction:column;gap:5px;}
+  .mpblock{background:#fff;border:1px solid var(--line);border-radius:4px;padding:8px 10px;
+    font-family:ui-monospace,monospace;font-size:10px;color:var(--ink-soft);display:flex;
+    align-items:center;gap:8px;transition:all .55s cubic-bezier(.22,1,.36,1);position:relative;}
+  .mpblock .mi{width:16px;height:16px;border-radius:3px;flex-shrink:0;background:var(--slate-tint);
+    display:grid;place-items:center;font-size:9px;color:var(--slate);font-weight:700;}
+  .mpblock.hl{border-color:var(--mag);background:var(--mag-tint);color:var(--mag-deep);font-weight:600;}
+  .mpblock.hl .mi{background:var(--mag);color:#fff;}
+  .mpblock.moved{border-color:var(--gold);background:#fbf1dc;color:#8a6516;font-weight:600;}
+  .mpblock.moved .mi{background:var(--gold);color:#fff;}
+  .mpblock.appear{border-style:dashed;border-color:var(--gold);}
+  .mp-inner{display:flex;gap:4px;flex:1;}
+  .mp-inner .mini{flex:1;height:14px;border-radius:2px;background:var(--slate-tint);transition:all .55s;position:relative;}
+  .mp-inner .mini.first{background:var(--teal);}
+
+  /* ---------- products table ---------- */
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px;margin:10px 0;}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:560px;}
+  thead th{background:var(--ink);color:var(--paper);text-align:left;padding:13px 16px;
+    font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:12px;
+    letter-spacing:.06em;text-transform:uppercase;}
+  tbody td{padding:14px 16px;border-top:1px solid var(--line-soft);vertical-align:top;}
+  tbody tr:nth-child(even){background:var(--paper-2);}
+  .badge{display:inline-block;font-family:ui-monospace,monospace;font-size:10px;font-weight:600;
+    padding:3px 9px;border-radius:20px;letter-spacing:.04em;white-space:nowrap;}
+  .badge.opti{background:var(--slate-tint);color:var(--slate);}
+  .badge.built{background:var(--mag-tint);color:var(--mag-deep);}
+  .badge.gold{background:#fbf1dc;color:#8a6516;}
+  td .pname{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;}
+
+  /* ---------- variations widget ---------- */
+  .kitchen{border:2px solid var(--ink);border-radius:6px;overflow:hidden;margin:14px 0;background:#fff;}
+  .kitchen-tabs{display:flex;background:var(--paper-2);border-bottom:2px solid var(--ink);}
+  .kitchen-tabs button{flex:1;background:transparent;border:none;border-right:1px solid var(--line);
+    padding:16px;cursor:pointer;font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;
+    font-size:14px;color:var(--ink-soft);transition:all .18s;text-align:left;}
+  .kitchen-tabs button:last-child{border-right:none;}
+  .kitchen-tabs button.on{background:#fff;color:var(--ink);box-shadow:inset 0 -3px 0 var(--mag);}
+  .kitchen-tabs button:focus-visible{outline:3px solid var(--gold);outline-offset:-3px;}
+  .kitchen-tabs button .sub{display:block;font-family:ui-monospace,monospace;font-weight:400;
+    font-size:10px;letter-spacing:.04em;margin-top:4px;color:var(--ink-soft);}
+  .kitchen-body{padding:26px 24px;}
+  .pantry{display:flex;flex-wrap:wrap;gap:7px;margin:16px 0;}
+  .dish{width:38px;height:38px;border-radius:5px;background:linear-gradient(120deg,var(--paint-a),var(--paint-b));
+    border:1px solid var(--line);position:relative;transition:all .3s;}
+  .dish.dim{opacity:.28;filter:grayscale(.6);}
+  .dish.chosen{border:2px solid var(--mag);box-shadow:0 0 0 3px var(--mag-tint);transform:scale(1.08);}
+  .kitchen-body .kh{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;font-size:17px;margin:0 0 8px;}
+  .kitchen-body p{font-size:15px;margin:0 0 8px;max-width:none;}
+  .countline{font-family:ui-monospace,monospace;font-size:12px;color:var(--ink-soft);
+    letter-spacing:.03em;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft);}
+  .countline b{color:var(--mag);}
+
+  /* ---------- ladder ---------- */
+  .ladder{list-style:none;padding:0;margin:14px 0;counter-reset:ld;}
+  .ladder li{counter-increment:ld;display:grid;grid-template-columns:44px 1fr auto;gap:0 18px;
+    align-items:center;padding:18px 20px;border:1px solid var(--line);border-radius:6px;
+    margin-bottom:8px;background:#fff;}
+  .ladder li::before{content:counter(ld);width:34px;height:34px;border-radius:50%;
+    background:var(--ink);color:#fff;font-family:"Helvetica Neue",Arial,sans-serif;font-weight:800;
+    display:grid;place-items:center;font-size:15px;}
+  .ladder .lt{font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;font-size:16px;}
+  .ladder .ld{font-size:14px;color:var(--ink-soft);margin-top:2px;}
+  .ladder .when{font-family:ui-monospace,monospace;font-size:10.5px;padding:5px 10px;border-radius:20px;
+    background:var(--paper-2);color:var(--ink-soft);white-space:nowrap;letter-spacing:.03em;}
+  .ladder .when.live{background:var(--teal-tint);color:var(--teal);font-weight:600;}
+  @media(max-width:600px){.ladder li{grid-template-columns:36px 1fr;}.ladder .when{grid-column:2;justify-self:start;margin-top:8px;}}
+
+  /* ---------- callout ---------- */
+  .call{border-left:4px solid var(--gold);background:#fbf6ea;padding:20px 24px;border-radius:0 5px 5px 0;margin:22px 0;}
+  .call p{margin:0;max-width:none;}
+  .call .ct{font-family:ui-monospace,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.12em;
+    color:var(--gold);font-weight:700;margin-bottom:7px;}
+  .call.teal{border-left-color:var(--teal);background:var(--teal-tint);}
+  .call.teal .ct{color:var(--teal);}
+  .call p+p{margin-top:10px;}
+
+  /* ---------- FAQ ---------- */
+  details{border:1px solid var(--line);border-radius:6px;margin-bottom:8px;background:#fff;overflow:hidden;}
+  details[open]{border-color:var(--mag);}
+  summary{cursor:pointer;padding:16px 20px;font-family:"Helvetica Neue",Arial,sans-serif;font-weight:700;
+    font-size:15.5px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  summary::-webkit-details-marker{display:none;}
+  summary::after{content:"+";font-family:ui-monospace,monospace;font-size:20px;color:var(--mag);transition:transform .2s;}
+  details[open] summary::after{content:"–";}
+  summary:focus-visible{outline:3px solid var(--gold);outline-offset:-3px;}
+  .faq-body{padding:0 20px 18px;font-size:15px;color:var(--ink-soft);}
+  .faq-body p{max-width:none;margin:0;}
+
+  /* ---------- elevator / closing ---------- */
+  .elevator{margin:60px 0 0;padding:40px 36px;background:var(--mag);color:#fff;border-radius:6px;
+    position:relative;overflow:hidden;}
+  .elevator::after{content:"";position:absolute;right:-40px;bottom:-40px;width:200px;height:200px;
+    border-radius:50%;background:rgba(255,255,255,.08);}
+  .elevator .et{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:#ffd9e6;margin:0 0 16px;}
+  .elevator p{font-size:22px;line-height:1.45;margin:0;max-width:64ch;position:relative;font-weight:400;}
+  .elevator .u{border-bottom:2px solid rgba(255,255,255,.5);}
+
+  footer{margin-top:60px;padding-top:22px;border-top:2px solid var(--ink);
+    font-family:ui-monospace,monospace;font-size:11.5px;color:var(--ink-soft);letter-spacing:.04em;}
+
+  @media(max-width:640px){
+    body{font-size:16px;}
+    .wrap{padding:0 18px 80px;}
+    .wall{grid-template-columns:1fr;}
+    .frame.wide{grid-column:auto;}
+    .analogy{grid-template-columns:1fr;}
+    ol.steps>li{grid-template-columns:40px 1fr;gap:0 14px;}
+    .thesis p{font-size:19px;}
+    .elevator p{font-size:19px;}
+    .ord-tabs{flex-direction:column;}
+    .ord-tabs button{border-right:none;border-bottom:1px solid var(--line);}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Behavioral Targeting and Intelligence · Solution &amp; Algorithm</p>
+    <h1>We recommend <span class="swap">content</span><br>the way we recommend products.</h1>
+    <p class="dek">The right image, banner, or module for each shopper — chosen automatically from everything you already have, based on what that shopper is doing right now. This edition sets out the full design: the model, the dimension registry, the learning logic, and exactly what we need from your team.</p>
+    <div class="readmeta">
+      <span><i class="dot"></i> Personalized content</span>
+      <span><i class="dot s"></i> Your default</span>
+      <span><i class="dot g"></i> Interactive — try it</span>
+    </div>
+  </header>
+
+  <div class="thesis">
+    <p>If you understand product recommendations — <span class="hl">"customers who viewed this also bought…"</span> — you already understand most of this. It's the same idea pointed at a different thing: not <em>which products</em> to show, but <span class="hl">which content</span> to show.</p>
+    <div class="foot">The one-sentence version</div>
+  </div>
+
+  <!-- ============ THE PREMISE ============ -->
+  <section>
+    <p class="snum">01 — THE PREMISE: ANONYMOUS FIRST</p>
+    <h2>Built for the shoppers you've never seen.</h2>
+    <p>We've adopted your name for this initiative deliberately: <strong>behavioral targeting and intelligence</strong>, not "site personalization." The distinction matters because of who your shoppers are. <strong>90–95% of your traffic is anonymous.</strong> Roughly <strong>80% has never been to the site before.</strong> Email — the identified channel — is about 10% of traffic. A system that depends on knowing who someone is will sit idle for nine out of ten visitors.</p>
+    <p>This design starts from the opposite premise: <strong>everything in it works from the first click of a first visit by a shopper you have never seen</strong> — using only what they do in the session, where they are, how they arrived, and what shoppers like them respond to. Warehouse data (Snowflake-derived analyses, for example) enriches the model as priors; it never becomes a dependency. And to put it in your own terms: product recommendations are table stakes — this initiative is content and experience recommendation.</p>
+    <div class="call">
+      <p class="ct">Two commitments, up front</p>
+      <p><strong>1 · Content recommendations here work the way product recommendations work — as a standalone serving capability.</strong> A content ID is treated like a product ID: registered, scored, ranked, served, measured. No experiment needs to exist for a decision to be made. Experimentation — including contextual bandits — remains available as an <em>optional instrument</em> you can point at any slot; it is never the engine and never a prerequisite.</p>
+      <p><strong>2 · Your front end paints — always.</strong> We deliver decisions as data — IDs, order, scores, reasons — over a push contract, and your applications render. We never inject into or modify your pages.</p>
+    </div>
+  </section>
+
+  <!-- ============ THE WIDGET ============ -->
+  <section id="widget">
+    <p class="snum">02 — THE FAMILIAR EXAMPLE</p>
+    <h2>Netflix shows you a different thumbnail than it shows me.</h2>
+    <p>Same show — different artwork, per person, chosen automatically. Nobody hand-writes "show this viewer the couple, that one the explosion"; the system learns it from what each person watches. Now replace "show" with <strong>a product page</strong> and "thumbnail" with <strong>every content slot on it.</strong></p>
+    <p><strong>Tap a shopper below.</strong> Watch the same page fill its slots differently for each one — and watch the single message sent to the site change with it. Notice the gallery slot: it's a carousel, and its <em>internal</em> order personalizes too (more on that shortly).</p>
+
+    <div class="stage">
+      <div class="stage-top">
+        <span class="t"><span class="browserdots"><i></i><i></i><i></i></span> Product page · one shopper</span>
+        <span class="mono" style="font-size:11px;color:#b7b0a6;">one reading · one pick per slot · one message</span>
+      </div>
+
+      <div class="persona-bar" id="personaBar" role="tablist" aria-label="Choose a shopper">
+        <button class="on" data-p="evening" role="tab" aria-selected="true">
+          <span class="pn">Shopper A</span><span class="pl">browsing evening styles</span>
+        </button>
+        <button data-p="firsttime" role="tab" aria-selected="false">
+          <span class="pn">Shopper B</span><span class="pl">first-time visitor · Miami</span>
+        </button>
+        <button data-p="returning" role="tab" aria-selected="false">
+          <span class="pn">Shopper C</span><span class="pl">returning · close to buying</span>
+        </button>
+        <button data-p="paidsocial" role="tab" aria-selected="false">
+          <span class="pn">Shopper D</span><span class="pl">arrived from paid social</span>
+        </button>
+      </div>
+
+      <div class="thermo">
+        <span class="lbl">Interest<br>thermometer</span>
+        <div class="therm-set" id="thermSet"></div>
+      </div>
+
+      <div class="wall" id="wall" aria-live="polite"></div>
+
+      <div class="msgout" id="msgout"></div>
+      <div class="stage-note">
+        <span>▲</span>
+        <span id="stageNote"><b>That's the whole mechanism.</b> One reading of the shopper's interests → one pick per slot, each with an order number → one message. The site does the displaying. Nothing is injected into the page.</span>
+      </div>
+    </div>
+    <p class="caption">Each slot shows the content ID chosen and <em>why</em>. Grey slots (header, footer, legal) are marked off-limits and always show your default. Any slot with no pick simply shows your default — the page never breaks and never waits. The teal-outlined item in the gallery is the one the carousel <em>leads</em> with for this shopper.</p>
+    <p class="caption">For clarity, the walkthrough's thermometer tracks just four interests, drawn from the registry's behavioral dimensions. The full version-one set — including location, visit number, and entry channel — is defined in <a href="#registry">the dimension registry</a> below.</p>
+
+    <div class="analogy">
+      <div class="col">
+        <h4>Netflix — one show, many thumbnails</h4>
+        <div class="thumbstack">
+          <div class="thumb"><span class="img" style="background:linear-gradient(120deg,#e8ccd6,#d9b3c4)"></span><div><span class="who">Romance viewer</span><br><span class="lbl">The couple</span></div></div>
+          <div class="thumb"><span class="img" style="background:linear-gradient(120deg,#cdd8dd,#a9c0cc)"></span><div><span class="who">Action viewer</span><br><span class="lbl">The explosion</span></div></div>
+        </div>
+      </div>
+      <div class="col">
+        <h4>Here — one page, personal content</h4>
+        <div class="thumbstack">
+          <div class="thumb"><span class="img" style="background:linear-gradient(120deg,#f0d9b0,#e3c48c)"></span><div><span class="who">Evening browser</span><br><span class="lbl">Evening-styled hero</span></div></div>
+          <div class="thumb"><span class="img" style="background:linear-gradient(120deg,#c9dcc9,#a6c6a6)"></span><div><span class="who">Close to buying</span><br><span class="lbl">Close-up + reviews</span></div></div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">This is a pattern retail brands are actively asking for — often described back to us, unprompted, with the Netflix analogy.</p>
+  </section>
+
+  <!-- ============ CONTENT FORMS ============ -->
+  <section>
+    <p class="snum">03 — WHAT "CONTENT" MEANS HERE</p>
+    <h2>Content isn't only a picture in a fixed box.</h2>
+    <p>A piece of content can take several forms, and the catalog treats them as first-class types. A slot can hold any of them — and, as the gallery showed, a slot can hold a <em>set</em> whose internal order is itself personalized.</p>
+    <div class="forms">
+      <div class="formcard">
+        <div class="ficon" style="background:var(--mag)">▨</div>
+        <div class="fname">Image</div>
+        <div class="fdesc">A hero shot, a banner, a product photo in a particular style.</div>
+      </div>
+      <div class="formcard">
+        <div class="ficon" style="background:var(--slate)">¶</div>
+        <div class="fname">Text</div>
+        <div class="fdesc">A headline, a story block, a value message — the words themselves.</div>
+      </div>
+      <div class="formcard">
+        <div class="ficon" style="background:var(--teal)">▤</div>
+        <div class="fname">Module</div>
+        <div class="fdesc">A composite unit — a reviews block, a styling widget, a carousel of items.</div>
+      </div>
+      <div class="formcard">
+        <div class="ficon" style="background:var(--gold)">▥</div>
+        <div class="fname">Layout</div>
+        <div class="fdesc">The arrangement of a region itself — the longer-horizon form (more below).</div>
+      </div>
+    </div>
+    <p class="caption">Because everything is content-by-ID, a slot doesn't care which form fills it — the site receives an ID and a type and renders accordingly. This is why the same mechanism scales from a single image to a full page of mixed modules.</p>
+  </section>
+
+  <!-- ============ FIVE STEPS ============ -->
+  <section>
+    <p class="snum">04 — HOW IT WORKS</p>
+    <h2>One shopper's journey, in five steps.</h2>
+    <ol class="steps">
+      <li><div>
+        <h3>Your content is registered, labeled.</h3>
+        <p>Every image, banner, text block, and module gets an ID and simple labels — "evening," "lifestyle," "close-up," "reviews." This is the <strong>content catalog</strong>: the same idea as a product catalog, but for content. Where labels are sparse, AI proposes them and a person approves — a design-time enrichment step, never something running on the live site.</p>
+      </div></li>
+      <li><div>
+        <h3>A shopper browses, and the engine reads the signals.</h3>
+        <p>As they interact, the engine keeps a live interest thermometer: browsing evening styles makes the <em>evening</em> score rise; ignoring them a while lets it cool. Milliseconds, invisible, on every action. This is the affinity engine.</p>
+      </div></li>
+      <li><div>
+        <h3>Interests are matched to the content's labels.</h3>
+        <p>A high <em>evening</em> score means the evening-styled image outranks the everyday one — so that's the pick. Not a rule someone wrote: a live match between the shopper's behavior and the content's labels, recalculated every time.</p>
+      </div></li>
+      <li><div>
+        <h3>The decision is sent; the site displays it.</h3>
+        <p>A small message is pushed: "in this slot, show content <span class="kbd">#CMP1234</span>, and here's <em>why</em>." The website does the actual rendering. <strong>Nothing is touched, redesigned, or injected into the page</strong> — the decision arrives as data.</p>
+      </div></li>
+      <li><div>
+        <h3>The system learns what works.</h3>
+        <p>Over time it observes which content leads to outcomes, for which kinds of shoppers, from which channels. Winners rise in the rankings — exactly how product recommendations improve — and every decision can answer <em>"why did this shopper see this?"</em> The full learning logic, in four layers, is <a href="#learning">set out below</a>.</p>
+      </div></li>
+    </ol>
+
+    <div class="call">
+      <p class="ct">A real page is a wall of slots</p>
+      <p>The story followed one slot to keep it simple. A real product page might have <strong>eight sections</strong> — banner, gallery, story block, recommendations, reviews, styling module. Your template decides the slots; <strong>the engine chooses what fills each one, per shopper</strong>. One reading of the thermometer, several picks, sent together as one message. This multi-section delivery is proven technology — an existing deployment fills a ten-widget home page this way today, every widget resolved per request with duplicates removed and a fallback each. The new capability swaps a fixed-rule picker for live interest; the delivery shape is the same.</p>
+    </div>
+  </section>
+
+  <!-- ============ THE MODEL ============ -->
+  <section id="model">
+    <p class="snum">05 — THE MODEL, PRECISELY</p>
+    <h2>Deterministic in computation, probabilistic in interpretation.</h2>
+    <p>The five steps above are the story. This is the same machine written down precisely — the part built for your data science team to pressure-test. As summarized in our working session: <strong>a probabilistic model across a defined set of dimensions, with configurable weights and full visibility into those weights.</strong> That is the whole architecture; the rest of this document is the precision behind that sentence.</p>
+    <p>One clarification your data scientists will want first: the model is <strong>deterministic in computation and probabilistic in interpretation</strong>. Same inputs always produce the same scores — every number is reproducible and auditable end to end. The outputs are normalized affinities in <span class="kbd">[0, 1)</span> that read as propensity estimates ("how likely is this shopper to respond to evening-styled content <em>right now</em>"). There is no black box anywhere in the serving path: no runtime model call, no unexplainable weights, no sampling noise.</p>
+
+    <h3>Per-dimension scoring</h3>
+    <p>Each dimension <span class="kbd">d</span> (defined in the registry below) tracks a small vector of tag accumulators for each shopper — the interest thermometer you tapped through above, written as data. When a signal arrives for tag <span class="kbd">g</span> at time <span class="kbd">t</span>:</p>
+    <div class="msgout block">R[d,g] ← R[d,g] · e^(−Δt / <span class="mo">τ_d</span>) + <span class="mo">w_action</span> · s   <span class="mc">// decay the past, then add the new signal</span></div>
+    <ul class="plain">
+      <li><span class="kbd">Δt</span> is the time since the accumulator was last touched; <span class="kbd">τ_d</span> is the dimension's decay horizon — a tunable, short for volatile interests, long for stable taste.</li>
+      <li><span class="kbd">w_action</span> is the action's weight. Defaults: view 1 · save/wishlist 2 · add-to-cart 3 · purchase 5; for content interactions, impression 0.25 · click/tap 1 · dwell past threshold 2 · attributed conversion 5. All defaults, all tunable.</li>
+      <li>Decay is applied lazily at read time — state stores the value and its timestamp — which is mathematically identical to continuous decay. Interest cools during inactivity without any scheduled process.</li>
+    </ul>
+
+    <h3>Normalization — saturation</h3>
+    <p>Raw accumulation is unbounded, so scores are normalized with a half-saturation constant:</p>
+    <div class="msgout block">a[d,g] = R[d,g] / (R[d,g] + <span class="mo">K_d</span>)   <span class="mc">// a ∈ [0,1) · a = 0.5 exactly when R = K_d</span></div>
+    <p>Early signals move the score fast; repeated identical signals show diminishing returns. <span class="kbd">K_d</span> sets how much evidence "half-convinced" requires — per dimension, tunable.</p>
+
+    <h3>Membership with hysteresis</h3>
+    <p>Where affinities drive audience membership, entry and exit use two thresholds — defaults: enter at <span class="kbd">a ≥ 0.6</span>, exit at <span class="kbd">a &lt; 0.45</span> — so shoppers don't flap in and out at a boundary. Both thresholds are tunable per audience.</p>
+
+    <h3>Session-over-session learning is the same math</h3>
+    <p>A new session is just a large <span class="kbd">Δt</span>: interests cool between visits at the dimension's own horizon rather than resetting. The shopper's state is durable — held at the edge, keyed to a stable first-party visitor ID, with every underlying event also recorded to the shopper's profile in ODP, the durable memory. If edge state is ever absent, it is re-seeded from ODP on the first event of the session. Long-horizon dimensions (category taste) persist across weeks; short-horizon dimensions (price sensitivity within a hunt) fade in minutes — because each dimension carries its own <span class="kbd">τ</span>.</p>
+  </section>
+
+  <!-- ============ THE DIMENSION REGISTRY ============ -->
+  <section id="registry">
+    <p class="snum">06 — THE DIMENSION REGISTRY · V1</p>
+    <h2>Eight dimensions, agreed up front — no internal magic.</h2>
+    <p>Phase one runs on an explicitly documented set of <strong>6–8 agreed dimensions</strong>. Below is our proposed starting set of eight; the registry workshop with your data science team locks the final set, the taxonomies, and the default weights. <strong>Location is in from day one.</strong> These are our starting lines, deliberately drawn to be redrawn with your team.</p>
+    <div class="tbl-wrap">
+      <table style="min-width:720px;">
+        <thead><tr><th>#</th><th>Dimension</th><th>What it measures</th><th>Primary signals</th><th>Kind</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><span class="pname">Location / regional affinity</span></td><td>What is trending or resonating in the shopper's region — and the regional prior for brand-new visitors</td><td>Coarse request geolocation + population-level engagement aggregates</td><td><span class="badge opti">Context + population</span></td></tr>
+          <tr><td>2</td><td><span class="pname">Visit number</span></td><td>Where the shopper is in their journey (first visit vs. return)</td><td>Stable first-party visitor ID, session boundaries</td><td><span class="badge opti">Context</span></td></tr>
+          <tr><td>3</td><td><span class="pname">Entry / marketing channel</span></td><td>How this session arrived (paid social, search, email, direct…)</td><td>UTM parameters + referrer, classified at the edge</td><td><span class="badge opti">Context</span></td></tr>
+          <tr><td>4</td><td><span class="pname">Content-type affinity</span></td><td>Which asset forms this shopper responds to (on-model, silo, detail/zoom, video…)</td><td>Content interactions: clicks, dwell, video completion, gallery behavior</td><td><span class="badge built">Behavioral</span></td></tr>
+          <tr><td>5</td><td><span class="pname">Product line / collection affinity</span></td><td>Which lines and collections are warming</td><td>Product + content interactions carrying line tags</td><td><span class="badge built">Behavioral</span></td></tr>
+          <tr><td>6</td><td><span class="pname">Silhouette / category affinity</span></td><td>Which product forms (tote, crossbody, shoulder…)</td><td>Product interactions carrying category tags</td><td><span class="badge built">Behavioral</span></td></tr>
+          <tr><td>7</td><td><span class="pname">Occasion affinity</span></td><td>The shopping context being expressed (evening, everyday, work, travel…)</td><td>Product + content interactions carrying occasion tags</td><td><span class="badge built">Behavioral</span></td></tr>
+          <tr><td>8</td><td><span class="pname">Price-band affinity</span></td><td>The price tier the shopper is actually engaging</td><td>Product interactions by price band (deliberately short decay horizon)</td><td><span class="badge built">Behavioral</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">Behavioral dimensions are <strong>catalog-driven</strong>: their tag vocabularies come from <em>your</em> catalogs and content metadata, not from a hard-coded list — the same mechanism generates the dimension values for each brand from that brand's own data. That is also why the registry extends cleanly (see "Adding dimensions later," below).</p>
+
+    <h3>Dimension 1 — Location, done as affinity, not as rules</h3>
+    <p>The requirement is explicitly <em>not</em> "if Florida, don't show hoodies." Rule lists are brittle, manually maintained, and wrong at the edges. The version-one mechanism is affinity-driven at the population level:</p>
+    <ul class="plain">
+      <li><strong>Coarse geolocation on every request.</strong> The edge network supplies country / region / metro with the first request — no device permissions, no GPS, no PII, no third-party data. A brand-new visitor has a region before they have a click.</li>
+      <li><strong>Regional engagement aggregates.</strong> For each region <span class="kbd">r</span> and tag <span class="kbd">g</span>, the system maintains decayed population accumulators <span class="kbd">P[r,g]</span> fed by <em>all</em> shoppers' interactions in that region — the same decay mathematics as personal scoring, with a longer horizon (<span class="kbd">τ_region</span>). From these, a <strong>regional lift</strong>: the share of engagement tag <span class="kbd">g</span> gets in region <span class="kbd">r</span>, relative to its global share. Lift &gt; 1 means disproportionately loved there; lift &lt; 1, disproportionately ignored. "Hoodies in Florida" demotes itself because Floridians don't engage with hoodies — the right behavior <em>emerges from the data</em> instead of being encoded by hand, and it stays current as tastes shift, automatically.</li>
+    </ul>
+    <p><strong>Cold-start blending.</strong> The affinity used for ranking blends personal signal with the regional prior:</p>
+    <div class="msgout block">ã = (1−λ) · a_personal + λ · â_regional   <span class="mc">// λ = K_blend / (K_blend + evidence)</span></div>
+    <p><span class="kbd">λ</span> shrinks as the shopper's own evidence accumulates. A first-time visitor with zero history gets a regionally-informed page on the first paint; within a handful of interactions, their own behavior takes over. This is the direct answer to the 80%-never-seen problem.</p>
+    <p><strong>Tunables:</strong> regional granularity (country / state / metro), <span class="kbd">τ_region</span>, <span class="kbd">K_blend</span>, and a floor/ceiling on regional influence. All visible, all yours to adjust.</p>
+
+    <h3>Dimension 2 — Visit number</h3>
+    <p>Sessions are counted against a stable, device-scoped, first-party visitor ID — no fingerprinting; a new session begins after an inactivity gap, 30 minutes by default. The registry buckets visits (<span class="kbd">1</span> / <span class="kbd">2–3</span> / <span class="kbd">4+</span>) and conditions content-type preference on the bucket — seeded with your merchandising knowledge as defaults (first product visit → on-model and lifestyle imagery; return visits → silo, detail/zoom, construction shots, fit and reviews), then <strong>reweighted from observed outcomes</strong> rather than left as assumptions. Your 40/60 split — 40% of purchases on visit one, 60% on subsequent visits — is exactly the pattern this dimension exists to exploit.</p>
+    <p><em>Identity honesty, stated plainly for your data scientists:</em> a cleared cookie or a new device is a new visitor until an identifier exists to stitch on. When you later light up hashed-email capture on authenticated touchpoints, ODP stitches those histories server-side — the model needs no change; it simply inherits longer memories. Nothing in version one depends on that.</p>
+
+    <h3>Dimension 3 — Entry / marketing channel</h3>
+    <p>Classified at the edge, per session, from UTM parameters and referrer into an agreed taxonomy — proposed: paid social, paid search, organic search, email, direct, referral, affiliate. Channel acts two ways: as a <strong>context attribute</strong> conditioning outcome statistics (what converts for paid-social arrivals differs from search arrivals), and optionally as a <strong>strategy override</strong> (a slot may run a different weight profile for a given channel). You told us channel is your strongest single predictor; the registry treats it as first-class.</p>
+
+    <h3>Dimension 4 — Content-type affinity</h3>
+    <p>The engine can only serve the right <em>form</em> of asset if it knows the form. The content catalog types every asset against an agreed taxonomy — proposed starting point: <span class="kbd">on-model</span> <span class="kbd">silo</span> (product-only) <span class="kbd">detail/zoom</span> <span class="kbd">construction/sole</span> <span class="kbd">flat-lay</span> <span class="kbd">video</span> <span class="kbd">ugc</span> <span class="kbd">editorial/story</span>. The dimension then learns each shopper's response to each form — dwell, expansion, video completion — so a video-responsive shopper measurably accumulates <em>video affinity</em> and video assets rise in their rankings. This dimension is also what makes the visit-number defaults self-correcting: if a segment's return visitors actually prefer on-model imagery, the data overrides the seed.</p>
+
+    <h3>Dimensions 5–8 — the behavioral core</h3>
+    <p>These are the engine's native dimensions, running in production today in our live environment: product line/collection, silhouette/category, occasion, and price band — each with its own <span class="kbd">τ</span>, <span class="kbd">K</span>, and weights, each feeding both product-side and content-side scoring from one shopper vector. Price band deliberately runs a short horizon — price sensitivity is a state, not a trait.</p>
+
+    <h3>Adding dimensions later</h3>
+    <p>You raised that adding dimensions after launch can be hard — that is exactly why the registry is reviewed and agreed up front, and why it is <strong>versioned</strong>. Mechanically, the registry is configuration over a catalog-driven engine: adding a dimension is a registry change plus a decision about history. The new dimension learns from its activation forward, and where the underlying raw events were retained — they are, in ODP — it can be <strong>backfilled</strong> so it starts warm. What deserves scrutiny up front is not whether the machinery can add a dimension — it can — but whether the <em>inputs</em> for it exist: metadata, taxonomy, signals. That is what the workshop locks.</p>
+  </section>
+
+  <!-- ============ STRATEGIES ============ -->
+  <section id="strategies">
+    <p class="snum">07 — STRATEGIES</p>
+    <h2>A strategy is dimensions, weighted, applied to a slot.</h2>
+    <p>The registry describes the shopper. A <strong>strategy</strong> decides how much each dimension matters, and where — it is the unit of control your team configures: <em>a combination of dimensions, with weights, applied to a slot.</em></p>
+    <div class="msgout block">strategy = {
+  <span class="mk">slots</span>:       [<span class="mv">"home-hero"</span>, <span class="mv">"home-story-2"</span>],           <span class="mc">// where it applies</span>
+  <span class="mk">weights</span>:     { <span class="mk">location</span>: <span class="mo">1.0</span>, <span class="mk">visit</span>: <span class="mo">0.8</span>, <span class="mk">channel</span>: <span class="mo">0.6</span>,
+                 <span class="mk">content_type</span>: <span class="mo">1.0</span>, <span class="mk">occasion</span>: <span class="mo">0.7</span>, … },  <span class="mc">// the dimension mix</span>
+  <span class="mk">constraints</span>: { <span class="mk">types</span>: [<span class="mv">"image"</span>,<span class="mv">"video"</span>], <span class="mk">excludeTags</span>: […] }, <span class="mc">// candidate rules</span>
+  <span class="mk">mode</span>:        <span class="mv">"configured"</span> | <span class="mv">"autonomous"</span>
+}</div>
+    <p>At decision time, each candidate asset for the slot is scored: the shopper's (blended) affinities for the asset's tags, weighted by the strategy's dimension mix, plus the outcome-learning lift (set out below). Highest score wins the slot — and every decision records its arithmetic.</p>
+    <p>Two modes, both first-class:</p>
+    <ul class="plain">
+      <li><strong>Configured</strong> — your team sets the weights per slot (the homepage hero leans location + channel; a product-page gallery leans visit number + content-type). The tuning surface edits them live; changes take effect immediately, with no deployment.</li>
+      <li><strong>Autonomous</strong> — the engine adjusts the weight mix itself from outcome statistics, <strong>with full visibility</strong>: every adjustment is logged, inspectable, and reversible, and any weight can be pinned. Autonomy is a dial per slot, not a philosophy.</li>
+    </ul>
+
+    <h3>Page assembly — the invariants</h3>
+    <p>Unchanged from the contract we've already aligned on: one push per page carrying every slot's decision with an explicit <span class="kbd">order</span>; no asset appears twice on a page; slots marked off-limits are never touched; any slot without a decision renders your default. The <span class="kbd">order</span> field ships from day one — echoing your template now, so that when experience and layout personalization arrive later, reordering is a data change rather than a re-integration.</p>
+
+    <h3>The delivery contract, literally</h3>
+    <p>The strategy produces decisions; this is the payload that carries them — Shopper A's page from the walkthrough above, two of its slots shown, exactly as it arrives on the wire:</p>
+    <div class="msgout block">{ <span class="mk">"kind"</span>: <span class="mv">"content_decisions"</span>, <span class="mk">"page"</span>: <span class="mv">"home"</span>,
+  <span class="mk">"decisions"</span>: [
+    { <span class="mk">"slot"</span>: <span class="mv">"home-hero"</span>, <span class="mk">"order"</span>: <span class="mo">1</span>,
+      <span class="mk">"content"</span>: { <span class="mk">"customerContentId"</span>: <span class="mv">"CMP1450"</span>, <span class="mk">"systemId"</span>: <span class="mv">"cnt_8f3a…"</span>, <span class="mk">"type"</span>: <span class="mv">"image"</span>, <span class="mk">"url"</span>: <span class="mv">"…"</span> },
+      <span class="mk">"score"</span>: <span class="mo">0.78</span>,
+      <span class="mk">"explain"</span>: { <span class="mk">"drivers"</span>: [ { <span class="mk">"dim"</span>: <span class="mv">"occasion"</span>, <span class="mk">"tag"</span>: <span class="mv">"evening"</span>, <span class="mk">"a"</span>: <span class="mo">0.72</span> } ],
+                   <span class="mk">"context"</span>: { <span class="mk">"channel"</span>: <span class="mv">"paid_social"</span>, <span class="mk">"visit"</span>: <span class="mo">2</span>, <span class="mk">"region"</span>: <span class="mv">"FL"</span> } } },
+    { <span class="mk">"slot"</span>: <span class="mv">"home-story"</span>, <span class="mk">"order"</span>: <span class="mo">3</span>,
+      <span class="mk">"content"</span>: { <span class="mk">"customerContentId"</span>: <span class="mv">"CMP3310"</span>, <span class="mk">"systemId"</span>: <span class="mv">"cnt_2b71…"</span>, <span class="mk">"type"</span>: <span class="mv">"text"</span>, <span class="mk">"url"</span>: <span class="mv">"…"</span> },
+      <span class="mk">"score"</span>: <span class="mo">0.66</span> }
+  ],
+  <span class="mk">"ts"</span>: <span class="mo">1761955200000</span> }</div>
+    <p class="caption">This is the real contract behind the widget's illustration: your content ID echoed back (ours alongside), a score, an explain record, and an explicit <span class="kbd">order</span> per slot — which ships from day one. Any slot absent from <span class="kbd">decisions</span> renders your default.</p>
+  </section>
+
+  <!-- ============ THREE KINDS OF ORDERING ============ -->
+  <section id="ordering">
+    <p class="snum">08 — THE PART THAT NEEDS CARE: ORDERING</p>
+    <h2>"Ordering" means three different things. Keeping them straight matters.</h2>
+    <p>This is the most common point of confusion, so it's worth being precise. There are three distinct kinds of "reordering," they live at different layers, and they're at different stages of readiness. <strong>Tap through them.</strong></p>
+
+    <div class="ordwidget">
+      <div class="ord-tabs" id="ordTabs" role="tablist" aria-label="Kinds of ordering">
+        <button class="on t-live" data-o="within" role="tab" aria-selected="true">
+          Order <em>inside</em> a slot
+          <span class="otag live">● Live today</span>
+        </button>
+        <button class="t-build" data-o="across" role="tab" aria-selected="false">
+          Which content <em>leads</em>
+          <span class="otag build">● This build</span>
+        </button>
+        <button class="t-future" data-o="move" role="tab" aria-selected="false">
+          Moving the slots
+          <span class="otag future">● Later · your pacing</span>
+        </button>
+      </div>
+      <div class="ord-body">
+        <div>
+          <h3 class="oh" id="ordHead"></h3>
+          <p id="ordDesc"></p>
+          <p id="ordEx" style="color:var(--ink);"></p>
+          <span class="ord-status" id="ordStatus"></span>
+        </div>
+        <div class="minipage" id="ordDemo" aria-hidden="true"></div>
+      </div>
+    </div>
+    <p class="caption">All three share one message contract. Every batch of picks already carries an order number per slot — initially just matching your template — so when slot-level rearrangement arrives, it's a change in the data, not a re-integration.</p>
+
+    <div class="call teal">
+      <p class="ct">These lines aren't fixed law</p>
+      <p>There are several reasonable ways to divide this up; the split above is our starting interpretation. The co-design workshop is exactly where you draw the boundaries that fit your template, your team, and your pace. Nothing here forces a slot to be personalized, and any region you'd rather leave alone stays exactly as it is.</p>
+    </div>
+  </section>
+
+  <!-- ============ THE LEARNING LOGIC ============ -->
+  <section id="learning">
+    <p class="snum">09 — THE LEARNING LOGIC</p>
+    <h2>"How does it learn?" has four concrete answers.</h2>
+    <p>Four layers, in increasing timescale, each named. None of them is a black box; none of them requires an experiment to be running.</p>
+
+    <h3>L1 — Within the session (milliseconds)</h3>
+    <p>The accumulate/decay mathematics above, applied on every event. This is where "she's hunting evening bags <em>right now</em>" comes from.</p>
+
+    <h3>L2 — Across sessions</h3>
+    <p>Shopper state is durable and decays on each dimension's own horizon; every event is also a fact on the ODP profile. A returning shopper's vector re-warms from durable memory at session start; the visit count increments. Interests cool between visits — they don't reset.</p>
+
+    <h3>L3 — Outcome learning: what works</h3>
+    <p>The engine accumulates per-item, context-conditioned outcome statistics over the open catalog: for each content item and context cell (channel × visit bucket × region, as agreed), a smoothed conversion lift versus that context's baseline — empirical-Bayes smoothing toward 1.0 with a configurable prior strength, so small samples don't produce wild swings. Ranking scores are multiplied by lift, so assets that demonstrably work for a context rise <em>for that context</em>.</p>
+    <p>New or under-observed content receives a configurable <strong>exploration share</strong> per slot (default 10%): a deterministic rotation guarantees fresh assets accumulate evidence instead of starving. Note what this is <em>not</em>: it is not variation buckets, and it is not bandit-dependent — it is item-level statistics over the whole catalog, the same way product recommendations learn. A contextual bandit (CMAB) remains available as an optional per-slot instrument if your team wants controlled variation testing on a specific placement; it is never required for the system to learn.</p>
+
+    <h3>L4 — Discovery: what matters</h3>
+    <p>Offline analysis over the accumulated decision-and-outcome corpus — cohort contrasts, predictive-attribute analysis per channel — surfaces <em>proposals</em>: "this behavior predicts conversion for paid-social visitors; want it as a dimension weight? as an audience?" Proposals are human-approved, never self-activating, and they arrive with the evidence that produced them. This is also where the registry grows over time, governed.</p>
+  </section>
+
+  <!-- ============ PRODUCTS TABLE ============ -->
+  <section>
+    <p class="snum">10 — WHAT'S A PRODUCT, WHAT WAS BUILT</p>
+    <h2>The honest picture of the parts.</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Piece</th><th>What it does, plainly</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pname">ODP</span></td><td>The memory. Every shopper action saved to their profile; audiences live here; other tools can use them.</td><td><span class="badge opti">Optimizely · live today</span></td></tr>
+          <tr><td><span class="pname">Feature Experimentation</span> <span class="mono" style="font-size:11px;">(incl. CMAB)</span></td><td>The experimentation toolkit — flags, tests, bandits. Optional testing instruments, available per slot where your team wants them — never required for content serving.</td><td><span class="badge opti">Optimizely · where it fits</span></td></tr>
+          <tr><td><span class="pname">Opal</span></td><td>The AI assistant layer — explains what the system is doing and why, in plain language.</td><td><span class="badge opti">Optimizely · transparency</span></td></tr>
+          <tr><td><span class="pname">The affinity engine</span></td><td>The interest thermometer — scores each shopper's interests in real time as they browse.</td><td><span class="badge built">Purpose-built</span></td></tr>
+          <tr><td><span class="pname">Content catalog + matching</span></td><td>Registers your content and picks the best piece per shopper.</td><td><span class="badge built">Purpose-built · in build</span></td></tr>
+          <tr><td><span class="pname">The delivery kit (SDK)</span></td><td>The small connector your website uses to receive the decisions.</td><td><span class="badge built">Purpose-built</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="call">
+      <p class="ct">The honest summary</p>
+      <p>It <strong>runs on Optimizely products</strong> — ODP is the backbone, experimentation and Opal are used where they fit — <strong>with a purpose-built engine</strong> for the real-time scoring and content matching. It's built and demonstrated, and being productized. The transparent, explainable math in the middle is a deliberate design choice, not a black box.</p>
+    </div>
+  </section>
+
+  <!-- ============ VARIATIONS WIDGET ============ -->
+  <section>
+    <p class="snum">11 — HOW THIS DIFFERS FROM PRE-BUILT VARIATIONS</p>
+    <h2>Ranking a catalog is not the same as choosing between pre-made versions.</h2>
+    <p>A natural question is how this relates to the more familiar approach of building a few page versions and testing which performs best. They're genuinely different mechanisms. The kitchen analogy makes it click — <strong>tap each side.</strong></p>
+
+    <div class="kitchen">
+      <div class="kitchen-tabs" id="kitchenTabs">
+        <button class="on" data-k="cmab">Pre-built variations<span class="sub">a taste test between a few dishes</span></button>
+        <button data-k="cp">Content personalization<span class="sub">a chef with the whole pantry</span></button>
+      </div>
+      <div class="kitchen-body">
+        <div id="pantry" class="pantry"></div>
+        <div id="kitchenText">
+          <h3 class="kh" id="kh"></h3>
+          <p id="kp"></p>
+          <div class="countline" id="kcount"></div>
+        </div>
+      </div>
+    </div>
+    <p class="caption">Both have a place. Testing a few designed versions against each other is powerful when you know the versions you want to compare. Content personalization answers a different need: when you <em>don't</em> want to pre-decide the combinations, and would rather rank everything you have for each person — the way product recommendations already do.</p>
+
+    <div class="call">
+      <p class="ct">The one-line distinction</p>
+      <p>Pre-built variations choose between a <strong>few designed versions</strong>; content personalization <strong>ranks everything in the catalog</strong> for each person. The bandit approach still has a role as one optional testing instrument inside the system — but it isn't the engine doing the picking.</p>
+    </div>
+  </section>
+
+  <!-- ============ CONTROL AND TRANSPARENCY ============ -->
+  <section id="control">
+    <p class="snum">12 — CONTROL &amp; TRANSPARENCY</p>
+    <h2>Every constant is a parameter. Every decision explains itself.</h2>
+    <p>Everything so far describes what the system does. This section is about who holds the controls — three commitments, then the surfaces where your data scientists plug in.</p>
+    <ul class="plain">
+      <li><strong>Every constant in this document is a visible, editable parameter</strong> — action weights, decay horizons (<span class="kbd">τ</span>), saturation constants (<span class="kbd">K</span>), thresholds (<span class="kbd">θ</span>), strategy weight profiles, blending constants, exploration share, smoothing priors. All of it is configuration, versioned, with change history; edits apply immediately, without a deployment.</li>
+      <li><strong>Every decision explains itself.</strong> Each served decision carries its explain record: the dimensions that drove it, their scores and weights, the context, the lift applied. "Why did this shopper see this?" is a lookup, not an investigation.</li>
+      <li><strong>No black box, structurally.</strong> There is no runtime model call to interrogate — the serving path is arithmetic you can recompute by hand from the explain record.</li>
+    </ul>
+
+    <h3>Injection surfaces — bring your own math</h3>
+    <ol class="steps">
+      <li><div>
+        <h3>Parameter control <span class="badge built">v1</span></h3>
+        <p>The full parameter surface above, via UI and API. This is not a demo toggle — it is the same configuration the engine reads.</p>
+      </div></li>
+      <li><div>
+        <h3>Priors import <span class="badge built">v1</span></h3>
+        <p>Seed the model with your own analyses: Snowflake-derived cohort priors, merchandising priors per visit bucket, regional seasonal priors. Imported priors enter as labeled prior mass and decay/blend under the same mathematics — your knowledge starts the model warm; behavior then confirms or corrects it.</p>
+      </div></li>
+      <li><div>
+        <h3>Full data egress — the closed loop <span class="badge built">v1</span></h3>
+        <p>Export every decision and outcome record, explain records included. Your team fits whatever they want offline — propensity models, uplift analyses — and writes the results back as priors or strategy weight profiles. Your math, our serving path, complete audit trail.</p>
+      </div></li>
+      <li><div>
+        <h3>Custom scoring hooks <span class="badge gold">co-design</span></h3>
+        <p>A defined extension point for substituting or adjusting the ranking function on specific slots. We would rather design this with your data scientists against a real use case than guess at the interface — it is an explicit agenda item for the registry workshop.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <!-- ============ HALVES / PROVENANCE ============ -->
+  <section>
+    <p class="snum">13 — WHY THIS CAN MOVE QUICKLY</p>
+    <h2>Both halves already exist — this connects them.</h2>
+    <p>The delivery half — content registered with IDs and labels, served to a site by ID, the site doing the displaying, with duplicates removed and a fallback per slot — is <strong>already shipped and running</strong> for a demanding enterprise deployment. What it deliberately lacks is the brains in the middle: it picks by fixed business rules rather than live behavior.</p>
+    <p>The brains half — the live interest scoring and the learning design — has been <strong>built and demonstrated</strong> separately.</p>
+    <div class="call teal">
+      <p class="ct">The short version</p>
+      <p>The delivery half is shipped; the brains half is demonstrated. This work joins them — which is why it can move at the pace it does, rather than starting from nothing.</p>
+    </div>
+  </section>
+
+  <!-- ============ LADDER ============ -->
+  <section>
+    <p class="snum">14 — THE STAGES</p>
+    <h2>Four stages, each useful on its own, each building the next.</h2>
+    <ul class="ladder">
+      <li><div><span class="lt">The foundation</span><div class="ld">Live interest scoring, self-building audiences, and instant response, wired into your ODP.</div></div><span class="when live">Live today</span></li>
+      <li><div><span class="lt">Content personalization</span><div class="ld">The content catalog plus per-shopper content picking — the Netflix-artwork moment, and the subject of this document.</div></div><span class="when">In build</span></li>
+      <li><div><span class="lt">Learning</span><div class="ld">The system learns which content converts, for whom, and keeps improving.</div></div><span class="when">Follows on</span></li>
+      <li><div><span class="lt">Layout personalization</span><div class="ld">Not just which content in the slots — the arrangement of the page itself, per shopper.</div></div><span class="when">~6 months</span></li>
+    </ul>
+    <p class="caption">The stages build on each other — each generates the data the next one needs, so they run in order rather than being skipped. The foundation is live today, and it's the natural starting point.</p>
+  </section>
+
+  <!-- ============ FEEDING THE MACHINE ============ -->
+  <section id="feeding">
+    <p class="snum">15 — WHAT WE NEED FROM YOUR TEAM</p>
+    <h2>Feeding the machine — the complete list.</h2>
+    <p>You asked us to be explicit: <em>"tell me what you need to feed your machine."</em> Here is the complete list. Nothing on it is exotic; most of it exists in your CMS or DAM today.</p>
+
+    <h3>1 — The content feed</h3>
+    <p>Per asset — via API access for our source adapter, or a periodic JSON/CSV export; the adapter handles either:</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>What it is</th><th>Required?</th></tr></thead>
+        <tbody>
+          <tr><td><span class="kbd">contentId</span></td><td>Your stable ID for the asset — the ID we echo back in every decision.</td><td>Required</td></tr>
+          <tr><td><span class="kbd">type</span></td><td>The asset's form, from the agreed taxonomy (on-model, silo, detail/zoom, video…).</td><td>Required</td></tr>
+          <tr><td><span class="kbd">url</span> / render reference</td><td>How your front end renders it — we never host your assets.</td><td>Required</td></tr>
+          <tr><td><span class="kbd">tags</span></td><td>Merchandising metadata: occasion, line/collection, season, subject…</td><td>Required — sparse is OK, see below</td></tr>
+          <tr><td><span class="kbd">slotEligibility</span></td><td>Which slots and templates the asset may serve.</td><td>Required</td></tr>
+          <tr><td><span class="kbd">lifecycle</span></td><td>Status, publish/expire windows.</td><td>Required</td></tr>
+          <tr><td><span class="kbd">brand</span>, <span class="kbd">locale</span></td><td>Brand and market scoping.</td><td>Required (multi-brand)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Where metadata is sparse: our enrichment pipeline proposes tags — AI-assisted, design-time only, never in the serving path — and <strong>your team approves them</strong> before they enter the catalog. We'll want an early sample batch (~100–500 assets) to calibrate the taxonomy together.</p>
+
+    <h3>2 — The slot map</h3>
+    <p>Per page template: the personalizable slots and their IDs, the off-limits slots, and the default content per slot.</p>
+
+    <h3>3 — Behavioral events</h3>
+    <p>Our SDK auto-emits views, clicks, dwell, and content interactions. From your side we need the <strong>conversion/order event</strong> — order ID, items, value — one integration point — plus any analytics-layer hooks you'd prefer we consume instead.</p>
+
+    <h3>4 — The product catalog feed, per brand</h3>
+    <p>IDs, categories, attributes, price bands — the behavioral dimensions read their tag vocabularies from it.</p>
+
+    <h3>5 — Environments and access</h3>
+    <p>Staging or lower-environment domains for the pilot brand, CORS/allowlisting, and a named front-end integration owner for the SDK working session.</p>
+
+    <h3>6 — Taxonomy and registry sign-off</h3>
+    <p>One working session with your data science and analytics team to lock the content-type taxonomy, the final 6–8 dimensions, and the default weights.</p>
+
+    <h3>7 — Later, and optional: identity enrichment</h3>
+    <p>Hashed email on authenticated touchpoints, whenever your roadmap allows. It lengthens memories; version one does not depend on it.</p>
+  </section>
+
+  <!-- ============ THE ACCEPTANCE BAR ============ -->
+  <section>
+    <p class="snum">16 — THE ACCEPTANCE BAR</p>
+    <h2>What "working in version one" means.</h2>
+    <p>We want the launch bar written down in your terms, so nobody grades this on vibes:</p>
+    <div class="call teal">
+      <p class="ct">The launch bar, written down</p>
+      <p>On the pilot brand's homepage, with a candidate pool of 20–30 assets, <strong>different visitors verifiably see different content, chosen by the agreed dimension registry</strong> — location (with regional trending), visit number, entry channel, content-type affinity, and the behavioral affinities — with <strong>weight configurability live</strong> in the tuning surface, an <strong>explain record behind every decision</strong>, and your defaults rendering wherever no decision applies.</p>
+    </div>
+    <p>In spirit and in behavior, it works from day one; tuning after launch makes it sharper, not functional. The algorithm needing refinement post-launch is expected — the mechanism working is not negotiable.</p>
+  </section>
+
+  <!-- ============ ONE PLATFORM ============ -->
+  <section>
+    <p class="snum">17 — ONE PLATFORM, BRAND BY BRAND</p>
+    <h2>Pilot on Kate Spade. Carry the pattern to Coach.</h2>
+    <p>This is designed as a multi-brand platform from the first line: per-brand content catalogs, configurations, strategy profiles, and audiences, with <strong>hard data isolation between brands</strong>. What transfers from the pilot brand to the next is configuration patterns and learnings — never shopper data. And because the behavioral dimensions are catalog-driven, each brand's tag vocabularies are generated from that brand's own catalog and content — the same machinery, tuned per brand.</p>
+    <p>Pilot on Kate Spade, carry the pattern to Coach: the platform posture your team described, and the one we've built for.</p>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section>
+    <p class="snum">18 — COMMON QUESTIONS</p>
+    <h2>The things worth clarifying up front.</h2>
+    <details><summary>Does this build or change our website?</summary><div class="faq-body"><p>No. Decisions arrive as data; your site renders them. A slot with no decision shows your default, and a slot marked off-limits is never touched. It's designed to sit alongside your front end, not inside it.</p></div></details>
+    <details><summary>Is it AI?</summary><div class="faq-body"><p>The per-shopper picking is transparent math — scores you can read and choices that explain themselves. AI assists in two supporting places: proposing content labels up front (human-approved), and explaining results in plain language through Opal. The decision path itself is deterministic.</p></div></details>
+    <details><summary>Does it need to know who the shopper is?</summary><div class="faq-body"><p>No — the design is anonymous-first. Everything in it works from the first click of a first visit, using session behavior, region, and arrival channel; a brand-new visitor gets a regionally informed page on the first paint. Identity, where it later exists, only ever lengthens memory — it is never a prerequisite.</p></div></details>
+    <details><summary>What do we need to have in place?</summary><div class="faq-body"><p>Your content (with access for the engine to register it), your ODP, and a website team willing to spend a workshop connecting the delivery kit and agreeing the slot taxonomy. That workshop is also where the ordering boundaries above get drawn.</p></div></details>
+    <details><summary>Can we start small?</summary><div class="faq-body"><p>Yes — the foundation stage stands alone and deploys quickly, and content personalization can begin on a handful of slots on a single page type before widening. Nothing requires personalizing the whole site at once.</p></div></details>
+    <details><summary>How do we know why a shopper saw something?</summary><div class="faq-body"><p>Every decision carries an explain record — the interests that drove it and the context that shaped it (channel, visit count, and so on). Opal is the surface that turns those records into plain-language answers and reporting.</p></div></details>
+    <details><summary>Can our data scientists change the math?</summary><div class="faq-body"><p>Yes, through four surfaces: every parameter is live-editable — weights, decay horizons, thresholds, smoothing priors; your own analyses import as priors; every decision and outcome record exports for offline work and writes back as priors or weight profiles; and custom scoring hooks are an explicit co-design item. The detail is in <a href="#control">the control section</a> above.</p></div></details>
+    <details><summary>What about the slots we never want personalized?</summary><div class="faq-body"><p>You mark them off-limits in configuration and they always render your default — header, footer, legal, or anything else you choose. This is enforced at assembly, so a personalized decision can never land in a slot you've excluded.</p></div></details>
+  </section>
+
+  <!-- ============ CLOSING ============ -->
+  <div class="elevator">
+    <p class="et">In one breath</p>
+    <p>Product recommendations pick the right <span class="u">products</span> for each shopper. This does the same for <span class="u">content</span> — the images, banners, and modules themselves — using the shopper's live behavior, on your own data, with every choice explainable — scored on an agreed, visible set of dimensions, and working from the first click for <span class="u">the shoppers you've never seen</span>. The foundation is live, the delivery half is already shipped, and the brains half is demonstrated. This connects them.</p>
+  </div>
+
+  <footer>
+    BEHAVIORAL TARGETING AND INTELLIGENCE · SOLUTION &amp; ALGORITHM · PREPARED FOR TAPESTRY
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===================== FRAME WALL ===================== */
+  var interests = ["evening","everyday","lifestyle","detail"];
+  var interestLabel = {evening:"Evening",everyday:"Everyday",lifestyle:"Lifestyle",detail:"Detail"};
+
+  var personas = {
+    evening:    {evening:88, everyday:22, lifestyle:34, detail:30},
+    firsttime:  {evening:30, everyday:36, lifestyle:82, detail:18},
+    returning:  {evening:44, everyday:28, lifestyle:26, detail:90},
+    paidsocial: {evening:38, everyday:33, lifestyle:70, detail:46}
+  };
+
+  // gallery carousel slide sets per persona: array of {label, color, lead}
+  var galleries = {
+    evening:   [{l:"Evening",c:"#e3c48c",lead:true},{l:"Everyday",c:"#d9c3a0"},{l:"Detail",c:"#cdd8dd"},{l:"UGC",c:"#d9b3c4"}],
+    firsttime: [{l:"Lifestyle",c:"#c9dcc9",lead:true},{l:"Evening",c:"#e3c48c"},{l:"Everyday",c:"#d9c3a0"},{l:"Detail",c:"#cdd8dd"}],
+    returning: [{l:"Close-up",c:"#cdd8dd",lead:true},{l:"Detail",c:"#c7d3d9"},{l:"Evening",c:"#e3c48c"},{l:"UGC",c:"#d9b3c4"}],
+    paidsocial:[{l:"Model-worn",c:"#d9b3c4",lead:true},{l:"Lifestyle",c:"#c9dcc9"},{l:"Evening",c:"#e3c48c"},{l:"Detail",c:"#cdd8dd"}]
+  };
+
+  var frames = [
+    {id:"s1", label:"Hero banner", wide:true, picks:{
+      evening:   {cid:"#CMP1450", t:"Evening-styled hero", w:"evening score highest → elegant styling outranks everyday"},
+      firsttime: {cid:"#CMP1188", t:"Inspiring lifestyle image", w:"first visit → regional prior + lifestyle lead → aspirational shot"},
+      returning: {cid:"#CMP1502", t:"Detailed close-up", w:"detail score highest → product-forward hero"},
+      paidsocial:{cid:"#CMP1207", t:"Model-worn lifestyle shot", w:"paid-social arrivals respond to model-worn imagery"}
+    }},
+    {id:"s2", label:"Header", locked:true},
+    {id:"s3", label:"Product gallery", carousel:true},
+    {id:"s4", label:"Storytelling block", picks:{
+      evening:   {cid:"#CMP3310", t:"'Night out' brand story", w:"tone matched to evening affinity"},
+      firsttime: {cid:"#CMP3302", t:"Brand heritage intro", w:"first visit → introduce the brand"},
+      returning: {cid:"#CMP3345", t:"Craftsmanship & materials", w:"detail affinity → substance over intro"},
+      paidsocial:{cid:"#CMP3320", t:"Lifestyle-led narrative", w:"lifestyle framing carries from the channel"}
+    }},
+    {id:"s5", label:"Reviews module", picks:{
+      evening:   {cid:"#CMP4401", t:"Occasion-tagged reviews", w:"reviews mentioning events surface first"},
+      firsttime: {cid:"#CMP4400", t:"Top-rated overview", w:"broad social proof for a new visitor"},
+      returning: {cid:"#CMP4455", t:"Reviews inline, up top", w:"return visit, close to buying → proof placed prominently"},
+      paidsocial:{cid:"#CMP4412", t:"Photo reviews from buyers", w:"visual proof to match visual intent"}
+    }},
+    {id:"s6", label:"Styling module", picks:{
+      evening:   {cid:"#CMP5510", t:"Evening looks to pair", w:"styling tied to evening affinity"},
+      firsttime: {cid:"#CMP5502", t:"Everyday styling ideas", w:"accessible pairings for a first visit"},
+      returning: {cid:"#CMP5545", t:"Complete-the-look", w:"buying intent → complementary items"},
+      paidsocial:{cid:"#CMP5520", t:"As-seen styling", w:"mirrors the channel creative"}
+    }},
+    {id:"s7", label:"Recommendations", picks:{
+      evening:   {cid:"products", t:"Product recs (unchanged)", w:"this slot still chooses products — existing machinery", keep:true},
+      firsttime: {cid:"products", t:"Product recs (unchanged)", w:"this slot still chooses products — existing machinery", keep:true},
+      returning: {cid:"products", t:"Product recs (unchanged)", w:"this slot still chooses products — existing machinery", keep:true},
+      paidsocial:{cid:"products", t:"Product recs (unchanged)", w:"this slot still chooses products — existing machinery", keep:true}
+    }},
+    {id:"s8", label:"Footer · legal", locked:true}
+  ];
+
+  var wallEl = document.getElementById("wall");
+  var thermSet = document.getElementById("thermSet");
+  var msgEl = document.getElementById("msgout");
+  var firstRender = true;
+
+  interests.forEach(function(k){
+    var t = document.createElement("div");
+    t.className = "therm";
+    t.innerHTML = '<span class="name">'+interestLabel[k]+'</span>'+
+      '<span class="track"><span class="fill" data-k="'+k+'"></span></span>'+
+      '<span class="pct" data-pk="'+k+'">0</span>';
+    thermSet.appendChild(t);
+  });
+
+  function topInterest(p){
+    var best=null, bv=-1;
+    interests.forEach(function(k){ if(personas[p][k]>bv){bv=personas[p][k];best=k;} });
+    return best;
+  }
+  function renderThermo(p){
+    var top = topInterest(p);
+    interests.forEach(function(k){
+      var fill = thermSet.querySelector('.fill[data-k="'+k+'"]');
+      var pct = thermSet.querySelector('.pct[data-pk="'+k+'"]');
+      var v = personas[p][k];
+      fill.style.width = v+"%";
+      fill.classList.toggle("hot", k===top);
+      pct.textContent = v;
+    });
+  }
+  function carouselHTML(p){
+    var g = galleries[p];
+    var slides = g.map(function(s,i){
+      return '<div class="cslide'+(s.lead?' lead':'')+'" style="background:'+s.c+'">'+
+             '<span class="ord">'+(i+1)+'</span>'+s.l+'</div>';
+    }).join("");
+    return '<div class="carousel">'+slides+'</div>';
+  }
+  function renderWall(p, animate){
+    if(firstRender){
+      wallEl.innerHTML = "";
+      frames.forEach(function(f){
+        var d = document.createElement("div");
+        d.className = "frame"+(f.wide?" wide":"")+(f.locked?" def":"");
+        d.setAttribute("data-fid", f.id);
+        wallEl.appendChild(d);
+      });
+      firstRender = false;
+    }
+    frames.forEach(function(f){
+      var el = wallEl.querySelector('[data-fid="'+f.id+'"]');
+      var html = "";
+      if(f.locked){
+        el.classList.add("def");
+        html = '<div class="ftag"><span>'+f.label+'</span><span class="locked">off-limits</span></div>'+
+               '<div class="swatch"></div>'+
+               '<div class="pick"><span class="cid">your default</span></div>'+
+               '<div class="why">Marked off-limits — never personalized.</div>';
+      } else if(f.carousel){
+        el.classList.remove("def");
+        html = '<div class="ftag"><span>'+f.label+'</span><span class="carousel-tag">carousel · order personalizes</span></div>'+
+               carouselHTML(p)+
+               '<div class="why">The set is ranked for this shopper — the leading item is outlined. This ordering-inside-a-slot is live today.</div>';
+      } else {
+        var pk = f.picks[p];
+        var keep = pk.keep;
+        el.classList.toggle("def", !!keep);
+        html = '<div class="ftag"><span>'+f.label+'</span>'+(keep?'<span class="locked" style="background:var(--paper-2);color:var(--ink-soft);border-color:var(--line)">product recs</span>':'')+'</div>'+
+               '<div class="swatch"></div>'+
+               '<div class="pick"><span class="cid">'+(keep?"products →":pk.cid)+'</span> '+pk.t+'</div>'+
+               '<div class="why">'+pk.w+'</div>';
+      }
+      el.innerHTML = html;
+      if(animate){
+        el.classList.remove("pulse"); void el.offsetWidth; el.classList.add("pulse");
+      }
+    });
+  }
+  function renderMsg(p){
+    var parts = []; var ord = 1;
+    frames.forEach(function(f){
+      if(f.locked) return;
+      if(f.carousel){
+        parts.push('<span class="mk">'+f.id+'</span>:<span class="mo">ord'+ord+'</span>→<span class="mv">carousel[ranked]</span>');
+        ord++; return;
+      }
+      var pk = f.picks[p];
+      if(pk.keep){ ord++; return; }
+      parts.push('<span class="mk">'+f.id+'</span>:<span class="mo">ord'+ord+'</span>→<span class="mv">'+pk.cid.replace('#','')+'</span>');
+      ord++;
+    });
+    msgEl.innerHTML = '<span class="mc">// one message · each pick carries an order number →</span>  { '+parts.join(', ')+' }';
+  }
+  function setPersona(p, animate){ renderThermo(p); renderWall(p, animate); renderMsg(p); }
+
+  var pbtns = document.querySelectorAll("#personaBar button");
+  pbtns.forEach(function(b){
+    b.addEventListener("click", function(){
+      pbtns.forEach(function(x){x.classList.remove("on");x.setAttribute("aria-selected","false");});
+      b.classList.add("on"); b.setAttribute("aria-selected","true");
+      setPersona(b.getAttribute("data-p"), true);
+    });
+  });
+  setPersona("evening", false);
+
+  /* ===================== THREE KINDS OF ORDERING ===================== */
+  var ordData = {
+    within: {
+      head: "Order inside a slot",
+      desc: "The sequence of items <em>within</em> a single module — which photo the gallery leads with, which item tops a carousel. This is ranking, and it's the same machinery that already orders product recommendations.",
+      ex: "Example: the gallery leads with the evening shot for one shopper and the close-up for another. The slot doesn't move; its contents reorder.",
+      status: "Live today", statusClass:"live",
+      demo: "within"
+    },
+    across: {
+      head: "Which content leads across the slots",
+      desc: "Given a fixed set of slots in fixed positions, <em>which content fills each</em> and which is emphasized — reviews pulled to a prominent slot for a returning shopper, a story block leading for a newcomer. The slots stay put; what lands in them is personal.",
+      ex: "Example: for a buying-intent shopper, the reviews module carries the prominent content while the hero goes product-forward. Same layout, different emphasis.",
+      status: "This build", statusClass:"build",
+      demo: "across"
+    },
+    move: {
+      head: "Moving the slots themselves",
+      desc: "The arrangement of the page <em>region</em> changing per shopper — a banner relocating, a module appearing only for certain visitors, sections reordering. This is layout personalization, the longer-horizon stage.",
+      ex: "Example: a social-first module appears near the top for social visitors and isn't present for others; the banner drops below the gallery for returning shoppers.",
+      status: "Later · your pacing", statusClass:"future",
+      demo: "move"
+    }
+  };
+
+  var ordHead = document.getElementById("ordHead");
+  var ordDesc = document.getElementById("ordDesc");
+  var ordEx = document.getElementById("ordEx");
+  var ordStatus = document.getElementById("ordStatus");
+  var ordDemo = document.getElementById("ordDemo");
+
+  function ordDemoHTML(kind){
+    var top = '<div class="mp-top"></div><div class="mprow">';
+    if(kind==="within"){
+      return top+
+        '<div class="mpblock"><span class="mi">H</span>Hero</div>'+
+        '<div class="mpblock hl"><span class="mi">G</span><div class="mp-inner">'+
+          '<span class="mini first"></span><span class="mini"></span><span class="mini"></span><span class="mini"></span>'+
+        '</div></div>'+
+        '<div class="mpblock"><span class="mi">R</span>Reviews</div>'+
+        '<div class="mpblock"><span class="mi">S</span>Story</div>'+
+        '</div>';
+    }
+    if(kind==="across"){
+      return top+
+        '<div class="mpblock"><span class="mi">H</span>Hero</div>'+
+        '<div class="mpblock"><span class="mi">G</span>Gallery</div>'+
+        '<div class="mpblock hl"><span class="mi">R</span>Reviews — leading content</div>'+
+        '<div class="mpblock"><span class="mi">S</span>Story</div>'+
+        '</div>';
+    }
+    // move
+    return top+
+      '<div class="mpblock appear"><span class="mi">+</span>Social module (appears)</div>'+
+      '<div class="mpblock moved"><span class="mi">G</span>Gallery (moved up)</div>'+
+      '<div class="mpblock"><span class="mi">H</span>Hero (moved down)</div>'+
+      '<div class="mpblock"><span class="mi">R</span>Reviews</div>'+
+      '</div>';
+  }
+
+  function setOrd(kind){
+    var d = ordData[kind];
+    ordHead.innerHTML = d.head;
+    ordDesc.innerHTML = d.desc;
+    ordEx.innerHTML = d.ex;
+    ordStatus.textContent = d.status;
+    ordStatus.className = "ord-status "+d.statusClass;
+    ordDemo.innerHTML = ordDemoHTML(d.demo);
+  }
+  var obtns = document.querySelectorAll("#ordTabs button");
+  obtns.forEach(function(b){
+    b.addEventListener("click", function(){
+      obtns.forEach(function(x){x.classList.remove("on");x.setAttribute("aria-selected","false");});
+      b.classList.add("on"); b.setAttribute("aria-selected","true");
+      setOrd(b.getAttribute("data-o"));
+    });
+  });
+  setOrd("within");
+
+  /* ===================== VARIATIONS / KITCHEN ===================== */
+  var pantryEl = document.getElementById("pantry");
+  var khEl = document.getElementById("kh");
+  var kpEl = document.getElementById("kp");
+  var kcountEl = document.getElementById("kcount");
+  var TOTAL = 40;
+  for(var i=0;i<TOTAL;i++){
+    var d = document.createElement("div");
+    d.className = "dish";
+    var hueA = i%3===0 ? "#e8ccd6" : (i%3===1 ? "#cdd8dd" : "#f0d9b0");
+    var hueB = i%3===0 ? "#d9b3c4" : (i%3===1 ? "#a9c0cc" : "#e3c48c");
+    d.style.background = "linear-gradient(120deg,"+hueA+","+hueB+")";
+    pantryEl.appendChild(d);
+  }
+  var dishes = pantryEl.querySelectorAll(".dish");
+  function renderKitchen(mode){
+    dishes.forEach(function(dd,idx){
+      dd.classList.remove("dim","chosen");
+      if(mode==="cmab"){
+        if(idx>=4){ dd.classList.add("dim"); }
+        if(idx===1){ dd.classList.add("chosen"); }
+      } else {
+        if(idx===23){ dd.classList.add("chosen"); }
+      }
+    });
+    if(mode==="cmab"){
+      khEl.textContent = "A taste test between a few dishes someone already cooked.";
+      kpEl.innerHTML = "People pre-build a few versions of a page. The test learns which version works best for which kind of visitor. Powerful — but <em>somebody had to cook those few dishes first</em>, and a visitor only ever gets one of them.";
+      kcountEl.innerHTML = "Content the system can choose from: <b>a few pre-built versions</b> · the rest of the pantry is off the table.";
+    } else {
+      khEl.textContent = "A chef with the whole pantry.";
+      kpEl.innerHTML = "Nothing is pre-built. The system looks at <em>all</em> the content in the catalog — hundreds of pieces — and composes the right pick <em>per shopper, per moment</em>. Nobody decides the combinations in advance.";
+      kcountEl.innerHTML = "Content the system can choose from: <b>the entire catalog</b> · composed live, per person.";
+    }
+  }
+  var ktabs = document.querySelectorAll("#kitchenTabs button");
+  ktabs.forEach(function(b){
+    b.addEventListener("click", function(){
+      ktabs.forEach(function(x){x.classList.remove("on");});
+      b.classList.add("on");
+      renderKitchen(b.getAttribute("data-k"));
+    });
+  });
+  renderKitchen("cmab");
+
+})();
+</script>
+</body>
+</html>

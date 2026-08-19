@@ -46,6 +46,12 @@ export interface Env {
   REFLEX_RETENTION_DAYS?: string;
   REFLEX_RATE_LIMIT_PER_MIN?: string;
 
+  // Bright Hour demo (docs/qvc/QVC-Demo-Design-Brief.md §3): pins the demo epoch
+  // offer windows are materialized against, so a rehearsed run replays identically.
+  // Absent ⇒ midnight ET at or before the request stamp.
+  BRIGHTHOUR_EPOCH_MS?: string;
+  BRIGHTHOUR_CLOCK_MULTIPLIER?: string;
+
   // Connector layer — "real seams, mocked calls" (docs/architecture/05-demo-build-spec.md)
   CONNECTOR_MODE?: 'mock' | 'live';
   // Mode-B decision source, independent of CONNECTOR_MODE:

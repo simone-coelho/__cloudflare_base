@@ -1,0 +1,44 @@
+# Recommendations Documentation
+
+> Documentation for Recommendations
+
+## Guides
+- [Content Recommendations developer documentation](https://docs.developers.optimizely.com/recommendations/docs/content-recommendations.md): Complete guide to set up and configure Optimizely Content Recommendations, including tracking implementation, widget deployment, and personalization features.
+- [Prepare your content](https://docs.developers.optimizely.com/recommendations/docs/prepare-your-content.md): Learn how to optimize your website content for accurate scraping and topic extraction by using data attributes and meta tags in Optimizely Content Recommendations.
+- [Introduction to tracking](https://docs.developers.optimizely.com/recommendations/docs/setup-tracking.md): Learn how tracking works in Optimizely Content Recommendations, including user identification, event capture, and content processing for personalization.
+- [Create properties](https://docs.developers.optimizely.com/recommendations/docs/create-properties.md): Set up web properties in the Content Recommendations dashboard to define which websites you want to track and configure for personalization.
+- [Deploy tracking script manually](https://docs.developers.optimizely.com/recommendations/docs/deploy-manually.md): Learn how to manually add the ip.js tracking script to your website for user identification, event tracking, and content recommendations.
+- [Deploy tracking script with CMS NuGet package](https://docs.developers.optimizely.com/recommendations/docs/deploy-via-nuget.md): Install and configure Content Recommendations tracking for Optimizely Content Management System (CMS) 12 websites using the NuGet package integration.
+- [Deploy tracking script with Google Tag Manager](https://docs.developers.optimizely.com/recommendations/docs/deploy-via-tag-manager.md): Deploy Content Recommendations tracking using tag management systems like Google Tag Manager or OneTrust for flexible script management.
+- [Tracking SDK reference](https://docs.developers.optimizely.com/recommendations/docs/tracking-sdk.md): Complete reference for the ip.js tracking SDK, including visitor identification, event tracking commands, and automatic data collection features.
+- [Introduction to widgets](https://docs.developers.optimizely.com/recommendations/docs/setup-widgets.md): Learn about Content Recommendation widgets, how they work with Deliveries and Sections, and how they personalize content for website visitors.
+- [Create flows and sections](https://docs.developers.optimizely.com/recommendations/docs/create-flows-sections.md): Set up Sections to organize content and Flows to automatically categorize and assign content for use in recommendation widgets.
+- [Create deliveries](https://docs.developers.optimizely.com/recommendations/docs/create-deliveries.md): Configure deliveries to define content sourcing and ranking logic for recommendation widgets, linking sections to widgets on your site.
+- [Deploy widget manually](https://docs.developers.optimizely.com/recommendations/docs/setup-manually.md): Manually deploy recommendation widgets by placing Mustache templates in your HTML for customized content presentation.
+- [Deploy widget with CMS NuGet package](https://docs.developers.optimizely.com/recommendations/docs/setup-via-nuget.md): Use the Content Recommendations block type in Optimizely Content Management System (CMS) to add widgets through the content editor interface.
+- [Deploy widget with Google Tag Manager](https://docs.developers.optimizely.com/recommendations/docs/setup-via-tag-manager.md): Deploy recommendation widgets using Google Tag Manager for flexible widget management without modifying site code.
+- [Widget SDK reference](https://docs.developers.optimizely.com/recommendations/docs/personalisation-sdk.md): Complete reference for configuring and customizing recommendation widgets, including templating, callbacks, and advanced rendering options.
+- [Troubleshoot Optimizely Content Recommendations](https://docs.developers.optimizely.com/recommendations/docs/troubleshooting.md): Diagnose and resolve common issues with missing content, interactions, and recommendations in your Content Recommendations implementation.
+- [Topic extraction FAQ](https://docs.developers.optimizely.com/recommendations/docs/topic-extraction.md): Learn how Natural Language Processing (NLP) identifies topics in your content and what affects the quality of topic extraction for recommendations.
+- [ODP + Content Recommendations](https://docs.developers.optimizely.com/recommendations/docs/odp-content-recommendations.md): How to integrate Optimizely Data Platform with Optimizely Content Recommendations
+
+## API Reference
+- [API overview](https://docs.developers.optimizely.com/recommendations/reference/api-overview.md): An introduction to the Content Recommendations API, including its resources, authentication, and available regions.
+- [Fetch content by ID](https://docs.developers.optimizely.com/recommendations/reference/getcontent.md): Get detailed information about a specific content item.
+- [Update content](https://docs.developers.optimizely.com/recommendations/reference/updatecontent.md): Update specific fields of a content item. Only 'Approved' and 'Featured' fields can be modified.
+- [List content sections](https://docs.developers.optimizely.com/recommendations/reference/getcontentsections.md): Retrieve all sections containing the specified content item.
+- [List content](https://docs.developers.optimizely.com/recommendations/reference/listcontent.md): Retrieve a paginated list of content items.
+- [Ingest new content](https://docs.developers.optimizely.com/recommendations/reference/importcontent.md): Import a content item using a URL. The URL is queued for processing.
+- [Search content](https://docs.developers.optimizely.com/recommendations/reference/filtercontent.md): Retrieve a paginated list of content items matching a Lucene query.
+- [List deliveries](https://docs.developers.optimizely.com/recommendations/reference/listdeliveries.md): Retrieve all widget deliveries, including API keys where applicable.
+- [Fetch delivery](https://docs.developers.optimizely.com/recommendations/reference/getdelivery.md): Retrieve detailed information about a delivery using its API key. Use 'me' for the current delivery.
+- [Update recommendation](https://docs.developers.optimizely.com/recommendations/reference/updaterecommendation.md): Mark a pending recommendation as read.
+- [Fetch section by ID](https://docs.developers.optimizely.com/recommendations/reference/getsection.md): Retrieve detailed information about a specific section.
+- [Update section](https://docs.developers.optimizely.com/recommendations/reference/updatesection.md): Update section attributes, such as title and description.
+- [List content assigned to a section](https://docs.developers.optimizely.com/recommendations/reference/getsectioncontent.md): Retrieve a paginated list of content items assigned to the specified section.
+- [Create a new user](https://docs.developers.optimizely.com/recommendations/reference/createuser.md): Create a new user. Only 'identifiers' and 'additional_info' fields are supported.
+- [Fetch user by ID](https://docs.developers.optimizely.com/recommendations/reference/getuser.md): Retrieve detailed information about a specific user.
+- [Fetch personalised content](https://docs.developers.optimizely.com/recommendations/reference/listusercontent.md): Paginated list of personalised content ordered by relevance to the specified user.
+- [Search user content](https://docs.developers.optimizely.com/recommendations/reference/searchusercontent.md): Paginated list of content matching a Lucene query ordered by relevance to the user.
+- [Update user](https://docs.developers.optimizely.com/recommendations/reference/updateuser.md): Update an existing user. Only 'identifiers' and 'additional_info' fields are supported.
+- [Delete user](https://docs.developers.optimizely.com/recommendations/reference/deleteuser.md): Permanently delete the specified user.

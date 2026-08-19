@@ -4,6 +4,13 @@ import path from 'path';
 export default defineConfig({
   test: {
     globals: true,
+    // The route suites dynamically import the whole worker graph inside the
+    // FIRST test body (catalog JSON, segment engine, connectors, experiment
+    // module), which on a cold run costs several seconds before any assertion
+    // runs. Vitest's 5s default was timing that one test out on slower machines
+    // while every assertion in it passed. 15s is a ceiling for module loading,
+    // not a licence for slow tests.
+    testTimeout: 15_000,
     environment: 'miniflare',
     environmentOptions: {
       kvNamespaces: ['CACHE', 'SESSIONS'],
