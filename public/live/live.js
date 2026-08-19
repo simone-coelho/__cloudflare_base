@@ -3293,19 +3293,19 @@
 
   /* ---- PACING. Every duration the arc uses, in one place. ---- */
   var DIRECTOR = {
-    viewGapMs: 6500,        // between the three cold-open clicks (runbook: ~5s apart)
+    viewGapMs: 7500,        // between the three cold-open clicks (runbook: ~5s apart)
     scrollSettleMs: 650,    // smooth-scroll to rest before the pulse
-    glideMs: 900,           // the ghost cursor's travel to its target
-    dwellMs: 500,           // hover beat before the press — the room sees the aim
-    pulseMs: 1300,           // how long the highlight sits before the click lands
-    afterClickMs: 2300,     // let the event flush and the bars re-read
-    recomposeMs: 2400,      // let a recompose paint
+    glideMs: 1200,           // the ghost cursor's travel to its target
+    dwellMs: 1000,           // hover beat before the press — the room sees the aim
+    pulseMs: 2300,           // how long the highlight sits before the click lands
+    afterClickMs: 3300,     // let the event flush and the bars re-read
+    recomposeMs: 3400,      // let a recompose paint
     resultWaitMs: 3600,     // how long a beat waits for the camera to travel
-    resultHoldMs: 5500,     // the ring plays IN VIEW before the beat moves on
-    beatPauseMs: 7500,      // the big pause BETWEEN beats in the full arc
-    readMs: 8500,           // time to let the room read a caption
-    overlayMs: 11000,       // time an overlay card stays up
-    briefMs: 7000,          // scenario 3's note inside the arc
+    resultHoldMs: 6500,     // the ring plays IN VIEW before the beat moves on
+    beatPauseMs: 8500,      // the big pause BETWEEN beats in the full arc
+    readMs: 9500,           // time to let the room read a caption
+    overlayMs: 12000,       // time an overlay card stays up
+    briefMs: 8000,          // scenario 3's note inside the arc
     proposePollMs: 1500,    // Offer Desk propose poll
     proposeTimeoutMs: 60000 // the model call is slow; do not give up early
   };
