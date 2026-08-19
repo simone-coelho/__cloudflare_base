@@ -12,6 +12,9 @@ Each is a score from 0 to 1 for one aspect of this shopper: **category** (kitche
 - **Time lowers them:** each dial decays on its own clock. Demo speed: category halves in ~90 seconds. Production speed: days-to-weeks. Slow dials (brand taste, price posture) outlive fast ones (urgency, mission) — that's the "two-speed" story.
 - **Thresholds with a gap:** cross **0.60** → enter an audience (the chip appears). Must fall below **0.45** → exit. The gap prevents flickering. Audiences aren't hand-built — they're **generated from the catalog's own vocabulary** ("Kitchen & Table Affinity" exists because the catalog has a Kitchen & Table shelf).
 
+## The cold start (before any behavior exists)
+A brand-new visitor's first paint opens with the **geo cohort banner**: her real location (read at the edge, off the request itself — no client code), the real Census income for that area (cited with vintage), and what shoppers near her favor — **representative** first-party history, always labeled (in production: the customer's own warehouse). It is **a prior, not a profile** — and the moment her own category dial crosses 0.60, the banner yields with a toast: behavior beats geography, always. Red line: geography **curates**, never prices or gates. Grain is honest: metro when the local cohort is big enough, else state ("shoppers in North Carolina"), else national — with N suppressed when borrowed.
+
 ## The five steps (how every slot gets filled, every time)
 1. **GATES** — remove what *cannot* show: offer window not open or expired · sold out · blocked by a business rule. Gates judge the **item**, never the shopper.
 2. **PINS** — a merchandiser reserved the slot (the hero billboard). Pinned content skips ranking. **Humans outrank the engine.**

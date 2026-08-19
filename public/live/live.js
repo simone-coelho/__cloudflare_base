@@ -87,6 +87,7 @@
     events: '/live/api/events',   // batch — the default sink
     event: '/live/api/event',     // singular — fallback for older server builds
     reflex: '/live/api/reflex',
+    geo: '/live/api/geo',         // the cold start — geography, read off the request itself
     ws: '/live/api/ws'
   };
 
@@ -140,6 +141,9 @@
   };
 
   var SLOT_META = {
+    // Not a composed slot: the cold-start banner, named here so the camera, the
+    // ledger and the glass box can all call it the same thing.
+    geo_cold_start:     { render: 'geo',      title: 'Opening picks for your area', kicker: '' },
     hero_billboard:     { render: 'hero',     title: '',                        kicker: '' },
     daily_deal:         { render: 'deal',     title: 'Today’s Bright One℠', kicker: 'One great item. One-day price. A new one tomorrow.' },
     spotlight_for_you:  { render: 'reco',     title: 'Spotlight for You',       kicker: 'Picked for you — and it changes as you look around.' },
@@ -862,9 +866,21 @@
     return '<button class="bh-btn bh-btn--primary bh-btn--block" type="button" data-bh-cta="add_to_cart">Add to Cart</button>';
   }
 
+  /* ctx.inert   — the card is NOT part of the composed page: it carries
+                   data-bh-geocard instead of data-bh-card, so the impression
+                   observer (which selects [data-bh-card]) never counts it. That
+                   matters more than it looks: a banner whose own cards impressed
+                   would raise the dials and then congratulate itself for the
+                   crossing — the page manufacturing the behaviour it claims to
+                   have observed. Clicks stay real; impressions are not ours.
+     ctx.compact — no availability line, quantity stepper or CTA. The cold-start
+                   row is a PRIOR being shown, not a shelf being sold. */
   function cardHtml(n, ctx) {
     var frame = ctx.frame === 'reco' ? 'bh-frame--reco' : 'bh-frame--square';
-    return '<article class="bh-card" data-bh-card data-bh-item="' + esc(n.id) + '"' +
+    var mark = ctx.inert
+      ? 'class="bh-card bh-card--geo" data-bh-geocard data-bh-geo-item="' + esc(n.id) + '"'
+      : 'class="bh-card" data-bh-card data-bh-item="' + esc(n.id) + '"';
+    return '<article ' + mark +
         ' data-bh-slot="' + esc(ctx.slot) + '" data-bh-decision="' + esc(ctx.decisionId || '') + '">' +
       '<div class="bh-frame ' + frame + '">' + packshot(n) + '</div>' +
       badgesHtml(n, { window: !!ctx.showWindow }) +
@@ -874,7 +890,7 @@
         (n.aired ? '<p class="bh-onair__aired">' + esc(n.aired) + '</p>' : '') +
         priceHtml(n) +
         starsHtml(n) +
-        '<div class="bh-card__foot">' + availHtml(n) + qtyHtml(n) + ctaHtml(n) + '</div>' +
+        (ctx.compact ? '' : '<div class="bh-card__foot">' + availHtml(n) + qtyHtml(n) + ctaHtml(n) + '</div>') +
       '</div>' +
     '</article>';
   }
@@ -1152,6 +1168,329 @@
     if (kind === 'event') return renderEvent(dec);
     if (kind === 'reco') return renderRail(dec, 'reco');
     return renderRail(dec, 'square');
+  }
+
+  /* ==========================================================================
+   * 7b · THE COLD START — the geo prior, painted before any behaviour exists
+   *
+   * A brand-new anonymous visitor has no profile, no history, and nothing worth
+   * reading in storage. The first paint still has to be useful — so it opens on
+   * the only true thing the page knows about her: WHERE SHE IS, and what
+   * shoppers there actually buy.
+   *
+   * THE HONESTY MODEL, which the banner states on itself in plain sight:
+   *   · her LOCATION is real — Cloudflare resolved it at the edge and handed it
+   *     to the Worker ON the request. No client script, no pixel, nothing an
+   *     ad-blocker can refuse and nothing a third party sold us;
+   *   · the QUERY is real — a first-party-gated roll-up (metro → state →
+   *     national) joined to real public census;
+   *   · the CENSUS is real public data, quoted with the vintage of the row;
+   *   · only the COHORT DATA is representative. In production it is the
+   *     customer's own warehouse. The banner never stops saying so.
+   *
+   * AND IT YIELDS. The instant any dial crosses its θin, the prior collapses to
+   * a strip: her own behaviour outranks her geography, always. That two-speed
+   * moment is the whole reason the banner exists — a prior, not a profile.
+   *
+   * Fairness: geography CURATES what is shown here. It never prices, gates,
+   * discounts or withholds — there is not one price on this page that reads a
+   * geography, and the census figure is context, never a targeting gate.
+   * ======================================================================== */
+  var geo = {
+    data: null,        // the /live/api/geo payload
+    yielded: false,    // her own behaviour arrived and replaced the prior
+    told: false,       // the arrival is written to the ledger exactly once
+    wired: false
+  };
+
+  var GEO_TIP = 'Her location is REAL — Cloudflare resolves it at the edge and hands it to the ' +
+    'Worker on the request itself, so there is no client script to block and no third party involved; ' +
+    'the census figure is real public US Census data, quoted with its vintage. ' +
+    'Only the cohort behind the lean is representative — in production it is your own warehouse, ' +
+    'queried exactly the same way — and geography only ever CURATES what is shown, never the price. ' +
+    'This banner retires itself the moment her own category affinity crosses θin: a prior, not a profile.';
+
+  function geoEl() { return $('bh-geo'); }
+
+  function greetingFor(ms) {
+    var h = new Date(ms).getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  function moneyWhole(n) {
+    if (n == null || isNaN(n)) return '';
+    return '$' + Math.round(Number(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  /* The census citation, exactly as the row carries it. A row that says it is
+     representative KEEPS saying so — we never launder a proxy into "US Census". */
+  function censusCite(cen) {
+    var src = String((cen && cen.source) || '').split(';')[0].trim();
+    if (!src) return '';
+    return /^Census\b/.test(src) ? 'US ' + src : src;
+  }
+
+  function geoLeanText(lean) {
+    if (!lean || !lean.length) return '';
+    return lean.length > 1 ? lean[0] + ' and ' + lean[1] : lean[0];
+  }
+
+  /* WHO the cohort is, said at the grain we actually used. "Near you" is a claim
+     about a metro; a state prior says the state; the floor says the country. */
+  function geoWhoText(g) {
+    var loc = g.location || {};
+    if (g.grain === 'metro') return 'shoppers near you lean ';
+    if (g.grain === 'state') return 'shoppers in ' + (loc.region || loc.regionCode || 'your state') + ' lean ';
+    return 'shoppers across the country lean ';
+  }
+
+  function geoGrainLabel(g) {
+    return g.grain === 'metro' ? 'metro' : g.grain === 'state' ? 'statewide' : 'national';
+  }
+
+  async function fetchGeo() {
+    try {
+      var r = await fetchWithTimeout(ENDPOINTS.geo, { method: 'GET', credentials: 'omit', cache: 'no-store' }, 6000);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var j = await r.json();
+      if (!j || !j.location) throw new Error('unexpected shape');
+      geo.data = j;
+      renderGeo();
+      geoTellArrival();
+      renderExplains();
+    } catch (e) {
+      // No banner is the honest failure: we will not invent a location.
+      geo.data = null;
+      var host = geoEl(); if (host) host.hidden = true;
+    }
+  }
+
+  function renderGeo() {
+    var host = geoEl(); if (!host) return;
+    var g = geo.data;
+    if (!g) { host.hidden = true; return; }
+    var loc = g.location || {};
+    var cen = g.census;
+    var lean = g.cohortLean || [];
+
+    var title = greetingFor(demoNow()) + ', ' + loc.label + ' — ' + geoWhoText(g) +
+      '<span class="bh-geo__lean">' + esc(geoLeanText(lean)) + '</span>.';
+
+    var censusLine = '';
+    if (cen && cen.medianHhIncome != null) {
+      censusLine = '<p class="bh-geo__census">Median household income here: <b>' +
+        esc(moneyWhole(cen.medianHhIncome)) + '</b> ' +
+        '<span class="bh-geo__cite">(' + esc(censusCite(cen)) + ')</span></p>';
+    }
+
+    var now = demoNow();
+    var cards = (g.cohortItems || []).map(function (it) {
+      var n = norm(it, { offer: it.offer, now: now });
+      return n ? cardHtml(n, { slot: 'geo_cold_start', frame: 'square', inert: true, compact: true }) : '';
+    }).join('');
+
+    // The honesty note is not decoration and is never abbreviated: three claims,
+    // each one either REAL or REPRESENTATIVE, with no third category.
+    var honesty = '<p class="bh-geo__honesty">' +
+      'location: <b>live from the edge</b> &middot; census: <b>real</b> &middot; cohort: <b>representative</b> &middot; ' +
+      '<span class="bh-geo__grain">' + esc(geoGrainLabel(g)) +
+        (g.cohortSize != null ? ' &middot; n ' + g.cohortSize : '') + '</span>' +
+      '</p>';
+
+    host.innerHTML =
+      '<div class="bh-geo__head">' +
+        '<div class="bh-geo__titles">' +
+          '<div>' +
+            '<p class="bh-geo__eyebrow">Where you&rsquo;re shopping from</p>' +
+            '<h2 class="bh-geo__title">' + title + '</h2>' +
+            '<p class="bh-geo__strip">A prior, not a profile &mdash; replaced by your own behaviour.</p>' +
+          '</div>' +
+        '</div>' +
+        explainBtn({ slot_id: 'geo_cold_start' }) +
+      '</div>' +
+      '<div class="bh-geo__body">' +
+        censusLine +
+        '<div class="bh-rail">' + cards + '</div>' +
+        honesty +
+      '</div>';
+    host.setAttribute('data-bh-tip', GEO_TIP);
+    host.classList.toggle('bh-geo--yielded', geo.yielded);
+    host.hidden = false;
+    wireGeo();
+  }
+
+  /* The banner's own click handler. wireCards() binds #bh-slots and only that,
+     so the cold start wires itself — the [explain] chevron, and the cards, whose
+     clicks ARE real signal: a shopper clicking a neighbourhood pick is behaving,
+     and that behaviour is hers. (Their IMPRESSIONS are deliberately not counted;
+     see cardHtml's ctx.inert.) */
+  function wireGeo() {
+    var host = geoEl();
+    if (!host || geo.wired) return;
+    geo.wired = true;
+    host.addEventListener('click', function (ev) {
+      var xb = ev.target.closest('[data-bh-explain]');
+      if (xb) { openExplain(xb.getAttribute('data-bh-explain'), xb); return; }
+      var open = ev.target.closest('[data-bh-open]');
+      if (!open) return;
+      ev.preventDefault();
+      var card = open.closest('[data-bh-geocard]');
+      if (!card) return;
+      var id = card.getAttribute('data-bh-geo-item');
+      var item = ((geo.data && geo.data.cohortItems) || []).filter(function (i) {
+        return (i.itemNumber || i.id) === id;
+      })[0];
+      var cat = item ? item.category : '';
+      if (!director.running) {
+        storyBegin({
+          act: 'Clicked ' + cardName(card) + ' in the opening picks — the first behaviour of this session.',
+          weight: ACTION_WEIGHT.product_click,
+          focus: cat ? { dim: 'category', value: cat } : null
+        });
+      }
+      postEvent('product_click', { item_id: id, slot_id: 'geo_cold_start' });
+      scheduleRefresh(600);
+    });
+  }
+
+  /* The arrival, written to the ledger once per visitor. */
+  function geoTellArrival() {
+    var g = geo.data;
+    if (!g || geo.told) return;
+    geo.told = true;
+    var loc = g.location || {};
+    var cen = g.census;
+    storyAdd({
+      act: 'You arrived from ' + loc.label + ' — the edge read it off the request itself.',
+      math: geoGrainLabel(g) + ' grain · ' +
+        (g.cohortSize != null ? 'n ' + g.cohortSize : 'n suppressed (leaders borrowed from a coarser grain)') +
+        ' · census ' + (cen ? censusCite(cen) : 'unavailable') +
+        ' · cohort representative',
+      cons: '→ First paint opens on what shoppers near you buy: a PRIOR, not a profile.'
+    });
+  }
+
+  /* Every dial at or above its own θin, hottest (furthest past it) first. */
+  function hotDials() {
+    var snap = state.affinity || (state.payload && state.payload.affinitySnapshot) || null;
+    if (!snap) return [];
+    var values = snap.dims || snap.dimensions || snap;
+    var cfg = state.reflexConfig || {};
+    var out = [];
+    DIMENSIONS.forEach(function (d) {
+      var lead = leadingValue(values[d.key]);
+      if (!lead || typeof lead.score !== 'number' || !isFinite(lead.score)) return;
+      var c = cfg[d.key] || {};
+      var th = (typeof c.thetaIn === 'number') ? c.thetaIn : d.thetaIn;
+      if (lead.score < th) return;
+      out.push({ key: d.key, value: lead.value, score: lead.score, theta: th });
+    });
+    return out.sort(function (a, b) { return (b.score - b.theta) - (a.score - a.theta); });
+  }
+
+  /* THE TWO-SPEED MOMENT — and the rule behind it is LIKE FOR LIKE.
+     The prior's whole claim is about AISLES: "shoppers near you lean these two
+     categories." So the thing that retires it is her own CATEGORY dial crossing
+     θin — the page now knows what she is shopping for, from her, and no longer
+     needs a stand-in for it.
+     A secondary dial crossing is deliberately NOT enough on its own: one click
+     saturates priceBand or mediaAffinity almost immediately, and collapsing on
+     that would be the page announcing it knows her before it knows the one thing
+     it was actually guessing at. Three hot dials is the backstop — behaviour
+     that is unambiguous even in a session where no category reading lands.
+     Nothing here fabricates a crossing: this reads the same snapshot the bars on
+     screen are drawn from. */
+  function geoMaybeYield() {
+    if (!geo.data || geo.yielded) return false;
+    var hot = hotDials();
+    if (!hot.length) return false;
+    var cat = null;
+    hot.some(function (h) { if (h.key === 'category') { cat = h; return true; } return false; });
+    var trigger = cat || (hot.length >= 3 ? hot[0] : null);
+    if (!trigger) return false;
+    geoYield(trigger);
+    return true;
+  }
+
+  function geoYield(hot) {
+    geo.yielded = true;
+    var host = geoEl();
+    if (host) host.classList.add('bh-geo--yielded');
+    momentToast('Your own behavior just replaced the neighborhood prior');
+    var clicks = 0;
+    Object.keys(storyClicks).forEach(function (k) { clicks += storyClicks[k] || 0; });
+    // The COUNT is READ, never assumed. The runbook says three clicks, and three
+    // is usually what it takes — but scrolling to the rail counts real views, so
+    // the category axis sometimes crosses on the first. Whatever actually did it
+    // is what this says, and the Director reads this very line back, so no
+    // caption on stage can claim a click that did not happen.
+    var WORD = { 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five', 6: 'Six' };
+    geo.yieldLine = (clicks === 0 ? 'Her browsing'
+        : clicks === 1 ? 'Her first click'
+        : (WORD[clicks] || clicks) + ' clicks') +
+      ' replaced the neighborhood prior — behavior beats geography, always.';
+    storyAdd({
+      act: geo.yieldLine,
+      math: hot.key + (hot.value ? ' (' + hot.value + ')' : '') + ' ' + hot.score.toFixed(2) +
+        ' ≥ θin ' + hot.theta.toFixed(2) + ' — her own signal crossed.',
+      cons: '→ The banner collapsed to a strip; the page now runs on her behaviour, not her geography.'
+    });
+    renderExplains();
+  }
+
+  /* A brand-new visitor gets the cold open back — the prior is a property of the
+     VISITOR, not of the tab. Nothing is re-fetched: her geography did not move. */
+  function geoReset() {
+    geo.yielded = false;
+    geo.told = false;
+    geo.yieldLine = null;
+    var host = geoEl();
+    if (host) host.classList.remove('bh-geo--yielded');
+    if (geo.data) { renderGeo(); geoTellArrival(); }
+    else fetchGeo();
+  }
+
+  /* The glass-box record, in the same shape every composed slot files. */
+  function geoDecisionRecord() {
+    var g = geo.data;
+    if (!g) return null;
+    var loc = g.location || {};
+    var x = g.explain || {};
+    var ladder = (x.ladder || []).map(function (r) {
+      return r.level + ':' + r.key + ' n=' + r.n + (r.cleared ? ' ✓' : ' ✗');
+    }).join('  →  ');
+    return {
+      slot_id: 'geo_cold_start',
+      strategy: geo.yielded ? 'geo_prior · yielded to behaviour' : 'geo_prior',
+      decision_id: 'geo_' + (g.grain || 'na') + '_' + (loc.regionCode || loc.country || 'US'),
+      badge: geo.yielded ? 'yielded' : geoGrainLabel(g),
+      explain: {
+        candidates_considered: (g.cohortItems || []).length,
+        candidate_set: g.cohortLean || [],
+        config_version: 'geo-cold-start',
+        gates_passed: ['window_open', 'availability'],
+        // the geo fields the plain-English sentence reads — the SAME numbers the
+        // kv rows below it print, so the sentence can never drift from the record
+        grain: x.grain || g.grain,
+        n: x.n == null ? null : x.n,
+        threshold: x.threshold
+      },
+      kv: [
+        ['grain', String(x.grain || g.grain)],
+        ['N', x.n == null ? '— (suppressed: leaders borrowed)' : String(x.n)],
+        ['threshold', String(x.threshold == null ? '—' : x.threshold)],
+        ['source', String(x.source || '—')],
+        ['location', (loc.label || '—') + ' · ' + (loc.precision || '—') + ' · ' + (loc.source || '—')],
+        ['census', g.census
+          ? (g.census.label + ' · ' + (g.census.source || '—') + ' · vintage ' + (g.census.vintage || '—'))
+          : '— (no census row)'],
+        ['roll-up ladder', ladder || '—'],
+        ['honesty', 'location real · query real · census real-public · cohort representative'],
+        ['curation_only', 'true — geography curates what is shown, never the price']
+      ]
+    };
   }
 
   /* ==========================================================================
@@ -2430,13 +2769,20 @@
     var now = Date.now();
     if (now - affinityAt < 700) return;
     affinityAt = now;
+    // WHOSE reading this is. A poll issued before New Viewer can land after it,
+    // and adopting it would paint the previous shopper's bars onto a visitor who
+    // has done nothing — and, since the cold-start banner yields on those same
+    // numbers, would collapse the prior for someone who has not behaved at all.
+    // A read belongs to the visitor it was asked about, or it is dropped.
+    var who = state.visitorId;
     try {
       var r = await withApiLock(function () {
-        return fetchWithTimeout(ENDPOINTS.reflex + '?visitorId=' + encodeURIComponent(state.visitorId),
+        return fetchWithTimeout(ENDPOINTS.reflex + '?visitorId=' + encodeURIComponent(who),
           { method: 'GET', credentials: 'omit', cache: 'no-store' }, 6000);
       });
-      if (!r.ok) return;
+      if (!r.ok || who !== state.visitorId) return;
       var j = await r.json();
+      if (who !== state.visitorId) return;
       if (j && j.affinity) {
         if (j.config && j.config.dims) state.reflexConfig = j.config.dims;
         if (adoptAffinity(j.affinity, pick(j.now, Date.now()))) renderDims();
@@ -2863,6 +3209,11 @@
     // back. The instrument is at the top of the panel precisely so this is
     // rarely needed — but during a long arc the presenter may have scrolled.
     if (DIM_MOVED_KEY) revealDim(DIM_MOVED_KEY);
+
+    // THE TWO-SPEED MOMENT: this is the read the bars are drawn from, so it is
+    // also the honest place to ask whether the geographic prior has been
+    // replaced. The banner yields on the SAME numbers the room is watching.
+    geoMaybeYield();
   }
 
   /* Scroll a dimension into view WITHIN the panel only — never the page. A
@@ -2922,6 +3273,17 @@
   function plainExplain(d, x, excluded) {
     var slotName = (SLOT_META[d.slot_id] && SLOT_META[d.slot_id].title) || d.slot_id;
 
+    if (d.slot_id === 'geo_cold_start') {
+      var g = geo.data || {};
+      var where = (g.location && g.location.label) || 'this area';
+      var n = x.n == null ? 'a representative cohort (N suppressed — the leaders were borrowed from a coarser grain)'
+                          : 'a representative cohort of ' + x.n;
+      return geo.yielded
+        ? 'Her own category signal crossed θin, so the geographic prior yielded — the page runs on her behaviour now, not on ' + where + '.'
+        : 'Nobody has told this page who she is. It opened on ' + where + ' at the ' + (x.grain || g.grain) +
+          ' grain, from ' + n + ' and real public census — a prior it replaces the moment she behaves.';
+    }
+
     if (x.pinned) {
       return 'A merchandiser reserved this slot — ranking never ran.';
     }
@@ -2961,6 +3323,10 @@
     var host = $('bh-explains'); if (!host) return;
     var decs = ((state.payload && state.payload.decisions) || []).slice()
       .sort(function (a, b) { return (a.order || 0) - (b.order || 0); });
+    // The cold start is not a composed slot, but it IS a decision the room will
+    // ask about — so it files the same record, first, where it happened.
+    var geoRec = geoDecisionRecord();
+    if (geoRec) decs = [geoRec].concat(decs);
     if (!decs.length) { host.innerHTML = '<p class="bh-panel__empty">No decisions in this payload.</p>'; return; }
     host.innerHTML = decs.map(function (d) {
       var x = d.explain || {};
@@ -2998,7 +3364,8 @@
         '</div>';
       }).join('') : '';
 
-      var badgeText = fails.length ? '✖ ' + fails.length + ' gate' + (fails.length > 1 ? 's' : '')
+      var badgeText = d.badge ? d.badge
+        : fails.length ? '✖ ' + fails.length + ' gate' + (fails.length > 1 ? 's' : '')
         : (x.pinned ? 'pinned' : (x.quota_reserved ? 'quota' : 'rank ' + (x.rank_position == null ? '?' : x.rank_position)));
 
       return '<div class="bh-xp" data-bh-xp="' + esc(d.slot_id) + '">' +
@@ -3028,6 +3395,10 @@
             '<dt>config_version</dt><dd>' + esc(x.config_version || '—') + '</dd>' +
             '<dt>latency</dt><dd>' + esc(x.engine_latency_ms == null ? '—' : x.engine_latency_ms + ' ms') + '</dd>' +
             '<dt>decision_id</dt><dd>' + esc(d.decision_id || '—') + '</dd>' +
+            // record-specific rows (the cold start's grain / N / source / census)
+            (d.kv || []).map(function (p) {
+              return '<dt>' + esc(p[0]) + '</dt><dd>' + esc(p[1]) + '</dd>';
+            }).join('') +
           '</dl>' +
         '</div>' +
       '</div>';
@@ -3211,6 +3582,9 @@
     if (storyPending && storyPending.timer) clearTimeout(storyPending.timer);
     storyPending = null;
     renderStory();
+    // …and the cold start comes BACK: the geographic prior belongs to a visitor
+    // who has done nothing yet, and this visitor has done nothing yet.
+    geoReset();
     var tdot = $('bh-tab-dot'); if (tdot) tdot.hidden = true;
     state.focusCategory = null;
     lastComposition = null;   // a fresh visitor's first paint is not a 'change'
@@ -3711,10 +4085,49 @@
      Captions carry the runbook's own talk track. Banned vocabulary (pressure,
      countdowns, scarcity, social proof) appears in none of them. */
 
+  /** Take the room to a region and ring it — the same marks a recompose plays.
+      Used where there is something true to LOOK at that no recompose produced:
+      the cold-start banner arriving, and the same banner yielding. */
+  async function directorFrame(el) {
+    if (!el || el.hidden) return false;
+    if (!prefersCalm() && !el.hasAttribute('data-bh-pending')) {
+      el.setAttribute('data-bh-pending', 'bh-slotring');
+    }
+    await new Promise(function (res) { cameraTo(el, res); });
+    armMarks();
+    return true;
+  }
+
   async function scStranger() {
     caption('Resetting to a cold, anonymous visitor…', '');
     await directorClickControl('bh-ops-newviewer', DIRECTOR.recomposeMs);
     await dwait(900);
+
+    /* ── THE COLD START, BEFORE A SINGLE CLICK ────────────────────────────
+       The beat used to open on a blank shopper and three clicks. It now opens
+       one step earlier, on the frame that answers "what do you show someone you
+       know nothing about?" — because the honest answer is not "nothing" and it
+       is not "a profile you invented". It is her geography, read off the request
+       at the edge, joined to real public census, filled with a representative
+       cohort that says so. A prior. Which the next fifteen seconds replace. */
+    var hadBanner = false;
+    var banner = geoEl();
+    if (geo.data && !geo.yielded && banner && !banner.hidden) {
+      hadBanner = true;
+      var loc = geo.data.location || {};
+      caption('Before her first click — the page already opens on her geography.',
+        'Before her first click, the page already opens usefully — her geography is a prior, from the edge and the public census.');
+      await dwait(DIRECTOR.announceMs);
+      await directorFrame(banner);
+      var cen = geo.data.census;
+      caption('Opening picks for ' + loc.label + ' — ' + geoWhoText(geo.data) +
+        geoLeanText(geo.data.cohortLean || []) + '.',
+        (cen && cen.medianHhIncome != null
+          ? 'Median household income there is ' + moneyWhole(cen.medianHhIncome) + ' — real public census, quoted with its vintage. '
+          : 'No census row for that geography, and the banner says so rather than guessing. ') +
+        'Her location is real, the query is real, the cohort is representative — and geography only curates what is shown, never the price.');
+      await dwait(DIRECTOR.readMs);
+    }
 
     var picks = itemsOnScreenByCat('kitchen', 3);
     if (picks.length < 3) {
@@ -3758,6 +4171,18 @@
     }
 
     await dwait(1200);
+
+    /* ── AND THE PRIOR YIELDS ─────────────────────────────────────────────
+       Only when it actually did. The banner collapses on the same numbers the
+       bars are drawn from, so if the dials never crossed there is nothing here
+       to celebrate and the beat says nothing — the house rule, unchanged. */
+    if (hadBanner && geo.yielded) {
+      await directorFrame(geoEl());
+      caption('The neighbourhood prior just yielded — her own behaviour replaced it.',
+        geo.yieldLine || 'Her behavior replaced the neighborhood prior — behavior beats geography, always.');
+      await dwait(DIRECTOR.readMs);
+    }
+
     var fin = dimReading('category');
     caption(fin
       ? 'category — ' + (fin.value || 'Kitchen & Table') + ' · ' + fin.score.toFixed(2) +
@@ -4056,7 +4481,7 @@
   document.addEventListener('click', tipHide, true);
 
   var SCENARIOS = [
-    { key: 'stranger',   label: 'Anonymous Stranger', tip: 'Resets to a cold visitor, then clicks 3 kitchen products (announced first, ghost cursor, ~7s apart). Watch the category bar cross 0.60 and the Spotlight module swap. The no-training-period proof.',   run: scStranger },
+    { key: 'stranger',   label: 'Anonymous Stranger', tip: 'Resets to a cold visitor. FIRST frames the cold-start banner — before any click, the page opens on her real geography (read at the edge, off the request) with real public census and a representative cohort. THEN clicks 3 kitchen products (announced first, ghost cursor, ~7s apart): the category bar crosses 0.60, the Spotlight swaps, and the geographic prior YIELDS to her own behavior. The no-training-period proof, and the two-speed story.',   run: scStranger },
     { key: 'governance', label: 'Governance & quota', tip: 'Turns the discovery quota OFF — the discovery rail collapses into more-of-the-same — then back ON. The do-not-over-personalize guardrail, shown as disease then cure.',   run: scGovernance },
     { key: 'second',     label: 'Second Shopper', tip: 'Prompts you to open an incognito window at the same URL: same moment, different shopper, different page. Several eligible offers; the system picks per customer.',       run: scSecondShopper },
     { key: 'newoffer',   label: 'A New Offer Is Born', tip: 'The centerpiece. A raw feed row hits the Offer Desk, a REAL model call proposes tags (~16s — narrate over it), a human approves with one edit, and the item goes live on the floor. No campaign, no rebuild.',  run: scNewOffer },
@@ -4185,6 +4610,9 @@
     setInterval(tickClock, 250);
     initIdleDecay();
     initDirector();
+    // The cold start rides its own request, in parallel: the banner is the FIRST
+    // useful thing on the page and must not queue behind the composition.
+    fetchGeo();
     fetchPage().then(function () { connectWs(); });
     window.BrightHour = state;   // presenter console handle
   }

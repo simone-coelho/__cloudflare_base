@@ -56,6 +56,7 @@ import {
   trackBhOfferClick,
   type BhAssignment,
 } from '@/demos/brighthour/experiment';
+import { resolveBhGeoCohort, type BhGeoInput } from '@/demos/brighthour/geoCohort';
 import { gateWrite } from '@/services/fxEnv';
 import {
   BH_DECISION_COLUMNS,
@@ -424,6 +425,69 @@ liveRoutes.post('/page', async (c) => {
     console.error('Error composing Bright Hour page:', error);
     return c.json(
       { ok: false, error: error instanceof Error ? error.message : 'compose failed' },
+      500
+    );
+  }
+});
+
+// ── GET /live/api/geo ────────────────────────────────────────────────────────
+
+/**
+ * The geo-cohort COLD START: what the very first paint can honestly say to a
+ * visitor nobody has ever seen (src/demos/brighthour/geoCohort.ts).
+ *
+ * The geography is read off `request.cf` — Cloudflare resolves it at the edge and
+ * hands it to the Worker ON the request, so there is no client script to block,
+ * no pixel to refuse and no third party involved. Under `wrangler dev` the local
+ * runtime populates only part of `cf` (city is frequently absent), which is why
+ * the payload's `precision` field is explicit and the banner degrades city →
+ * region → 'your area'. In production the same code path sees the richer object.
+ *
+ * QA / rehearsal overrides (?city=&region=&regionCode=&postal=&metro=) are the
+ * LABELLED path: any of them present and the payload reports source:'query'
+ * instead of 'edge', exactly like the Coach /geo/cohort route. Never mixed with
+ * the real cf, so a forced state cannot be silently corrected by the edge ZIP.
+ *
+ * Coach's own /geo routes are untouched: this shares their brain, not their door.
+ */
+liveRoutes.get('/geo', async (c) => {
+  try {
+    const cf = ((c.req.raw as unknown as { cf?: Record<string, unknown> }).cf ?? {}) as Record<string, unknown>;
+    const q = c.req.query();
+    const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
+
+    const hasOverride =
+      q.city != null || q.region != null || q.regionCode != null || q.postal != null || q.metro != null;
+
+    const geo: BhGeoInput = hasOverride
+      ? {
+          city: str(q.city),
+          region: str(q.region),
+          regionCode: str(q.regionCode) ?? str(q.region),
+          metroCbsa: str(q.metro),
+          postalCode: str(q.postal),
+          country: str(q.country) ?? 'US',
+          source: 'query',
+        }
+      : {
+          city: str(cf.city),
+          region: str(cf.region),
+          regionCode: str(cf.regionCode),
+          metroCbsa: null, // the edge's metroCode is a Nielsen DMA — the ZIP crosswalk owns CBSA
+          dmaCode: str(cf.metroCode),
+          postalCode: str(cf.postalCode),
+          country: str(cf.country),
+          source: 'edge',
+        };
+
+    const realNowMs = Date.now();
+    const { items } = await loadComposerCatalog(c.env, realNowMs);
+    const cohort = await resolveBhGeoCohort(c.env, geo, items, realNowMs);
+    return c.json({ ok: true, ...cohort });
+  } catch (error) {
+    console.error('Error resolving Bright Hour geo cohort:', error);
+    return c.json(
+      { ok: false, error: error instanceof Error ? error.message : 'geo cohort failed' },
       500
     );
   }

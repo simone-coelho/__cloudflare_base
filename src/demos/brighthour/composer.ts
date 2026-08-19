@@ -852,6 +852,35 @@ function offerView(c: Candidate, nowMs: number, cfg: ComposerConfig): OfferView 
   return view;
 }
 
+/**
+ * The wire-safe projection of ONE catalog item with no ranking context — the
+ * same SafeItem + OfferView the slots emit, so anything that renders an item
+ * outside a ranked slot (today: the geo cold-start banner, src/demos/brighthour/
+ * geoCohort.ts) hands the page the shape its ONE card template already reads.
+ * Nothing here ranks, scores or personalizes: it projects, and it runs the same
+ * gates so `eligible` means what it means everywhere else.
+ */
+export function plainItemView(
+  item: ComposerItem,
+  nowMs: number,
+  cfg: ComposerConfig = DEFAULT_COMPOSER_CONFIG
+): (SafeItem & { offer: OfferView; eligible: boolean }) {
+  const gates = evaluateGates(
+    { ...(item as OfferItemLike), availability: { ats: atsOf(item) } },
+    nowMs,
+    { vipOfferActive: cfg.vipOfferActive, channel: cfg.channel, cfg: cfg.lifecycle }
+  );
+  const c: Candidate = {
+    item,
+    itemId: idOf(item),
+    gates,
+    dimensionScores: {},
+    rankScore: 0,
+    categoryScore: 0,
+  };
+  return { ...safeItem(c), offer: offerView(c, nowMs, cfg), eligible: gates.eligible };
+}
+
 function railItem(
   c: RankedCandidate,
   nowMs: number,

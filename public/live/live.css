@@ -289,6 +289,74 @@ button, input, select { font: inherit; color: inherit; }
 .bh-rail--wide { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 
 /* ============================================================================
+   THE COLD START — the geo prior, on first paint, before any behaviour exists.
+
+   It is deliberately NOT a hero: warm, quiet, one notch above the page's ground
+   tone, so the room reads it as the page opening usefully rather than as a
+   promotion. The coral edge is the same mark the rest of the page uses; nothing
+   here borrows the signal red (price + daily deal own that, and only that).
+
+   The banner has two states and they are the whole point:
+     · open      — the greeting, the census line, the cohort row, the honesty note
+     · yielded   — collapsed to one slim strip, because her own behaviour arrived
+   ========================================================================== */
+.bh-geo {
+  position: relative;
+  margin: 0 0 36px;
+  padding: 22px 24px 20px;
+  background: linear-gradient(180deg, var(--bh-blush-2) 0%, var(--bh-greige-1) 100%);
+  border: 1px solid var(--bh-greige-3);
+  border-left: 4px solid var(--bh-coral);
+  scroll-margin-top: 88px;
+  transition: padding .35s ease, background .35s ease;
+}
+.bh-geo__head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  flex-wrap: nowrap; margin: 0 0 6px;
+}
+.bh-geo__titles { flex: 1 1 auto; min-width: 0; }
+.bh-geo__head .bh-explain { flex: 0 0 auto; }
+.bh-geo__eyebrow {
+  font-family: var(--bh-head); font-size: .6875rem; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--bh-ink); margin: 0 0 8px; opacity: .72;
+}
+.bh-geo__title { font-family: var(--bh-head); font-size: 1.375rem; line-height: 1.25; margin: 0; color: var(--bh-ink); }
+.bh-geo__lean { font-weight: 700; }
+.bh-geo__census {
+  margin: 8px 0 16px; font-size: .9375rem; font-weight: 500; color: var(--bh-body); max-width: 68ch;
+}
+.bh-geo__census b { color: var(--bh-ink); font-weight: 700; }
+.bh-geo__cite { color: var(--bh-body); font-size: .8125rem; }
+
+/* the cohort row: the same card template, one size smaller — a PRIOR, not a rail */
+.bh-geo .bh-rail { grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); }
+.bh-card--geo { background: var(--bh-white); }
+.bh-card--geo .bh-card__desc { font-size: .875rem; }
+
+/* the honesty note — quiet, permanent, and never abbreviated away */
+.bh-geo__honesty {
+  margin: 14px 0 0; font-size: .78125rem; letter-spacing: .01em; color: var(--bh-body);
+  border-top: 1px solid var(--bh-greige-3); padding-top: 10px;
+}
+.bh-geo__honesty b { color: var(--bh-ink); font-weight: 700; }
+.bh-geo__grain {
+  display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 4px;
+  background: var(--bh-greige-2); color: var(--bh-ink); font-size: .6875rem; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+
+/* ---- YIELDED: her own behaviour replaced the prior, so the prior gets out of
+   the way. It does not vanish — the room must be able to see what was replaced,
+   and the [explain] record stays reachable. ---- */
+.bh-geo--yielded { padding: 10px 16px; background: var(--bh-greige-1); border-left-color: var(--bh-greige-3); }
+.bh-geo--yielded .bh-geo__body { display: none; }
+.bh-geo--yielded .bh-geo__title { font-size: .9375rem; font-weight: 600; }
+.bh-geo--yielded .bh-geo__eyebrow { display: none; }
+.bh-geo--yielded .bh-geo__head { margin: 0; align-items: center; }
+.bh-geo__strip { display: none; margin: 0; font-size: .8125rem; color: var(--bh-body); }
+.bh-geo--yielded .bh-geo__strip { display: block; }
+
+/* ============================================================================
    PRODUCT CARD — their grid-card template order, exactly (A10):
    square image → badge → brand → 3-line description clamp → price block →
    instalment line → stars + review count → Add to Cart (suppressed when sold out)
