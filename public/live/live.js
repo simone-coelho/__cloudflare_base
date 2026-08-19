@@ -3293,7 +3293,8 @@
 
   /* ---- PACING. Every duration the arc uses, in one place. ---- */
   var DIRECTOR = {
-    viewGapMs: 7500,        // between the three cold-open clicks (runbook: ~5s apart)
+    viewGapMs: 7500,
+    announceMs: 2400,     // the intent line is READ before anything moves        // between the three cold-open clicks (runbook: ~5s apart)
     scrollSettleMs: 650,    // smooth-scroll to rest before the pulse
     glideMs: 1200,           // the ghost cursor's travel to its target
     dwellMs: 1000,           // hover beat before the press — the room sees the aim
@@ -3723,14 +3724,18 @@
         pick = fresh[0];
       }
       clicked[pick.id] = 1;
-      caption('Click ' + (i + 1) + ' of 3 — ' + pick.name,
-        i === 0 ? 'Nobody has told this page who she is. Watch the category axis.' : '');
+      // TELL → DO → EXPLAIN: the intent line lands first, in future tense,
+      // and holds long enough to be read before the cursor even appears.
+      caption('Next — clicking ' + pick.name + ' (' + (i + 1) + ' of 3)',
+        i === 0 ? 'Nobody has told this page who she is. Watch the category axis.'
+                : 'Watch the category bar and the Spotlight module.');
+      await dwait(DIRECTOR.announceMs);
       await directorClickCard(pick.id);
       var r = dimReading('category');
       var reading = r
         ? 'category ' + r.score.toFixed(2) + ' (θin ' + r.thetaIn.toFixed(2) + ')'
         : '';
-      if (r) caption('Click ' + (i + 1) + ' of 3 registered — ' + reading, '');
+      if (r) caption('Landed — click ' + (i + 1) + ' of 3: ' + reading, '');
       // the result phase: the camera takes the room to what the click moved
       await directorResult(reading);
       if (i < picks.length - 1) {
