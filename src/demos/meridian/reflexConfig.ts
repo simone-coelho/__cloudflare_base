@@ -2,17 +2,26 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // THE PARALLEL REGISTRIES — the structural argument for agnosticism.
 //
-// Retail and financial declare the SAME SEVEN DIMENSION SHAPES, reading the SAME
-// RECORD FIELDS, with the SAME τ / K / θ tuning. Only the dimension KEY
-// changes — the word the room reads on the instrument.
+// Retail and financial declare the SAME SEVEN DIMENSION SHAPES, with the SAME
+// τ / K / θ tuning, and six of the seven read the SAME RECORD FIELD. Only the
+// dimension KEY changes — the word the room reads on the instrument.
 //
-//   category    ← category      → productFamily
-//   subcategory ← subcategory   → subFamily
-//   priceBand   ← value_usd     → amountBand
-//   styleWorld  ← world         → lifeStage
-//   occasion    ← needs[]       → intent
-//   contentType ← contentType   → contentType
-//   journeyStage← (the verb)    → applicationStage
+//   shape     retail key    ← retail field   financial key      ← financial field
+//   broad     category      ← category       productFamily      ← category
+//   narrow    line          ← line           subFamily          ← subcategory
+//   band      priceBand     ← value_usd      amountBand         ← value_usd
+//   durable   styleWorld    ← world          lifeStage          ← world
+//   need      occasion      ← needs[]        intent             ← needs[]
+//   content   contentType   ← contentType    contentType        ← contentType
+//   stage     journeyStage  ← (the verb)     applicationStage   ← (the verb)
+//
+// THE NARROW SHAPE IS THE ONE EXCEPTION (decision D3, 2026-08-28). Retail's
+// narrow dimension is the product LINE — Drover, Linden, Halden — the family a
+// luxury house actually merchandises by, the way Coach merchandises "Tabby".
+// Material stays on the retail record as `subcategory` for the card's display
+// string ("Outerwear · wool") and is no longer a dimension. Financial has no
+// lines; its narrow dimension keeps reading `subcategory` (fixed / variable /
+// revolving …) under the key subFamily.
 //
 // SIX OF THE SEVEN READ THE NOUN. The seventh reads the VERB: journeyStage is
 // not carried by any item, it is carried by WHAT THE VISITOR DID — a click is
@@ -25,8 +34,8 @@
 // only their labels change. Nobody has to be told the engine is the same engine.
 //
 // TWO SPEEDS SHIP IN BOTH. The durable axes (priceBand/styleWorld, amountBand/
-// lifeStage — τ 240-300s demo) visibly DO NOT move while the fast axes (category,
-// subcategory — τ 60-90s) spike. That contrast is the most persuasive thirty
+// lifeStage — τ 120-150s demo) visibly DO NOT move while the fast axes (category,
+// line — τ 30-45s) spike. That contrast is the most persuasive thirty
 // seconds available: taste is slow, this session is fast, one engine holds both.
 //
 // PROD_TAUS is what a real deployment runs — days and weeks. Publishing both is
@@ -151,7 +160,8 @@ function buildConfig(vertical: Vertical, taus: Readonly<Record<MeridianShape, nu
     version: `meridian-${vertical}-${rate}-v1`,
     dimensions: [
       dim('broad', retail ? 'category' : 'productFamily', 'category', taus),
-      dim('narrow', retail ? 'subcategory' : 'subFamily', 'subcategory', taus),
+      // The one place the two registries read different fields — see the header.
+      dim('narrow', retail ? 'line' : 'subFamily', retail ? 'line' : 'subcategory', taus),
       dim('band', retail ? 'priceBand' : 'amountBand', 'value_usd', taus, {
         derive: 'band',
         // Retail: everyday / considered / premium. Financial: modest / core / major.
@@ -197,7 +207,7 @@ export function configFor(vertical: Vertical, rate: 'demo' | 'prod' = 'demo'): R
  */
 export const SHAPE_OF_KEY: Readonly<Record<string, MeridianShape>> = {
   category: 'broad', productFamily: 'broad',
-  subcategory: 'narrow', subFamily: 'narrow',
+  line: 'narrow', subFamily: 'narrow',
   priceBand: 'band', amountBand: 'band',
   styleWorld: 'durable', lifeStage: 'durable',
   occasion: 'need', intent: 'need',
@@ -208,6 +218,54 @@ export const SHAPE_OF_KEY: Readonly<Record<string, MeridianShape>> = {
 /** Display order on the instrument. Fixed across verticals — that is the point. */
 export const SHAPE_ORDER: readonly MeridianShape[] =
   ['broad', 'narrow', 'need', 'band', 'durable', 'content', 'stage'];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RECENCY LEADS, ACCUMULATION GATES — AN ADDITION TO THE SPEC.
+//
+// Decided 2026-08-28 (D2). This is NOT in the Tapestry documents, which specify
+// decay only: within a dimension the value with the most accumulated affinity
+// leads, and keeps leading until decay says otherwise. Run that on stage and it
+// misbehaves in a way the room notices. Three clicks on Drover pieces, then one
+// on a Linden bag — the visitor has plainly moved on, and the documented
+// algorithm keeps pushing Drover for roughly the narrow τ, about thirty seconds,
+// because one Linden click cannot out-accumulate three Drover ones. Thirty
+// seconds of a page ignoring what she just did is thirty seconds of the
+// argument failing.
+//
+// So a dimension can be flagged RECENCY-LED. Its lead is the most recently
+// touched value — the entry with the latest t — not the highest a. In scoring,
+// the lead contributes its full a; every other value in that dimension
+// contributes a × TRAILING. Drover pieces still rank, weakly: she did look at
+// three of them, and pretending otherwise would be its own kind of lie.
+//
+// MEMBERSHIP IS NOT TOUCHED. Entering and leaving an audience stays purely
+// threshold-based in core — a ≥ θ_in in, a < θ_out out — so after those four
+// clicks Linden leads the page, the Drover audience is still hers, and it
+// leaves on its own when its affinity decays out. The receipt names both:
+// "line · Linden led by recency; Drover trailing ×0.25".
+//
+// Retail `line` is the only recency-led dimension for now. Category stays
+// score-led on purpose: which aisle she is in IS a running total. This is a
+// Meridian-side map rather than a field on core's DimensionSpec because it is
+// a Meridian decision, and widening core reaches into two other demos. The rule
+// itself lives in lead.ts; composer.ts applies it when it is handed raw state.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type LeadMode = 'recency' | 'score';
+
+/** Dimension key → how its lead is chosen. Absent means 'score', the documented default. */
+export const LEAD_BY: Readonly<Record<string, LeadMode>> = {
+  line: 'recency',
+};
+
+/** What a non-lead value's affinity is multiplied by inside a recency-led dimension. */
+export const DEFAULT_TRAILING = 0.25;
+export const TRAILING: Readonly<Record<string, number>> = {
+  line: 0.25,
+};
+
+export const leadModeFor = (dimKey: string): LeadMode => LEAD_BY[dimKey] ?? 'score';
+export const trailingFor = (dimKey: string): number => TRAILING[dimKey] ?? DEFAULT_TRAILING;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THE GUARD.
@@ -233,6 +291,16 @@ for (const vertical of ['retail', 'financial'] as const) {
         `so it would never be drawn on the instrument.`,
       );
     }
+  }
+}
+// Same failure mode for the lead maps: a misspelt key would apply the recency
+// rule to nothing, silently, and look exactly like the rule not working.
+for (const key of new Set([...Object.keys(LEAD_BY), ...Object.keys(TRAILING)])) {
+  if (!SHAPE_OF_KEY[key]) {
+    throw new Error(
+      `reflexConfig: LEAD_BY/TRAILING names "${key}", which is not a Meridian dimension key. ` +
+      `The recency rule would silently apply to nothing.`,
+    );
   }
 }
 

@@ -1,3 +1,240 @@
+// src/demos/meridian/reflexConfig.ts
+var SECOND = 1e3;
+var MINUTE = 60 * SECOND;
+var HOUR = 60 * MINUTE;
+var DAY = 24 * HOUR;
+var DEMO_TAUS = {
+  // Retuned against a measured run. The three surfaces still retreat in order —
+  // narrow, then broad, then need — but the whole staircase now completes inside
+  // ~90s of narration instead of ~160s of silence.
+  broad: 45 * SECOND,
+  narrow: 30 * SECOND,
+  band: 150 * SECOND,
+  durable: 120 * SECOND,
+  need: 60 * SECOND,
+  content: 45 * SECOND,
+  // Intent is the most perishable thing here. Someone who was deciding two
+  // minutes ago and has been idle since is browsing again.
+  stage: 40 * SECOND
+};
+var PROD_TAUS = {
+  broad: 14 * DAY,
+  narrow: 7 * DAY,
+  band: 45 * DAY,
+  durable: 60 * DAY,
+  need: 21 * DAY,
+  content: 14 * DAY,
+  stage: 3 * DAY
+};
+var SHAPE_TUNING = {
+  broad: { K: 1.8, thetaIn: 0.6, thetaOut: 0.45 },
+  narrow: { K: 1.6, thetaIn: 0.6, thetaOut: 0.45 },
+  band: { K: 2.4, thetaIn: 0.55, thetaOut: 0.4 },
+  durable: { K: 2.2, thetaIn: 0.58, thetaOut: 0.42 },
+  need: { K: 1.8, thetaIn: 0.6, thetaOut: 0.45 },
+  content: { K: 1.6, thetaIn: 0.6, thetaOut: 0.45 },
+  // Low K on purpose: one add-to-bag (weight 3.0) gives a = 3.0/(3.0+1.4) =
+  // 0.68, clear of θ_in. Deciding is a state you enter on one decisive act.
+  stage: { K: 1.4, thetaIn: 0.6, thetaOut: 0.45 }
+};
+var MERIDIAN_WEIGHTS = {
+  /** The cold-start seed, derived from published census figures. Sized to land
+      the band affinity visibly above zero but below theta_out — we know
+      something, we have not committed to anything.
+      At 1.6 it landed a = 1.6/(1.6+2.4) = 0.400 against a theta_out of 0.40,
+      i.e. exactly ON the line, so it claimed for one tick and immediately
+      announced its own retreat. 1.35 gives a = 0.36: unmistakably non-zero on
+      the bar, and comfortably short of committing. */
+  prior: 1.35,
+  /** An off-site arrival — email opened, ad clicked, form submitted. Someone
+      chose to act on a surface that is not your website, which is a stronger
+      statement than a page view and weaker than adding to a bag. */
+  arrival: 2,
+  /** Zero-party: the visitor STATED this rather than revealed it. Weighted above
+      an arrival because it is unambiguous, and below a purchase because saying
+      you like evening pieces is not the same as buying one. Critically it lands
+      in the SAME vector as observed behaviour and decays on the SAME clock — a
+      preference declared once stops driving the page unless behaviour agrees. */
+  declared: 3.2,
+  /** Choosing a department is a broader statement than opening one product —
+      it is the visitor telling you which aisle they are in. */
+  nav_click: 2,
+  view: 1,
+  scroll_depth: 0.5,
+  rail_click: 1.5,
+  block_read: 1.2,
+  row_click: 1.5,
+  search: 2,
+  save: 3,
+  intent_start: 3,
+  // add to cart · begin application
+  convert: 4,
+  // purchase · submit application
+  reflex_tick: 0
+  // re-evaluate only — never accumulates
+};
+function dim(shape, key, source, taus, extra = {}) {
+  return { key, source, tauMs: taus[shape], ...SHAPE_TUNING[shape], ...extra };
+}
+function buildConfig(vertical, taus) {
+  const retail = vertical === "retail";
+  const rate = taus === DEMO_TAUS ? "demo" : "prod";
+  return {
+    version: `meridian-${vertical}-${rate}-v1`,
+    dimensions: [
+      dim("broad", retail ? "category" : "productFamily", "category", taus),
+      // The one place the two registries read different fields — see the header.
+      dim("narrow", retail ? "line" : "subFamily", retail ? "line" : "subcategory", taus),
+      dim("band", retail ? "priceBand" : "amountBand", "value_usd", taus, {
+        derive: "band",
+        // Retail: everyday / considered / premium. Financial: modest / core / major.
+        cuts: retail ? [75, 250] : [25e3, 25e4],
+        labels: retail ? ["entry", "core", "premium"] : ["modest", "core", "major"]
+      }),
+      dim("durable", retail ? "styleWorld" : "lifeStage", "world", taus),
+      dim("need", retail ? "occasion" : "intent", "needs", taus, { multi: true }),
+      dim("content", "contentType", "contentType", taus),
+      // Source deliberately names no item field. extractTouches skips a source
+      // it cannot find, so this dimension can only ever be moved by an
+      // explicitly emitted verb — which is exactly the guarantee we want.
+      dim("stage", retail ? "journeyStage" : "applicationStage", "__verb__", taus)
+    ],
+    weights: { ...MERIDIAN_WEIGHTS },
+    // Globals are per-dimension-overridden above; these are the floor.
+    tauMs: taus.broad,
+    K: 1.8,
+    thetaIn: 0.6,
+    thetaOut: 0.45,
+    epsilon: 0.01,
+    maxValuesPerDim: 24
+  };
+}
+var MERIDIAN_RETAIL_CONFIG = buildConfig("retail", DEMO_TAUS);
+var MERIDIAN_FINANCIAL_CONFIG = buildConfig("financial", DEMO_TAUS);
+var MERIDIAN_RETAIL_CONFIG_PROD = buildConfig("retail", PROD_TAUS);
+var MERIDIAN_FINANCIAL_CONFIG_PROD = buildConfig("financial", PROD_TAUS);
+function configFor(vertical, rate = "demo") {
+  if (rate === "prod") {
+    return vertical === "retail" ? MERIDIAN_RETAIL_CONFIG_PROD : MERIDIAN_FINANCIAL_CONFIG_PROD;
+  }
+  return vertical === "retail" ? MERIDIAN_RETAIL_CONFIG : MERIDIAN_FINANCIAL_CONFIG;
+}
+var SHAPE_OF_KEY = {
+  category: "broad",
+  productFamily: "broad",
+  line: "narrow",
+  subFamily: "narrow",
+  priceBand: "band",
+  amountBand: "band",
+  styleWorld: "durable",
+  lifeStage: "durable",
+  occasion: "need",
+  intent: "need",
+  contentType: "content",
+  journeyStage: "stage",
+  applicationStage: "stage"
+};
+var SHAPE_ORDER = ["broad", "narrow", "need", "band", "durable", "content", "stage"];
+var LEAD_BY = {
+  line: "recency"
+};
+var DEFAULT_TRAILING = 0.25;
+var TRAILING = {
+  line: 0.25
+};
+var trailingFor = (dimKey) => TRAILING[dimKey] ?? DEFAULT_TRAILING;
+for (const vertical of ["retail", "financial"]) {
+  for (const d of configFor(vertical).dimensions) {
+    const shape = SHAPE_OF_KEY[d.key];
+    if (!shape) {
+      throw new Error(
+        `reflexConfig: dimension "${d.key}" (${vertical}) is missing from SHAPE_OF_KEY. It would score nothing and fail silently. Add it, and add its shape to SHAPE_ORDER.`
+      );
+    }
+    if (!SHAPE_ORDER.includes(shape)) {
+      throw new Error(
+        `reflexConfig: shape "${shape}" (from "${d.key}") is missing from SHAPE_ORDER, so it would never be drawn on the instrument.`
+      );
+    }
+  }
+}
+for (const key of /* @__PURE__ */ new Set([...Object.keys(LEAD_BY), ...Object.keys(TRAILING)])) {
+  if (!SHAPE_OF_KEY[key]) {
+    throw new Error(
+      `reflexConfig: LEAD_BY/TRAILING names "${key}", which is not a Meridian dimension key. The recency rule would silently apply to nothing.`
+    );
+  }
+}
+var STAGE_OF_ACTION = {
+  view: "browse",
+  row_click: "browse",
+  rail_click: "browse",
+  block_read: "browse",
+  nav_click: "browse",
+  scroll_depth: "browse",
+  arrival: "browse",
+  search: "consider",
+  save: "consider",
+  intent_start: "decide",
+  convert: "decide"
+};
+var STAGE_LABELS = {
+  retail: { browse: "browsing", consider: "considering", decide: "deciding" },
+  financial: { browse: "exploring", consider: "comparing", decide: "applying" }
+};
+var stageKeyFor = (v) => v === "retail" ? "journeyStage" : "applicationStage";
+var decidingValueFor = (v) => STAGE_LABELS[v].decide;
+function stageTouchFor(action, vertical) {
+  const step = STAGE_OF_ACTION[action];
+  if (!step) return null;
+  return { dim: stageKeyFor(vertical), value: STAGE_LABELS[vertical][step] };
+}
+function expiryOf(state, dim2, value, config) {
+  const entry = state.dims?.[dim2]?.[value];
+  if (!entry) return null;
+  const spec = config.dimensions.find((d) => d.key === dim2);
+  const K = spec?.K ?? config.K;
+  const thetaOut = spec?.thetaOut ?? config.thetaOut;
+  const tauMs = spec?.tauMs ?? config.tauMs;
+  const floor = K * thetaOut / (1 - thetaOut);
+  if (entry.s <= floor) return null;
+  return entry.t + tauMs * Math.log(entry.s / floor);
+}
+
+// src/demos/meridian/lead.ts
+function leadValue(state, dimKey) {
+  const entries = state?.dims?.[dimKey];
+  if (!entries) return null;
+  let lead = null;
+  let best = null;
+  for (const [value, e] of Object.entries(entries)) {
+    if (lead === null || best === null) {
+      lead = value;
+      best = e;
+      continue;
+    }
+    const newer = e.t > best.t || e.t === best.t && (e.s > best.s || e.s === best.s && value < lead);
+    if (newer) {
+      lead = value;
+      best = e;
+    }
+  }
+  return lead;
+}
+function leadWeights(state, spec, trailing = trailingFor(spec.key)) {
+  if (LEAD_BY[spec.key] !== "recency") return null;
+  const lead = leadValue(state, spec.key);
+  if (lead === null) return null;
+  return {
+    dim: spec.key,
+    by: "recency",
+    lead,
+    trailing,
+    weight: (value) => value === lead ? 1 : trailing,
+    mark: (value) => value === lead ? { lead: "recency" } : { lead: "trailing", trailing, ledBy: lead }
+  };
+}
+
 // src/demos/meridian/composer.ts
 var SLOT_STRATEGIES = {
   // Each slot's HIGHEST-weighted shape is its lead, and the lead is what decides
@@ -41,13 +278,14 @@ function scoreOne(record, input, strategy) {
     if (omega === 0) continue;
     const perValue = input.affinity.dims[spec.key];
     if (!perValue) continue;
+    const lead = input.state ? leadWeights(input.state, spec) : null;
     for (const [value, a] of Object.entries(perValue)) {
       if (a <= 0) continue;
       const m = spec.derive === "band" && spec.cuts && spec.labels ? bandLabel(Number(record[spec.source] ?? 0), spec.cuts, spec.labels) === value ? 1 : 0 : match(record, spec.source, value);
       if (m === 0) continue;
-      const contribution = omega * a * m;
+      const contribution = omega * a * (lead ? lead.weight(value) : 1) * m;
       score += contribution;
-      drivers.push({ dim: spec.key, value, a: round(a), weight: round(contribution) });
+      drivers.push({ dim: spec.key, value, a: round(a), weight: round(contribution), ...lead ? lead.mark(value) : {} });
     }
   }
   drivers.sort((x, y) => y.weight - x.weight);
@@ -59,7 +297,8 @@ function scoreOne(record, input, strategy) {
   const judgedSpec = judged ? input.config.dimensions.find((d) => d.key === judged.dim) : void 0;
   return {
     score,
-    drivers: drivers.slice(0, 4),
+    drivers: drivers.filter((d, i) => i < 4 || "lead" in d),
+    // a trailing value is small by design; the receipt still names it
     confidence: judged?.a ?? 0,
     thetaOut: judgedSpec?.thetaOut ?? input.config.thetaOut
   };
@@ -204,193 +443,6 @@ function compose(input) {
     });
   }
   return decisions;
-}
-
-// src/demos/meridian/reflexConfig.ts
-var SECOND = 1e3;
-var MINUTE = 60 * SECOND;
-var HOUR = 60 * MINUTE;
-var DAY = 24 * HOUR;
-var DEMO_TAUS = {
-  // Retuned against a measured run. The three surfaces still retreat in order —
-  // narrow, then broad, then need — but the whole staircase now completes inside
-  // ~90s of narration instead of ~160s of silence.
-  broad: 45 * SECOND,
-  narrow: 30 * SECOND,
-  band: 150 * SECOND,
-  durable: 120 * SECOND,
-  need: 60 * SECOND,
-  content: 45 * SECOND,
-  // Intent is the most perishable thing here. Someone who was deciding two
-  // minutes ago and has been idle since is browsing again.
-  stage: 40 * SECOND
-};
-var PROD_TAUS = {
-  broad: 14 * DAY,
-  narrow: 7 * DAY,
-  band: 45 * DAY,
-  durable: 60 * DAY,
-  need: 21 * DAY,
-  content: 14 * DAY,
-  stage: 3 * DAY
-};
-var SHAPE_TUNING = {
-  broad: { K: 1.8, thetaIn: 0.6, thetaOut: 0.45 },
-  narrow: { K: 1.6, thetaIn: 0.6, thetaOut: 0.45 },
-  band: { K: 2.4, thetaIn: 0.55, thetaOut: 0.4 },
-  durable: { K: 2.2, thetaIn: 0.58, thetaOut: 0.42 },
-  need: { K: 1.8, thetaIn: 0.6, thetaOut: 0.45 },
-  content: { K: 1.6, thetaIn: 0.6, thetaOut: 0.45 },
-  // Low K on purpose: one add-to-bag (weight 3.0) gives a = 3.0/(3.0+1.4) =
-  // 0.68, clear of θ_in. Deciding is a state you enter on one decisive act.
-  stage: { K: 1.4, thetaIn: 0.6, thetaOut: 0.45 }
-};
-var MERIDIAN_WEIGHTS = {
-  /** The cold-start seed, derived from published census figures. Sized to land
-      the band affinity visibly above zero but below theta_out — we know
-      something, we have not committed to anything.
-      At 1.6 it landed a = 1.6/(1.6+2.4) = 0.400 against a theta_out of 0.40,
-      i.e. exactly ON the line, so it claimed for one tick and immediately
-      announced its own retreat. 1.35 gives a = 0.36: unmistakably non-zero on
-      the bar, and comfortably short of committing. */
-  prior: 1.35,
-  /** An off-site arrival — email opened, ad clicked, form submitted. Someone
-      chose to act on a surface that is not your website, which is a stronger
-      statement than a page view and weaker than adding to a bag. */
-  arrival: 2,
-  /** Zero-party: the visitor STATED this rather than revealed it. Weighted above
-      an arrival because it is unambiguous, and below a purchase because saying
-      you like evening pieces is not the same as buying one. Critically it lands
-      in the SAME vector as observed behaviour and decays on the SAME clock — a
-      preference declared once stops driving the page unless behaviour agrees. */
-  declared: 3.2,
-  /** Choosing a department is a broader statement than opening one product —
-      it is the visitor telling you which aisle they are in. */
-  nav_click: 2,
-  view: 1,
-  scroll_depth: 0.5,
-  rail_click: 1.5,
-  block_read: 1.2,
-  row_click: 1.5,
-  search: 2,
-  save: 3,
-  intent_start: 3,
-  // add to cart · begin application
-  convert: 4,
-  // purchase · submit application
-  reflex_tick: 0
-  // re-evaluate only — never accumulates
-};
-function dim(shape, key, source, taus, extra = {}) {
-  return { key, source, tauMs: taus[shape], ...SHAPE_TUNING[shape], ...extra };
-}
-function buildConfig(vertical, taus) {
-  const retail = vertical === "retail";
-  const rate = taus === DEMO_TAUS ? "demo" : "prod";
-  return {
-    version: `meridian-${vertical}-${rate}-v1`,
-    dimensions: [
-      dim("broad", retail ? "category" : "productFamily", "category", taus),
-      dim("narrow", retail ? "subcategory" : "subFamily", "subcategory", taus),
-      dim("band", retail ? "priceBand" : "amountBand", "value_usd", taus, {
-        derive: "band",
-        // Retail: everyday / considered / premium. Financial: modest / core / major.
-        cuts: retail ? [75, 250] : [25e3, 25e4],
-        labels: retail ? ["entry", "core", "premium"] : ["modest", "core", "major"]
-      }),
-      dim("durable", retail ? "styleWorld" : "lifeStage", "world", taus),
-      dim("need", retail ? "occasion" : "intent", "needs", taus, { multi: true }),
-      dim("content", "contentType", "contentType", taus),
-      // Source deliberately names no item field. extractTouches skips a source
-      // it cannot find, so this dimension can only ever be moved by an
-      // explicitly emitted verb — which is exactly the guarantee we want.
-      dim("stage", retail ? "journeyStage" : "applicationStage", "__verb__", taus)
-    ],
-    weights: { ...MERIDIAN_WEIGHTS },
-    // Globals are per-dimension-overridden above; these are the floor.
-    tauMs: taus.broad,
-    K: 1.8,
-    thetaIn: 0.6,
-    thetaOut: 0.45,
-    epsilon: 0.01,
-    maxValuesPerDim: 24
-  };
-}
-var MERIDIAN_RETAIL_CONFIG = buildConfig("retail", DEMO_TAUS);
-var MERIDIAN_FINANCIAL_CONFIG = buildConfig("financial", DEMO_TAUS);
-var MERIDIAN_RETAIL_CONFIG_PROD = buildConfig("retail", PROD_TAUS);
-var MERIDIAN_FINANCIAL_CONFIG_PROD = buildConfig("financial", PROD_TAUS);
-function configFor(vertical, rate = "demo") {
-  if (rate === "prod") {
-    return vertical === "retail" ? MERIDIAN_RETAIL_CONFIG_PROD : MERIDIAN_FINANCIAL_CONFIG_PROD;
-  }
-  return vertical === "retail" ? MERIDIAN_RETAIL_CONFIG : MERIDIAN_FINANCIAL_CONFIG;
-}
-var SHAPE_OF_KEY = {
-  category: "broad",
-  productFamily: "broad",
-  subcategory: "narrow",
-  subFamily: "narrow",
-  priceBand: "band",
-  amountBand: "band",
-  styleWorld: "durable",
-  lifeStage: "durable",
-  occasion: "need",
-  intent: "need",
-  contentType: "content",
-  journeyStage: "stage",
-  applicationStage: "stage"
-};
-var SHAPE_ORDER = ["broad", "narrow", "need", "band", "durable", "content", "stage"];
-for (const vertical of ["retail", "financial"]) {
-  for (const d of configFor(vertical).dimensions) {
-    const shape = SHAPE_OF_KEY[d.key];
-    if (!shape) {
-      throw new Error(
-        `reflexConfig: dimension "${d.key}" (${vertical}) is missing from SHAPE_OF_KEY. It would score nothing and fail silently. Add it, and add its shape to SHAPE_ORDER.`
-      );
-    }
-    if (!SHAPE_ORDER.includes(shape)) {
-      throw new Error(
-        `reflexConfig: shape "${shape}" (from "${d.key}") is missing from SHAPE_ORDER, so it would never be drawn on the instrument.`
-      );
-    }
-  }
-}
-var STAGE_OF_ACTION = {
-  view: "browse",
-  row_click: "browse",
-  rail_click: "browse",
-  block_read: "browse",
-  nav_click: "browse",
-  scroll_depth: "browse",
-  arrival: "browse",
-  search: "consider",
-  save: "consider",
-  intent_start: "decide",
-  convert: "decide"
-};
-var STAGE_LABELS = {
-  retail: { browse: "browsing", consider: "considering", decide: "deciding" },
-  financial: { browse: "exploring", consider: "comparing", decide: "applying" }
-};
-var stageKeyFor = (v) => v === "retail" ? "journeyStage" : "applicationStage";
-var decidingValueFor = (v) => STAGE_LABELS[v].decide;
-function stageTouchFor(action, vertical) {
-  const step = STAGE_OF_ACTION[action];
-  if (!step) return null;
-  return { dim: stageKeyFor(vertical), value: STAGE_LABELS[vertical][step] };
-}
-function expiryOf(state, dim2, value, config) {
-  const entry = state.dims?.[dim2]?.[value];
-  if (!entry) return null;
-  const spec = config.dimensions.find((d) => d.key === dim2);
-  const K = spec?.K ?? config.K;
-  const thetaOut = spec?.thetaOut ?? config.thetaOut;
-  const tauMs = spec?.tauMs ?? config.tauMs;
-  const floor = K * thetaOut / (1 - thetaOut);
-  if (entry.s <= floor) return null;
-  return entry.t + tauMs * Math.log(entry.s / floor);
 }
 
 // src/reflex/core.ts

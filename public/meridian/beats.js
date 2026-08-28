@@ -117,7 +117,7 @@ export const BEATS = [
     why: 'Sets up the staircase in beat 21. Without it, the retreats later look arbitrary.',
     do: 'Click two items.',
     watch: 'Bars move at different rates. Taste is slow; this session is fast.',
-    say: 'Seven things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both.',
+    say: 'Seven things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both. And the line she is in follows her last click, not her running total — step from Drover to Linden and Linden leads at once, while Drover trails until it decays out on its own.',
     real: 'LIVE' },
 
   { n: 13, act: 2, cap: 'C9', title: 'It waited until it was sure', secs: 55, mark: 'SLOW DOWN',

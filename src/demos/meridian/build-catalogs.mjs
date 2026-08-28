@@ -24,54 +24,69 @@ const SWATCH = [
   ['navy',     '#2F52A8'], ['mulberry', '#7E3A80'], ['garnet',   '#B8355F'], ['steel',    '#3F6389'],
 ];
 
-// name | category | material (the NARROW axis) | price | styleWorld | occasions
+// line | piece | category | material | price | styleWorld | occasions
 //
-// Subcategory is MATERIAL, not shape. Shape gave 26 values over 38 items and
-// cleared the audience-generation floor on ZERO of them — the narrow dimension
-// would have been dead, and the rail leads on narrow. Material repeats across
-// categories the way luxury retail actually thinks, and every value clears.
+// THE LINE LEADS THE NAME (decision D3, 2026-08-28). A line is a family the way
+// Coach's "Tabby" is a family — Drover is heritage outerwear, Linden is
+// structured leather bags — and `name` is composed as `${line} ${piece}` so the
+// family reads first on every card. The PIECE keeps its type noun (coat, tote,
+// loafer): packshots in public/meridian/img are keyed by id and depict the
+// type, so a coat must stay a coat. Ten lines over forty pieces, every line
+// three or more, so each clears the audience-generation floor. Row ORDER is
+// the id, and the swatch is assigned by index — do not reorder rows.
+//
+// Line is the NARROW dimension. Subcategory is MATERIAL and stays on the record
+// for the card's display string ("Outerwear · wool"); it is no longer a
+// dimension. (Material was chosen over shape originally because shape gave 26
+// values over 38 items and cleared the floor on none — the same floor every
+// line is sized to clear.)
 const RETAIL = [
-  ['Ashby Leather Crossbody','Bags','leather',248,'heritage',['everyday','work']],
-  ['Wren Saddle Bag','Bags','leather',195,'heritage',['everyday','gift']],
-  ['Linden Structured Tote','Bags','leather',320,'modern',['work','everyday']],
-  ['Onyx Evening Clutch','Bags','leather',195,'statement',['evening','gift']],
-  ['Bay Packable Tote','Bags','canvas',88,'minimal',['travel','everyday']],
-  ['Holloway Weekender','Bags','canvas',385,'heritage',['travel']],
-  ['Drover Wool Coat','Outerwear','wool',420,'heritage',['work','evening']],
-  ['Waxed Field Jacket','Outerwear','canvas',298,'heritage',['everyday','travel']],
-  ['Marchetti Trench','Outerwear','technical',545,'modern',['work','evening']],
-  ['Shorewell Rain Shell','Outerwear','technical',186,'minimal',['travel','everyday']],
-  ['Quilted Liner Vest','Outerwear','technical',165,'minimal',['everyday']],
-  ['Cable Fisherman Sweater','Knitwear','wool',165,'heritage',['everyday','gift']],
-  ['Merino Crew','Knitwear','wool',128,'minimal',['everyday','work']],
-  ['Lambswool Vest','Knitwear','wool',95,'minimal',['work']],
-  ['Cashmere Turtleneck','Knitwear','cashmere',285,'modern',['work','evening']],
-  ['Alpaca Wrap Cardigan','Knitwear','cashmere',240,'modern',['everyday','gift']],
-  ['Ridgeline Chelsea Boot','Footwear','leather',320,'heritage',['everyday','work']],
-  ['Suede Derby','Footwear','leather',240,'heritage',['work']],
-  ['Calfskin Loafer','Footwear','leather',275,'modern',['work','evening']],
-  ['Minimal Court Heel','Footwear','leather',295,'statement',['evening']],
-  ['Canvas Court Sneaker','Footwear','canvas',110,'minimal',['everyday','travel']],
-  ['Pave Drop Earrings','Jewellery','metal',395,'statement',['evening','gift']],
-  ['Faceted Onyx Cufflinks','Jewellery','metal',145,'statement',['gift','evening']],
-  ['Fine Curb Chain','Jewellery','metal',320,'modern',['everyday','gift']],
-  ['Signet Ring','Jewellery','metal',210,'heritage',['everyday','gift']],
-  ['Slim Bangle','Jewellery','metal',165,'minimal',['everyday','gift']],
-  ['Smoked Vetiver','Fragrance','glass',175,'statement',['evening','gift']],
-  ['Amber Absolute','Fragrance','glass',215,'statement',['evening','gift']],
-  ['Fig and Neroli','Fragrance','glass',130,'minimal',['everyday','gift']],
-  ['Bergamot and Cedar','Fragrance','glass',145,'modern',['gift','everyday']],
-  ['Acetate Aviator','Eyewear','acetate',215,'heritage',['travel','everyday']],
-  ['Oversized Shield','Eyewear','acetate',265,'statement',['travel','evening']],
-  ['Tortoise Reader','Eyewear','acetate',120,'modern',['work']],
-  ['Round Wire Frame','Eyewear','metal',185,'minimal',['everyday']],
-  ['Wool Check Muffler','Scarves','wool',95,'heritage',['everyday','gift']],
-  ['Lambswool Scarf','Scarves','wool',58,'minimal',['everyday','gift']],
-  ['Silk Twill Square','Scarves','silk',165,'statement',['evening','gift']],
-  ['Silk Twill Oblong','Scarves','silk',195,'modern',['evening','gift']],
-  ['Silk Bandana','Scarves','silk',85,'statement',['everyday','gift']],
-  ['Cashmere Wrap','Scarves','cashmere',245,'modern',['travel','gift']],
+  ['Linden',    'Leather Crossbody',  'Bags','leather',248,'heritage',['everyday','work']],
+  ['Linden',    'Saddle Bag',         'Bags','leather',195,'heritage',['everyday','gift']],
+  ['Linden',    'Structured Tote',    'Bags','leather',320,'modern',['work','everyday']],
+  ['Linden',    'Evening Clutch',     'Bags','leather',195,'statement',['evening','gift']],
+  ['Holloway',  'Packable Tote',      'Bags','canvas',88,'minimal',['travel','everyday']],
+  ['Holloway',  'Weekender',          'Bags','canvas',385,'heritage',['travel']],
+  ['Drover',    'Wool Coat',          'Outerwear','wool',420,'heritage',['work','evening']],
+  ['Drover',    'Waxed Field Jacket', 'Outerwear','canvas',298,'heritage',['everyday','travel']],
+  ['Shorewell', 'Trench',             'Outerwear','technical',545,'modern',['work','evening']],
+  ['Shorewell', 'Rain Shell',         'Outerwear','technical',186,'minimal',['travel','everyday']],
+  ['Shorewell', 'Liner Vest',         'Outerwear','technical',165,'minimal',['everyday']],
+  ['Fenwick',   'Fisherman Sweater',  'Knitwear','wool',165,'heritage',['everyday','gift']],
+  ['Fenwick',   'Merino Crew',        'Knitwear','wool',128,'minimal',['everyday','work']],
+  ['Fenwick',   'Lambswool Vest',     'Knitwear','wool',95,'minimal',['work']],
+  ['Fenwick',   'Turtleneck',         'Knitwear','cashmere',285,'modern',['work','evening']],
+  ['Fenwick',   'Wrap Cardigan',      'Knitwear','cashmere',240,'modern',['everyday','gift']],
+  ['Ridgeline', 'Chelsea Boot',       'Footwear','leather',320,'heritage',['everyday','work']],
+  ['Ridgeline', 'Suede Derby',        'Footwear','leather',240,'heritage',['work']],
+  ['Ridgeline', 'Calfskin Loafer',    'Footwear','leather',275,'modern',['work','evening']],
+  ['Ridgeline', 'Court Heel',         'Footwear','leather',295,'statement',['evening']],
+  ['Holloway',  'Court Sneaker',      'Footwear','canvas',110,'minimal',['everyday','travel']],
+  ['Halden',    'Pave Drop Earrings', 'Jewellery','metal',395,'statement',['evening','gift']],
+  ['Halden',    'Onyx Cufflinks',     'Jewellery','metal',145,'statement',['gift','evening']],
+  ['Halden',    'Fine Curb Chain',    'Jewellery','metal',320,'modern',['everyday','gift']],
+  ['Halden',    'Signet Ring',        'Jewellery','metal',210,'heritage',['everyday','gift']],
+  ['Halden',    'Slim Bangle',        'Jewellery','metal',165,'minimal',['everyday','gift']],
+  ['Solstice',  'Smoked Vetiver',     'Fragrance','glass',175,'statement',['evening','gift']],
+  ['Solstice',  'Amber Absolute',     'Fragrance','glass',215,'statement',['evening','gift']],
+  ['Solstice',  'Fig & Neroli',       'Fragrance','glass',130,'minimal',['everyday','gift']],
+  ['Solstice',  'Bergamot & Cedar',   'Fragrance','glass',145,'modern',['gift','everyday']],
+  ['Harlow',    'Acetate Aviator',    'Eyewear','acetate',215,'heritage',['travel','everyday']],
+  ['Harlow',    'Oversized Shield',   'Eyewear','acetate',265,'statement',['travel','evening']],
+  ['Harlow',    'Tortoise Reader',    'Eyewear','acetate',120,'modern',['work']],
+  ['Harlow',    'Round Wire Frame',   'Eyewear','metal',185,'minimal',['everyday']],
+  ['Drover',    'Wool Check Muffler', 'Scarves','wool',95,'heritage',['everyday','gift']],
+  ['Fenwick',   'Lambswool Scarf',    'Scarves','wool',58,'minimal',['everyday','gift']],
+  ['Aster',     'Silk Twill Square',  'Scarves','silk',165,'statement',['evening','gift']],
+  ['Aster',     'Silk Twill Oblong',  'Scarves','silk',195,'modern',['evening','gift']],
+  ['Aster',     'Silk Bandana',       'Scarves','silk',85,'statement',['everyday','gift']],
+  ['Aster',     'Cashmere Wrap',      'Scarves','cashmere',245,'modern',['travel','gift']],
 ];
+
+/** A card wraps past this; the design sheet was approved at two lines of name. */
+const MAX_NAME = 26;
+/** The audience-generation floor: a line with fewer pieces can never mint an audience. */
+const MIN_PER_LINE = 3;
 
 const FINANCIAL = [
   ['30-Year Fixed Mortgage','Mortgage','fixed',385000,'building',['borrow'],6.24],
@@ -110,16 +125,34 @@ const BLOCKS = [
   ['financial','Buying Your First Car','Guide','guide','Auto','starting-out',['borrow'],['block_a','block_b']],
 ];
 
-const items = RETAIL.map(([name, category, subcategory, value_usd, world, needs], i) => {
+const cap = (s) => s[0].toUpperCase() + s.slice(1);
+
+const items = RETAIL.map(([line, piece, category, subcategory, value_usd, world, needs], i) => {
   const id = `MRD-R${String(i + 1).padStart(3, '0')}`;
   const [swatch, hex] = SWATCH[i % SWATCH.length];
+  const name = `${line} ${piece}`;
   return {
-    id, vertical: 'retail', name, category, subcategory, value_usd, world, needs,
+    id, vertical: 'retail', name, line, category, subcategory, value_usd, world, needs,
     available: true, swatch, hex,
-    blurb: `${name} — ${subcategory} in the ${world} line.`,
+    blurb: `${name} — ${subcategory}, from the ${line} line. ${cap(world)} in spirit.`,
     image: `/meridian/img/${id}.jpg`,
   };
 });
+
+// Fail here, not on stage. A line under the floor is an audience that can never
+// be minted; a name over the limit is a card that wraps onto a third line.
+{
+  const perLine = {};
+  for (const it of items) (perLine[it.line] ??= []).push(it.name);
+  for (const [line, names] of Object.entries(perLine)) {
+    if (names.length < MIN_PER_LINE) {
+      throw new Error(`line "${line}" has ${names.length} piece(s); a line needs ${MIN_PER_LINE} to clear the audience floor`);
+    }
+  }
+  for (const it of items) {
+    if (it.name.length > MAX_NAME) throw new Error(`"${it.name}" is ${it.name.length} chars; the card holds ${MAX_NAME}`);
+  }
+}
 
 const fin = FINANCIAL.map(([name, category, subcategory, value_usd, world, needs, rate_pct], i) => {
   const id = `MRD-F${String(i + 1).padStart(3, '0')}`;
@@ -137,7 +170,11 @@ const blocks = BLOCKS.map(([vertical, title, kicker, contentType, category, worl
   category, world, needs, slots, body: `${kicker}: ${title}.`,
 }));
 
-const write = (f, o) => writeFileSync(join(HERE, f), JSON.stringify(o, null, 2) + '\n');
+// Byte-stable on purpose: non-ASCII is \u-escaped and there is no trailing
+// newline, which is exactly how the committed files are laid out — so a fresh
+// run reproduces them byte for byte, and any diff in a catalogue is a real one.
+const escapeNonAscii = (s) => s.replace(/[\u007f-\uffff]/g, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+const write = (f, o) => writeFileSync(join(HERE, f), escapeNonAscii(JSON.stringify(o, null, 2)));
 write('catalog.retail.json', items);
 write('catalog.financial.json', fin);
 write('catalog.blocks.json', blocks);
@@ -152,7 +189,7 @@ const report = (label, rows, dims) => {
   }
 };
 const band = (cuts) => (r) => r.value_usd < cuts[0] ? 'entry' : r.value_usd < cuts[1] ? 'core' : 'premium';
-report('RETAIL', items, [['category', r => r.category], ['subcategory', r => r.subcategory],
+report('RETAIL', items, [['category', r => r.category], ['line', r => r.line], ['subcategory', r => r.subcategory],
   ['world', r => r.world], ['needs', r => r.needs], ['band', band([150, 300])]]);
 report('FINANCIAL', fin, [['category', r => r.category], ['subcategory', r => r.subcategory],
   ['world', r => r.world], ['needs', r => r.needs], ['band', band([25000, 250000])]]);

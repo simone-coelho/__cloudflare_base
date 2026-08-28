@@ -195,7 +195,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **They watch —** Bars move at different rates. Taste is slow; this session is fast.
 
-**You say —** Seven things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both.
+**You say —** Seven things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both. And the line she is in follows her last click, not her running total — step from Drover to Linden and Linden leads at once, while Drover trails until it decays out on its own.
 
 *Why 0:50:* Sets up the staircase in beat 21. Without it, the retreats later look arbitrary.
 
