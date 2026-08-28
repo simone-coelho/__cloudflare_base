@@ -722,7 +722,7 @@ const hideCursor = () => $('demo-cursor').classList.remove('show');
 /** One beat: a list of targets, resolved lazily so a re-rank between clicks is honoured. */
 async function browse(btn, targets) {
   if (BZ.busy) return;
-  BZ.busy = true; btn.classList.add('running');
+  BZ.busy = true; BZ.abort = false; btn.classList.add('running');   // a fresh run never inherits a stale stop
   document.querySelectorAll('[id^="bz-"]').forEach((b) => { b.disabled = true; });
   try {
     for (const t of targets) {
@@ -1104,7 +1104,7 @@ function swap(el, render, instant) {
     // get the quieter glow. Both are one-shot, and only a real change gets here.
     const fx = el.id === 'hero' ? 'landed' : 'pulse';
     el.classList.remove(fx); void el.offsetWidth; el.classList.add(fx);
-    if (fx === 'landed') { clearTimeout(el._fx); el._fx = setTimeout(() => el.classList.remove('landed'), 3300); }
+    if (fx === 'landed') { clearTimeout(el._fx); el._fx = setTimeout(() => el.classList.remove('landed'), 4000); }
   }, 300);
 }
 
@@ -2042,9 +2042,9 @@ function openDirector() {
 
 $('dir-next').onclick = () => goBeat(DIR.i + 1);
 $('dir-prev').onclick = () => { setAuto(false); goBeat(DIR.i - 1); };
-$('dir-play').onclick = () => { if (DIR.auto) BZ.abort = true; setAuto(!DIR.auto); };
+$('dir-play').onclick = () => { if (DIR.auto && BZ.busy) BZ.abort = true; setAuto(!DIR.auto); };
 $('dir-stop').onclick = async () => {
-  BZ.abort = true;                 // stop the visitor mid-stride, cleanly
+  if (BZ.busy) BZ.abort = true;    // stop the visitor mid-stride — only if she is mid-stride
   setAuto(false); dirPlay(false); DIR.elapsedBefore = 0; DIR.i = 0;
   sessionStorage.removeItem('mrd_dir');
   await $('btn-reset').onclick();                  // a new visitor, in the object and on the page
@@ -2057,7 +2057,7 @@ addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') { e.preventDefault(); goBeat(DIR.i + 1); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); goBeat(DIR.i - 1); }
   if (e.key === ' ') { e.preventDefault(); setAuto(!DIR.auto); }
-  if (e.key === 'Escape') { BZ.abort = true; }
+  if (e.key === 'Escape') { if (BZ.busy) BZ.abort = true; }
 });
 setInterval(dirTick, 500);
 

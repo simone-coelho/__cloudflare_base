@@ -936,21 +936,29 @@ body.has-director .world,body.has-director .engine{padding-bottom:var(--dir-h, 2
 .mo-chips button:hover{border-color:var(--accent);color:var(--accent)}
 .moment-box{border-top:6px solid var(--accent)}
 
-/* ── HERO LANDED — the star arrives. When the banner changes it must read as an
-     event, not a repaint: it rises in, pops, a shimmer sweeps across it, and a
-     red shadow sits underneath and fades over three seconds. One shot, only on
-     a real change (swap() adds .landed after the fade-out/render). */
-.hero.landed{animation:heroLand 3s var(--ease) both}
+/* ── HERO LANDED — when the banner changes it must be IMPOSSIBLE to miss from
+     the back of the room. It jumps in, a solid red ring and halo wrap it, the
+     card itself flushes warm, a red band sweeps across, a JUST CHANGED tag
+     appears in the corner, and a red shadow sits underneath — all holding for
+     ~2.5s before easing back. One shot, only on a real change. */
+.hero.landed{animation:heroLand 3.8s var(--ease) both}
 @keyframes heroLand{
-  0%  {opacity:0;transform:translateY(14px) scale(.985);
-       box-shadow:0 0 0 0 rgba(214,71,47,0), 0 8px 24px -16px rgba(28,26,23,.4)}
-  14% {opacity:1;transform:translateY(0) scale(1.02);
-       box-shadow:0 0 0 8px rgba(214,71,47,.6), 0 34px 70px -8px rgba(214,71,47,.85)}
-  55% {transform:scale(1);
-       box-shadow:0 0 0 8px rgba(214,71,47,.5), 0 32px 66px -8px rgba(214,71,47,.75)}
-  100%{transform:scale(1);
+  0%  {opacity:0;transform:translateY(18px) scale(.975);background:#fff;
+       box-shadow:0 0 0 0 rgba(214,71,47,0)}
+  10% {opacity:1;transform:translateY(0) scale(1.03);background:#FFE9E4;
+       box-shadow:0 0 0 5px #D6472F, 0 0 0 16px rgba(214,71,47,.32), 0 30px 70px -4px rgba(214,71,47,.95)}
+  22% {transform:scale(1.012);background:#FFEFEB}
+  65% {transform:scale(1);background:#FFF3F0;
+       box-shadow:0 0 0 5px #D6472F, 0 0 0 16px rgba(214,71,47,.26), 0 30px 70px -4px rgba(214,71,47,.85)}
+  100%{transform:scale(1);background:#fff;
        box-shadow:0 0 0 0 rgba(214,71,47,0), 0 8px 24px -16px rgba(28,26,23,.4)}}
-.hero.landed::after{content:'';position:absolute;top:-30%;bottom:-30%;left:-45%;width:36%;pointer-events:none;
-  background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.8) 44%,rgba(255,236,230,.95) 50%,rgba(255,255,255,0) 100%);
-  transform:skewX(-14deg);animation:heroShimmer 1.3s .2s var(--ease) both}
+/* the sweep — a red-tinted band, because a white band on a white card is invisible */
+.hero.landed::after{content:'';position:absolute;top:-30%;bottom:-30%;left:-45%;width:34%;pointer-events:none;z-index:1;
+  background:linear-gradient(105deg,rgba(214,71,47,0) 0%,rgba(214,71,47,.22) 40%,rgba(255,255,255,.9) 50%,rgba(214,71,47,.22) 60%,rgba(214,71,47,0) 100%);
+  transform:skewX(-14deg);animation:heroShimmer 1.3s .15s var(--ease) both}
 @keyframes heroShimmer{0%{left:-45%}100%{left:135%}}
+/* the tag — the same device the bank demo used to name a zone the moment it changed */
+.hero.landed::before{content:'JUST CHANGED';position:absolute;top:0;right:0;z-index:2;
+  background:#D6472F;color:#fff;font:700 11.5px/1 var(--sans);letter-spacing:.16em;
+  padding:8px 12px;border-radius:0 0 0 8px;animation:heroTag 3.8s var(--ease) both}
+@keyframes heroTag{0%{opacity:0;transform:translateY(-10px)}8%{opacity:1;transform:none}78%{opacity:1}100%{opacity:0}}
