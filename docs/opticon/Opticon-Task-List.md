@@ -195,6 +195,19 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 - [x] **The dial did nothing.** Two causes: no affinity to weigh (a weight times nothing is nothing — it now says "nothing to weigh yet" instead of sitting there), and the campaign's hero copy was masking the re-decision. Turning a slider now clears the override: the merchandiser outranks the campaign. Verified: line weight to 0.60 → hero re-decides to the Shorewell Trench, kicker "because of what you have looked at", driver `line=Shorewell w=0.3851`.
 - [x] "fell to 0.42, under the exit threshold of 0.42" — exit and entry sentences at 4dp, same fix as the offer.
 
+## 12 · Phase 4 — the demo clock (Simone's stability review, 2026-08-28)
+
+His words: *"As I'm having a conversation, you're removing, changing, continuing… let me know that it's about to decay — do you want to proceed?"* The root: engine time rode the wall clock, so decay ran while he talked. All fixed and verified:
+
+- [x] **THE DEMO CLOCK.** Engine time advances ONLY on the presenter's acts (each act carries forward at most 10s of real time) or by explicit consent. Verified: **45 real seconds behind an open predict band — bars, row order, greens, hero, audiences and the moment countdowns all pixel-identical.** Server WS frames are ignored mid-session (the object runs on wall time; adopting its frames re-imported unconsented decay); the wire stays real for actions, receipts and the returning-visitor snapshot.
+- [x] **"Let two minutes pass" asks first.** The band shows exactly what those minutes will take (line · Drover 0.545 → 0.306; which audiences lapse; whether the offer expires) before they pass; closing it is the consent. Verified: nothing lapses before the press, lapses land after.
+- [x] **The dial works again.** The priority list had been auto-engaging and constraining the hero, eating the weight changes. Priority now binds only after the merchandiser reorders (and is releasable: *"Priority enforced — release to let the weights decide"*); the dial re-decides the hero live both ways (line ↑ → Shorewell Rain Shell; band ↑ → Holloway Weekender), gets the colour knob, and **names the conflict** when priority is enforced instead of dying silently.
+- [x] **Stop stops.** Pause/Restart/Esc abort the visitor mid-stride (after the in-flight click completes); Restart also proved out as a full new-visitor reset. The control whose sequence is playing **pulses** so the room can see where we are.
+- [x] **Green holds and strips ride the clock** — they persist while you talk and fade only as demo time moves.
+- [x] **Ask Calder and the Concierge have real chrome**: serif header, the honesty rule as the subtitle, suggestion chips so a beat never starts with typing.
+
+---
+
 ## 11 · Phase 3 — match the Coach demo (agreed 2026-08-28)
 
 Simone's third review. The pattern he named: I rebuilt capabilities the Coach demo already had, and each rebuild changed how they worked. The ten below were agreed item by item before any building. **Standing rule:** state stays isolated; Coach's stateless services are reused; every capability matches Coach's behaviour first and differs only where Simone asks.

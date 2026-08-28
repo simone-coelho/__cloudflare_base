@@ -272,12 +272,25 @@
 
 <div class="moment" id="conc">
   <div class="moment-box">
+    <div class="mo-head">
+      <div>
+        <h3>The Style Concierge</h3>
+        <p>Builds a look, piece by piece. It can only recommend what we sell, and it never repeats itself.</p>
+      </div>
+      <span>
+        <button type="button" id="conc-reset">Start over</button>
+        <button type="button" id="conc-close">Close</button>
+      </span>
+    </div>
     <form class="ask-form" id="conc-form" autocomplete="off">
       <input id="conc-q" placeholder="Tell the concierge what the occasion is…" aria-label="Ask the concierge">
       <button type="submit">Style it</button>
-      <button type="button" id="conc-reset">Start over</button>
-      <button type="button" id="conc-close">Close</button>
     </form>
+    <div class="mo-chips" data-for="conc-q">
+      <button type="button">A winter wedding in Vermont</button>
+      <button type="button">Less formal — for the office</button>
+      <button type="button">Jewellery only</button>
+    </div>
     <div class="conc-thread" id="conc-thread"></div>
   </div>
 </div>
@@ -322,11 +335,23 @@
 
 <div class="moment" id="ask">
   <div class="moment-box">
+    <div class="mo-head">
+      <div>
+        <h3>Ask Calder</h3>
+        <p>Say it the way you would to a person. Every answer is a real piece, in stock, ranked for you.</p>
+      </div>
+      <button type="button" id="ask-close">Close</button>
+    </div>
     <form class="ask-form" id="ask-form" autocomplete="off">
       <input id="q" placeholder="Ask for what you need…" aria-label="Ask">
       <button type="submit">Ask</button>
-      <button type="button" id="ask-close">Close</button>
     </form>
+    <div class="mo-chips" data-for="q">
+      <button type="button">Sweaters for winter</button>
+      <button type="button">A gift under $150</button>
+      <button type="button">Something for a graduation</button>
+      <button type="button">A weekend away</button>
+    </div>
     <div class="ask-answer" id="ask-answer" hidden>
       <div class="ask-art" id="ask-art"></div>
       <div class="ask-body">

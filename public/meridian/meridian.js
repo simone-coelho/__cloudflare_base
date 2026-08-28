@@ -21,6 +21,15 @@ import {
 const API = '/meridian/api';
 const $ = (id) => document.getElementById(id);
 
+/** Engine time. Everything the reflex engine sees goes through this. */
+const NOW = () => S.clock;
+/** An act happened: carry forward a LITTLE real time (never a conversation). */
+function advanceClock() {
+  const real = Date.now();
+  S.clock += Math.min(Math.max(0, real - S.lastReal), 10_000);
+  S.lastReal = real;
+}
+
 const VID = (() => {
   // ?visitor= pins the identity, so a rehearsal can return to a known profile
   // from a clean browser rather than depending on whatever localStorage holds.
@@ -52,6 +61,13 @@ const S = {
   runId: 'run-' + Math.floor(Date.now() / 1000),
   vertical: 'retail', items: [], blocks: [], registry: null, config: null,
   reflex: null, audiences: new Set(), decisions: [], prevRank: new Map(),
+  // THE DEMO CLOCK. Engine time advances ONLY when the presenter acts — each
+  // act carries forward at most 10s of real time, and "Let two minutes pass"
+  // adds exactly what it says, with a preview and a consent press. Between
+  // acts the page is genuinely frozen: no decay, no retreats, no fading
+  // greens, no offers retiring mid-sentence. The room can talk for ten
+  // minutes and nothing moves uninvited.
+  clock: Date.now(), lastReal: Date.now(),
   seq: -1, ws: null, heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, sayLockUntil: 0,
   claimedAt: {},
   withdrawn: new Set(),
@@ -69,7 +85,7 @@ async function load(vertical) {
     config: configFor(vertical), reflex: emptyState(configFor(vertical)),
     audiences: new Set(), decisions: [], prevRank: new Map(),
     heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, withdrawn: new Set(),
-    behaved: false, anchorId: null, claimedAt: {}, audiencePriority: [],
+    behaved: false, anchorId: null, claimedAt: {}, audiencePriority: [], priorityEngaged: false,
   });
   S.published = [];
   document.documentElement.dataset.vertical = vertical;
@@ -140,7 +156,7 @@ async function seedColdStart(seed) {
 
   if (!cs.prior || !seed) return;
   const touches = [{ dim: cs.prior.dim, value: cs.prior.value }];
-  const res = apply(S.reflex, { action: 'prior', touches }, Date.now(), S.config);
+  const res = apply(S.reflex, { action: 'prior', touches }, NOW(), S.config);
   S.reflex = res.state; absorb(res.changes);
   post('/action', { vertical: S.vertical, events: [{ action: 'prior', touches }] });
   consequence('Cold start', cs.prior.why,
@@ -195,7 +211,8 @@ function fireSurface(s) {
   // about journey stage, so it gets its own verb rather than being flattened.
   const act = s.act ?? 'arrival';
   recordDone(act === 'declared' ? 'Told us' : 'Arrived from', `${KIND_LABEL[s.kind]} — ${s.subject}`, '');
-  const res = apply(S.reflex, { action: act, touches: s.touches }, Date.now(), S.config);
+  advanceClock();
+  const res = apply(S.reflex, { action: act, touches: s.touches }, NOW(), S.config);
   S.reflex = res.state;
   absorb(res.changes);
   recompose();
@@ -287,23 +304,24 @@ function checkHandoff(snap) {
 // ── Signals from the page ───────────────────────────────────────────────────
 /** Browsing a department: a category touch with no single item behind it. */
 function navTo(category) {
-  const before = snapshot(S.reflex, Date.now(), S.config);
+  advanceClock();
+  const before = snapshot(S.reflex, NOW(), S.config);
   const audBefore = new Set(S.audiences);
   const touches = [{ dim: S.vertical === 'retail' ? 'category' : 'productFamily', value: category }];
   const stage = stageTouchFor('nav_click', S.vertical);
   const res = apply(S.reflex, { action: 'nav_click', touches: stage ? [...touches, stage] : touches },
-                    Date.now(), S.config);
+                    NOW(), S.config);
   S.reflex = res.state; absorb(res.changes);
   S.behaved = true; S.sinceArrival += 1;
   TALLY.events += 1; TALLY.departments.add(category);
   const prevDecisions = S.decisions;
   recompose();
   post('/action', { vertical: S.vertical, events: [{ action: 'nav_click', touches }] });
-  { const mv = biggestMove(before, snapshot(S.reflex, Date.now(), S.config));
+  { const mv = biggestMove(before, snapshot(S.reflex, NOW(), S.config));
     recordDone('Browsed', category, mv ? `${mv.dim} ${mv.from.toFixed(2)} → ${mv.to.toFixed(2)}` : ''); }
   evidenceCard({
     verb: 'Browsed', subject: category, meta: 'department',
-    before, after: snapshot(S.reflex, Date.now(), S.config),
+    before, after: snapshot(S.reflex, NOW(), S.config),
     prevDecisions, nextDecisions: S.decisions,
     entered: [...S.audiences].filter((a) => !audBefore.has(a)),
   });
@@ -421,8 +439,9 @@ const VERB_LABEL = {
 };
 
 function signal(action, record) {
+  advanceClock();
   S.sinceArrival += 1;
-  const before = snapshot(S.reflex, Date.now(), S.config);
+  const before = snapshot(S.reflex, NOW(), S.config);
   const prevDecisions = S.decisions;
   const audBefore = new Set(S.audiences);
 
@@ -430,7 +449,7 @@ function signal(action, record) {
   if (record) {
     const touches = extractTouches(record, S.config);
     const res = apply(S.reflex, { action, touches: stage ? [...touches, stage] : touches },
-                      Date.now(), S.config);
+                      NOW(), S.config);
     S.reflex = res.state;
     absorb(res.changes);
     TALLY.events += 1;
@@ -445,7 +464,7 @@ function signal(action, record) {
   recompose();
 
   if (record) {
-    const mv = biggestMove(before, snapshot(S.reflex, Date.now(), S.config));
+    const mv = biggestMove(before, snapshot(S.reflex, NOW(), S.config));
     recordDone(VERB_LABEL[action] || action, record.name || record.title || record.id,
       mv ? `${mv.dim} ${mv.from.toFixed(2)} → ${mv.to.toFixed(2)}` : '');
     evidenceCard({
@@ -453,7 +472,7 @@ function signal(action, record) {
       subject: record.name || record.title || record.id,
       meta: [record.category, record.subcategory, record.value_usd != null ? money(record.value_usd) : null]
         .filter(Boolean).join(' · '),
-      before, after: snapshot(S.reflex, Date.now(), S.config),
+      before, after: snapshot(S.reflex, NOW(), S.config),
       prevDecisions, nextDecisions: S.decisions,
       entered: [...S.audiences].filter((a) => !audBefore.has(a)),
     });
@@ -467,6 +486,12 @@ function signal(action, record) {
 
 function onFrame(f) {
   if (f.type !== 'meridian_update') return;
+  // CLIENT-AUTHORITATIVE under the demo clock. The object runs on wall time,
+  // so its frames carry decay the presenter never consented to — adopting them
+  // re-introduced exactly the "changing shit while I talk" this clock removes.
+  // The wire stays real (actions, receipts, the returning-visitor snapshot);
+  // what the room WATCHES is composed here, on presenter time.
+  return;
   if (f.seq <= S.seq && f.source !== 'snapshot') return;
   S.seq = f.seq;
   // The server is authoritative, with one exception that is a race rather than
@@ -499,7 +524,7 @@ function renderPriority() {
   S.audiencePriority = [...(S.audiencePriority || []).filter((a) => entered.includes(a)),
                         ...entered.filter((a) => !(S.audiencePriority || []).includes(a))];
   if (!S.audiencePriority.length) { el.innerHTML = '<div class="prio-none">No audiences yet — priority applies once she is in two.</div>'; return; }
-  const won = pick(S.decisions, 'hero')?.explain?.wonBy;
+  const won = S.priorityEngaged ? pick(S.decisions, 'hero')?.explain?.wonBy : null;
   el.innerHTML = S.audiencePriority.map((a, i) => `
     <div class="prio-row${won?.audience === a ? ' winner' : ''}" data-a="${a}">
       <div class="n">${i + 1}</div>
@@ -513,12 +538,28 @@ function renderPriority() {
     </div>`).join('');
   el.querySelectorAll('button[data-up]').forEach((b) => { b.onclick = () => movePriority(+b.dataset.up, -1); });
   el.querySelectorAll('button[data-dn]').forEach((b) => { b.onclick = () => movePriority(+b.dataset.dn, +1); });
+  // Named state, releasable: engaged = the order binds the hero; released = the
+  // weights decide again (which is what the tuning dial turns).
+  const foot = document.createElement('div');
+  foot.className = 'prio-none';
+  foot.innerHTML = S.priorityEngaged
+    ? 'Priority <b>enforced</b> — the order above decides the hero. <a href="#" id="prio-release">Release</a> to let the weights decide.'
+    : 'Not enforced — the weights decide. Reorder with the arrows to enforce this order.';
+  el.appendChild(foot);
+  const rel = foot.querySelector('#prio-release');
+  if (rel) rel.onclick = (e) => {
+    e.preventDefault();
+    S.priorityEngaged = false; S.heroOverride = null; S.heroDirty = true;
+    recompose(); renderPriority();
+    consequence('Priority', 'Released', 'The weights decide the hero again — which is what the tuning dial turns.');
+  };
 }
 
 function movePriority(i, dir) {
   const p = S.audiencePriority; const j = i + dir;
   if (j < 0 || j >= p.length) return;
   [p[i], p[j]] = [p[j], p[i]];
+  S.priorityEngaged = true;        // the reorder IS the merchandiser stepping in
   S.heroOverride = null; S.heroDirty = true;      // the merchandiser outranks the campaign copy
   recompose();
   const won = pick(S.decisions, 'hero')?.explain?.wonBy;
@@ -552,9 +593,9 @@ function forecast(action, record, touchesOverride) {
   const stage = stageTouchFor(action, S.vertical);
   const base = touchesOverride || (record ? extractTouches(record, S.config) : []);
   const touches = stage ? [...base, stage] : base;
-  const before = snapshot(copy, Date.now(), S.config);
-  const res = apply(copy, { action, touches }, Date.now(), S.config);
-  const after = snapshot(res.state, Date.now(), S.config);
+  const before = snapshot(copy, NOW(), S.config);
+  const res = apply(copy, { action, touches }, NOW(), S.config);
+  const after = snapshot(res.state, NOW(), S.config);
 
   const nextDecisions = compose({ affinity: after, state: res.state, items: S.items, blocks: S.blocks,
     config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
@@ -587,6 +628,9 @@ const VERB_PAST = { row_click: 'Clicked', nav_click: 'Browsed', intent_start: 'A
 
 /** Show the band for the act about to happen; resolves when the presenter closes it. */
 function predictThenProve(action, record, touchesOverride, label) {
+  $('pd-mode').textContent = 'watching for her next act';
+  $('pd-note').textContent = 'Computed on a copy of her real profile — the same engine, the same numbers. Nothing here is a guess.';
+  $('pd-go').textContent = 'Close — let her do it';
   const f = forecast(action, record, touchesOverride);
   const pct = (n) => n.toFixed(3);
   $('pd-done').innerHTML = DONE.length
@@ -606,6 +650,24 @@ function predictThenProve(action, record, touchesOverride, label) {
   if (f.blockChanges) will.push(`The story becomes <b>${escapeHtml(f.blockNext || '—')}</b>.`);
   if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
   $('pd-will').innerHTML = will.map((w) => `<li>${w}</li>`).join('');
+  return openBandRaw();
+}
+
+/** The shared band plumbing: fill arbitrary columns, await the consent press. */
+function openPredictBand({ mode, act, math, will, note, button }) {
+  $('pd-mode').textContent = mode;
+  $('pd-done').innerHTML = DONE.length
+    ? DONE.map((d) => `<li><b>${d.verb}</b> ${escapeHtml(d.subject)}${d.move ? ` — <code>${d.move}</code>` : ''}</li>`).join('')
+    : '<li>Nothing yet — she arrived, that is all.</li>';
+  $('pd-act').textContent = act;
+  $('pd-math').innerHTML = math;
+  $('pd-will').innerHTML = will.map((w) => `<li>${w}</li>`).join('');
+  if (note) $('pd-note').textContent = note;
+  $('pd-go').textContent = button || 'Close — let her do it';
+  return openBandRaw();
+}
+
+function openBandRaw() {
   $('predict').hidden = false; PD.open = true;
   if (window.MOMENTS) window.MOMENTS.pause();
   return new Promise((resolve) => { PD.resolve = resolve; });
@@ -622,7 +684,7 @@ $('pd-go').onclick = () => { $('predict').hidden = true; PD.open = false; if (wi
 // Presenter-triggered, always. A beat is short — one department, three clicks —
 // and runs to completion; the pause is between beats, which is where the
 // presenter talks. Nothing here fires on its own.
-const BZ = { busy: false };
+const BZ = { busy: false, abort: false };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function scrollTargetIntoView(el) {
@@ -660,10 +722,11 @@ const hideCursor = () => $('demo-cursor').classList.remove('show');
 /** One beat: a list of targets, resolved lazily so a re-rank between clicks is honoured. */
 async function browse(btn, targets) {
   if (BZ.busy) return;
-  BZ.busy = true; btn.classList.add('busy');
+  BZ.busy = true; btn.classList.add('running');
   document.querySelectorAll('[id^="bz-"]').forEach((b) => { b.disabled = true; });
   try {
     for (const t of targets) {
+      if (BZ.abort) break;                                     // the presenter said stop
       const el = typeof t === 'function' ? t() : document.querySelector(t);
       if (!el) continue;
       if (el.wait) { await sleep(el.wait); continue; }        // a beat may pause to let a retreat land
@@ -682,7 +745,7 @@ async function browse(btn, targets) {
     }
   } finally {
     hideCursor();
-    BZ.busy = false; btn.classList.remove('busy');
+    BZ.busy = false; BZ.abort = false; btn.classList.remove('busy'); btn.classList.remove('running');
     document.querySelectorAll('[id^="bz-"]').forEach((b) => { b.disabled = false; });
   }
 }
@@ -743,23 +806,56 @@ $('bz-decide').onclick = (e) => browse(e.currentTarget, beatTargets('c'));
 // decay is something the presenter asks for: every accumulator's last touch
 // moves back by N seconds, locally and in the object, and the ordinary tick
 // does the rest. Same math. The only thing that changed is who chose the moment.
-function skipTime(seconds) {
+async function skipTime(seconds) {
+  if (PD.open || BZ.busy) return;                 // one thing at a time
+  advanceClock();
   const ms = seconds * 1000;
-  for (const dim of Object.values(S.reflex.dims || {})) {
-    for (const entry of Object.values(dim)) entry.t = Math.max(0, entry.t - ms);
+
+  // PREVIEW FIRST. "Let me know that it's about to decay - do you want to
+  // proceed?" The band shows what those minutes will take before they pass;
+  // closing it is the consent that lets them.
+  const copy = JSON.parse(JSON.stringify(S.reflex));
+  const res0 = tick(copy, NOW() + ms, S.config);
+  const lapses = res0.changes.exited.filter((a) => !isStageAudience(a));
+  const drops = [];
+  const before0 = snapshot(S.reflex, NOW(), S.config);
+  const after0 = snapshot(res0.state, NOW() + ms, S.config);
+  for (const spec of S.registry.dimensions) {
+    const b = before0.dims?.[spec.key] || {}; const a = after0.dims?.[spec.key] || {};
+    for (const v of Object.keys(b)) {
+      if ((b[v] ?? 0) - (a[v] ?? 0) > 0.08) drops.push({ dim: spec.key, value: v, from: b[v], to: a[v] ?? 0 });
+    }
   }
+  drops.sort((x, y) => (y.from - y.to) - (x.from - x.to));
+  const will = [];
+  for (const a of lapses) will.push('She <b>leaves ' + prettyAudience(a) + '</b>.');
+  if (OFFER.live && OFFER.expiresAt <= NOW() + ms) will.push('The <b>offer expires</b>, naming the number that ended it.');
+  if (!will.length) will.push('Scores drop; nothing crosses out yet.');
+
+  await openPredictBand({
+    mode: 'time is about to pass - with your consent',
+    act: Math.round(seconds / 60) + ' minutes pass',
+    math: drops.slice(0, 3).map((d) => d.dim + ' \u00b7 ' + d.value + ' \u00a0' + d.from.toFixed(3) + ' \u2192 <b>' + d.to.toFixed(3) + '</b>').join('<br>')
+      || 'Nothing measurable decays.',
+    will,
+    note: 'Nothing has happened yet. Close this and the minutes pass - the same decay, at the moment you chose.',
+    button: 'Close - let ' + Math.round(seconds / 60) + ' minutes pass',
+  });
+
+  S.clock += ms;
   const before = new Set(S.audiences);
-  const res = tick(S.reflex, Date.now(), S.config);
+  const res = tick(S.reflex, NOW(), S.config);
   S.reflex = res.state;
   if (res.changes.entered.length || res.changes.exited.length) absorb(res.changes);
-  recompose(false, { tick: true });                 // retreats are allowed; nothing else moves
-  post('/action', { vertical: S.vertical, events: [{ action: 'time_skip', seconds }] });
-  const gone = [...before].filter((a) => !S.audiences.has(a));
-  consequence('Time', `${Math.round(seconds / 60)} minutes passed — because you said so`,
-    gone.length ? `Lapsed: ${gone.map(prettyAudience).join(', ')}. The same decay ran; the presenter chose the moment.`
+  recompose(false, { tick: true });
+  post('/action', { vertical: S.vertical, events: [{ action: 'time_skip', seconds, at: NOW() }] });
+  const gone = [...before].filter((a) => !S.audiences.has(a) && !isStageAudience(a));
+  recordDone('Let pass', Math.round(seconds / 60) + ' minutes', gone.length ? gone.length + ' audience(s) lapsed' : 'scores decayed');
+  consequence('Time', Math.round(seconds / 60) + ' minutes passed - because you said so',
+    gone.length ? 'Lapsed: ' + gone.map(prettyAudience).join(', ') + '. The same decay ran; the presenter chose the moment.'
                 : 'Nothing lapsed yet. Press again and the next retreat lands.');
   $('sentence').textContent = gone.length
-    ? `Two minutes passed. ${prettyAudience(gone[0])} lapsed — its score decayed under the exit threshold. Nobody wrote an exit rule.`
+    ? 'Two minutes passed. ' + prettyAudience(gone[0]) + ' lapsed - its score decayed under the exit threshold. Nobody wrote an exit rule.'
     : 'Two minutes passed. Every score decayed; nothing has crossed out yet.';
   S.sayLockUntil = Date.now() + 6000;
 }
@@ -776,7 +872,7 @@ let TUNED = false;
 
 function renderDial() {
   const st = SLOT_STRATEGIES.hero;
-  const shapes = ['broad', 'narrow', 'band', 'durable', 'need'];
+  const shapes = ['broad', 'narrow', 'band', 'durable', 'need', 'hue'];
   $('dial-rows').innerHTML = shapes.map((sh) => `
     <div class="dial-row">
       <label for="dial-${sh}">${SHAPE_LABEL[sh] || sh}</label>
@@ -791,10 +887,12 @@ function renderDial() {
       TUNED = true;
       S.heroOverride = null;                        // the merchandiser outranks the campaign's copy
       S.heroDirty = true;
-      const snap = snapshot(S.reflex, Date.now(), S.config);
+      const snap = snapshot(S.reflex, NOW(), S.config);
       const strongest = Math.max(0, ...Object.values(snap.dims || {}).flatMap((d) => Object.values(d)));
       recompose();
-      $('dial-foot').textContent = strongest < 0.05
+      $('dial-foot').textContent = S.priorityEngaged
+        ? 'Audience priority is ENFORCED, so it outranks these weights for the hero — release it in Live affinity to let the dial decide.'
+        : strongest < 0.05
         ? 'Nothing to weigh yet — she has no affinity. Browse first, then turn this.'
         : `hero · ${SHAPE_LABEL[sh] || sh} = ${v.toFixed(2)} · re-decided now · ${S.config.version}+tuned`;
     };
@@ -803,17 +901,16 @@ function renderDial() {
 }
 
 // ── The audience strip ──────────────────────────────────────────────────────
-let STRIP_TIMER = null;
 const prettyAudience = (key) => key.replace(/_affinity$/, '').replace(/_/g, ' · ');
 
+let STRIP_UNTIL = 0;
 function strip(kind, html, ttl) {
-  clearTimeout(STRIP_TIMER);
   const el = $('strip');
   el.classList.toggle('out', kind === 'out');
   $('strip-k').textContent = kind === 'out' ? 'Left an audience' : 'Entered an audience';
   $('strip-t').innerHTML = html;
   el.hidden = false;
-  STRIP_TIMER = setTimeout(() => { el.hidden = true; }, ttl);
+  STRIP_UNTIL = NOW() + ttl;      // rides the demo clock — holds while you talk
 }
 
 /** What entering and leaving MEAN for the page, said on the page. */
@@ -836,7 +933,7 @@ function absorb(changes) {
   if (changes.entered.length || changes.exited.length) announceAudiences(changes.entered, changes.exited);
   if ((changes.entered.length || changes.exited.length) && window.MOMENTS) {
     window.MOMENTS.audienceChange({ entered: changes.entered, exited: changes.exited,
-      snapshot: snapshot(S.reflex, Date.now(), S.config) });
+      snapshot: snapshot(S.reflex, NOW(), S.config) });
   }
   if (changes.entered.length || changes.exited.length) renderChips(changes.entered, changes.exited);
   if (changes.explain?.length) say(changes.explain[0]);
@@ -879,11 +976,11 @@ function holdSteady(prev, next) {
 }
 
 function recompose(first, opts = {}) {
-  const snap = snapshot(S.reflex, Date.now(), S.config);
+  const snap = snapshot(S.reflex, NOW(), S.config);
   checkHandoff(snap);
   let next = compose({ affinity: snap, state: S.reflex, items: S.items, blocks: S.blocks,
                        config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
-                       audiencePriority: S.audiencePriority,
+                       audiencePriority: S.priorityEngaged ? S.audiencePriority : undefined,
                        anchorId: S.anchorId, decidingValue: decidingValueFor(S.vertical) });
   if (opts.tick) next = holdSteady(S.decisions, next);
   const prev = S.decisions; S.decisions = next;
@@ -1163,7 +1260,7 @@ function flipRow(before) {
 // moving brand-new nodes into place. Cards now persist across paints: the DOM
 // is reordered, only the rank chip and the change badge are updated, and the
 // photograph is never reloaded.
-const ROW = { nodes: new Map(), lastMovers: [], holdTimer: null };
+const ROW = { nodes: new Map(), lastMovers: [], holdUntil: 0 };
 
 function cardNode(it, hue) {
   const el = document.createElement('article');
@@ -1245,14 +1342,9 @@ function highlightMovers(movers, holdMs, label = 'was') {
     d.hidden = false;
     d.innerHTML = `<b>${now}</b><small>${was == null ? (label === 'std' ? 'not in std' : 'new in') : `${label} ${was}`}</small>`;
   }
-  ROW.holdTimer = setTimeout(() => {
-    // The badge fades WITH the border — a green "was 7" outliving its green
-    // border read as a leftover.
-    $('row').querySelectorAll('.card.changed').forEach((el) => {
-      el.classList.remove('changed');
-      const d = el.querySelector('.delta'); if (d) d.hidden = true;
-    });
-  }, holdMs);
+  // Clock-based, not wall-based: the green holds while the presenter talks and
+  // fades only as demo time moves. Stability during a conversation is the rule.
+  ROW.holdUntil = NOW() + holdMs;
 }
 
 function paintRow(ds, prevIds, first, rowMoved = false, tick = false) {
@@ -1377,10 +1469,18 @@ setInterval(() => {
   // tick() never accumulates — it re-reads at `now` and applies the exits decay
   // has already earned. This is what lets the staircase land on the page at the
   // honest moment instead of waiting for the server's alarm to travel.
-  const res = tick(S.reflex, Date.now(), S.config);
+  const res = tick(S.reflex, NOW(), S.config);
   S.reflex = res.state;
   if (res.changes.entered.length || res.changes.exited.length) absorb(res.changes);
   recompose(false, { tick: true });
+  if (ROW.holdUntil && NOW() >= ROW.holdUntil) {
+    ROW.holdUntil = 0;
+    $('row').querySelectorAll('.card.changed').forEach((el) => {
+      el.classList.remove('changed');
+      const d = el.querySelector('.delta'); if (d) d.hidden = true;
+    });
+  }
+  if (STRIP_UNTIL && NOW() >= STRIP_UNTIL) { STRIP_UNTIL = 0; $('strip').hidden = true; }
 }, 1000);
 
 const isStageAudience = (a) => /^(journeystage|applicationstage)_/.test(a);
@@ -1416,7 +1516,7 @@ const CLAIM_HELD_MS = 5000;
 
 function announceRetreat(prev, next) {
   if (!prev.length) return;
-  const now = Date.now();
+  const now = NOW();
   const claiming = new Set(next.filter((d) => d.strategy === 'affinity').map((d) => d.slot));
   for (const slot of claiming) if (!(slot in S.claimedAt)) S.claimedAt[slot] = now;
   for (const slot of [...S.withdrawn]) if (claiming.has(slot)) S.withdrawn.delete(slot);
@@ -1476,7 +1576,7 @@ $('ask-form').onsubmit = async (e) => {
   const a = await fetch(`${API}/search`, {
     method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ vertical: S.vertical, query,
-                           affinity: snapshot(S.reflex, Date.now(), S.config) }),
+                           affinity: snapshot(S.reflex, NOW(), S.config) }),
   }).then((r) => r.json()).catch(() => null);
   input.disabled = false; input.placeholder = was; input.value = '';
 
@@ -1492,7 +1592,7 @@ $('ask-form').onsubmit = async (e) => {
   }
 
   // A search is an ordinary signal — it goes through apply() like any click.
-  const res = apply(S.reflex, { action: 'search', touches: a.touches }, Date.now(), S.config);
+  const res = apply(S.reflex, { action: 'search', touches: a.touches }, NOW(), S.config);
   S.reflex = res.state; absorb(res.changes); recompose();
   post('/action', { vertical: S.vertical, events: [{ action: 'search', touches: a.touches }] });
 
@@ -1647,6 +1747,15 @@ $('conc-close').onclick = () => $('conc').classList.remove('open');
 $('conc-reset').onclick = () => {
   CONC.history = []; CONC.shown = []; $('conc-thread').innerHTML = '';
 };
+// Suggestion chips fill the input and submit — a beat never starts with typing.
+document.querySelectorAll('.mo-chips').forEach((box) => {
+  const input = $(box.dataset.for);
+  const form = input.closest('.moment-box').querySelector('form');
+  box.querySelectorAll('button').forEach((b) => {
+    b.onclick = () => { input.value = b.textContent; form.dispatchEvent(new Event('submit', { cancelable: true })); };
+  });
+});
+
 $('conc-form').onsubmit = (e) => {
   e.preventDefault();
   const q = $('conc-q').value.trim();
@@ -1880,9 +1989,9 @@ function resolveTarget(t) {
 async function performBeat(beat) {
   if (!beat.perform?.length || BZ.busy) return;
   const targets = beat.perform.map((t) => () => resolveTarget(t));
-  $('dir-next').disabled = true;
+  $('dir-next').disabled = true; $('dir-next').classList.add('running');
   try { await browse($('dir-next'), targets); }
-  finally { $('dir-next').disabled = false; }
+  finally { $('dir-next').disabled = false; $('dir-next').classList.remove('running'); }
 }
 
 async function goBeat(i) {
@@ -1929,8 +2038,9 @@ function openDirector() {
 
 $('dir-next').onclick = () => goBeat(DIR.i + 1);
 $('dir-prev').onclick = () => { setAuto(false); goBeat(DIR.i - 1); };
-$('dir-play').onclick = () => setAuto(!DIR.auto);
+$('dir-play').onclick = () => { if (DIR.auto) BZ.abort = true; setAuto(!DIR.auto); };
 $('dir-stop').onclick = async () => {
+  BZ.abort = true;                 // stop the visitor mid-stride, cleanly
   setAuto(false); dirPlay(false); DIR.elapsedBefore = 0; DIR.i = 0;
   sessionStorage.removeItem('mrd_dir');
   await $('btn-reset').onclick();                  // a new visitor, in the object and on the page
@@ -1943,7 +2053,7 @@ addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') { e.preventDefault(); goBeat(DIR.i + 1); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); goBeat(DIR.i - 1); }
   if (e.key === ' ') { e.preventDefault(); setAuto(!DIR.auto); }
-  if (e.key === 'Escape') { $('director').hidden = true; document.body.classList.remove('has-director'); }
+  if (e.key === 'Escape') { BZ.abort = true; }
 });
 setInterval(dirTick, 500);
 
@@ -1959,7 +2069,7 @@ const OFFER = { expiresAt: null, live: false, dim: null, value: null };
 function offerTick() {
   if (!OFFER.live) return;
   const el = $('offer');
-  const left = OFFER.expiresAt - Date.now();
+  const left = OFFER.expiresAt - NOW();
 
   if (left > 0) {
     const secs = Math.ceil(left / 1000);
@@ -1970,7 +2080,7 @@ function offerTick() {
 
   // Ended. Say which number ended it — the whole point of the beat.
   OFFER.live = false;
-  const snap = snapshot(S.reflex, Date.now(), S.config);
+  const snap = snapshot(S.reflex, NOW(), S.config);
   const a = snap.dims?.[OFFER.dim]?.[OFFER.value];
   const spec = S.config.dimensions.find((d) => d.key === OFFER.dim);
   el.classList.add('done'); el.classList.remove('expiring');
@@ -1999,7 +2109,7 @@ function checkOffer() {
   if (!S.audiences.has(audienceKey(dim, value))) return;
 
   const at = expiryOf(S.reflex, dim, value, S.config);
-  if (!at || at <= Date.now()) return;
+  if (!at || at <= NOW()) return;
 
   OFFER.expiresAt = at; OFFER.live = true; OFFER.dim = dim; OFFER.value = value;
   const el = $('offer');
@@ -2013,7 +2123,7 @@ function checkOffer() {
     + `the engine calculates that "${value}" crosses back under its exit threshold.`;
   offerTick();
   consequence('Reflex moment', 'A white-glove offer arrived', 
-    `Earned by a decisive act, and it expires at a computed instant — ${Math.round((at - Date.now()) / 1000)}s `
+    `Earned by a decisive act, and it expires at a computed instant — ${Math.round((at - NOW()) / 1000)}s `
     + 'from now, derived from the decay curve rather than chosen.');
 }
 
@@ -2033,7 +2143,7 @@ async function conciergeAsk(message) {
   thread.scrollTop = thread.scrollHeight;
 
   // The engine's live read, so an open-ended ask reflects what she has been doing.
-  const snap = snapshot(S.reflex, Date.now(), S.config);
+  const snap = snapshot(S.reflex, NOW(), S.config);
   const affinity = {};
   for (const [dim, vals] of Object.entries(snap.dims)) {
     const top = Object.entries(vals).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([v]) => v);
@@ -2269,6 +2379,7 @@ $('btn-reset').onclick = async () => {
 window.MOMENTS = initMoments({
   mount: $('moments'),
   vertical: S.vertical,
+  getNow: NOW,                      // the hold's 15:00 freezes while you talk
   prettyAudience,
   onCta: () => { $('page').scrollTo({ top: 0, behavior: 'smooth' }); },
   expiryOf: (key, ctx) => (ctx?.dim && ctx?.value) ? expiryOf(S.reflex, ctx.dim, ctx.value, S.config) : null,

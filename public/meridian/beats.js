@@ -193,7 +193,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 21, act: 2, cap: 'C10 · C33', title: 'Watch her leave', secs: 115, mark: 'THE BEAT NOBODY ELSE HAS',
-    perform: [{ sel: '#btn-skip' }, { wait: 9000 }, { sel: '#btn-skip' }],
+    perform: [{ sel: '#btn-skip' }],
     why: 'Two presses of two minutes each and the three retreats have landed, in order, with their numbers. Nothing happens while you wait any more — time passes when you say so.',
     do: 'Press "Let two minutes pass". The retreats land one after another; talk over them. Press it again for the rest.',
     watch: 'Three separate retreats — hero at ~28s on category, row at ~64s on price band, story at ~74s on taste. Each names its dimension and its number. The offer ends and says why. The row returns to discovery.',

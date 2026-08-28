@@ -908,3 +908,27 @@ body.has-director .world,body.has-director .engine{padding-bottom:var(--dir-h, 2
 .prio-row button:hover{border-color:var(--p-blue);color:var(--p-blue)}
 .prio-row button:disabled{opacity:.3;cursor:default}
 .prio-none{font:400 12px/1.5 ui-monospace,monospace;color:var(--p-dim)}
+
+/* The control whose sequence is playing right now. The room can see where we are. */
+.dir-palette .controls button.running{
+  background:#7FB8FF;border-color:#7FB8FF;color:#08121f;
+  box-shadow:0 0 0 3px rgba(127,184,255,.45);animation:runpulse 1.2s ease-in-out infinite}
+#dir-next.running,#dir-next:disabled.running{box-shadow:0 0 0 3px rgba(127,184,255,.45);animation:runpulse 1.2s ease-in-out infinite}
+@keyframes runpulse{0%,100%{box-shadow:0 0 0 3px rgba(127,184,255,.45)}50%{box-shadow:0 0 0 6px rgba(127,184,255,.2)}}
+.prio-none a{color:var(--p-blue);font-weight:600}
+
+/* ── Modal chrome: Ask Calder and the Concierge look like the store, not a
+     bare input with a border. Serif voice, a subtitle that states the honesty
+     rule, and suggestion chips so a beat never starts with typing. */
+.mo-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;
+  background:#fff;padding:18px 18px 14px;margin:0;border-bottom:1px solid var(--line)}
+.mo-head h3{font:400 26px/1.15 var(--serif);margin:0 0 5px}
+.mo-head p{margin:0;font-size:13.5px;line-height:1.5;color:var(--muted);max-width:52ch}
+.mo-head button{font:600 13px/1 var(--sans);padding:9px 14px;border-radius:5px;cursor:pointer;
+  background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+.mo-head button:hover{border-color:var(--ink)}
+.mo-chips{display:flex;flex-wrap:wrap;gap:7px;background:#fff;margin:0;padding:12px 18px 16px}
+.mo-chips button{font:500 12.5px/1 var(--sans);padding:8px 12px;border-radius:99px;cursor:pointer;
+  background:#F4F5F7;border:1px solid var(--line);color:var(--ink)}
+.mo-chips button:hover{border-color:var(--accent);color:var(--accent)}
+.moment-box{border-top:6px solid var(--accent)}
