@@ -195,6 +195,19 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 - [x] **The dial did nothing.** Two causes: no affinity to weigh (a weight times nothing is nothing — it now says "nothing to weigh yet" instead of sitting there), and the campaign's hero copy was masking the re-decision. Turning a slider now clears the override: the merchandiser outranks the campaign. Verified: line weight to 0.60 → hero re-decides to the Shorewell Trench, kicker "because of what you have looked at", driver `line=Shorewell w=0.3851`.
 - [x] "fell to 0.42, under the exit threshold of 0.42" — exit and entry sentences at 4dp, same fix as the offer.
 
+## 13 · Phase 5 — the abstract, ported (go given 2026-08-28)
+
+The marketing abstract is Coach's own material; see `docs/opticon/Opticon-Abstract-Coverage.md` for the claim-by-claim map. Order agreed: cold start first, then experiments visible, Radar, AI search, modal exclusivity + 15/15.
+
+- [ ] **Cold start on the page — IN PROGRESS.** Server (agent): `geoCohort.ts` + `GET /meridian/api/cohort` against Meridian-owned `mrd_transactions`/`mrd_purchase_items`, New York metro + NC Triad seeds, the ladder, the 50-state fallback, real ACS census rows. Client (done, awaiting the route): the arrival is a gated act (`arrive()`, beat 4 "She arrives — the cold start", palette "She arrives"); the band declares geo · census → band · your receipts → lines; OK applies the priors (`prior` 1.35), the cohort hero ("The Drover leads near you"), the first line "What shoppers near you carry" (composer `coldPicks`, strategy `cohort`, badge "near you"), the Welcome strip, the provenance card, the Why; first engagement hands off (`handoffFromCohort`); the cold-start tab shows the receipts, the grain, the honesty tags and opens "DY vs us" (ported contrast modal); beat 9 is the receipts + DY beat. Composer tests +3 (74/74).
+- [ ] Experiments visible — readouts, Opal tool card, the bandit half of the TikTok beat with the 28:00 window on the demo clock.
+- [ ] Revenue Radar — Gen-Z cohort, 44.3% / $7,623, prove the fix in-session, padding.
+- [ ] AI search — rename, full height, affinity + neighbourhood rows before a query.
+- [ ] Modal exclusivity + the 15/15 checklist.
+- [ ] Compare reliability — agent investigating (root cause required); quiz and rearrangement captures reported missing.
+
+---
+
 ## 12 · Phase 4 — the demo clock (Simone's stability review, 2026-08-28)
 
 His words: *"As I'm having a conversation, you're removing, changing, continuing… let me know that it's about to decay — do you want to proceed?"* The root: engine time rode the wall clock, so decay ran while he talked. All fixed and verified:

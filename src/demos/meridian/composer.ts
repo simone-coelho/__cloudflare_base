@@ -72,6 +72,13 @@ export interface ComposeInput {
   items: readonly MeridianItem[];
   /** The department shelf: when the visitor is IN a department the row is built from it alone; hero, rail and blocks stay global. */
   rowItems?: readonly MeridianItem[];
+  /**
+   * THE COLD START: what shoppers from her neighbourhood actually bought, in
+   * order, as item ids. Used only while she has no audiences of her own — the
+   * first line opens on the cohort, and her first engagement hands off to the
+   * live profile. Curation only; never a price, never a gate.
+   */
+  coldPicks?: readonly string[];
   blocks: readonly MeridianBlock[];
   config: ReflexConfig;
   /** dimension shape lookup, from reflexConfig.SHAPE_OF_KEY */
@@ -406,6 +413,24 @@ export function compose(input: ComposeInput): MeridianDecision[] {
     } else {
       const { scored, gated } = rank(rowPool, 'row', usedItems);
       const withMatch = scored.map((s) => ({ ...s, matched: matchedOf(s.r) }));
+      // COLD START: no audiences of her own yet, but a neighbourhood cohort —
+      // the first line is what shoppers like her, from here, actually buy.
+      const cohortIds = (input.coldPicks ?? []).filter((id) => rowPool.some((i) => i.id === id));
+      if (cohortIds.length && input.affinity.audiences.length === 0) {
+        const byIdx = new Map(cohortIds.map((id, i) => [id, i]));
+        const block = withMatch.filter((s) => byIdx.has(s.r.id)).sort((a, b) => byIdx.get(a.r.id)! - byIdx.get(b.r.id)!).slice(0, ROW_BLOCK);
+        const inBlock = new Set(block.map((s) => s.r.id));
+        const standard = withMatch.filter((s) => !inBlock.has(s.r.id)).sort((a, b) => standardOrder(a.r, b.r));
+        [...block, ...standard].slice(0, rowSize).forEach((s, i) => {
+          usedItems.add(s.r.id);
+          const isPick = inBlock.has(s.r.id);
+          decisions.push({
+            slot: 'row', order: order++, itemId: s.r.id,
+            strategy: isPick ? 'cohort' : 'standard',
+            explain: explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
+          });
+        });
+      } else {
       // THE PICKS ARE THE FIRST LINE, AND ONLY THE FIRST LINE. With several
       // broad audiences entered, everything on the shelf is a member, and "10
       // promoted" meant the block was the whole row — the picks were nowhere in
@@ -433,6 +458,7 @@ export function compose(input: ComposeInput): MeridianDecision[] {
           },
         });
       });
+      }
     }
   }
 

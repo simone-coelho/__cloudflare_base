@@ -69,9 +69,24 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *The ecosystem. Keep it moving — it sets up Act 2, it is not the point.*
 
-### 4. She opened an email
+### 4. She arrives — the cold start
 
-**1:15** · C1 · LIVE
+**0:50** · C2 · geo LIVE · census LIVE public · first-party REPRESENTATIVE
+> ### ⏸ STOP
+
+**You do —** Press Next. Read the band with the room: real geo, free census, your own receipts. Then OK.
+
+**They watch —** The hero: “The Drover leads near you”. The first line: what New York-metro shoppers carry. The welcome. The provenance: geo real · census real · first-party representative · behaviour none.
+
+**You say —** Nobody knows her. No account, no cookie, no segment. What we do know is where she is — and what shoppers from there actually bought, in your own receipts, enriched with free public census data. Dynamic Yield rents a neighbourhood’s average wallet from a third party. We open on your customers’ own purchases: no licensing, real intent, and it compounds because it is yours. Aggregate, never the individual. We curate, never price.
+
+*Why 0:50:* The premise of the whole session: no profile, no segment, nobody else’s data — and the page still opens on what shoppers from her neighbourhood actually buy.
+
+---
+
+### 5. She opened an email
+
+**0:55** · C1 · LIVE
 
 **You do —** Open the email in the inbox on the left.
 
@@ -79,13 +94,13 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You say —** She opened that in Gmail. Not on your site. The pixel fired, we captured it, and by the time she arrived the page had already answered it. She has not clicked a single thing here.
 
-*Why 1:15:* First time the room sees a page answer something that happened off-site. It needs room to land.
+*Why 0:55:* First time the room sees a page answer something that happened off-site. It needs room to land.
 
 ---
 
-### 5. She clicked the ad
+### 6. She clicked the ad
 
-**0:55** · C3 · LIVE
+**0:50** · C3 · LIVE
 
 **You do —** Click the ad.
 
@@ -93,13 +108,13 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You say —** Your media team spent money to make that click happen. Most sites then show the same homepage they show everyone.
 
-*Why 0:55:* A repeat of the same mechanism with a different surface. Faster, because the room already has the idea.
+*Why 0:50:* A repeat of the same mechanism with a different surface. Faster, because the room already has the idea.
 
 ---
 
-### 6. She signed up by text
+### 7. She signed up by text
 
-**0:35** · C2 · LIVE
+**0:30** · C2 · LIVE
 
 **You do —** Sign up by text.
 
@@ -107,13 +122,13 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You say —** Different surface, same profile, and she never typed an email address into your site.
 
-*Why 0:35:* One press, one surface — the room needs to see the text land before the next thing happens.
+*Why 0:30:* One press, one surface — the room needs to see the text land before the next thing happens.
 
 ---
 
-### 7. A form on someone else’s site
+### 8. A form on someone else’s site
 
-**0:35** · C4 · LIVE
+**0:30** · C4 · LIVE
 
 **You do —** Submit the style quiz.
 
@@ -121,13 +136,13 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You say —** Now we have what she told us and what she did. Those are different kinds of evidence and it weighs them differently — a stated preference decays on the same clock as everything else, so telling us once does not steer her forever.
 
-*Why 0:35:* Introduces the declared-versus-observed distinction used again in Act 3. Its own press, so it can be discussed.
+*Why 0:30:* Introduces the declared-versus-observed distinction used again in Act 3. Its own press, so it can be discussed.
 
 ---
 
-### 8. Four surfaces, one profile
+### 9. Four surfaces, one profile
 
-**1:00** · C5 · LIVE
+**0:55** · C5 · LIVE
 
 **You do —** Point at the episode stack.
 
@@ -135,21 +150,21 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You say —** Four systems that in most stacks hold four different views of this person. One profile, resolved at the edge — and every one of those is first-party data you already own.
 
-*Why 1:00:* The act’s thesis. A pause here is what makes Act 2 feel earned rather than clever.
+*Why 0:55:* The act’s thesis. A pause here is what makes Act 2 feel earned rather than clever.
 
 ---
 
-### 9. And the ones who arrive with none of that
+### 10. The receipts behind the cold start
 
-**1:40** · C6 · C7 · geo LIVE · census LIVE public · cohort REPRESENTATIVE
+**1:30** · C6 · C7 · geo LIVE · census LIVE public · first-party REPRESENTATIVE
 
-**You do —** Nothing. Point at the cold-start panel.
+**You do —** Nothing. Point at the cold-start panel, then the contrast.
 
-**They watch —** Region off the connection · published census · the derivation sentence · geo real / census real / prior derived / behaviour none.
+**They watch —** Region off the connection · census row and source · your receipts by line with their shares · the grain used · geo real / census real / first-party representative / behaviour none. Then: DY’s ZIP average versus your customers’ own purchases.
 
-**You say —** For the ones who arrive with none of the above — region off the connection, income from published census, opening price band is arithmetic over the two. No tracker, no third-party data, no consent wall. And it is labelled: the geography is real, the census is real, the prior is derived, and the behaviour is nothing, because she has not done anything yet.
+**You say —** The geography is real — off the connection. The census is real and free — ACS, cited on the row. The receipts are yours: what shoppers from this metro bought, by line, with the share. We roll up only when your own counts are thin — never because the census is. And we curate, never price: no gate, no financing, no protected class, ever. This is the cold start every retailer is asking for, and it runs on data you already own.
 
-*Why 1:40:* Dense: geography, census, the derivation, and four honesty labels. The longest beat in the act by design.
+*Why 1:30:* Dense: geography, the census, the ladder, your receipts, and the DY contrast. The longest beat in the act by design — everybody in the room is looking for cold-start management.
 
 ---
 
@@ -157,7 +172,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *The engine, and the flip.*
 
-### 10. The handoff
+### 11. The handoff
 
 **1:50** · C35 · LIVE
 > ### ⏸ STOP
@@ -172,7 +187,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 11. That number is measured
+### 12. That number is measured
 
 **0:40** · C36 · LIVE
 
@@ -186,7 +201,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 12. The control
+### 13. The control
 
 **0:45** · C14 · LIVE
 > ### ⏸ DO NOT SKIP
@@ -201,7 +216,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 13. Different memories, different speeds
+### 14. Different memories, different speeds
 
 **0:50** · C8 · LIVE
 
@@ -215,7 +230,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 14. It waited until it was sure
+### 15. It waited until it was sure
 
 **0:55** · C9 · LIVE
 > ### ⏸ SLOW DOWN
@@ -230,7 +245,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 15. The row re-ranks
+### 16. The row re-ranks
 
 **0:50** · C15 · LIVE
 
@@ -244,7 +259,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 16. The hero commits
+### 17. The hero commits
 
 **0:35** · C16 · LIVE
 
@@ -258,7 +273,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 17. Which box comes first
+### 18. Which box comes first
 
 **0:50** · C17 · LIVE
 
@@ -272,7 +287,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 18. The page gains a section
+### 19. The page gains a section
 
 **0:55** · C13 · C18 · LIVE
 
@@ -286,7 +301,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 19. An offer that cannot be extended
+### 20. An offer that cannot be extended
 
 **0:45** · C33 · LIVE
 
@@ -300,7 +315,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 20. Your merchandiser outranks it
+### 21. Your merchandiser outranks it
 
 **0:45** · C11 · C19 · LIVE
 
@@ -314,7 +329,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 21. The refusal
+### 22. The refusal
 
 **1:00** · C20 · LIVE
 > ### ⏸ SLOW DOWN
@@ -331,7 +346,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 22. Watch her leave
+### 23. Watch her leave
 
 **1:55** · C10 · C33 · LIVE
 > ### ⏸ THE BEAT NOBODY ELSE HAS
@@ -346,7 +361,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 23. She came back
+### 24. She came back
 
 **0:50** · C12 · edge memory LIVE · ODP wired-dormant
 
@@ -362,7 +377,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 24. I changed what we sell
+### 25. I changed what we sell
 
 **1:35** · C34 · LIVE
 > ### ⏸ THE STRONGEST LINE
@@ -383,7 +398,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *Opal and experimentation.*
 
-### 25. Opal proposes
+### 26. Opal proposes
 
 **1:10** · C21 · LIVE (US-only)
 
@@ -397,7 +412,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 26. A person decides
+### 27. A person decides
 
 **0:50** · C21 · GATED — enabled
 
@@ -411,7 +426,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 27. It cannot invent a scene
+### 28. It cannot invent a scene
 
 **1:15** · C22 · LIVE
 
@@ -425,7 +440,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 28. A stylist that cannot oversell
+### 29. A stylist that cannot oversell
 
 **1:15** · C23 · LIVE
 
@@ -439,7 +454,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 29. The product is real, the scene is styling
+### 30. The product is real, the scene is styling
 
 **0:45** · C24 · LIVE
 
@@ -453,7 +468,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 30. A real experiment, thirty seconds ago
+### 31. A real experiment, thirty seconds ago
 
 **1:20** · C25 · LIVE
 
@@ -467,7 +482,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 31. Bandits, and what I will not show you
+### 32. Bandits, and what I will not show you
 
 **1:25** · C26 · C27 · LIVE rules
 
@@ -485,7 +500,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *Revenue Radar.*
 
-### 32. The average lied
+### 33. The average lied
 
 **1:50** · C28 · compute LIVE · traffic SIMULATED
 > ### ⏸ THE BIGGEST WOW — SLOW RIGHT DOWN
@@ -500,7 +515,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 33. Launch the fix
+### 34. Launch the fix
 
 **1:20** · C29 · audience/flag LIVE · lift REPRESENTATIVE
 
@@ -514,7 +529,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 34. We hand you the rows
+### 35. We hand you the rows
 
 **0:50** · C30 · LIVE
 
@@ -532,7 +547,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *Signal to live creative.*
 
-### 35. A signal we did not generate
+### 36. A signal we did not generate
 
 **0:35** · C31 · SIMULATED, labelled
 
@@ -546,7 +561,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 36. Opal writes the moment
+### 37. Opal writes the moment
 
 **0:45** · C31 · LIVE
 
@@ -560,7 +575,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 37. It ships as a real flag
+### 38. It ships as a real flag
 
 **0:50** · C31 · LIVE
 
@@ -574,7 +589,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 38. What I did not show you
+### 39. What I did not show you
 
 **0:50** · — · —
 
@@ -592,16 +607,17 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 If you are running short, these are the ones that do not get compressed.
 
-- **10. The handoff** — STOP *(1:50)*
-- **12. The control** — DO NOT SKIP *(0:45)*
-- **14. It waited until it was sure** — SLOW DOWN *(0:55)*
-- **21. The refusal** — SLOW DOWN *(1:00)*
-- **22. Watch her leave** — THE BEAT NOBODY ELSE HAS *(1:55)*
-- **24. I changed what we sell** — THE STRONGEST LINE *(1:35)*
-- **32. The average lied** — THE BIGGEST WOW — SLOW RIGHT DOWN *(1:50)*
+- **4. She arrives — the cold start** — STOP *(0:50)*
+- **11. The handoff** — STOP *(1:50)*
+- **13. The control** — DO NOT SKIP *(0:45)*
+- **15. It waited until it was sure** — SLOW DOWN *(0:55)*
+- **22. The refusal** — SLOW DOWN *(1:00)*
+- **23. Watch her leave** — THE BEAT NOBODY ELSE HAS *(1:55)*
+- **25. I changed what we sell** — THE STRONGEST LINE *(1:35)*
+- **33. The average lied** — THE BIGGEST WOW — SLOW RIGHT DOWN *(1:50)*
 
 ## Every caution
 
-- **Beat 21, The refusal:** RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.
-- **Beat 23, She came back:** DO NOT say "ODP is the memory". ODP is deliberately not connected on this surface. If asked: connect ODP and this becomes durable across devices and shareable with the rest of your stack — that is a credential, not a code change.
-- **Beat 24, I changed what we sell:** The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.
+- **Beat 22, The refusal:** RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.
+- **Beat 24, She came back:** DO NOT say "ODP is the memory". ODP is deliberately not connected on this surface. If asked: connect ODP and this becomes durable across devices and shareable with the rest of your stack — that is a credential, not a code change.
+- **Beat 25, I changed what we sell:** The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.

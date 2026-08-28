@@ -654,23 +654,42 @@ function compose(input) {
     } else {
       const { scored, gated } = rank(rowPool, "row", usedItems);
       const withMatch = scored.map((s) => ({ ...s, matched: matchedOf(s.r) }));
-      const block = withMatch.filter((s) => s.matched.length > 0).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r)).slice(0, ROW_BLOCK);
-      const inBlock = new Set(block.map((s) => s.r.id));
-      const standard = withMatch.filter((s) => !inBlock.has(s.r.id)).sort((a, b) => standardOrder(a.r, b.r));
-      [...block, ...standard].slice(0, rowSize).forEach((s, i) => {
-        usedItems.add(s.r.id);
-        const isPromoted = inBlock.has(s.r.id);
-        decisions.push({
-          slot: "row",
-          order: order++,
-          itemId: s.r.id,
-          strategy: isPromoted ? "affinity" : "standard",
-          explain: {
-            ...explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
-            ...isPromoted ? { matched: s.matched } : {}
-          }
+      const cohortIds = (input.coldPicks ?? []).filter((id) => rowPool.some((i) => i.id === id));
+      if (cohortIds.length && input.affinity.audiences.length === 0) {
+        const byIdx = new Map(cohortIds.map((id, i) => [id, i]));
+        const block = withMatch.filter((s) => byIdx.has(s.r.id)).sort((a, b) => byIdx.get(a.r.id) - byIdx.get(b.r.id)).slice(0, ROW_BLOCK);
+        const inBlock = new Set(block.map((s) => s.r.id));
+        const standard = withMatch.filter((s) => !inBlock.has(s.r.id)).sort((a, b) => standardOrder(a.r, b.r));
+        [...block, ...standard].slice(0, rowSize).forEach((s, i) => {
+          usedItems.add(s.r.id);
+          const isPick = inBlock.has(s.r.id);
+          decisions.push({
+            slot: "row",
+            order: order++,
+            itemId: s.r.id,
+            strategy: isPick ? "cohort" : "standard",
+            explain: explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut)
+          });
         });
-      });
+      } else {
+        const block = withMatch.filter((s) => s.matched.length > 0).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r)).slice(0, ROW_BLOCK);
+        const inBlock = new Set(block.map((s) => s.r.id));
+        const standard = withMatch.filter((s) => !inBlock.has(s.r.id)).sort((a, b) => standardOrder(a.r, b.r));
+        [...block, ...standard].slice(0, rowSize).forEach((s, i) => {
+          usedItems.add(s.r.id);
+          const isPromoted = inBlock.has(s.r.id);
+          decisions.push({
+            slot: "row",
+            order: order++,
+            itemId: s.r.id,
+            strategy: isPromoted ? "affinity" : "standard",
+            explain: {
+              ...explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
+              ...isPromoted ? { matched: s.matched } : {}
+            }
+          });
+        });
+      }
     }
   }
   for (const slot of ["block_a", "block_b"]) {

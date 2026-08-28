@@ -125,7 +125,7 @@ export interface MeridianDecision {
    * audience it belongs to. Promotion requires membership — 'affinity' (or
    * 'completion') in the row is a claim only a membership can back.
    */
-  strategy: 'cold-start' | 'affinity' | 'fading' | 'pin' | 'fallback' | 'quota' | 'completion' | 'standard';
+  strategy: 'cold-start' | 'affinity' | 'fading' | 'pin' | 'fallback' | 'quota' | 'completion' | 'cohort' | 'standard';
   explain: MeridianExplain;
 }
 

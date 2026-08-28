@@ -100,7 +100,7 @@ const S = {
   withdrawn: new Set(),
 };
 
-const money = (n) => '$' + n.toLocaleString('en-US');
+const money = (n) => (n == null || Number.isNaN(Number(n)) ? '—' : '$' + Number(n).toLocaleString('en-US'));
 const byId = (id) => S.items.find((i) => i.id === id) || S.blocks.find((b) => b.id === id);
 const pick = (ds, slot) => ds.find((d) => d.slot === slot);
 
@@ -113,6 +113,7 @@ async function load(vertical) {
     audiences: new Set(), decisions: [], prevRank: new Map(),
     heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, withdrawn: new Set(), dept: null,
     behaved: false, anchorId: null, claimedAt: {}, audiencePriority: [], priorityEngaged: false,
+    arrived: false, cohort: null, coldPrior: null, coldPicks: null,
   });
   S.published = [];
   document.documentElement.dataset.vertical = vertical;
@@ -181,16 +182,156 @@ async function seedColdStart(seed) {
       <span class="tg dv">prior derived</span>
       <span class="tg no" id="cold-behaviour">${seed ? 'behaviour none' : 'superseded by behaviour'}</span></div>` : '';
 
-  if (!cs.prior || !seed) return;
-  const touches = [{ dim: cs.prior.dim, value: cs.prior.value }];
-  const res = apply(S.reflex, { action: 'prior', touches }, NOW(), S.config);
-  S.reflex = res.state; absorb(res.changes);
-  post('/action', { vertical: S.vertical, events: [{ action: 'prior', touches }] });
-  consequence('Cold start', cs.prior.why,
-    `${c.source} · ${c.label}. No behaviour yet — geography and public data only.`);
-  $('sentence').textContent =
-    `Nothing has happened yet — and the page is already weighted. ${c.label || cs.geo.region || 'This region'}, ${cs.prior.value} band.`;
+  // THE NEIGHBOURHOOD COHORT — what shoppers like her, from here, actually
+  // bought (your receipts) enriched with the census. Fetched now, applied when
+  // she ARRIVES (a gated act: the band declares it, OK opens the page on it).
+  const cq = new URLSearchParams({ vertical: S.vertical });
+  for (const k of ['region', 'zip', 'city', 'country']) { const v = new URLSearchParams(location.search).get(k); if (v) cq.set(k, v); }
+  S.cohort = await fetch(`${API}/cohort?${cq}`, { credentials: 'omit' }).then((r) => r.json()).catch(() => null);
+  if (!S.cohort?.ok) S.cohort = null;
+  S.coldPrior = seed && cs.prior ? cs.prior : null;
+  renderCohortTab(cs);
 }
+
+const BAND_PHRASE = { entry: 'everyday essentials', core: 'signature styles', premium: 'our most considered pieces', elevated: 'our most considered pieces' };
+const cohortUsable = (c) => !!(c && c.topLines && c.topLines.length && (c.granularityUsed !== 'national' || c.synthesized));
+const narrowKey = () => S.registry.dimensions.find((d) => d.shape === 'narrow')?.key || 'line';
+const broadKey = () => S.registry.dimensions.find((d) => d.shape === 'broad')?.key || 'category';
+
+/** The priors an arrival applies: the census band, then the cohort's lead lines and family. */
+function coldTouches() {
+  const t = [];
+  if (S.coldPrior) t.push({ dim: S.coldPrior.dim, value: S.coldPrior.value });
+  const c = S.cohort;
+  if (cohortUsable(c)) {
+    for (const l of c.topLines.slice(0, 2)) t.push({ dim: narrowKey(), value: l.line });
+    if (c.topFamilies?.[0]?.category) t.push({ dim: broadKey(), value: c.topFamilies[0].category });
+  }
+  return t;
+}
+/** What shoppers near her carry: the lead colourway of each leading line, in cohort order, five at most. */
+function coldPicksFor(c) {
+  const picks = [];
+  for (const l of c.topLines) {
+    const seen = new Set();
+    for (const it of S.items.filter((i) => i.line === l.line)) {
+      const fam = it.family || it.id;
+      if (seen.has(fam)) continue; seen.add(fam);
+      picks.push(it.id); if (seen.size >= 2) break;
+    }
+    if (picks.length >= 5) break;
+  }
+  return picks.slice(0, 5);
+}
+function cohortHero(c) {
+  const top = c.topLines[0].line, second = c.topLines[1]?.line;
+  const lead = S.items.find((i) => i.line === top);
+  return {
+    from: 'cohort', item: lead?.id,
+    kicker: `What shoppers near you reach for · ${c.grainLabel}${c.sampleSize ? ` · N=${c.sampleSize}` : ''}`,
+    title: `The ${top} leads near you`,
+    body: `No history yet — so we open on what shoppers like her, from here, reach for: the ${top}${second ? ` and the ${second}` : ''}, in ${BAND_PHRASE[c.modalBand] || 'signature styles'}. Aggregate, never the individual — we curate, never price.`,
+  };
+}
+const place = (c) => [c?.geo?.city, c?.geo?.region].filter(Boolean).join(', ') || c?.grainLabel || 'her location';
+
+/**
+ * SHE ARRIVES. The first thing the room sees: no profile, no segment, nobody
+ * else's data — and the page opens on what shoppers from her neighbourhood
+ * actually bought, in your own receipts, enriched with free public census.
+ * Gated like every other act: declared first, then done on OK.
+ */
+function arrive() {
+  if (S.arrived) return;
+  if (PD.open && !GATE.open) return;
+  if (needsGate()) { gateThen([{ kind: 'arrive' }], () => arrive()); return; }
+  S.arrived = true;
+  advanceClock();
+  const touches = coldTouches();
+  if (touches.length) {
+    const res = apply(S.reflex, { action: 'prior', touches }, NOW(), S.config);
+    S.reflex = res.state; absorb(res.changes);
+    post('/action', { vertical: S.vertical, events: [{ action: 'prior', touches }] });
+  }
+  const c = S.cohort;
+  if (cohortUsable(c)) {
+    S.coldPicks = coldPicksFor(c);
+    S.heroOverride = cohortHero(c); S.heroDirty = true;
+    const top = c.topLines[0].line;
+    strip('cold', `<b>Welcome from ${escapeHtml(c.geo?.city || c.grainLabel)}.</b> Shoppers near you tend to reach for the <b>${escapeHtml(top)}</b> — we've opened on that, from <b>${escapeHtml(c.grainLabel)}</b> first-party data. No account, no cookie needed.`, 30000);
+    consequence('Cold start · geo-cohort',
+      c.synthesized ? 'Opened on what shoppers near you reach for' : `Opened on what ${c.grainLabel} shoppers buy`,
+      `First touch · ${place(c)} (${c.honesty?.geo === 'query-override' ? 'forced location · rehearsal' : 'real edge geo'}) · cohort = ${c.grainLabel} · ${c.synthesized ? 'representative cohort' : `${c.sampleSize} shoppers`} · median HH income ${money(c.census?.medianHhIncome)} (${c.census?.source || 'Census'}). `
+      + `No history yet → open on what they buy: ${c.topLines.slice(0, 3).map((l) => `${l.line} ${Math.round(l.share * 100)}%`).join(', ')}. Shoppers like her, from here — aggregate, never the individual. We curate, never price; her first engagement hands off to the live profile.`
+      + (c.synthesized ? ` Representative cohort shown for her real location — in production this is your ${c.grainLabel} customers' own purchase history.` : ''));
+    $('sentence').textContent = `Nothing has happened yet — and the page opened on what ${c.grainLabel} shoppers actually buy: your receipts, plus public census. Nobody knows her.`;
+  } else if (S.coldPrior) {
+    consequence('Cold start', S.coldPrior.why, 'No behaviour yet — geography and public data only. No first-party cohort clears the gate for this location.');
+    $('sentence').textContent = `Nothing has happened yet — and the page is already weighted. ${S.coldPrior.value} band, from the census.`;
+  }
+  recordDone('Arrived', `${place(c)} — cold start`, touches.map((t) => `${t.dim}=${t.value}`).join(' · '));
+  recompose();
+  S.sayLockUntil = Date.now() + 8000;
+}
+
+/** Her FIRST engagement hands the page from the cohort to her. The priors stay and decay like everything else. */
+function handoffFromCohort() {
+  if (S.heroOverride?.from !== 'cohort' && !S.coldPicks) return;
+  if (S.heroOverride?.from === 'cohort') { S.heroOverride = null; S.heroDirty = true; }
+  S.coldPicks = null;
+  consequence('Handoff', 'The cohort gave way to her first act',
+    'Shoppers like her opened the page; now she is the evidence. The neighbourhood priors stay in the profile and decay on the same clock as everything else.');
+}
+
+/** The cold-start tab: the census, the receipts, the ladder, the honesty. */
+function renderCohortTab(cs) {
+  const c = S.cohort; const cen = cs?.census;
+  const tag = (cls, t) => `<span class="tg ${cls}">${t}</span>`;
+  const rows = [];
+  rows.push(`<div class="cold-row"><span>Resolved at the edge</span><b>${escapeHtml([cs?.geo?.city, cs?.geo?.region, cs?.geo?.country].filter(Boolean).join(', ') || 'unknown')}${cs?.overridden ? ' (override)' : ''}</b></div>`);
+  if (cen) {
+    rows.push(`<div class="cold-row"><span>${escapeHtml(cen.label || '')}</span><b>${escapeHtml(cen.source || '')}</b></div>`);
+    rows.push(`<div class="cold-row"><span>Median household income</span><b>${money(cen.medianHhIncomeUsd)}</b></div>`);
+    rows.push(`<div class="cold-row"><span>Median home value</span><b>${money(cen.medianHomeValueUsd)}</b></div>`);
+  }
+  if (cs?.prior) rows.push(`<div class="cold-why"><b>${escapeHtml(cs.prior.dim)} → ${escapeHtml(cs.prior.value)}</b><br>${escapeHtml(cs.prior.why)}</div>`);
+  if (cohortUsable(c)) {
+    rows.push(`<h6 class="cold-h">Your receipts · ${escapeHtml(c.grainLabel)} ${c.synthesized ? '· representative cohort' : `· N=${c.sampleSize} shoppers`}</h6>`);
+    for (const l of c.topLines.slice(0, 4)) rows.push(`<div class="cold-row"><span>${escapeHtml(l.line)}</span><b>${Math.round(l.share * 100)}% of shoppers here</b></div>`);
+    rows.push(`<div class="cold-row"><span>Modal price band</span><b>${escapeHtml(c.modalBand)} · curation only</b></div>`);
+    if (c.attachRate != null) rows.push(`<div class="cold-row"><span>Attach a second piece</span><b>${Math.round(c.attachRate * 100)}% of orders</b></div>`);
+    rows.push(`<div class="cold-row"><span>Grain used</span><b>${escapeHtml(c.granularityUsed)} → shown at ${escapeHtml(c.presentLevel || c.granularityUsed)}</b></div>`);
+    if (c.synthesized) rows.push(`<div class="cold-why">Representative cohort for her real location — in production this is your ${escapeHtml(c.grainLabel)} customers' own purchase history (source swap: <code>MRD_GEO_COHORT_SOURCE=warehouse</code>).</div>`);
+  } else {
+    rows.push(`<div class="cold-why">No first-party cohort clears the gate for this location yet — the census band alone opens the page.</div>`);
+  }
+  rows.push(`<div class="cold-tags">${tag('ok', 'geo real')}${tag('ok', 'census real · public')}${tag('dv', cohortUsable(c) ? (c.dataSource === 'warehouse' ? 'first-party · your warehouse' : 'first-party · representative') : 'prior derived')}<span class="tg no" id="cold-behaviour">behaviour none</span></div>`);
+  rows.push(`<button class="cold-btn" id="btn-dyvs-tab">Dynamic Yield vs us — the neighbourhood's wallet vs your receipts</button>`);
+  $('cold').innerHTML = rows.join('');
+  $('btn-dyvs-tab').onclick = openDy;
+}
+
+/** The contrast: DY rents the neighbourhood's AVERAGE wallet; we use your own receipts. */
+function openDy() {
+  const c = S.cohort; const cen = c?.census;
+  document.querySelectorAll('.moment.open').forEach((m) => m.classList.remove('open'));
+  $('dy-left').innerHTML = `
+    <div class="dy-h">Dynamic Yield<span>third-party proxy · neighbourhood AVERAGE · no purchase intent</span></div>
+    <div class="dy-pin">📍 ${escapeHtml(place(c))}${c?.geo?.zip ? ` · ZIP ${escapeHtml(c.geo.zip)}` : ''}</div>
+    <div class="dy-quote">"This neighbourhood averages ${money(cen?.medianHhIncome)} household income${cen?.medianHomeValue ? ` · ${money(cen.medianHomeValue)} homes` : ''}."</div>
+    <ul><li>Third-party proxy — a postal-code average</li><li>Affluence guess, not purchase intent</li><li>Historical — yesterday's cohort</li><li>No idea what this shopper actually buys</li></ul>
+    <div class="dy-foot">Guesses the neighbourhood's wallet · ${escapeHtml(cen?.source || 'Census ACS 2024')}, free &amp; public</div>`;
+  const lines = cohortUsable(c) ? c.topLines.slice(0, 3).map((l) => `<li>Carry the ${escapeHtml(l.line)} · ${Math.round(l.share * 100)}% of shoppers here</li>`).join('') : '<li>No cohort clears the gate here yet</li>';
+  $('dy-right').innerHTML = `
+    <div class="dy-h">Optimizely<span>real intent · your own receipts · ${escapeHtml(c?.grainLabel || '—')}${c?.sampleSize ? ` · N=${c.sampleSize}` : ' · representative'}</span></div>
+    <div class="dy-pin">👤 Shoppers like her, from here · first-party</div>
+    <ul>${lines}${cohortUsable(c) ? `<li>Modal price band: ${escapeHtml(c.modalBand)} (curation only)</li>` : ''}${c?.attachRate != null ? `<li>Attach a companion ${Math.round(c.attachRate * 100)}% of the time</li>` : ''}</ul>
+    <div class="dy-foot">Curates the storefront, never the price — aggregate, never the individual</div>`;
+  $('dyvs').classList.add('open');
+}
+$('dyvs-close').onclick = () => $('dyvs').classList.remove('open');
+$('btn-dyvs').onclick = openDy;
+$('bz-arrive').onclick = (e) => browse(e.currentTarget, [{ arrive: true }]);
 
 function connect() {
   if (S.ws) try { S.ws.close(); } catch {}
@@ -226,6 +367,7 @@ function fireSurface(s) {
   if (!s || S.usedSurfaces.has(s.id)) return;
   if (PD.open && !GATE.open) return;               // a band is open: read it, press OK — nothing sneaks past it
   if (needsGate()) { gateThen([{ kind: 'surface', s }], () => fireSurface(s)); return; }
+  handoffFromCohort();
   S.usedSurfaces.add(s.id);
   document.querySelector(`.surface[data-id="${s.id}"]`)?.classList.add('done');
 
@@ -335,6 +477,7 @@ function checkHandoff(snap) {
 function navTo(category) {
   if (PD.open && !GATE.open) return;
   if (needsGate()) { gateThen([{ kind: 'nav', category }], () => navTo(category)); return; }
+  handoffFromCohort();
   advanceClock();
   // A department click SHOWS the department. The shelf becomes that category —
   // her picks first, then its standard order — so "wanders to bags" has bags
@@ -479,6 +622,7 @@ function signal(action, record) {
   if ((action === 'row_click' || action === 'intent_start') && record && needsGate()) {
     gateThen([{ kind: 'item', item: record, action }], () => signal(action, record)); return;
   }
+  if (action === 'row_click' || action === 'intent_start') handoffFromCohort();
   advanceClock();
   S.sinceArrival += 1;
   const before = snapshot(S.reflex, NOW(), S.config);
@@ -637,7 +781,7 @@ function forecast(action, record, touchesOverride) {
   const res = apply(copy, { action, touches }, NOW(), S.config);
   const after = snapshot(res.state, NOW(), S.config);
 
-  const nextDecisions = compose({ affinity: after, state: res.state, items: S.items, rowItems: rowPool(), blocks: S.blocks,
+  const nextDecisions = compose({ affinity: after, state: res.state, items: S.items, rowItems: rowPool(), coldPicks: S.coldPicks || undefined, blocks: S.blocks,
     config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
     anchorId: action === 'intent_start' && record ? record.id : S.anchorId,
     decidingValue: decidingValueFor(S.vertical) });
@@ -664,7 +808,7 @@ function forecast(action, record, touchesOverride) {
            completion: nextDecisions.some((d) => d.strategy === 'completion') && !S.decisions.some((d) => d.strategy === 'completion') };
 }
 
-const VERB_PAST = { row_click: 'Clicked', nav_click: 'Browsed', intent_start: 'Adds to bag', arrival: 'Arrived from', declared: 'Told us', search: 'Searched' };
+const VERB_PAST = { row_click: 'Clicked', nav_click: 'Browsed', intent_start: 'Adds to bag', arrival: 'Arrived from', declared: 'Told us', search: 'Searched', prior: 'Prior (geo + census + receipts)' };
 
 /** Show the band for the act about to happen; resolves when the presenter closes it. */
 function predictThenProve(action, record, touchesOverride, label) {
@@ -709,6 +853,7 @@ function actOf(t) {
   if (typeof t === 'string') return t === '#hero-cta' ? { kind: 'cta' } : t === '#btn-skip' ? { kind: 'skip' } : null;
   if (typeof t === 'function') return null;
   if (t.predict) return actOf(t.predict);
+  if (t.arrive) return { kind: 'arrive' };
   if (t.surface != null) { const sf = SURFACES[S.vertical][t.surface]; return sf ? { kind: 'surface', s: sf } : null; }
   if (t.dept) return { kind: 'nav', category: t.dept };
   if (t.card) return { kind: 'card', cat: t.card.cat, n: t.card.n };
@@ -728,7 +873,12 @@ function forecastSequence(acts) {
   const before = snapshot(reflex, clock, cfg);
   const entered = [], exited = [], did = [], weights = [];
   const poolOf = () => (dept ? S.items.filter((i) => i.category === dept) : S.items);
-  const composeSim = (snap) => compose({ affinity: snap, state: reflex, items: S.items, rowItems: poolOf(), blocks: S.blocks,
+  const arriving = acts.some((a) => a.kind === 'arrive');
+  const handsOff = acts.some((a) => a.kind !== 'arrive' && a.kind !== 'skip');
+  const simPicks = handsOff ? undefined : (arriving && cohortUsable(S.cohort) ? coldPicksFor(S.cohort) : (S.coldPicks || undefined));
+  if (arriving && cohortUsable(S.cohort)) override = cohortHero(S.cohort);
+  else if (handsOff && override?.from === 'cohort') override = null;
+  const composeSim = (snap) => compose({ affinity: snap, state: reflex, items: S.items, rowItems: poolOf(), coldPicks: simPicks, blocks: S.blocks,
     config: cfg, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
     audiencePriority: S.priorityEngaged ? S.audiencePriority : undefined,
     anchorId: anchor, decidingValue: decidingValueFor(S.vertical) });
@@ -740,6 +890,15 @@ function forecastSequence(acts) {
   };
   for (const a of acts) {
     clock += 2000;
+    if (a.kind === 'arrive') {
+      const c = S.cohort;
+      did.push(`Arrives from ${place(c)} — nothing known but where she is (${c?.honesty?.geo === 'query-override' ? 'forced location' : 'real edge geo'})`);
+      if (c?.census) did.push(`Census ${c.census.source || 'ACS'}: median household income ${money(c.census.medianHhIncome)} → ${S.coldPrior ? `${S.coldPrior.value} band` : 'a price band'} (public, free)`);
+      if (cohortUsable(c)) did.push(`Your receipts: ${c.synthesized ? 'a representative cohort at' : `${c.sampleSize} shoppers in`} ${c.grainLabel} — ${c.topLines.slice(0, 3).map((l) => `${l.line} ${Math.round(l.share * 100)}%`).join(', ')}`);
+      const touches = coldTouches();
+      if (touches.length) step('prior', touches);
+      continue;
+    }
     if (a.kind === 'surface') {
       if (used.has(a.s.id)) continue; used.add(a.s.id);
       override = { ...a.s.hero, from: a.s.id };
@@ -805,7 +964,7 @@ function forecastSequence(acts) {
   const heroNowTitle = $('hero-title').textContent;
   const heroD = next.find((d) => d.slot === 'hero');
   const heroNextTitle = override ? override.title : ((heroD?.itemId && byId(heroD.itemId)?.name) || heroNowTitle);
-  const picksOf = (ds) => ds.filter((d) => d.slot === 'row' && (d.strategy === 'affinity' || d.strategy === 'completion')).map((d) => byId(d.itemId)?.name).filter(Boolean);
+  const picksOf = (ds) => ds.filter((d) => d.slot === 'row' && (d.strategy === 'affinity' || d.strategy === 'completion' || d.strategy === 'cohort')).map((d) => byId(d.itemId)?.name).filter(Boolean);
   const picksNow = picksOf(S.decisions), picksNext = picksOf(next);
   const orderNow = (S.layout?.order || []).filter((x) => x !== 'takeover'), orderNext = lay.order.filter((x) => x !== 'takeover');
   const lead = lay.sections.filter((x) => x.strategy !== 'locked' && x.strategy !== 'template').sort((a, b) => a.rank - b.rank)[0];
@@ -863,6 +1022,7 @@ async function sequenceBand(acts) {
     const subs = why.split(/;\s*/).flatMap((part) => part.split(/,\s*(?=[a-z])/)).map((x) => x.trim()).filter(Boolean).map(escapeHtml);
     will.push(willItem(`The page <b>rearranges</b> — ${pill(SECTION_NAME[f.lead?.section] || f.lead?.section || 'a different section')} now leads`, subs));
   }
+  if (acts.some((a) => a.kind === 'arrive')) will.push(willItem('Nothing about <b>her</b> yet — behaviour none', ['the neighbourhood priors sit in her profile and decay like everything else', 'her first engagement hands the page from the cohort to her']));
   if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
   await openPredictBand({
     mode: f.did.length === 1 ? 'before her next act' : `before her next ${f.did.length} acts`,
@@ -963,6 +1123,7 @@ async function browse(btn, targets) {   // targets are perform SPECS
       const el = typeof spec === 'function' ? spec() : typeof spec === 'string' ? document.querySelector(spec) : resolveTarget(spec);
       if (!el) continue;
       if (el.wait) { await sleep(el.wait); continue; }        // a beat may pause to let a retreat land
+      if (el.run) { el.run(); await sleep(1400); continue; }   // an act with no element to click (the arrival)
       await moveCursorTo(el);
       await sleep(700);                                        // between clicks — Coach's cadence
     }
@@ -1153,7 +1314,8 @@ let STRIP_UNTIL = 0;
 function strip(kind, html, ttl) {
   const el = $('strip');
   el.classList.toggle('out', kind === 'out');
-  $('strip-k').textContent = kind === 'out' ? 'Left an audience' : 'Entered an audience';
+  el.classList.toggle('cold', kind === 'cold');
+  $('strip-k').textContent = kind === 'out' ? 'Left an audience' : kind === 'cold' ? 'Welcome' : 'Entered an audience';
   $('strip-t').innerHTML = html;
   el.hidden = false;
   STRIP_UNTIL = NOW() + ttl;      // rides the demo clock — holds while you talk
@@ -1224,7 +1386,7 @@ function holdSteady(prev, next) {
 function recompose(first, opts = {}) {
   const snap = snapshot(S.reflex, NOW(), S.config);
   checkHandoff(snap);
-  let next = compose({ affinity: snap, state: S.reflex, items: S.items, rowItems: rowPool(), blocks: S.blocks,
+  let next = compose({ affinity: snap, state: S.reflex, items: S.items, rowItems: rowPool(), coldPicks: S.coldPicks || undefined, blocks: S.blocks,
                        config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
                        audiencePriority: S.priorityEngaged ? S.audiencePriority : undefined,
                        anchorId: S.anchorId, decidingValue: decidingValueFor(S.vertical) });
@@ -1612,7 +1774,7 @@ function showWhatChanged() {
 function highlightMovers(movers, holdMs, label = 'was') {
   applyHighlight($('row'));
   $('row').querySelectorAll('.card.changed').forEach((el) => el.classList.remove('changed'));
-  for (const { id, was, now, std, fresh } of movers) {
+  for (const { id, was, now, std, fresh, near } of movers) {
     const el = ROW.nodes.get(id); if (!el) continue;
     el.classList.add('changed');
     const d = el.querySelector('.delta');
@@ -1620,6 +1782,7 @@ function highlightMovers(movers, holdMs, label = 'was') {
     // The badge names where the pick came from; a pick already in place with
     // nothing to say carries the colour alone.
     const tag = label === 'std' ? (was == null ? 'not in std' : `std ${was}`)
+      : near ? 'near you'
       : was != null ? `was ${was}`
       : fresh ? 'new in'
       : std != null ? `std ${std}`
@@ -1661,12 +1824,12 @@ function paintRow(ds, prevIds, first, rowMoved = false, tick = false) {
     if (row.children[i] !== el) row.insertBefore(el, row.children[i] || null);
     el.querySelector('.rank').textContent = i + 1;
     const d = el.querySelector('.delta');
-    const picked = ds[i]?.strategy === 'affinity' || ds[i]?.strategy === 'completion';
+    const picked = ds[i]?.strategy === 'affinity' || ds[i]?.strategy === 'completion' || ds[i]?.strategy === 'cohort';
     if (tick || first) { d.hidden = true; return; }
     if (picked) {
       const was = rankBefore.get(it.id);
       const std = control.indexOf(it.id) + 1;
-      movers.push({ id: it.id, now: i + 1,
+      movers.push({ id: it.id, now: i + 1, near: ds[i]?.strategy === 'cohort',
                     was: (was && was !== i + 1) ? was : null,
                     std: (!was || was === i + 1) && std && std !== i + 1 ? std : null,
                     fresh: !was && prevIds.length > 0 });
@@ -1683,16 +1846,19 @@ function paintRow(ds, prevIds, first, rowMoved = false, tick = false) {
 
   const completing = ds.some((d) => d.strategy === 'completion');
   const anchor = completing && byId(ds.find((d) => d.anchorId)?.anchorId);
-  const claims = ds.some((d) => d.strategy === 'affinity');
+  const cohortLeads = ds.some((d) => d.strategy === 'cohort');
+  const claims = ds.some((d) => d.strategy === 'affinity') || cohortLeads;
   document.querySelector('.row-head').classList.toggle('quiet', !completing && !claims && ds.some((d) => d.strategy === 'fading'));
   $('row-title').textContent = completing
     ? (S.vertical === 'retail' ? 'Complete the look' : 'Complete your application')
+    : cohortLeads ? (S.vertical === 'retail' ? 'What shoppers near you carry' : 'What people near you choose')
     : (S.vertical === 'retail' ? 'Selected for you' : 'Suited to you');
   // The row is a promoted BLOCK over a standard shelf now, and the note says so:
   // membership earns the block, everything below it is what every shopper sees.
   const promoted = ds.filter((d) => d.strategy === 'affinity' || d.strategy === 'completion').length;
   $('row-note').textContent = completing
     ? `chosen to go with the ${anchor ? anchor.name : 'piece you chose'} — nothing from the same category`
+    : cohortLeads ? `what shoppers near her carry — ${S.cohort?.grainLabel || 'her area'}${S.cohort?.sampleSize ? ` · N=${S.cohort.sampleSize}` : ' · representative'} · first-party · curated, never priced`
     : claims ? `${S.dept ? `in ${S.dept} — ` : ''}picked for her — ${promoted} promoted, the rest in the standard order`
     : 'the standard order — the same for every shopper';
 }
@@ -2277,6 +2443,7 @@ function dirTick() {
 function resolveTarget(t) {
   if (typeof t === 'string') return document.querySelector(t);
   if (t.wait) return { wait: t.wait };
+  if (t.arrive) return { run: arrive };
   if (t.predict) { const inner = resolveTarget(t.predict); return inner ? { predict: true, el: inner } : null; }
   if (t.tab) { showTab(t.tab); return null; }
   if (t.surface != null) return document.querySelectorAll('#surfaces .surface')[t.surface] || null;

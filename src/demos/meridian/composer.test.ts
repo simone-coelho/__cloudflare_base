@@ -302,3 +302,31 @@ describe('audience priority is a merchandiser control (hero)', () => {
     expect(single.itemId).toBe(unlistedId);
   });
 });
+
+// ── The cold start: the neighbourhood cohort opens the first line ─────────────
+describe('cold start — the cohort opens the first line', () => {
+  it('with no audiences of her own, the cold picks are the first line, in order, as cohort strategy', () => {
+    const picks = ITEMS.slice(3, 6).map((i) => i.id);
+    const row = rowOf(composeWith({ affinity: affinity({}, []), coldPicks: picks }));
+    expect(idsOf(row).slice(0, 3)).toEqual(picks);
+    expect(row.slice(0, 3).every((d) => d.strategy === 'cohort')).toBe(true);
+    expect(row.slice(3).every((d) => d.strategy === 'standard')).toBe(true);
+    expectContiguous(row);
+  });
+  it('the moment she has an audience of her own, the cohort hands off', () => {
+    const picks = ITEMS.slice(3, 6).map((i) => i.id);
+    const key = `category_${String(ITEMS[0].category).toLowerCase()}_affinity`;
+    const row = rowOf(composeWith({
+      affinity: affinity({ category: { [ITEMS[0].category]: 0.7 } }, [key]), coldPicks: picks,
+    }));
+    expect(row.some((d) => d.strategy === 'cohort')).toBe(false);
+  });
+  it('cold picks never touch the hero, rail or blocks', () => {
+    const picks = ITEMS.slice(3, 6).map((i) => i.id);
+    const a = composeWith({ affinity: affinity({}, []) });
+    const b = composeWith({ affinity: affinity({}, []), coldPicks: picks });
+    expect(heroOf(b).itemId).toBe(heroOf(a).itemId);
+    expect(b.filter((d) => d.slot === 'block_a').map((d) => d.blockId)).toEqual(a.filter((d) => d.slot === 'block_a').map((d) => d.blockId));
+  });
+});
+
