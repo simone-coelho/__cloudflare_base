@@ -195,7 +195,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **They watch —** Bars move at different rates. Taste is slow; this session is fast.
 
-**You say —** Seven things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both. And the line she is in follows her last click, not her running total — step from Drover to Linden and Linden leads at once, while Drover trails until it decays out on its own.
+**You say —** Eight things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both. And the line she is in follows her last click, not her running total — step from Drover to Linden and Linden leads at once, while Drover trails until it decays out on its own.
 
 *Why 0:50:* Sets up the staircase in beat 21. Without it, the retreats later look arbitrary.
 
@@ -266,7 +266,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **They watch —** The row becomes "Complete the look" — nothing from the same category. A dimension read from the verb, not the item.
 
-**You say —** She stopped browsing and started deciding. That is a seventh dimension, and it is the only one not read off a product — it is read off what she did. So the page stops offering her more coats and starts completing the one she chose. It gained a section, not just different contents.
+**You say —** She stopped browsing and started deciding. That is an eighth dimension, and it is the only one not read off a product — it is read off what she did. So the page stops offering her more coats and starts completing the one she chose. It gained a section, not just different contents.
 
 *Why 0:55:* Two capabilities land together and the causal link needs saying out loud.
 
@@ -355,11 +355,11 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You do —** Switch the business.
 
-**They watch —** Seven bars stay in exactly their places and re-label. The four surfaces keep their KINDS — email, paid social, SMS, partner form — and re-vocabularise. Cold start recomputes from median home value at 80% LTV. The centre becomes unrecognisable.
+**They watch —** Eight bars stay in exactly their places and re-label. The four surfaces keep their KINDS — email, paid social, SMS, partner form — and re-vocabularise. Cold start recomputes from median home value at 80% LTV. The centre becomes unrecognisable.
 
 > ⚠️ **The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.**
 
-**You say —** I changed what we sell. Watch what did not change: seven bars, in the same seven places, relabelled. Category became product family, taste became life stage, journey stage became application stage. Same four kinds of surface on the left, speaking a different language. The centre you would not recognise — a bank does not merchandise, it makes offers and asks you to apply, so it renders as rates and cards and eligibility. One engine. Your front end paints it. You already know this customer, you just do not know him in this vocabulary yet.
+**You say —** I changed what we sell. Watch what did not change: eight bars, in the same eight places, relabelled. Category became product family, taste became life stage, colour became card tier, journey stage became application stage. Same four kinds of surface on the left, speaking a different language. The centre you would not recognise — a bank does not merchandise, it makes offers and asks you to apply, so it renders as rates and cards and eligibility. One engine. Your front end paints it. You already know this customer, you just do not know him in this vocabulary yet.
 
 *Why 1:35:* The act’s payoff. It needs the silence after it more than it needs the words in it.
 

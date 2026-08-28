@@ -57,6 +57,13 @@ export interface MeridianItem {
   subcategory: string;
   /** Product line — the family a piece belongs to (Calder's Tabby). Retail only; the narrow dimension. */
   line?: string;
+  /** The line plus its type noun ("Drover Field Jacket") — what the colourways are colourways OF.
+      Retail only, and absent on the fragrance singles (D8). */
+  family?: string;
+  /** Colourway — the hue dimension's retail source. Lowercase colour word; on every retail item (D8). */
+  colour?: string;
+  /** Card tier — the hue dimension's financial source. On the Card products only (D8). */
+  tier?: string;
   value_usd: number;
   world: DurableWorld;
   needs: MeridianNeed[];

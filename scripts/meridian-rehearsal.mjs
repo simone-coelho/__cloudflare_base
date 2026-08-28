@@ -20,15 +20,15 @@ await post('/action',{vertical:'retail',events:[{action:'prior',touches:[{dim:cs
 console.log('\n── BEAT 2-3  signal → threshold ─────────────────────');
 let r=await post('/action',{vertical:'retail',events:[{action:'row_click',itemId:'MRD-R010'}]});
 ok('one click moves a dimension', Object.keys(r.affinity.dims).length>0);
-for(let i=0;i<3;i++) r=await post('/action',{vertical:'retail',events:[{action:'view',touches:[{dim:'category',value:'Tools'}]}]});
-ok('category crossed θin', r.affinity.audiences.includes('category_tools_affinity'), `a=${r.affinity.dims.category.Tools.toFixed(3)}`);
+for(let i=0;i<3;i++) r=await post('/action',{vertical:'retail',events:[{action:'view',touches:[{dim:'category',value:'Outerwear'}]}]});
+ok('category crossed θin', r.affinity.audiences.includes('category_outerwear_affinity'), `a=${r.affinity.dims.category.Outerwear.toFixed(3)}`);
 ok('frame pushed on entry', frames.some(f=>f.changes.entered.length));
 ok('explain record carries thresholds', frames.some(f=>f.explain?.some(e=>e.thetaIn&&e.thetaOut)));
 ok('raw state shipped for adoption', Boolean(r.state?.dims), 'client can keep decaying');
 
 console.log('\n── BEAT 7  search ──────────────────────────────────');
-const s1=await fetch(`${API}/search`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vertical:'retail',query:'my garage project has been waiting'})}).then(x=>x.json());
-ok('routed inside the closed set', ['workshop'].includes(s1.scene?.id), `${s1.source} ${s1.ms}ms`);
+const s1=await fetch(`${API}/search`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vertical:'retail',query:'the weather turned cold this week'})}).then(x=>x.json());
+ok('routed inside the closed set', ['cold-snap'].includes(s1.scene?.id), `${s1.source} ${s1.ms}ms`);
 const scenes=await fetch(`${API}/scenes?vertical=retail`).then(x=>x.json());
 ok('scene is from the served set', scenes.scenes.some(x=>x.id===s1.scene.id), `${scenes.scenes.length} approved`);
 
@@ -44,7 +44,7 @@ ok('vector reset on swap', Object.keys(sw.affinity.dims).length===0);
 ok('registry is the financial one', sw.configVersion.includes('financial'), sw.configVersion);
 const fc=await fetch(`${API}/catalog?vertical=financial`).then(x=>x.json());
 const keys=fc.registry.dimensions.map(d=>d.key);
-ok('six bars, relabelled not reordered', keys.length===6 && keys[0]==='productFamily' && keys[3]==='lifeStage', keys.join(','));
+ok('eight bars, relabelled not reordered', keys.length===8 && keys[0]==='productFamily' && keys[3]==='lifeStage' && keys[4]==='tier', keys.join(','));
 let f=null;
 for(let i=0;i<3;i++) f=await post('/action',{vertical:'financial',events:[{action:'view',touches:[{dim:'productFamily',value:'Savings'}]}]});
 ok('financial audience minted', f.affinity.audiences.some(a=>a.startsWith('productfamily_')), f.affinity.audiences.join(','));

@@ -153,6 +153,7 @@
     "name": "Platinum Rewards Card",
     "category": "Card",
     "subcategory": "revolving",
+    "tier": "black",
     "value_usd": 12000,
     "world": "established",
     "needs": [
@@ -171,6 +172,7 @@
     "name": "Everyday Cashback Card",
     "category": "Card",
     "subcategory": "revolving",
+    "tier": "blue",
     "value_usd": 6000,
     "world": "building",
     "needs": [
@@ -189,6 +191,7 @@
     "name": "Secured Starter Card",
     "category": "Card",
     "subcategory": "revolving",
+    "tier": "silver",
     "value_usd": 1000,
     "world": "starting-out",
     "needs": [
@@ -207,6 +210,7 @@
     "name": "Voyager Travel Card",
     "category": "Card",
     "subcategory": "revolving",
+    "tier": "gold",
     "value_usd": 15000,
     "world": "established",
     "needs": [

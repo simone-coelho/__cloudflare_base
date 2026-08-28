@@ -28,8 +28,12 @@ const GLAPI = 'https://generativelanguage.googleapis.com/v1beta';
 const OUT = 'public/meridian/img';
 const MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
 
-const key = (readFileSync('.dev.vars', 'utf8').match(/GEMINI_API_KEY\s*=\s*"?([^"'\s]+)/) || [])[1];
-if (!key) { console.error('No GEMINI_API_KEY in .dev.vars'); process.exit(1); }
+// A worktree has no .dev.vars of its own, so the environment is a first-class
+// second source, not a hack: `GEMINI_API_KEY=… node …/build-images.mjs`.
+const key = (existsSync('.dev.vars')
+  ? (readFileSync('.dev.vars', 'utf8').match(/GEMINI_API_KEY\s*=\s*"?([^"'\s]+)/) || [])[1]
+  : undefined) || process.env.GEMINI_API_KEY;
+if (!key) { console.error('No GEMINI_API_KEY in .dev.vars or the environment'); process.exit(1); }
 
 const args = process.argv.slice(2);
 const only = (args.find((a) => a.startsWith('--only=')) || '').replace('--only=', '').split(',').filter(Boolean);
@@ -63,12 +67,39 @@ const WORLD_STYLING = {
  */
 const PAIRED = /\b(earrings|cufflinks|studs|hoops)\b/i;
 
+/** 'Scarves' → 'scarve' was the old naive singular; everything else survives a trimmed s. */
+const NOUN_OF = { Scarves: 'scarf' };
+
+/**
+ * The subject is the FAMILY plus its colourway (D8) — "drover field jacket in
+ * olive" — so the type noun the packshot depends on is preserved verbatim and
+ * the colour is stated where the model actually reads it. The fragrance
+ * singles have no family; their name is the subject and their colour describes
+ * the juice in the bottle.
+ */
 function subjectOf(item) {
-  const noun = item.category.toLowerCase().replace(/s$/, '');
-  if (PAIRED.test(item.name)) {
-    return `A matched PAIR of ${item.name.toLowerCase()}, both shown side by side — ${item.subcategory} ${noun}`;
+  const noun = NOUN_OF[item.category] || item.category.toLowerCase().replace(/s$/, '');
+  const base = (item.family || item.name).toLowerCase();
+  const colour = item.colour ? ` in ${item.colour}` : '';
+  if (PAIRED.test(base)) {
+    return `A matched PAIR of ${base}${colour}, both shown side by side — ${item.subcategory} ${noun}`;
   }
-  return `A single ${item.name.toLowerCase()} — a ${item.subcategory} ${noun}`;
+  if (item.category === 'Fragrance') {
+    return `A single ${base} — a ${item.subcategory} ${noun} bottle, the juice a deep ${item.colour}`;
+  }
+  // Heritage styling's "aged brass hardware" grew a zip onto a fisherman
+  // sweater and buttons onto its charcoal colourway. A sweater is a pullover;
+  // the subject says so explicitly, because colourways of one family must read
+  // as the SAME garment three times.
+  if (item.category === 'Knitwear') {
+    return `A single ${base}${colour} — a ${item.subcategory} crew-neck pullover with no zip, no buttons and no hardware of any kind`;
+  }
+  // "Aviator" flips between optical and sun at random; a colourway family has
+  // to be the same product three times, so the subject commits to sunglasses.
+  if (item.category === 'Eyewear') {
+    return `A single ${base}${colour} — ${item.subcategory} aviator sunglasses with dark tinted lenses, shown front-on`;
+  }
+  return `A single ${base}${colour} — a ${item.subcategory} ${noun}`;
 }
 
 function promptFor(item) {

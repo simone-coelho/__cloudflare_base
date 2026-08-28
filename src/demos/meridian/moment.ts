@@ -55,8 +55,9 @@ export function signalsFor(vertical: Vertical): MomentSignal[] {
   const pickScene = (id: string) => (scenes.find((s) => s.id === id) ?? scenes[0]).id;
   return vertical === 'retail'
     ? [
-        { source: 'TikTok', subject: 'waxed field jackets', itemId: items.find((i) => i.name.includes('Waxed'))?.id ?? items[0].id, sceneId: pickScene('cold-snap') },
-        { source: 'TikTok', subject: 'silk scarves worn as tops', itemId: items.find((i) => i.name.includes('Silk Twill Square'))?.id ?? items[0].id, sceneId: pickScene('investment-piece') },
+        // .find takes the family's FIRST colourway — the lead colour of each family.
+        { source: 'TikTok', subject: 'waxed field jackets', itemId: items.find((i) => i.name.includes('Field Jacket'))?.id ?? items[0].id, sceneId: pickScene('cold-snap') },
+        { source: 'TikTok', subject: 'silk scarves worn as tops', itemId: items.find((i) => i.name.includes('Silk Square'))?.id ?? items[0].id, sceneId: pickScene('investment-piece') },
         { source: 'Instagram', subject: 'signet rings', itemId: items.find((i) => i.name.includes('Signet'))?.id ?? items[0].id, sceneId: pickScene('graduation') },
       ]
     : [

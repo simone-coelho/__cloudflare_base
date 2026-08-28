@@ -84,8 +84,8 @@ export const RETAIL_SCENES: Scene[] = [
     headline: 'The weather turned',
     subhead: 'Wool, waxed cotton, and things that outlive a season.',
     aliases: ['cold', 'winter', 'coat', 'warm', 'snow', 'freezing', 'jacket', 'layers'],
-    // Drover is the heritage wool-and-waxed line — the coat, the field jacket,
-    // the muffler — which is what "the weather turned" means in this catalogue.
+    // Drover is the heritage waxed-canvas line — the field jacket, in olive,
+    // navy and tan — which is what "the weather turned" means in this catalogue.
     touches: [{ dim: 'category', value: 'Outerwear' }, { dim: 'line', value: 'Drover' },
               { dim: 'styleWorld', value: 'heritage' }],
     art: '/meridian/scenes/cold-snap.svg',
@@ -97,9 +97,9 @@ export const RETAIL_SCENES: Scene[] = [
     headline: 'A weekend away',
     subhead: 'Carry less, and carry it better.',
     aliases: ['weekend', 'travel', 'trip', 'flight', 'packing', 'getaway', 'holiday', 'vacation'],
-    // Category alone put an EVENING CLUTCH in a weekend bag row. Holloway is the
-    // canvas travel line — the weekender, the packable tote — which is what
-    // actually distinguishes a travel bag from a going-out one.
+    // Category alone once put an evening bag in a weekend bag row. Holloway is
+    // the canvas travel line — the weekender, in green, navy and tan — which is
+    // what actually distinguishes a travel bag from a going-out one.
     touches: [{ dim: 'occasion', value: 'travel' }, { dim: 'category', value: 'Bags' },
               { dim: 'line', value: 'Holloway' }],
     art: '/meridian/scenes/weekend-away.svg',

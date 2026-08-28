@@ -2,9 +2,19 @@
 //
 // RECENCY LEADS, ACCUMULATION GATES (decision D2, an addition to the spec).
 // The scenario the room will see: three clicks on Drover pieces, then one on a
-// Linden bag. Linden must lead the page at once, Drover must still rank —
-// weakly — and the Drover audience must persist until it decays out on its own,
-// because membership is core's threshold arithmetic and this rule never touches it.
+// Linden bag. Linden leads the line dimension at once, Drover must still rank,
+// and the Drover audience must persist until it decays out on its own, because
+// membership is core's threshold arithmetic and this rule never touches it.
+//
+// D8 MOVED WHERE THE FLIP IS VISIBLE. Under the families catalogue the three
+// Drover clicks are three colourways of ONE family, stacking the same category
+// and occasions three deep; with the D4 weights (every browsing verb 1.0) a
+// single Linden click can no longer outscore that stack on the UNFILTERED row
+// or rail while Drover is still a member — need ω and broad ω outweigh the
+// narrow ω the rule discounts. What the rule guarantees on the open page is the
+// demotion and the receipt; the outright flip the room watches happens on the
+// department shelf she wandered to, which the director filters before the
+// Linden click lands. The assertions below pin exactly that.
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -12,7 +22,7 @@ import {
 } from '@/reflex/core';
 import { configFor, SHAPE_OF_KEY, TRAILING, LEAD_BY } from './reflexConfig';
 import { itemsFor, blocksFor } from './catalog';
-import { compose, type ComposeInput } from './composer';
+import { compose, scoreOne, SLOT_STRATEGIES, type ComposeInput } from './composer';
 import { leadValue, leadWeights, leadSentence } from './lead';
 import type { MeridianItem } from './types';
 
@@ -43,7 +53,7 @@ function session() {
   let state = emptyState(cfg);
   drover.slice(0, 3).forEach((it, i) => { state = click(state, it, T0 + i * 5 * SECOND).state; });
   const at = T0 + 15 * SECOND;
-  state = click(state, byName('Linden Structured Tote'), at).state;
+  state = click(state, byName('Linden Structured Tote · Tan'), at).state;
   return { state, at };
 }
 
@@ -54,7 +64,7 @@ const composeAt = (state: ReflexState, at: number, extra: Partial<ComposeInput> 
   });
 
 /** Hero and rail pinned on other lines, so the row is where Drover and Linden meet. */
-const pins = () => ({ hero: byName('Solstice Smoked Vetiver').id, rail: byName('Harlow Acetate Aviator').id });
+const pins = () => ({ hero: byName('Solstice Smoked Vetiver').id, rail: byName('Harlow Aviator · Tortoise').id });
 
 describe('recency leads, accumulation gates (D2)', () => {
   it('flags retail line — and only line — as recency-led, trailing at ×0.25', () => {
@@ -91,25 +101,49 @@ describe('recency leads, accumulation gates (D2)', () => {
     expect(leadWeights(emptyState(cfg), lineSpec)).toBeNull();
   });
 
-  it('ranks a Linden item above the Drover items for the row — and would not without the rule', () => {
+  it('demotes the trailing family on the row, and the shelf she wandered to leads Linden', () => {
     const { state, at } = session();
-    const row = composeAt(state, at, { pins: pins() }).filter((d) => d.slot === 'row');
-    const linesInRow = row.map((d) => lineOf(d.itemId));
-    expect(linesInRow[0]).toBe('Linden');
-    const firstDrover = linesInRow.indexOf('Drover');
-    expect(firstDrover).toBeGreaterThan(0);                  // still ranks — weakly
-    expect(linesInRow.indexOf('Linden')).toBeLessThan(firstDrover);
+    const input: ComposeInput = {
+      affinity: snapshot(state, at, cfg), items, blocks, config: cfg,
+      shapeOfKey: SHAPE_OF_KEY, rowSize: 10, state,
+    };
+    const jacket = items.find((i) => i.line === 'Drover')!;
+    const tote = byName('Linden Structured Tote · Tan');
+    const rec = (i: MeridianItem) => i as unknown as Record<string, unknown>;
 
-    // The control: same state, no lead information — the documented, decay-only algorithm.
-    const control = composeAt(state, at, { pins: pins(), state: undefined })
+    // The rule demotes the trailing family's pieces and leaves the lead's alone,
+    // so the gap between them narrows against the documented decay-only control.
+    const jWith = scoreOne(rec(jacket), input, SLOT_STRATEGIES.row).score;
+    const jWithout = scoreOne(rec(jacket), { ...input, state: undefined }, SLOT_STRATEGIES.row).score;
+    const tWith = scoreOne(rec(tote), input, SLOT_STRATEGIES.row).score;
+    const tWithout = scoreOne(rec(tote), { ...input, state: undefined }, SLOT_STRATEGIES.row).score;
+    expect(jWith).toBeLessThan(jWithout);
+    expect(tWith).toBeCloseTo(tWithout, 6);
+    expect(jWith - tWith).toBeLessThan(jWithout - tWithout);
+
+    // Both families rank on the open row: Drover on its stacked accumulation
+    // (three colourways of one family — that is D8 working as intended), Linden
+    // lifted by the rule.
+    const linesInRow = composeAt(state, at, { pins: pins() })
       .filter((d) => d.slot === 'row').map((d) => lineOf(d.itemId));
-    expect(control[0]).toBe('Drover');
+    expect(linesInRow).toContain('Drover');
+    expect(linesInRow).toContain('Linden');
+
+    // The shelf the room is actually looking at — the director pressed the Bags
+    // department before this click — leads Linden at once.
+    const shelf = composeAt(state, at, { items: items.filter((i) => i.category === 'Bags'), pins: pins() })
+      .filter((d) => d.slot === 'row').map((d) => lineOf(d.itemId));
+    expect(shelf[0]).toBe('Linden');
   });
 
-  it('answers the last thing she did on the rail while the hero keeps to the slow axes', () => {
+  it('carries the recency lead in the rail receipt while the hero keeps to the slow axes', () => {
     const { state, at } = session();
     const ds = composeAt(state, at);
-    expect(lineOf(ds.find((d) => d.slot === 'rail')?.itemId)).toBe('Linden');
+    // Whichever piece the rail ranks, its line driver is governed by the lead:
+    // Linden marked as leading by recency, or the ranked line marked trailing it.
+    const railLine = ds.find((d) => d.slot === 'rail')!.explain.drivers.find((x) => x.dim === 'line')!;
+    if (railLine.value === 'Linden') expect(railLine.lead).toBe('recency');
+    else expect(railLine).toMatchObject({ lead: 'trailing', ledBy: 'Linden' });
     expect(lineOf(ds.find((d) => d.slot === 'hero')?.itemId)).toBe('Drover');
   });
 
