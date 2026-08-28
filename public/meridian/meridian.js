@@ -2693,6 +2693,7 @@ async function goBeat(i) {
   // Stage management: a modal left open by the previous beat (Ask, the
   // Concierge, receipts, radar) closes when the next beat starts.
   document.querySelectorAll('.moment.open').forEach((m) => m.classList.remove('open'));
+  $('xcard').hidden = true;                        // the experiment drawer too — a beat that needs one opens its own
   try {
     DIR.i = Math.max(0, Math.min(BEATS.length - 1, i));
     sessionStorage.setItem('mrd_dir', String(DIR.i));
