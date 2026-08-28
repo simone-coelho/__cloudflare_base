@@ -83,6 +83,18 @@ async function capture(rootEl) {
     backgroundColor: getComputedStyle(rootEl).backgroundColor,
     scale: Math.min(2, window.devicePixelRatio || 1),
     width: w, height: h,
+    // html2canvas RESTARTS every CSS animation inside its clone, so anything
+    // that animates in from opacity 0 is captured at 0 — the hero came out
+    // blank in the Now frame after an email. Freeze the clone at its final,
+    // settled state instead.
+    onclone: (doc) => {
+      const st = doc.createElement('style');
+      // Box-shadows too: html2canvas paints a large blurred shadow as a solid
+      // fill over the element's interior (the hero came out as a red block).
+      // Borders still paint, so highlighted cards keep their coloured edge.
+      st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}';
+      doc.head.appendChild(st);
+    },
   });
   return { url: canvas.toDataURL('image/png'), at: Date.now(), scrollTop, w, h };
 }

@@ -16,7 +16,10 @@ export const SURFACES = {
       touches: [{ dim: 'category', value: 'Outerwear' }, { dim: 'styleWorld', value: 'heritage' }],
       hero: { kicker: 'Because you opened The Autumn Edit',
               title: 'The field jacket we make every year',
-              body: 'Waxed cotton that earns its keep, and wool that outlives the season.' },
+              body: 'Waxed cotton that earns its keep, and wool that outlives the season.',
+              // The creative in the email showed THIS colourway, so the hero shows it
+              // too — a campaign lands the SKU it featured, not the engine's default.
+              item: 'MRD-R003' },
     },
     {
       id: 'ad-bags', kind: 'ad', from: 'Paid social · TikTok',

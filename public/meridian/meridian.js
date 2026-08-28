@@ -21,6 +21,30 @@ import {
 const API = '/meridian/api';
 const $ = (id) => document.getElementById(id);
 
+/**
+ * THE STEP COLOUR. Every step that highlights something — the hero changing,
+ * cards moving, "show what changed" — advances one colour, so two consecutive
+ * changes never wear the same one and the room can see that things moved
+ * AGAIN. Four colours, deliberately: enough to differ, few enough to read.
+ */
+const HL_PALETTE = [
+  { name: 'red',    hl: '#D6472F', ink: '#FFFFFF' },
+  { name: 'green',  hl: '#14C46A', ink: '#0B2E1B' },
+  { name: 'yellow', hl: '#F2C400', ink: '#2A2200' },
+  { name: 'blue',   hl: '#1E6FFF', ink: '#FFFFFF' },
+];
+const HL = { i: -1, cur: HL_PALETTE[1] };
+function nextHighlight() {
+  HL.i = (HL.i + 1) % HL_PALETTE.length;
+  HL.cur = HL_PALETTE[HL.i];
+  return HL.cur;
+}
+function applyHighlight(el, c = HL.cur) {
+  el.style.setProperty('--hl', c.hl);
+  el.style.setProperty('--hl-ink', c.ink);
+  el.dataset.hl = c.name;
+}
+
 /** Engine time. Everything the reflex engine sees goes through this. */
 const NOW = () => S.clock;
 /** An act happened: carry forward a LITTLE real time (never a conversation). */
@@ -1081,6 +1105,9 @@ function paint(prev, next, first, rowMoved = false, tick = false) {
   const nextRow = next.filter((d) => d.slot === 'row').map((d) => d.itemId);
   const prevRow = prev.filter((d) => d.slot === 'row').map((d) => d.itemId);
   const rowChanged = JSON.stringify(prevRow) !== JSON.stringify(nextRow);
+  // A step that changes something on the page gets the next colour — once per
+  // step, shared by the hero and the row so the whole step reads as one colour.
+  if (!first && !tick && (heroChanged || rowChanged || rowMoved)) nextHighlight();
 
   if (first || heroChanged) swap($('hero'), () => paintHero(pick(next, 'hero')), first);
   if (first || rowChanged || rowMoved) paintRow(next.filter((d) => d.slot === 'row'), prevRow, first, rowMoved, tick);
@@ -1105,13 +1132,16 @@ function swap(el, render, instant) {
     // The hero keeps its red drop shadow until it changes again; the blocks
     // get the quieter one-second glow.
     const fx = el.id === 'hero' ? 'landed' : 'pulse';
+    applyHighlight(el);
     el.classList.remove(fx); void el.offsetWidth; el.classList.add(fx);
   }, 300);
 }
 
 function paintHero(d) {
   const o = S.heroOverride;
-  const it = d?.itemId && byId(d.itemId);
+  // A campaign override may name the SKU its creative featured; otherwise the
+  // engine's pick.
+  const it = (o?.item && byId(o.item)) || (d?.itemId && byId(d.itemId));
   const cold = !o && (!d || d.strategy === 'cold-start' || d.strategy === 'fallback');
   $('hero').classList.toggle('quiet', !o && d?.strategy === 'fading');
   $('hero-kicker').textContent = o ? o.kicker
@@ -1331,13 +1361,14 @@ function showWhatChanged() {
       'Personalization has no claim on the row right now, so no card is out of its control position.');
     return;
   }
+  nextHighlight();
   highlightMovers(promoted, 10000, 'std');
   consequence('What changed', `${promoted.length} card${promoted.length === 1 ? '' : 's'} sit above where the standard order puts them`,
     promoted.map((m) => `${byId(m.id)?.name ?? m.id}: ${m.was ? `${m.was} → ${m.now}` : `in at ${m.now}`}`).join(' · '));
 }
 
 function highlightMovers(movers, holdMs, label = 'was') {
-  clearTimeout(ROW.holdTimer);
+  applyHighlight($('row'));
   $('row').querySelectorAll('.card.changed').forEach((el) => el.classList.remove('changed'));
   for (const { id, was, now } of movers) {
     const el = ROW.nodes.get(id); if (!el) continue;

@@ -31,6 +31,9 @@
      entered, so it means one thing everywhere. Swap for the brand green when
      supplied — nothing else depends on the exact value. */
   --changed:#14C46A; --changed-ink:#0B2E1B;
+  /* THE STEP COLOUR: rotates red → green → yellow → blue on every step, set by JS,
+     so consecutive changes never wear the same colour. */
+  --hl:#14C46A; --hl-ink:#0B2E1B;
   --sans:'Inter',ui-sans-serif,-apple-system,'Segoe UI',system-ui,sans-serif;
   /* the display face, one source */
   --serif:'Playfair Display',ui-serif,Georgia,serif;
@@ -102,7 +105,7 @@ body{
   background:var(--accent);color:#fff;opacity:0;transition:opacity .16s;pointer-events:none}
 .zone:hover::after{opacity:.92}
 .zone.pulse{animation:glow var(--t-glow) ease-out}
-@keyframes glow{0%{box-shadow:0 0 0 0 rgba(168,118,63,.5)}100%{box-shadow:0 0 0 18px rgba(168,118,63,0)}}
+@keyframes glow{0%{box-shadow:0 0 0 0 var(--hl)}100%{box-shadow:0 0 0 18px transparent}}
 
 /* HERO — the star. Large, simple, dominant. */
 .hero{margin:18px 0 0;min-height:0;padding:26px 34px;border-radius:10px;position:relative;overflow:hidden;
@@ -146,7 +149,7 @@ body{
 }
 .card .rank{position:absolute;top:10px;left:10px;z-index:2;width:26px;height:26px;border-radius:50%;
   background:var(--ink);color:#fff;font:700 13px/26px ui-monospace,monospace;text-align:center}
-.card .delta{position:absolute;top:10px;right:10px;z-index:2;background:var(--changed);color:var(--changed-ink);
+.card .delta{position:absolute;top:10px;right:10px;z-index:2;background:var(--hl);color:var(--hl-ink);
   font:700 11px/1 ui-monospace,monospace;padding:5px 7px;border-radius:3px;letter-spacing:.04em}
 .card .ph{aspect-ratio:1/1;background:#fff;position:relative}
 .card .ph svg{width:100%;height:100%;display:block}
@@ -668,8 +671,8 @@ body.has-director .page{padding-bottom:250px}
 /* ── What changed ──────────────────────────────────────────────────────────
    Every resting card is quiet, so one colour can be loud. A mover wears it on
    all four sides, thick, with the position it landed on and where it came from. */
-.card.changed{border-color:var(--changed);box-shadow:0 0 0 3px var(--changed), 0 10px 26px -12px rgba(20,196,106,.55)}
-.card.changed .rank{background:var(--changed);color:var(--changed-ink)}
+.card.changed{border-color:var(--hl);box-shadow:0 0 0 3px var(--hl), 0 10px 26px -12px var(--hl)}
+.card.changed .rank{background:var(--hl);color:var(--hl-ink)}
 .card .delta{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 9px 4px;border-radius:4px;
   font:700 15px/1 ui-monospace,monospace;box-shadow:0 2px 8px -3px rgba(0,0,0,.35)}
 .card .delta small{font:600 9.5px/1 ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
@@ -936,9 +939,10 @@ body.has-director .world,body.has-director .engine{padding-bottom:var(--dir-h, 2
 .mo-chips button:hover{border-color:var(--accent);color:var(--accent)}
 .moment-box{border-top:6px solid var(--accent)}
 
-/* ── HERO CHANGED — exactly what was asked for: it fades in, and it carries a
-     drop shadow in the same red as its top edging so it pops off the page.
-     The shadow HOLDS until the hero changes again. Nothing else. */
-.hero.landed{animation:heroIn .55s var(--ease) both;
-  box-shadow:0 22px 44px -4px var(--accent), 0 8px 18px -2px var(--accent) !important}
-@keyframes heroIn{0%{opacity:0;transform:translateY(14px)}100%{opacity:1;transform:none}}
+/* ── HERO CHANGED — it fades in (the swap's transition) and carries a drop shadow
+     in the SAME colour as its edging; both are the step colour, which rotates on
+     every change so the room sees each change as a different colour. The shadow
+     holds until the next change. No keyframes here: html2canvas restarts
+     animations in its clone, which blanked the hero in Compare's Now frame. */
+.hero.landed{border-top-color:var(--hl);
+  box-shadow:0 22px 44px -4px var(--hl), 0 8px 18px -2px var(--hl)}
