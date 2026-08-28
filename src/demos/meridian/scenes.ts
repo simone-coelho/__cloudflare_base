@@ -30,6 +30,17 @@ export interface Scene {
   touches: Touch[];
   /** A brand-approved still. Nothing is generated at request time. */
   art: string;
+  /**
+   * The editorial plate: a 16:9 photograph with the scene's lead product
+   * composited in, generated ONCE at design time by build-scenes.mjs, reviewed,
+   * and committed. Never generated on stage — same rule as the packshots.
+   */
+  image?: string;
+  /**
+   * Which product FAMILY the plate stars, by name — build-scenes.mjs selects
+   * the actual item by substring so a catalogue re-id cannot orphan the plate.
+   */
+  leadFamily?: string;
 }
 
 export const RETAIL_SCENES: Scene[] = [
@@ -44,6 +55,8 @@ export const RETAIL_SCENES: Scene[] = [
     touches: [{ dim: 'occasion', value: 'evening' }, { dim: 'occasion', value: 'gift' },
               { dim: 'priceBand', value: 'premium' }],
     art: '/meridian/scenes/wedding.svg',
+    image: '/meridian/scenes/wedding.jpg',
+    leadFamily: 'Aster',
   },
   {
     id: 'black-tie',
@@ -53,6 +66,8 @@ export const RETAIL_SCENES: Scene[] = [
     touches: [{ dim: 'occasion', value: 'evening' }, { dim: 'category', value: 'Jewellery' },
               { dim: 'styleWorld', value: 'statement' }],
     art: '/meridian/scenes/black-tie.svg',
+    image: '/meridian/scenes/black-tie.jpg',
+    leadFamily: 'Halden',
   },
   {
     id: 'new-job',
@@ -61,6 +76,8 @@ export const RETAIL_SCENES: Scene[] = [
     aliases: ['new job', 'work', 'office', 'interview', 'promotion', 'first day', 'commute'],
     touches: [{ dim: 'occasion', value: 'work' }, { dim: 'styleWorld', value: 'modern' }],
     art: '/meridian/scenes/new-job.svg',
+    image: '/meridian/scenes/new-job.jpg',
+    leadFamily: 'Linden',
   },
   {
     id: 'cold-snap',
@@ -72,6 +89,8 @@ export const RETAIL_SCENES: Scene[] = [
     touches: [{ dim: 'category', value: 'Outerwear' }, { dim: 'line', value: 'Drover' },
               { dim: 'styleWorld', value: 'heritage' }],
     art: '/meridian/scenes/cold-snap.svg',
+    image: '/meridian/scenes/cold-snap.jpg',
+    leadFamily: 'Fenwick',
   },
   {
     id: 'weekend-away',
@@ -84,6 +103,8 @@ export const RETAIL_SCENES: Scene[] = [
     touches: [{ dim: 'occasion', value: 'travel' }, { dim: 'category', value: 'Bags' },
               { dim: 'line', value: 'Holloway' }],
     art: '/meridian/scenes/weekend-away.svg',
+    image: '/meridian/scenes/weekend-away.jpg',
+    leadFamily: 'Holloway',
   },
   {
     id: 'hard-to-buy-for',
@@ -94,6 +115,8 @@ export const RETAIL_SCENES: Scene[] = [
     // category — the visitor's own affinity breaks the tie.
     touches: [{ dim: 'occasion', value: 'gift' }],
     art: '/meridian/scenes/hard-to-buy-for.svg',
+    image: '/meridian/scenes/hard-to-buy-for.jpg',
+    leadFamily: 'Solstice',
   },
   {
     id: 'graduation',
@@ -102,6 +125,8 @@ export const RETAIL_SCENES: Scene[] = [
     aliases: ['graduation', 'graduate', 'grad', 'diploma', 'commencement', 'milestone'],
     touches: [{ dim: 'occasion', value: 'gift' }, { dim: 'category', value: 'Jewellery' }],
     art: '/meridian/scenes/graduation.svg',
+    image: '/meridian/scenes/graduation.jpg',
+    leadFamily: 'Halden',
   },
   {
     id: 'investment-piece',
@@ -113,6 +138,10 @@ export const RETAIL_SCENES: Scene[] = [
     touches: [{ dim: 'priceBand', value: 'premium' }, { dim: 'styleWorld', value: 'heritage' },
               { dim: 'line', value: 'Ridgeline' }],
     art: '/meridian/scenes/investment-piece.svg',
+    image: '/meridian/scenes/investment-piece.jpg',
+    // The scene's line touch stays Ridgeline (the buy-once boot); the PLATE
+    // stars the Drover field jacket per the approved lead-product list.
+    leadFamily: 'Drover',
   },
 ];
 
