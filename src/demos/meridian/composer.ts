@@ -17,10 +17,14 @@
 // same code ranks 37 items or an entire catalog at the same cost.
 //
 // PRECEDENCE IS DECLARED, NOT IMPLICIT: eligibility gates run first, pins
-// outrank the engine, and weighted ranking operates only on what is left.
+// outrank the engine, and weighted ranking operates only on what is left. In
+// the row, ranking is further gated by MEMBERSHIP — "memberships gate, scores
+// rank" — so only items belonging to an audience the visitor has entered are
+// promoted; the rest hold the catalogue's own order.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { ReflexConfig, ReflexState } from '@/reflex/core';
+import { extractTouches, audienceKey, slugValue } from '@/reflex/core';
 import { leadWeights } from './lead';
 import type {
   MeridianItem, MeridianBlock, MeridianSlot, MeridianDecision, MeridianExplain,
@@ -69,6 +73,14 @@ export interface ComposeInput {
   shapeOfKey: Readonly<Record<string, string>>;
   /** Merchandiser authority. Outranks the engine and survives regeneration. */
   pins?: Partial<Record<MeridianSlot, string>>;
+  /**
+   * Merchandiser authority of a second kind: ordered audience keys, highest
+   * first. When the visitor is in two or more of these at once, the HERO is
+   * chosen from the candidates matching the highest-priority entered audience
+   * that any eligible candidate matches — score order among those. Absent, or
+   * with fewer than two of its audiences entered, nothing changes.
+   */
+  audiencePriority?: string[];
   rowSize?: number;
   /** The piece the visitor committed to. Only meaningful once stage says deciding. */
   anchorId?: string;
@@ -180,6 +192,41 @@ export function compose(input: ComposeInput): MeridianDecision[] {
   const usedItems = new Set<string>();
   const usedBlocks = new Set<string>();
 
+  // ── membership: the gate promotion has to pass ───────────────────────────
+  // "Memberships gate, scores rank" — the Tapestry rule, now enforced where it
+  // was being skipped. An item MATCHES an entered audience when one of its own
+  // touches maps, via audienceKey, to an audience the visitor has actually
+  // entered (θ_in crossed, hysteresis holding). Stage audiences are excluded on
+  // both sides: journey stage is page structure, not merchandise, and no shelf
+  // position should ever be explained by "you are deciding".
+  const stagePrefixes = Object.entries(input.shapeOfKey)
+    .filter(([, shape]) => shape === 'stage')
+    .map(([key]) => `${slugValue(key)}_`);
+  const entered = new Set(
+    input.affinity.audiences.filter((k) => !stagePrefixes.some((p) => k.startsWith(p))),
+  );
+  const matchedCache = new Map<string, string[]>();
+  /** The entered (non-stage) audiences this record belongs to, in touch order. */
+  const matchedOf = (r: { id: string }): string[] => {
+    const hit = matchedCache.get(r.id);
+    if (hit) return hit;
+    const matched: string[] = [];
+    if (entered.size > 0) {
+      for (const t of extractTouches(r as unknown as Record<string, unknown>, config)) {
+        if (input.shapeOfKey[t.dim] === 'stage') continue;
+        const key = audienceKey(t.dim, t.value);
+        if (entered.has(key) && !matched.includes(key)) matched.push(key);
+      }
+    }
+    matchedCache.set(r.id, matched);
+    return matched;
+  };
+  // Standard order = the catalogue's own order. Identical for every visitor,
+  // never re-sorted by score — the shelf everyone else sees.
+  const catIndex = new Map(items.map((it, i) => [it.id, i] as const));
+  const standardOrder = (a: { id: string }, b: { id: string }) =>
+    (catIndex.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (catIndex.get(b.id) ?? Number.MAX_SAFE_INTEGER);
+
   const rank = <T extends { id: string }>(
     pool: readonly T[],
     slot: MeridianSlot,
@@ -231,7 +278,30 @@ export function compose(input: ComposeInput): MeridianDecision[] {
       continue;
     }
     const { scored, gated, refused } = rank(items, slot, usedItems);
-    const top = scored[0];
+    let top = scored[0];
+    let wonBy: MeridianExplain['wonBy'];
+    // AUDIENCE PRIORITY IS A MERCHANDISER CONTROL. When the visitor is in two
+    // or more of the listed audiences at once, the hero stops being a pure
+    // arithmetic contest: it must come from the highest-priority entered
+    // audience that any eligible candidate matches — score order among those.
+    // The receipt names the audience that won and what it won over.
+    if (slot === 'hero' && input.audiencePriority && input.audiencePriority.length > 0) {
+      const inPriority = input.audiencePriority.filter((a) => input.affinity.audiences.includes(a));
+      if (inPriority.length >= 2) {
+        for (const audience of inPriority) {
+          const winner = scored.find((s) => matchedOf(s.r).includes(audience));
+          if (winner) {
+            top = winner;
+            wonBy = {
+              audience,
+              priority: input.audiencePriority.indexOf(audience),
+              over: inPriority.filter((a) => a !== audience),
+            };
+            break;
+          }
+        }
+      }
+    }
     // Only a slot the page RENDERS may consume an item. The rail is decided for
     // the receipt but has no element, and letting it reserve an item starved the
     // row of a piece nobody could see — the Drover jacket vanished from the shelf
@@ -243,11 +313,12 @@ export function compose(input: ComposeInput): MeridianDecision[] {
       explain: {
         ...explainOf(top?.drivers ?? [], scored.length, gated, 0, top?.confidence, top?.thetaOut),
         refused: refused.slice(0, 3),
+        ...(wonBy ? { wonBy } : {}),
       },
     });
   }
 
-  // ── row: the ranked list, or the completion set ──────────────────────────
+  // ── row: the promotion block, then the standard shelf ────────────────────
   {
     // Structure, not ranking. When the verb dimension says the visitor has
     // chosen, the row stops being a list of alternatives — offering more coats
@@ -269,49 +340,81 @@ export function compose(input: ComposeInput): MeridianDecision[] {
       && !!input.decidingValue
       && decidingA >= (stageSpec?.thetaOut ?? config.thetaOut);
 
+    // THE ROW READS AS A BLOCK. Re-scoring every item let promoted cards land
+    // at positions 1–4 and 8–9 with untouched cards between them, and the tail
+    // churned under every signal. Promotion now requires membership: the row is
+    // [items matching ≥1 entered audience, score order, ties in standard order]
+    // followed by [every other eligible item in standard order]. The promoted
+    // block is contiguous by construction, and the shelf under it is the shelf
+    // every visitor sees, in the catalogue's own order.
     if (completing && anchor) {
       const { scored, gated } = rank(
         // Complementary, not substitutable: a different category to the anchor's.
         items.filter((i) => i.category !== anchor.category),
         'row', usedItems,
       );
+      const withMatch = scored.map((s) => ({ ...s, matched: matchedOf(s.r) }));
       // Coherence with the chosen piece is the whole point, so it is scored
       // explicitly and shows up in the receipt as its own driver rather than
-      // hiding inside the affinity term.
-      const cohered = scored.map((s) => {
-        const it = s.r as unknown as MeridianItem;
-        const drivers = [...s.drivers];
-        let bonus = 0;
-        if (it.world && it.world === anchor.world) {
-          bonus += 0.45; drivers.push({ dim: 'completes', value: `same world · ${anchor.world}`, a: 1, weight: 0.45 });
-        }
-        const band = (v?: number) => (v == null ? '' : v < 75 ? 'entry' : v < 250 ? 'core' : 'premium');
-        if (band(it.value_usd) && band(it.value_usd) === band(anchor.value_usd)) {
-          bonus += 0.25; drivers.push({ dim: 'completes', value: `same band · ${band(anchor.value_usd)}`, a: 1, weight: 0.25 });
-        }
-        const shared = (it.needs ?? []).filter((n) => (anchor.needs ?? []).includes(n));
-        if (shared.length) {
-          bonus += 0.30; drivers.push({ dim: 'completes', value: `same occasion · ${shared[0]}`, a: 1, weight: 0.30 });
-        }
-        return { ...s, drivers, score: s.score + bonus };
-      }).sort((a, b) => b.score - a.score || a.r.id.localeCompare(b.r.id));
+      // hiding inside the affinity term. Coherence RANKS the promoted block;
+      // it does not promote — only membership does.
+      const promoted = withMatch
+        .filter((s) => s.matched.length > 0)
+        .map((s) => {
+          const it = s.r as unknown as MeridianItem;
+          const drivers = [...s.drivers];
+          let bonus = 0;
+          if (it.world && it.world === anchor.world) {
+            bonus += 0.45; drivers.push({ dim: 'completes', value: `same world · ${anchor.world}`, a: 1, weight: 0.45 });
+          }
+          const band = (v?: number) => (v == null ? '' : v < 75 ? 'entry' : v < 250 ? 'core' : 'premium');
+          if (band(it.value_usd) && band(it.value_usd) === band(anchor.value_usd)) {
+            bonus += 0.25; drivers.push({ dim: 'completes', value: `same band · ${band(anchor.value_usd)}`, a: 1, weight: 0.25 });
+          }
+          const shared = (it.needs ?? []).filter((n) => (anchor.needs ?? []).includes(n));
+          if (shared.length) {
+            bonus += 0.30; drivers.push({ dim: 'completes', value: `same occasion · ${shared[0]}`, a: 1, weight: 0.30 });
+          }
+          return { ...s, drivers, score: s.score + bonus };
+        })
+        .sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
+      const standard = withMatch
+        .filter((s) => s.matched.length === 0)
+        .sort((a, b) => standardOrder(a.r, b.r));
 
-      cohered.slice(0, rowSize).forEach((s, i) => {
+      [...promoted, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
+        const isPromoted = s.matched.length > 0;
         decisions.push({
-          slot: 'row', order: order++, itemId: s.r.id, strategy: 'completion',
-          anchorId: anchor.id,
-          explain: explainOf(s.drivers, cohered.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
+          slot: 'row', order: order++, itemId: s.r.id,
+          strategy: isPromoted ? 'completion' : 'standard',
+          ...(isPromoted ? { anchorId: anchor.id } : {}),
+          explain: {
+            ...explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
+            ...(isPromoted ? { matched: s.matched } : {}),
+          },
         });
       });
     } else {
       const { scored, gated } = rank(items, 'row', usedItems);
-      scored.slice(0, rowSize).forEach((s, i) => {
+      const withMatch = scored.map((s) => ({ ...s, matched: matchedOf(s.r) }));
+      const promoted = withMatch
+        .filter((s) => s.matched.length > 0)
+        .sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
+      const standard = withMatch
+        .filter((s) => s.matched.length === 0)
+        .sort((a, b) => standardOrder(a.r, b.r));
+
+      [...promoted, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
+        const isPromoted = s.matched.length > 0;
         decisions.push({
           slot: 'row', order: order++, itemId: s.r.id,
-          strategy: strategyFor(s),
-          explain: explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
+          strategy: isPromoted ? 'affinity' : 'standard',
+          explain: {
+            ...explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
+            ...(isPromoted ? { matched: s.matched } : {}),
+          },
         });
       });
     }

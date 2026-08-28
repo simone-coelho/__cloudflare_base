@@ -112,7 +112,13 @@ export interface MeridianDecision {
    * threshold, the slot keeps its ordering but drops the claim.
    */
   anchorId?: string;
-  strategy: 'cold-start' | 'affinity' | 'fading' | 'pin' | 'fallback' | 'quota' | 'completion';
+  /**
+   * 'standard' is the row's un-promoted shelf: the item sits in the catalogue's
+   * own order, identical for every visitor, because the visitor has entered no
+   * audience it belongs to. Promotion requires membership — 'affinity' (or
+   * 'completion') in the row is a claim only a membership can back.
+   */
+  strategy: 'cold-start' | 'affinity' | 'fading' | 'pin' | 'fallback' | 'quota' | 'completion' | 'standard';
   explain: MeridianExplain;
 }
 
@@ -136,6 +142,19 @@ export interface MeridianExplain {
    * score is kept precisely so we can say "it would have won" out loud.
    */
   refused?: Array<{ id: string; score: number; gate: string }>;
+  /**
+   * Promoted row items only: the entered audience key(s) this item matched —
+   * the membership that EARNED the promotion ('category_bags_affinity').
+   * Stage audiences never appear here; journey stage is page structure, not
+   * merchandise.
+   */
+  matched?: string[];
+  /**
+   * Hero only, when the merchandiser's `audiencePriority` decided a contest:
+   * which entered audience won, its position in the merchandiser's list
+   * (0 = highest), and the other entered, listed audiences it beat.
+   */
+  wonBy?: { audience: string; priority: number; over: string[] };
   /** Set when the value shown is representative rather than measured. */
   representative?: boolean;
 }
