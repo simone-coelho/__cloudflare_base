@@ -423,6 +423,7 @@ function leadSentence(drivers) {
 }
 
 // src/demos/meridian/composer.ts
+var ROW_BLOCK = 5;
 var SLOT_STRATEGIES = {
   // Each slot's HIGHEST-weighted shape is its lead, and the lead is what decides
   // whether the slot may still claim the visitor as its reason. Leads are chosen
@@ -598,6 +599,7 @@ function compose(input) {
     });
   }
   {
+    const rowPool = input.rowItems ?? items;
     const stageKey = Object.keys(input.shapeOfKey).find((k) => input.shapeOfKey[k] === "stage");
     const stageSpec = config.dimensions.find((d) => d.key === stageKey);
     const stageVals = stageKey ? input.affinity.dims[stageKey] ?? {} : {};
@@ -607,7 +609,7 @@ function compose(input) {
     if (completing && anchor) {
       const { scored, gated } = rank(
         // Complementary, not substitutable: a different category to the anchor's.
-        items.filter((i) => i.category !== anchor.category),
+        rowPool.filter((i) => i.category !== anchor.category),
         "row",
         usedItems
       );
@@ -631,11 +633,12 @@ function compose(input) {
           drivers.push({ dim: "completes", value: `same occasion \xB7 ${shared[0]}`, a: 1, weight: 0.3 });
         }
         return { ...s, drivers, score: s.score + bonus };
-      }).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
-      const standard = withMatch.filter((s) => s.matched.length === 0).sort((a, b) => standardOrder(a.r, b.r));
+      }).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r)).slice(0, ROW_BLOCK);
+      const inBlock = new Set(promoted.map((s) => s.r.id));
+      const standard = withMatch.filter((s) => !inBlock.has(s.r.id)).sort((a, b) => standardOrder(a.r, b.r));
       [...promoted, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
-        const isPromoted = s.matched.length > 0;
+        const isPromoted = inBlock.has(s.r.id);
         decisions.push({
           slot: "row",
           order: order++,
@@ -649,13 +652,14 @@ function compose(input) {
         });
       });
     } else {
-      const { scored, gated } = rank(items, "row", usedItems);
+      const { scored, gated } = rank(rowPool, "row", usedItems);
       const withMatch = scored.map((s) => ({ ...s, matched: matchedOf(s.r) }));
-      const promoted = withMatch.filter((s) => s.matched.length > 0).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
-      const standard = withMatch.filter((s) => s.matched.length === 0).sort((a, b) => standardOrder(a.r, b.r));
-      [...promoted, ...standard].slice(0, rowSize).forEach((s, i) => {
+      const block = withMatch.filter((s) => s.matched.length > 0).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r)).slice(0, ROW_BLOCK);
+      const inBlock = new Set(block.map((s) => s.r.id));
+      const standard = withMatch.filter((s) => !inBlock.has(s.r.id)).sort((a, b) => standardOrder(a.r, b.r));
+      [...block, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
-        const isPromoted = s.matched.length > 0;
+        const isPromoted = inBlock.has(s.r.id);
         decisions.push({
           slot: "row",
           order: order++,

@@ -97,21 +97,35 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 6. Text, then a form on someone else’s site
+### 6. She signed up by text
 
-**1:10** · C2 · C4 · LIVE
+**0:35** · C2 · LIVE
 
-**You do —** Sign up by text, then submit the style quiz.
+**You do —** Sign up by text.
 
-**They watch —** Identity resolves. Declared interest joins observed behaviour — and the engine keeps them apart.
+**They watch —** Identity resolves off a phone number. The hero answers the text.
 
-**You say —** Different surfaces, same profile, and she never typed an email address into your site. Now we have what she told us and what she did. Those are different kinds of evidence and it weighs them differently — a stated preference decays on the same clock as everything else, so telling us once does not steer her forever.
+**You say —** Different surface, same profile, and she never typed an email address into your site.
 
-*Why 1:10:* Two surfaces in one beat, and it introduces the declared-versus-observed distinction used again in Act 3.
+*Why 0:35:* One press, one surface — the room needs to see the text land before the next thing happens.
 
 ---
 
-### 7. Four surfaces, one profile
+### 7. A form on someone else’s site
+
+**0:35** · C4 · LIVE
+
+**You do —** Submit the style quiz.
+
+**They watch —** Declared interest joins observed behaviour — and the engine keeps them apart.
+
+**You say —** Now we have what she told us and what she did. Those are different kinds of evidence and it weighs them differently — a stated preference decays on the same clock as everything else, so telling us once does not steer her forever.
+
+*Why 0:35:* Introduces the declared-versus-observed distinction used again in Act 3. Its own press, so it can be discussed.
+
+---
+
+### 8. Four surfaces, one profile
 
 **1:00** · C5 · LIVE
 
@@ -125,7 +139,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 8. And the ones who arrive with none of that
+### 9. And the ones who arrive with none of that
 
 **1:40** · C6 · C7 · geo LIVE · census LIVE public · cohort REPRESENTATIVE
 
@@ -143,7 +157,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *The engine, and the flip.*
 
-### 9. The handoff
+### 10. The handoff
 
 **1:50** · C35 · LIVE
 > ### ⏸ STOP
@@ -158,7 +172,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 10. That number is measured
+### 11. That number is measured
 
 **0:40** · C36 · LIVE
 
@@ -172,7 +186,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 11. The control
+### 12. The control
 
 **0:45** · C14 · LIVE
 > ### ⏸ DO NOT SKIP
@@ -187,7 +201,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 12. Different memories, different speeds
+### 13. Different memories, different speeds
 
 **0:50** · C8 · LIVE
 
@@ -201,7 +215,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 13. It waited until it was sure
+### 14. It waited until it was sure
 
 **0:55** · C9 · LIVE
 > ### ⏸ SLOW DOWN
@@ -216,7 +230,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 14. The row re-ranks
+### 15. The row re-ranks
 
 **0:50** · C15 · LIVE
 
@@ -230,7 +244,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 15. The hero commits
+### 16. The hero commits
 
 **0:35** · C16 · LIVE
 
@@ -244,7 +258,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 16. Which box comes first
+### 17. Which box comes first
 
 **0:50** · C17 · LIVE
 
@@ -258,7 +272,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 17. The page gains a section
+### 18. The page gains a section
 
 **0:55** · C13 · C18 · LIVE
 
@@ -272,7 +286,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 18. An offer that cannot be extended
+### 19. An offer that cannot be extended
 
 **0:45** · C33 · LIVE
 
@@ -286,7 +300,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 19. Your merchandiser outranks it
+### 20. Your merchandiser outranks it
 
 **0:45** · C11 · C19 · LIVE
 
@@ -300,7 +314,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 20. The refusal
+### 21. The refusal
 
 **1:00** · C20 · LIVE
 > ### ⏸ SLOW DOWN
@@ -317,7 +331,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 21. Watch her leave
+### 22. Watch her leave
 
 **1:55** · C10 · C33 · LIVE
 > ### ⏸ THE BEAT NOBODY ELSE HAS
@@ -332,7 +346,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 22. She came back
+### 23. She came back
 
 **0:50** · C12 · edge memory LIVE · ODP wired-dormant
 
@@ -348,7 +362,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 23. I changed what we sell
+### 24. I changed what we sell
 
 **1:35** · C34 · LIVE
 > ### ⏸ THE STRONGEST LINE
@@ -369,7 +383,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *Opal and experimentation.*
 
-### 24. Opal proposes
+### 25. Opal proposes
 
 **1:10** · C21 · LIVE (US-only)
 
@@ -383,7 +397,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 25. A person decides
+### 26. A person decides
 
 **0:50** · C21 · GATED — enabled
 
@@ -397,7 +411,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 26. It cannot invent a scene
+### 27. It cannot invent a scene
 
 **1:15** · C22 · LIVE
 
@@ -411,7 +425,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 27. A stylist that cannot oversell
+### 28. A stylist that cannot oversell
 
 **1:15** · C23 · LIVE
 
@@ -425,7 +439,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 28. The product is real, the scene is styling
+### 29. The product is real, the scene is styling
 
 **0:45** · C24 · LIVE
 
@@ -439,7 +453,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 29. A real experiment, thirty seconds ago
+### 30. A real experiment, thirty seconds ago
 
 **1:20** · C25 · LIVE
 
@@ -453,7 +467,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 30. Bandits, and what I will not show you
+### 31. Bandits, and what I will not show you
 
 **1:25** · C26 · C27 · LIVE rules
 
@@ -471,7 +485,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *Revenue Radar.*
 
-### 31. The average lied
+### 32. The average lied
 
 **1:50** · C28 · compute LIVE · traffic SIMULATED
 > ### ⏸ THE BIGGEST WOW — SLOW RIGHT DOWN
@@ -486,7 +500,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 32. Launch the fix
+### 33. Launch the fix
 
 **1:20** · C29 · audience/flag LIVE · lift REPRESENTATIVE
 
@@ -500,7 +514,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 33. We hand you the rows
+### 34. We hand you the rows
 
 **0:50** · C30 · LIVE
 
@@ -518,7 +532,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *Signal to live creative.*
 
-### 34. A signal we did not generate
+### 35. A signal we did not generate
 
 **0:35** · C31 · SIMULATED, labelled
 
@@ -532,7 +546,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 35. Opal writes the moment
+### 36. Opal writes the moment
 
 **0:45** · C31 · LIVE
 
@@ -546,7 +560,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 36. It ships as a real flag
+### 37. It ships as a real flag
 
 **0:50** · C31 · LIVE
 
@@ -560,7 +574,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 37. What I did not show you
+### 38. What I did not show you
 
 **0:50** · — · —
 
@@ -578,16 +592,16 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 If you are running short, these are the ones that do not get compressed.
 
-- **9. The handoff** — STOP *(1:50)*
-- **11. The control** — DO NOT SKIP *(0:45)*
-- **13. It waited until it was sure** — SLOW DOWN *(0:55)*
-- **20. The refusal** — SLOW DOWN *(1:00)*
-- **21. Watch her leave** — THE BEAT NOBODY ELSE HAS *(1:55)*
-- **23. I changed what we sell** — THE STRONGEST LINE *(1:35)*
-- **31. The average lied** — THE BIGGEST WOW — SLOW RIGHT DOWN *(1:50)*
+- **10. The handoff** — STOP *(1:50)*
+- **12. The control** — DO NOT SKIP *(0:45)*
+- **14. It waited until it was sure** — SLOW DOWN *(0:55)*
+- **21. The refusal** — SLOW DOWN *(1:00)*
+- **22. Watch her leave** — THE BEAT NOBODY ELSE HAS *(1:55)*
+- **24. I changed what we sell** — THE STRONGEST LINE *(1:35)*
+- **32. The average lied** — THE BIGGEST WOW — SLOW RIGHT DOWN *(1:50)*
 
 ## Every caution
 
-- **Beat 20, The refusal:** RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.
-- **Beat 22, She came back:** DO NOT say "ODP is the memory". ODP is deliberately not connected on this surface. If asked: connect ODP and this becomes durable across devices and shareable with the rest of your stack — that is a credential, not a code change.
-- **Beat 23, I changed what we sell:** The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.
+- **Beat 21, The refusal:** RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.
+- **Beat 23, She came back:** DO NOT say "ODP is the memory". ODP is deliberately not connected on this surface. If asked: connect ODP and this becomes durable across devices and shareable with the rest of your stack — that is a credential, not a code change.
+- **Beat 24, I changed what we sell:** The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.

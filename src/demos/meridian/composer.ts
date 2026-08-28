@@ -44,6 +44,9 @@ export type SlotStrategy = Record<string, number>;
  * keys, so one table serves both verticals unchanged — the hero leans on broad
  * interest and durable taste whether that reads as styleWorld or lifeStage.
  */
+/** The promoted block is one line of the shelf: the picks are the first five, never scattered. */
+export const ROW_BLOCK = 5;
+
 export const SLOT_STRATEGIES: Record<MeridianSlot, Record<string, number>> = {
   // Each slot's HIGHEST-weighted shape is its lead, and the lead is what decides
   // whether the slot may still claim the visitor as its reason. Leads are chosen
@@ -67,6 +70,8 @@ export const SLOT_STRATEGIES: Record<MeridianSlot, Record<string, number>> = {
 export interface ComposeInput {
   affinity: AffinityView;
   items: readonly MeridianItem[];
+  /** The department shelf: when the visitor is IN a department the row is built from it alone; hero, rail and blocks stay global. */
+  rowItems?: readonly MeridianItem[];
   blocks: readonly MeridianBlock[];
   config: ReflexConfig;
   /** dimension shape lookup, from reflexConfig.SHAPE_OF_KEY */
@@ -320,6 +325,7 @@ export function compose(input: ComposeInput): MeridianDecision[] {
 
   // ── row: the promotion block, then the standard shelf ────────────────────
   {
+    const rowPool = input.rowItems ?? items;
     // Structure, not ranking. When the verb dimension says the visitor has
     // chosen, the row stops being a list of alternatives — offering more coats
     // to someone holding a coat is the moment personalization stops helping.
@@ -350,7 +356,7 @@ export function compose(input: ComposeInput): MeridianDecision[] {
     if (completing && anchor) {
       const { scored, gated } = rank(
         // Complementary, not substitutable: a different category to the anchor's.
-        items.filter((i) => i.category !== anchor.category),
+        rowPool.filter((i) => i.category !== anchor.category),
         'row', usedItems,
       );
       const withMatch = scored.map((s) => ({ ...s, matched: matchedOf(s.r) }));
@@ -377,14 +383,16 @@ export function compose(input: ComposeInput): MeridianDecision[] {
           }
           return { ...s, drivers, score: s.score + bonus };
         })
-        .sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
+        .sort((a, b) => b.score - a.score || standardOrder(a.r, b.r))
+        .slice(0, ROW_BLOCK);                       // the first line, same rule
+      const inBlock = new Set(promoted.map((s) => s.r.id));
       const standard = withMatch
-        .filter((s) => s.matched.length === 0)
+        .filter((s) => !inBlock.has(s.r.id))
         .sort((a, b) => standardOrder(a.r, b.r));
 
       [...promoted, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
-        const isPromoted = s.matched.length > 0;
+        const isPromoted = inBlock.has(s.r.id);
         decisions.push({
           slot: 'row', order: order++, itemId: s.r.id,
           strategy: isPromoted ? 'completion' : 'standard',
@@ -396,18 +404,26 @@ export function compose(input: ComposeInput): MeridianDecision[] {
         });
       });
     } else {
-      const { scored, gated } = rank(items, 'row', usedItems);
+      const { scored, gated } = rank(rowPool, 'row', usedItems);
       const withMatch = scored.map((s) => ({ ...s, matched: matchedOf(s.r) }));
-      const promoted = withMatch
+      // THE PICKS ARE THE FIRST LINE, AND ONLY THE FIRST LINE. With several
+      // broad audiences entered, everything on the shelf is a member, and "10
+      // promoted" meant the block was the whole row — the picks were nowhere in
+      // particular. The row now reads: [the top ROW_BLOCK members by score] then
+      // [everything else in the catalogue's own order]. What is selected for
+      // her is at the top, contiguous, and nowhere else.
+      const block = withMatch
         .filter((s) => s.matched.length > 0)
-        .sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
+        .sort((a, b) => b.score - a.score || standardOrder(a.r, b.r))
+        .slice(0, ROW_BLOCK);
+      const inBlock = new Set(block.map((s) => s.r.id));
       const standard = withMatch
-        .filter((s) => s.matched.length === 0)
+        .filter((s) => !inBlock.has(s.r.id))
         .sort((a, b) => standardOrder(a.r, b.r));
 
-      [...promoted, ...standard].slice(0, rowSize).forEach((s, i) => {
+      [...block, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
-        const isPromoted = s.matched.length > 0;
+        const isPromoted = inBlock.has(s.r.id);
         decisions.push({
           slot: 'row', order: order++, itemId: s.r.id,
           strategy: isPromoted ? 'affinity' : 'standard',

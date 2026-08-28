@@ -45,6 +45,9 @@ function applyHighlight(el, c = HL.cur) {
   el.dataset.hl = c.name;
 }
 
+/** The shelf she is looking at: the department she clicked, or the whole store. */
+const rowPool = () => (S.dept ? S.items.filter((i) => i.category === S.dept) : S.items);
+
 /** Engine time. Everything the reflex engine sees goes through this. */
 const NOW = () => S.clock;
 /** An act happened: carry forward a LITTLE real time (never a conversation). */
@@ -92,7 +95,7 @@ const S = {
   // greens, no offers retiring mid-sentence. The room can talk for ten
   // minutes and nothing moves uninvited.
   clock: Date.now(), lastReal: Date.now(),
-  seq: -1, ws: null, heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, sayLockUntil: 0,
+  seq: -1, ws: null, heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, sayLockUntil: 0, dept: null,
   claimedAt: {},
   withdrawn: new Set(),
 };
@@ -108,7 +111,7 @@ async function load(vertical) {
     vertical, items: r.items, blocks: r.blocks, registry: r.registry,
     config: configFor(vertical), reflex: emptyState(configFor(vertical)),
     audiences: new Set(), decisions: [], prevRank: new Map(),
-    heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, withdrawn: new Set(),
+    heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, withdrawn: new Set(), dept: null,
     behaved: false, anchorId: null, claimedAt: {}, audiencePriority: [], priorityEngaged: false,
   });
   S.published = [];
@@ -119,7 +122,7 @@ async function load(vertical) {
   // did nothing. That is the hinge beat of the whole session.
   const cats = [...new Set(r.items.map((i) => i.category))];
   $('nav').innerHTML = cats
-    .map((c, i) => `<button class="navc${i === 0 ? ' on' : ''}" data-cat="${c}">${c}</button>`).join('');
+    .map((c) => `<button class="navc" data-cat="${c}">${c}</button>`).join('');
   $('nav').querySelectorAll('.navc').forEach((el) => {
     el.onclick = () => {
       $('nav').querySelectorAll('.navc').forEach((x) => x.classList.toggle('on', x === el));
@@ -329,6 +332,11 @@ function checkHandoff(snap) {
 /** Browsing a department: a category touch with no single item behind it. */
 function navTo(category) {
   advanceClock();
+  // A department click SHOWS the department. The shelf becomes that category —
+  // her picks first, then its standard order — so "wanders to bags" has bags
+  // to wander to. Recording the touch without changing the shelf left the
+  // cursor clicking whatever the last campaign had put at slots 1 and 2.
+  S.dept = category;
   const before = snapshot(S.reflex, NOW(), S.config);
   const audBefore = new Set(S.audiences);
   const touches = [{ dim: S.vertical === 'retail' ? 'category' : 'productFamily', value: category }];
@@ -621,7 +629,7 @@ function forecast(action, record, touchesOverride) {
   const res = apply(copy, { action, touches }, NOW(), S.config);
   const after = snapshot(res.state, NOW(), S.config);
 
-  const nextDecisions = compose({ affinity: after, state: res.state, items: S.items, blocks: S.blocks,
+  const nextDecisions = compose({ affinity: after, state: res.state, items: S.items, rowItems: rowPool(), blocks: S.blocks,
     config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
     anchorId: action === 'intent_start' && record ? record.id : S.anchorId,
     decidingValue: decidingValueFor(S.vertical) });
@@ -778,7 +786,9 @@ async function browse(btn, targets) {
 const cardOf = (category, n) => () => {
   const cards = [...$('row').querySelectorAll('.card')];
   const inCat = cards.filter((c) => (byId(c.dataset.id)?.category === category));
-  return inCat[n] || cards[n] || cards[0];
+  // Never a positional fallback: clicking a jacket when asked for a bag is
+  // worse than skipping. The department filter makes the category present.
+  return inCat[n] || inCat[0] || null;
 };
 const dept = (name) => () => document.querySelector(`.navc[data-cat="${name}"]`);
 
@@ -1002,7 +1012,7 @@ function holdSteady(prev, next) {
 function recompose(first, opts = {}) {
   const snap = snapshot(S.reflex, NOW(), S.config);
   checkHandoff(snap);
-  let next = compose({ affinity: snap, state: S.reflex, items: S.items, blocks: S.blocks,
+  let next = compose({ affinity: snap, state: S.reflex, items: S.items, rowItems: rowPool(), blocks: S.blocks,
                        config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
                        audiencePriority: S.priorityEngaged ? S.audiencePriority : undefined,
                        anchorId: S.anchorId, decidingValue: decidingValueFor(S.vertical) });
@@ -1334,7 +1344,7 @@ function cardNode(it, hue) {
  */
 /** The order a cold visitor would see: personalization's control. */
 function controlOrder() {
-  const cold = compose({ affinity: { dims: {}, audiences: [] }, items: S.items, blocks: S.blocks,
+  const cold = compose({ affinity: { dims: {}, audiences: [] }, items: S.items, rowItems: rowPool(), blocks: S.blocks,
                          config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins });
   return cold.filter((d) => d.slot === 'row').map((d) => d.itemId);
 }
@@ -1370,13 +1380,20 @@ function showWhatChanged() {
 function highlightMovers(movers, holdMs, label = 'was') {
   applyHighlight($('row'));
   $('row').querySelectorAll('.card.changed').forEach((el) => el.classList.remove('changed'));
-  for (const { id, was, now } of movers) {
+  for (const { id, was, now, std, fresh } of movers) {
     const el = ROW.nodes.get(id); if (!el) continue;
     el.classList.add('changed');
     const d = el.querySelector('.delta');
     d.classList.remove('quiet');
-    d.hidden = false;
-    d.innerHTML = `<b>${now}</b><small>${was == null ? (label === 'std' ? 'not in std' : 'new in') : `${label} ${was}`}</small>`;
+    // The badge names where the pick came from; a pick already in place with
+    // nothing to say carries the colour alone.
+    const tag = label === 'std' ? (was == null ? 'not in std' : `std ${was}`)
+      : was != null ? `was ${was}`
+      : fresh ? 'new in'
+      : std != null ? `std ${std}`
+      : null;
+    d.hidden = !tag;
+    if (tag) d.innerHTML = `<b>${now}</b><small>${tag}</small>`;
   }
   // Clock-based, not wall-based: the green holds while the presenter talks and
   // fades only as demo time moves. Stability during a conversation is the rule.
@@ -1397,6 +1414,13 @@ function paintRow(ds, prevIds, first, rowMoved = false, tick = false) {
   // Remove what left, create what arrived, and put everything in order without
   // touching the nodes that merely moved.
   for (const [id, el] of ROW.nodes) if (!keep.has(id)) { el.remove(); ROW.nodes.delete(id); }
+  // WHAT IS HIGHLIGHTED IS WHAT WAS PICKED FOR HER — the promoted block, which
+  // the composer puts at the top and nowhere else. It used to be "whatever
+  // shifted a slot since the last paint", which lit a jacket at 4 because a bag
+  // dropped, and read as nonsense. Now: the block, in the step colour, with a
+  // badge saying where each pick came from — its previous slot if it just
+  // moved, its standard-order slot otherwise.
+  const control = (tick || first) ? [] : controlOrder();
   const movers = [];
   items.forEach((it, i) => {
     let el = ROW.nodes.get(it.id);
@@ -1404,18 +1428,26 @@ function paintRow(ds, prevIds, first, rowMoved = false, tick = false) {
     else el.style.setProperty('--hue', hues.get(it.id) || it.hex);
     if (row.children[i] !== el) row.insertBefore(el, row.children[i] || null);
     el.querySelector('.rank').textContent = i + 1;
-    const was = rankBefore.get(it.id);
     const d = el.querySelector('.delta');
-    if (tick || first) { d.hidden = true; }
-    else if (was && was > i + 1) movers.push({ id: it.id, was, now: i + 1, up: true });     // climbed
-    else if (!was && prevIds.length) movers.push({ id: it.id, was: null, now: i + 1, up: true }); // entered
-    else if (was && was < i + 1) {                                                              // slipped
-      d.hidden = false; d.classList.add('quiet'); d.innerHTML = `<small>was ${was}</small>`;
-    } else { d.hidden = true; }
+    const picked = ds[i]?.strategy === 'affinity' || ds[i]?.strategy === 'completion';
+    if (tick || first) { d.hidden = true; return; }
+    if (picked) {
+      const was = rankBefore.get(it.id);
+      const std = control.indexOf(it.id) + 1;
+      movers.push({ id: it.id, now: i + 1,
+                    was: (was && was !== i + 1) ? was : null,
+                    std: (!was || was === i + 1) && std && std !== i + 1 ? std : null,
+                    fresh: !was && prevIds.length > 0 });
+    } else {
+      const was = rankBefore.get(it.id);
+      if (was && was < i + 1) { d.hidden = false; d.classList.add('quiet'); d.innerHTML = `<small>was ${was}</small>`; }
+      else d.hidden = true;
+    }
   });
 
   flipRow(geometryBefore);
   if (movers.length) { ROW.lastMovers = movers; highlightMovers(movers, 12000); }
+  else if (!tick && !first) $('row').querySelectorAll('.card.changed').forEach((el) => el.classList.remove('changed'));
 
   const completing = ds.some((d) => d.strategy === 'completion');
   const anchor = completing && byId(ds.find((d) => d.anchorId)?.anchorId);
@@ -1429,7 +1461,7 @@ function paintRow(ds, prevIds, first, rowMoved = false, tick = false) {
   const promoted = ds.filter((d) => d.strategy === 'affinity' || d.strategy === 'completion').length;
   $('row-note').textContent = completing
     ? `chosen to go with the ${anchor ? anchor.name : 'piece you chose'} — nothing from the same category`
-    : claims ? `your audiences lead — ${promoted} promoted, the rest in the standard order`
+    : claims ? `${S.dept ? `in ${S.dept} — ` : ''}picked for her — ${promoted} promoted, the rest in the standard order`
     : 'the standard order — the same for every shopper';
 }
 
