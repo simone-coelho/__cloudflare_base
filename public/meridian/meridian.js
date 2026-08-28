@@ -193,6 +193,7 @@ function fireSurface(s) {
   // A stated preference is not an arrival. It weighs more, and it says nothing
   // about journey stage, so it gets its own verb rather than being flattened.
   const act = s.act ?? 'arrival';
+  recordDone(act === 'declared' ? 'Told us' : 'Arrived from', `${KIND_LABEL[s.kind]} — ${s.subject}`, '');
   const res = apply(S.reflex, { action: act, touches: s.touches }, Date.now(), S.config);
   S.reflex = res.state;
   absorb(res.changes);
@@ -297,6 +298,8 @@ function navTo(category) {
   const prevDecisions = S.decisions;
   recompose();
   post('/action', { vertical: S.vertical, events: [{ action: 'nav_click', touches }] });
+  { const mv = biggestMove(before, snapshot(S.reflex, Date.now(), S.config));
+    recordDone('Browsed', category, mv ? `${mv.dim} ${mv.from.toFixed(2)} → ${mv.to.toFixed(2)}` : ''); }
   evidenceCard({
     verb: 'Browsed', subject: category, meta: 'department',
     before, after: snapshot(S.reflex, Date.now(), S.config),
@@ -440,6 +443,9 @@ function signal(action, record) {
   recompose();
 
   if (record) {
+    const mv = biggestMove(before, snapshot(S.reflex, Date.now(), S.config));
+    recordDone(VERB_LABEL[action] || action, record.name || record.title || record.id,
+      mv ? `${mv.dim} ${mv.from.toFixed(2)} → ${mv.to.toFixed(2)}` : '');
     evidenceCard({
       verb: VERB_LABEL[action] || action,
       subject: record.name || record.title || record.id,
@@ -477,6 +483,83 @@ function onFrame(f) {
   if (f.explain?.length) say(f.explain[0]);
   recompose();
 }
+
+// ── Predict, then prove ─────────────────────────────────────────────────────
+// Before the decisive click, tell the room what it will cause — from a copy of
+// her real state run through the real engine — then let it happen. Nothing
+// here is a guess: the band is the engine's own arithmetic one click ahead.
+const PD = { open: false, resolve: null };
+const DONE = [];   // what she has done this session, as the band lists it
+
+function recordDone(verb, subject, move) {
+  DONE.push({ verb, subject, move });
+  if (DONE.length > 6) DONE.shift();
+}
+
+/** Run one hypothetical act on a copy of her profile and diff the outcome. */
+function forecast(action, record, touchesOverride) {
+  const copy = JSON.parse(JSON.stringify(S.reflex));
+  const stage = stageTouchFor(action, S.vertical);
+  const base = touchesOverride || (record ? extractTouches(record, S.config) : []);
+  const touches = stage ? [...base, stage] : base;
+  const before = snapshot(copy, Date.now(), S.config);
+  const res = apply(copy, { action, touches }, Date.now(), S.config);
+  const after = snapshot(res.state, Date.now(), S.config);
+
+  const nextDecisions = compose({ affinity: after, state: res.state, items: S.items, blocks: S.blocks,
+    config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
+    anchorId: action === 'intent_start' && record ? record.id : S.anchorId,
+    decidingValue: decidingValueFor(S.vertical) });
+  const pick2 = (ds, slot) => ds.find((d) => d.slot === slot);
+  const heroNow = pick2(S.decisions, 'hero')?.itemId; const heroNext = pick2(nextDecisions, 'hero')?.itemId;
+  const rowNow = S.decisions.filter((d) => d.slot === 'row').map((d) => d.itemId);
+  const rowNext = nextDecisions.filter((d) => d.slot === 'row').map((d) => d.itemId);
+  const climbs = rowNext.filter((id, i) => { const j = rowNow.indexOf(id); return j > i || j === -1; }).length;
+  const blockNow = pick2(S.decisions, 'block_a')?.blockId; const blockNext = pick2(nextDecisions, 'block_a')?.blockId;
+
+  // The dimension the act moves most, with its threshold.
+  const moves = [];
+  for (const spec of S.registry.dimensions) {
+    const b = before.dims?.[spec.key] || {}; const a = after.dims?.[spec.key] || {};
+    for (const v of Object.keys(a)) {
+      const from = b[v] ?? 0, to = a[v];
+      if (to - from > 0.0005) moves.push({ dim: spec.key, value: v, from, to, thetaIn: spec.thetaIn, crosses: from < spec.thetaIn && to >= spec.thetaIn });
+    }
+  }
+  moves.sort((x, y) => (y.to - y.from) - (x.to - x.from));
+  return { entered: res.changes.entered, exited: res.changes.exited, moves,
+           heroChanges: heroNow !== heroNext, heroNext: heroNext && byId(heroNext)?.name,
+           climbs, blockChanges: blockNow !== blockNext, blockNext: blockNext && byId(blockNext)?.title,
+           completion: nextDecisions.some((d) => d.strategy === 'completion') && !S.decisions.some((d) => d.strategy === 'completion') };
+}
+
+const VERB_PAST = { row_click: 'Clicked', nav_click: 'Browsed', intent_start: 'Adds to bag', arrival: 'Arrived from', declared: 'Told us', search: 'Searched' };
+
+/** Show the band for the act about to happen; resolves when the presenter closes it. */
+function predictThenProve(action, record, touchesOverride, label) {
+  const f = forecast(action, record, touchesOverride);
+  const pct = (n) => n.toFixed(3);
+  $('pd-done').innerHTML = DONE.length
+    ? DONE.map((d) => `<li><b>${d.verb}</b> ${escapeHtml(d.subject)}${d.move ? ` — <code>${d.move}</code>` : ''}</li>`).join('')
+    : '<li>Nothing yet — she arrived, that is all.</li>';
+  $('pd-act').textContent = label || `${VERB_PAST[action] || action} ${record?.name || ''}`;
+  const top = f.moves.slice(0, 3);
+  $('pd-math').innerHTML = top.length
+    ? top.map((m) => `${m.dim} · ${m.value} &nbsp;${pct(m.from)} → <b>${pct(m.to)}</b>${m.crosses ? ` &nbsp;≥ θ<sub>in</sub> ${m.thetaIn} → <b>enters</b>` : ` &nbsp;(θ<sub>in</sub> ${m.thetaIn})`}`).join('<br>')
+    : 'No dimension moves on this act.';
+  const will = [];
+  for (const a of f.entered.filter((x) => !isStageAudience(x))) will.push(`She <b>enters ${prettyAudience(a)}</b>.`);
+  for (const a of f.exited.filter((x) => !isStageAudience(x))) will.push(`She <b>leaves ${prettyAudience(a)}</b>.`);
+  if (f.heroChanges) will.push(`The hero becomes <b>${escapeHtml(f.heroNext || '—')}</b>.`);
+  if (f.completion) will.push(`The row becomes <b>Complete the look</b>.`);
+  else if (f.climbs) will.push(`<b>${f.climbs}</b> product${f.climbs === 1 ? '' : 's'} climb the row.`);
+  if (f.blockChanges) will.push(`The story becomes <b>${escapeHtml(f.blockNext || '—')}</b>.`);
+  if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
+  $('pd-will').innerHTML = will.map((w) => `<li>${w}</li>`).join('');
+  $('predict').hidden = false; PD.open = true;
+  return new Promise((resolve) => { PD.resolve = resolve; });
+}
+$('pd-go').onclick = () => { $('predict').hidden = true; PD.open = false; PD.resolve?.(); PD.resolve = null; };
 
 // ── The scripted browse ─────────────────────────────────────────────────────
 // The room has to WATCH her browse: a visible visitor clicks a coat, then
@@ -533,6 +616,16 @@ async function browse(btn, targets) {
       const el = typeof t === 'function' ? t() : document.querySelector(t);
       if (!el) continue;
       if (el.wait) { await sleep(el.wait); continue; }        // a beat may pause to let a retreat land
+      if (el.predict) {                                        // predict, then prove
+        const target = el.el;
+        const item = target?.dataset?.id ? byId(target.dataset.id) : null;
+        const dept = target?.dataset?.cat;
+        if (dept) await predictThenProve('nav_click', null, [{ dim: S.vertical === 'retail' ? 'category' : 'productFamily', value: dept }], `Browses ${dept}`);
+        else if (item) await predictThenProve(target.classList.contains('add') ? 'intent_start' : 'row_click', item);
+        await moveCursorTo(target);
+        await sleep(700);
+        continue;
+      }
       await moveCursorTo(el);
       await sleep(700);                                        // between clicks — Coach's cadence
     }
@@ -573,8 +666,10 @@ function renderBrowseBeats() {
 }
 const beatTargets = (k) => {
   const b = BROWSE_BEATS[S.vertical][k];
-  if (!b.dept) return ['#hero-cta'];
-  return [dept(b.dept), ...Array.from({ length: b.n }, (_, i) => cardOf(b.dept, i))];
+  if (!b.dept) return [() => ({ predict: true, el: document.querySelector('#hero-cta') })];
+  const clicks = Array.from({ length: b.n }, (_, i) => cardOf(b.dept, i));
+  const last = clicks.pop();
+  return [dept(b.dept), ...clicks, () => ({ predict: true, el: last() })];
 };
 /** Nth card of a product LINE currently on the row. */
 const cardOfLine = (line, n) => () => {
@@ -1698,6 +1793,7 @@ function dirTick() {
 function resolveTarget(t) {
   if (typeof t === 'string') return document.querySelector(t);
   if (t.wait) return { wait: t.wait };
+  if (t.predict) { const inner = resolveTarget(t.predict); return inner ? { predict: true, el: inner } : null; }
   if (t.tab) { showTab(t.tab); return null; }
   if (t.surface != null) return document.querySelectorAll('#surfaces .surface')[t.surface] || null;
   if (t.dept) return dept(t.dept)();
@@ -2089,7 +2185,7 @@ $('btn-return').onclick = () => location.reload();   // same id, same object, sa
 $('btn-reset').onclick = async () => {
   await post('/reset', {}); S.seq = -1;
   await load(S.vertical); connect();
-  clearBaseline(); $('btn-capture').classList.remove('on');
+  clearBaseline(); $('btn-capture').classList.remove('on'); DONE.length = 0;
   $('btn-capture').innerHTML = 'Capture baseline<small>freeze the page now</small>';
   $('takeover').hidden = true; $('hero').style.display = '';
 };

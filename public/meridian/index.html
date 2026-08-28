@@ -233,6 +233,38 @@
   </div>
 </div>
 
+<!-- Predict, then prove. Before the decisive click the band says what she has
+     done, what we are watching for, and what will change if she does it — computed
+     on a copy of her real state. The presenter closes it; the click performs; the
+     page does what the band said. -->
+<div class="predict" id="predict" hidden>
+  <div class="pd-box">
+    <div class="pd-head">
+      <span class="pd-k">Predict, then prove</span>
+      <span class="pd-mode" id="pd-mode">watching for her next act</span>
+    </div>
+    <div class="pd-grid">
+      <div class="pd-col">
+        <h6>What she has done</h6>
+        <ol id="pd-done"></ol>
+      </div>
+      <div class="pd-col pd-watch">
+        <h6>What we are watching for</h6>
+        <div class="pd-act" id="pd-act"></div>
+        <div class="pd-math" id="pd-math"></div>
+      </div>
+      <div class="pd-col">
+        <h6>What will change if she does it</h6>
+        <ul id="pd-will"></ul>
+      </div>
+    </div>
+    <div class="pd-foot">
+      <span id="pd-note">Computed on a copy of her real profile — the same engine, the same numbers. Nothing here is a guess.</span>
+      <button id="pd-go">Close — let her do it</button>
+    </div>
+  </div>
+</div>
+
 <div class="moment" id="conc">
   <div class="moment-box">
     <form class="ask-form" id="conc-form" autocomplete="off">
