@@ -1952,6 +1952,7 @@ setInterval(() => {
   }
   if (STRIP_UNTIL && NOW() >= STRIP_UNTIL) { STRIP_UNTIL = 0; $('strip').hidden = true; $('ostrip').hidden = true; }
   if (OSTRIP_UNTIL && NOW() >= OSTRIP_UNTIL) { OSTRIP_UNTIL = 0; $('ostrip').hidden = true; }
+  renderXp();
 }, 1000);
 
 const isStageAudience = (a) => /^(journeystage|applicationstage)_/.test(a);
@@ -2132,10 +2133,9 @@ $('btn-moment').onclick = async () => {
   }
 
   btn.textContent = 'shipping…';
-  const fx = await fetch(`${API}/experiment/dispatch`, {
-    method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ vertical: S.vertical, source: m.signal.source.toLowerCase(), flavour: 'ab' }),
-  }).then((x) => x.json()).catch(() => null);
+  // The bandit half of the beat: a real multi_armed_bandit rule, the 28:00
+  // window on the demo clock, allocation moving one round per two minutes.
+  const fx = await dispatchExperiment('mab', null, { source: m.signal.source.toLowerCase(), moment: m, windowMin: 28, title: `the moment — ${m.signal.source}` });
   btn.disabled = false; btn.innerHTML = label;
 
   const secs = Math.round((Date.now() - t0) / 1000);
@@ -2796,41 +2796,146 @@ async function launchFix(btn) {
     `${r.flagKey} targeted at ${d.cohortLabel}. Diagnosis representative, experiment live.`);
 }
 
-async function dispatchExperiment(flavour, btn) {
-  const label = btn.innerHTML;
-  btn.disabled = true; btn.textContent = 'creating…';
+// ── THE EXPERIMENT CARD: Opal doing it, on the page ──────────────────────────
+// Steps stream in, the real flag and rule land with their ids, then the readout.
+// The rule is REAL (A/B, MAB and CMAB are all validated live on the API). No
+// traffic reaches it in a conference room, so the allocation and the winner are
+// REPRESENTATIVE, labelled on the card, and they move on the demo clock — "let
+// two minutes pass" advances the bandit; nothing moves while the presenter talks.
+const XP = { open: false, flavour: null, r: null, startedAt: 0, windowMin: 0, arms: [], moment: null, closedAt: null };
+const MAB_ROUNDS_2 = [[50, 50], [40, 60], [27, 73], [20, 80]];
+const MAB_ROUNDS_3 = [[33, 34, 33], [22, 54, 24], [15, 65, 20], [11, 73, 16]];
+const ROUND_MS = 120_000;                      // one round per "two minutes pass"
+const mmss2 = (ms) => { const t = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+
+function xpStep(text, state = 'done') {
+  const li = document.createElement('li'); li.className = state; li.innerHTML = text; $('xc-steps').appendChild(li);
+  return li;
+}
+function openXpCard(flavour, title) {
+  Object.assign(XP, { open: true, flavour, r: null, startedAt: NOW(), windowMin: 0, arms: [], moment: null, closedAt: null });
+  $('xc-title').textContent = title;
+  $('xc-state').textContent = 'running…'; $('xc-state').hidden = false;
+  $('xc-badge').hidden = true; $('xc-clock').hidden = true;
+  $('xc-steps').innerHTML = ''; $('xc-rows').hidden = true; $('xc-readout').hidden = true; $('xc-foot').hidden = true;
+  applyHighlight($('xcard'));
+  $('xcard').hidden = false;
+  $('xcard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function xpBadge(r) {
+  const b = $('xc-badge'); b.hidden = false;
+  if (!r) { b.textContent = 'unreachable'; b.className = 'xc-badge sim'; return; }
+  if (r.simulated) { b.textContent = 'writes off'; b.className = 'xc-badge off'; return; }
+  if (!r.ok) { b.textContent = 'refused'; b.className = 'xc-badge sim'; return; }
+  b.textContent = r.created ? 'live · created now' : 'live · reused'; b.className = 'xc-badge';
+}
+const RULE_TYPE_NAME = { ab: 'a/b', mab: 'multi_armed_bandit', cmab: 'contextual_multi_armed_bandit' };
+function xpRows(r, flavour) {
+  const rows = [];
+  if (r?.flagKey) rows.push(['Flag', r.flagKey]);
+  rows.push(['Rule', `${r?.ruleKey ? r.ruleKey + ' · ' : ''}${RULE_TYPE_NAME[flavour]}`]);
+  if (r?.variations?.length) rows.push(['Variations', r.variations.join(' · ')]);
+  if (r?.environment) rows.push(['Environment', r.environment]);
+  if (r?.projectId) rows.push(['Project', r.projectId]);
+  if (r?.audience) rows.push(['Audience', `${r.audience.name} · #${r.audience.id}`]);
+  if (r?.ms != null) rows.push(['API', `${r.ms}ms`]);
+  if (r?.reason) rows.push(['Note', r.reason]);
+  $('xc-rows').innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${escapeHtml(String(v))}</b></div>`).join('')
+    + (r?.consoleUrl ? `<div><span>Optimizely</span><b><a href="${r.consoleUrl}" target="_blank" rel="noopener">Open it now →</a></b></div>` : '');
+  $('xc-rows').hidden = false;
+}
+const ARM_NAME = {
+  affinity_led: 'Affinity leads the hero', campaign_pinned: 'Campaign pins the hero',
+  wallet_first: 'Wallet payment first (current)', saved_card_first: 'Saved card first, wallet alternate',
+  verify_inline: 'Identity check inline (current)', resume_by_link: 'Resume-by-link before the check',
+};
+function xpArmNames(r) {
+  const names = (r?.variations?.length ? r.variations : ['affinity_led', 'campaign_pinned']).map((k) => ARM_NAME[k] || k);
+  if (XP.moment && names.length >= 2) names[1] = `${names[1]} — “${XP.moment.headline}”`;
+  return names;
+}
+/** The readout, re-rendered by the master tick: it moves only as demo time moves. */
+function renderXp() {
+  if (!XP.open || !XP.arms.length) return;
+  const el = $('xc-readout'); el.hidden = false;
+  const elapsed = NOW() - XP.startedAt;
+  if (XP.flavour === 'ab') {
+    const rates = [3.1, 4.6];
+    el.innerHTML = `<div class="xc-ro-h">A/B · two arms, fixed split<span>REPRESENTATIVE figures · the rule is real</span></div>`
+      + XP.arms.map((n, i) => `<div class="xc-arm ${i === 1 ? 'win' : ''}"><div class="xc-arm-top"><span>${i === 0 ? 'Control' : 'Treatment'} · <b>${escapeHtml(n)}</b>${i === 1 ? '<span class="xc-win">leads</span>' : ''}</span><span class="n">${(rates[i] ?? 3.1).toFixed(1)}%</span></div><div class="xc-track"><i style="width:${(rates[i] ?? 3.1) / 6 * 100}%"></i></div></div>`).join('')
+      + `<div class="xc-foot" style="padding:8px 0 0;border:0">+48% for the treatment · 96% confidence — <b>illustrative</b>; the split is 50/50 and real.</div>`;
+    return;
+  }
+  if (XP.flavour === 'mab') {
+    const table = XP.arms.length >= 3 ? MAB_ROUNDS_3 : MAB_ROUNDS_2;
+    const round = Math.min(table.length - 1, Math.floor(elapsed / ROUND_MS));
+    const alloc = table[round]; const winner = alloc.indexOf(Math.max(...alloc));
+    const closed = round === table.length - 1;
+    if (closed && XP.closedAt == null) XP.closedAt = elapsed;
+    const windowMs = XP.windowMin * 60_000;
+    if (XP.windowMin) { $('xc-clock').hidden = false; $('xc-clock').textContent = closed ? `closed ${mmss2(XP.closedAt)} of ${mmss2(windowMs)}` : mmss2(Math.max(0, windowMs - elapsed)); }
+    el.innerHTML = `<div class="xc-ro-h">Multi-armed bandit · round ${round + 1} of ${table.length}<span>traffic auto-allocating to the winner · REPRESENTATIVE allocation · the rule is real · Optimizely MAB is GA</span></div>`
+      + XP.arms.map((n, i) => `<div class="xc-arm ${i === winner && round > 0 ? 'win' : ''}"><div class="xc-arm-top"><span>${i === 0 ? 'Control' : 'Arm ' + (i + 1)} · <b>${escapeHtml(n)}</b>${i === winner && closed ? '<span class="xc-win">winner</span>' : ''}</span><span class="n">${alloc[i]}% of traffic</span></div><div class="xc-track"><i style="width:${alloc[i]}%"></i></div></div>`).join('')
+      + (closed
+        ? `<div class="xc-close">● Loop closed in ${mmss2(XP.closedAt)}${XP.windowMin ? ` of ${mmss2(windowMs)}` : ''} — <b>${escapeHtml(XP.arms[winner])}</b> promoted to ${alloc[winner]}% of traffic automatically.<small>Today the loop closes with a human Launch click (governance). Autonomy is roadmap. · Representative allocation · Optimizely MAB is GA · the multi_armed_bandit rule is real.</small></div>`
+        : `<div class="xc-foot" style="padding:8px 0 0;border:0">Each “Let two minutes pass” is a round. Round ${round + 1} — ${round === 0 ? 'even split, learning' : `traffic shifting to <b>${escapeHtml(XP.arms[winner])}</b>`}.</div>`);
+    return;
+  }
+  if (XP.flavour === 'cmab') {
+    const ctx = [
+      { c: 'Mobile · first visit', w: 1, lift: '+31%', conf: 93 },
+      { c: 'Desktop · returning', w: 0, lift: '+12%', conf: 91 },
+      { c: 'Premium band · heritage', w: 0, lift: '+19%', conf: 90 },
+      { c: 'Gen-Z · mobile · at payment', w: 1, lift: '+27%', conf: 94 },
+    ];
+    el.innerHTML = `<div class="xc-ro-h">Contextual bandit · a winner per context<span>REPRESENTATIVE winners · the contextual_multi_armed_bandit rule is real · attributes: device · persona · journey_stage</span></div>`
+      + ctx.map((x) => `<div class="xc-ctx"><span class="c">${x.c}</span><span><b>${escapeHtml(XP.arms[Math.min(x.w, XP.arms.length - 1)])}</b><span class="xc-win">winner</span></span><span class="l">${x.lift} · ${x.conf}% conf.</span></div>`).join('')
+      + `<div class="xc-foot" style="padding:8px 0 0;border:0">One experiment, many winners — chosen by context in real time. A CMAB rule may land as a draft that needs review; the badge says which.</div>`;
+  }
+}
+
+/** Create A/B, MAB or CMAB — Opal doing it, visibly, and for real. */
+async function dispatchExperiment(flavour, btn, opts = {}) {
+  if (XP.open && !$('xc-state').hidden) return;
+  const label = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Opal is creating…'; }
+  openXpCard(flavour, `${FLAVOUR_NAME[flavour]} — ${opts.title || (S.vertical === 'retail' ? 'the hero strategy' : 'the offer strategy')}`);
+  XP.moment = opts.moment || null; XP.windowMin = opts.windowMin || 0;
+  const snap = snapshot(S.reflex, NOW(), S.config);
+  const lead = Object.entries(snap.dims || {}).flatMap(([d, vs]) => Object.entries(vs).map(([v, a]) => ({ d, v, a }))).sort((x, y) => y.a - x.a)[0];
+  xpStep(`Reading the signal — ${opts.moment ? `<b>${escapeHtml(opts.moment.signal.source)}</b>: ${escapeHtml(opts.moment.signal.subject)} (simulated, labelled)` : lead && lead.a > 0.01 ? `her live affinity leads on <b>${escapeHtml(lead.d)} · ${escapeHtml(lead.v)}</b> at ${lead.a.toFixed(2)}` : 'no behaviour yet — the test starts from the standard order'}`);
+  await sleep(650);
+  xpStep(`Drafting the variants — <b>control</b> vs the strategy to test${opts.moment ? ` · copy: “${escapeHtml(opts.moment.headline)}”` : ''}`);
+  await sleep(650);
+  const creating = xpStep(`Creating the flag and the <b>${RULE_TYPE_NAME[flavour]}</b> rule in the real project — API call in flight…`, 'pending');
   const r = await fetch(`${API}/experiment/dispatch`, {
     method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ vertical: S.vertical, source: 'tiktok', flavour }),
+    body: JSON.stringify({ vertical: S.vertical, source: opts.source || 'tiktok', flavour }),
   }).then((x) => x.json()).catch(() => null);
-  btn.disabled = false; btn.innerHTML = label;
-
-  if (!r) return consequence('Experiment', 'Dispatch never reached the worker', 'Nothing was created.');
-  if (r.simulated) {
-    // Never dress a no-op as a success.
-    return consequence('Experiment — nothing written', r.reason,
-      `Would have created ${r.flagKey} with ${r.variations?.join(' vs ')}.`);
-  }
-  if (!r.ok) {
-    return consequence('Experiment refused', r.reason,
-      'Not downgraded to a rollout. A rollout is not a test, and claiming otherwise would be worse than failing.');
-  }
+  if (btn) { btn.disabled = false; btn.innerHTML = label; }
+  XP.r = r;
+  creating.className = r?.ok && !r.simulated ? 'done' : 'pending';
+  creating.innerHTML = !r ? 'The dispatch never reached the worker — nothing was created.'
+    : r.simulated ? `Nothing written — <b>${escapeHtml(r.reason || 'writes are off')}</b>. Would have created ${escapeHtml(r.flagKey || 'the flag')}.`
+    : !r.ok ? `Refused by the API — <b>${escapeHtml(r.reason || 'see note')}</b>. Not downgraded to a rollout: a rollout is not a test.`
+    : `${r.created ? 'Created' : 'Found live and reused'} — flag <b>${escapeHtml(r.flagKey)}</b>, rule <b>${escapeHtml(r.ruleKey || '')}</b> in <b>${escapeHtml(r.environment || '')}</b> · ${r.ms ?? '—'}ms`;
+  xpBadge(r); xpRows(r, flavour);
+  $('xc-state').hidden = true;
+  XP.arms = xpArmNames(r);
+  XP.startedAt = NOW();
+  renderXp();
+  $('xc-foot').hidden = false;
+  $('xc-foot').innerHTML = r?.ok && !r.simulated
+    ? `<b>Real:</b> the flag, the rule and its type in the Optimizely project — open it now. <b>Representative:</b> the figures on the readout; no traffic reaches this rule in this room.`
+    : `<b>Nothing was written.</b> The readout is what the rule would show — representative, and labelled.`;
   consequence(FLAVOUR_NAME[flavour],
-    r.created ? 'Created in Optimizely just now' : 'Already live — reused, not recreated',
-    `${r.flagKey} · ${r.variations.join(' vs ')} · ${r.environment} · ${r.ms}ms. ` +
-    (flavour === 'ab' ? 'Real rule, real project.'
-      : 'The rule is real. The winner is not shown — that needs traffic.'));
-  const card = $('conseq').firstChild;
-  if (card && r.consoleUrl) {
-    const a = document.createElement('a');
-    a.href = r.consoleUrl; a.target = '_blank'; a.className = 'cq-link';
-    a.textContent = 'Open in Optimizely →';
-    card.appendChild(a);
-  }
-  $('sentence').textContent = flavour === 'ab'
-    ? `A/B rule live in the real project. Open Optimizely and it is there.`
-    : `${FLAVOUR_NAME[flavour]} rule live in the real project. We are not going to fabricate the winner — that needs traffic.`;
+    !r ? 'Dispatch never reached the worker' : r.simulated ? `Nothing written — ${r.reason}` : !r.ok ? `Refused — ${r.reason}` : (r.created ? 'Created in Optimizely just now' : 'Already live — reused, not recreated'),
+    r?.ok && !r.simulated ? `${r.flagKey} · ${r.variations.join(' vs ')} · ${r.environment} · ${r.ms}ms. Real rule, real project; readout representative.` : (r?.reason || 'Nothing was created.'));
+  $('sentence').textContent = r?.ok && !r.simulated
+    ? `${FLAVOUR_NAME[flavour]} rule live in the real project — open Optimizely and it is there. The allocation on the card is representative: no traffic reaches it in this room.`
+    : `${FLAVOUR_NAME[flavour]}: nothing was written${r?.reason ? ` — ${r.reason}` : ''}.`;
   S.sayLockUntil = Date.now() + 6000;
+  return r;
 }
 $('btn-ab').onclick = (e) => dispatchExperiment('ab', e.currentTarget);
 $('btn-mab').onclick = (e) => dispatchExperiment('mab', e.currentTarget);
@@ -2853,6 +2958,7 @@ $('btn-return').onclick = () => location.reload();   // same id, same object, sa
 function hideStrips() {
   STRIP_UNTIL = 0; OSTRIP_UNTIL = 0;
   $('strip').hidden = true; $('ostrip').hidden = true;
+  XP.open = false; XP.arms = []; $('xcard').hidden = true;
 }
 $('btn-reset').onclick = async () => {
   hideStrips();                                    // the last session's banners are not this session's

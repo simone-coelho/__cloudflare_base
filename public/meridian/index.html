@@ -65,6 +65,22 @@
         <div class="strip" id="strip" hidden><span class="strip-k" id="strip-k"></span><span id="strip-t"></span></div>
         <div class="strip order" id="ostrip" hidden><span class="strip-k">Page rearranged</span><span id="ostrip-t"></span></div>
       </div>
+      <!-- OPAL DOING IT: the experiment card. Steps stream in, the real flag and rule
+           land with their ids, then the readout — arms, allocation moving on the demo
+           clock, or a winner per context. Labelled real/representative on every line. -->
+      <section class="xcard" id="xcard" hidden>
+        <div class="xc-head">
+          <span class="xc-tool">⚙ launchExperiment</span>
+          <span class="xc-title" id="xc-title"></span>
+          <span class="xc-state" id="xc-state">running…</span>
+          <span class="xc-badge" id="xc-badge" hidden></span>
+          <span class="xc-clock" id="xc-clock" hidden></span>
+        </div>
+        <ol class="xc-steps" id="xc-steps"></ol>
+        <div class="xc-rows" id="xc-rows" hidden></div>
+        <div class="xc-readout" id="xc-readout" hidden></div>
+        <div class="xc-foot" id="xc-foot" hidden></div>
+      </section>
 
       <section class="hero zone" id="hero" data-section="hero" data-label="PERSONALIZED · HERO">
         <div class="hero-copy">

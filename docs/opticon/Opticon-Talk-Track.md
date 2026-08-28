@@ -575,17 +575,17 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 38. It ships as a real flag
+### 38. It ships as a real bandit — and the loop closes
 
-**0:50** · C31 · LIVE
+**0:50** · C31 · C12 · C13 · rule REAL · copy REAL · allocation REPRESENTATIVE · signal SIMULATED
 
-**You do —** Nothing.
+**You do —** Press Next: six minutes pass in three consented steps. Read the card as the traffic shifts.
 
-**They watch —** Full-bleed takeover. The loop closed in M:SS.
+**They watch —** The experiment card: a real multi_armed_bandit rule with its flag and rule ids · the 28:00 window · traffic 50/50 → 40/60 → 27/73 → 20/80 · “Loop closed in ≈6:00 of 28:00 — winner promoted automatically.”
 
-**You say —** Signal to live creative, in the time we have been talking. And it is composed onto an approved still, not generated — the footer says so, because generating a photograph live invites exactly the question this beat exists to answer.
+**You say —** That rule is real — open Optimizely and it is there. The traffic is not: nobody in this room is buying, so the allocation you are watching is representative and it says so. Signal to a live, optimizing experience inside the window — before the moment cooled. Today a human still presses Launch; autonomy is roadmap.
 
-*Why 0:50:* The loop closing is the payoff. Name the elapsed time out loud.
+*Why 0:50:* The loop closing is the payoff. The bandit moves only as demo time moves, so the room sees each round land on a press.
 
 ---
 
