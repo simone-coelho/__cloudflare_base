@@ -67,7 +67,9 @@ export const RETAIL_SCENES: Scene[] = [
     headline: 'The weather turned',
     subhead: 'Wool, waxed cotton, and things that outlive a season.',
     aliases: ['cold', 'winter', 'coat', 'warm', 'snow', 'freezing', 'jacket', 'layers'],
-    touches: [{ dim: 'category', value: 'Outerwear' }, { dim: 'subcategory', value: 'wool' },
+    // Drover is the heritage wool-and-waxed line — the coat, the field jacket,
+    // the muffler — which is what "the weather turned" means in this catalogue.
+    touches: [{ dim: 'category', value: 'Outerwear' }, { dim: 'line', value: 'Drover' },
               { dim: 'styleWorld', value: 'heritage' }],
     art: '/meridian/scenes/cold-snap.svg',
   },
@@ -76,10 +78,11 @@ export const RETAIL_SCENES: Scene[] = [
     headline: 'A weekend away',
     subhead: 'Carry less, and carry it better.',
     aliases: ['weekend', 'travel', 'trip', 'flight', 'packing', 'getaway', 'holiday', 'vacation'],
-    // Category alone put an EVENING CLUTCH in a weekend bag row. Canvas is what
+    // Category alone put an EVENING CLUTCH in a weekend bag row. Holloway is the
+    // canvas travel line — the weekender, the packable tote — which is what
     // actually distinguishes a travel bag from a going-out one.
     touches: [{ dim: 'occasion', value: 'travel' }, { dim: 'category', value: 'Bags' },
-              { dim: 'subcategory', value: 'canvas' }],
+              { dim: 'line', value: 'Holloway' }],
     art: '/meridian/scenes/weekend-away.svg',
   },
   {
@@ -105,8 +108,10 @@ export const RETAIL_SCENES: Scene[] = [
     headline: 'One good thing instead of three',
     subhead: 'The version you keep.',
     aliases: ['investment', 'quality', 'last', 'splurge', 'timeless', 'buy once', 'expensive'],
+    // Ridgeline is the leather footwear line. A Chelsea boot is the archetypal
+    // buy-once piece, and the line clears both premium and heritage.
     touches: [{ dim: 'priceBand', value: 'premium' }, { dim: 'styleWorld', value: 'heritage' },
-              { dim: 'subcategory', value: 'leather' }],
+              { dim: 'line', value: 'Ridgeline' }],
     art: '/meridian/scenes/investment-piece.svg',
   },
 ];

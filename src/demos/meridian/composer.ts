@@ -20,7 +20,8 @@
 // outrank the engine, and weighted ranking operates only on what is left.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { ReflexConfig } from '@/reflex/core';
+import type { ReflexConfig, ReflexState } from '@/reflex/core';
+import { leadWeights } from './lead';
 import type {
   MeridianItem, MeridianBlock, MeridianSlot, MeridianDecision, MeridianExplain,
 } from './types';
@@ -73,6 +74,8 @@ export interface ComposeInput {
   anchorId?: string;
   /** The stage value that means "has chosen": `deciding`, or `applying`. */
   decidingValue?: string;
+  /** Raw state, with last-touch times, so a recency-led dimension can name its lead (lead.ts). */
+  state?: ReflexState;
 }
 
 /** How much of dimension d this record carries. 1, 0, or a share for multi. */
@@ -111,6 +114,8 @@ export function scoreOne(
 
     const perValue = input.affinity.dims[spec.key];
     if (!perValue) continue;
+    // D2: a recency-led dimension (reflexConfig.LEAD_BY) leads on its last touch — lead.ts. Null unless raw state is supplied.
+    const lead = input.state ? leadWeights(input.state, spec) : null;
 
     for (const [value, a] of Object.entries(perValue)) {
       if (a <= 0) continue;
@@ -119,9 +124,9 @@ export function scoreOne(
           ? bandLabel(Number(record[spec.source] ?? 0), spec.cuts, spec.labels) === value ? 1 : 0
           : match(record, spec.source, value);
       if (m === 0) continue;
-      const contribution = omega * a * m;
+      const contribution = omega * a * (lead ? lead.weight(value) : 1) * m;
       score += contribution;
-      drivers.push({ dim: spec.key, value, a: round(a), weight: round(contribution) });
+      drivers.push({ dim: spec.key, value, a: round(a), weight: round(contribution), ...(lead ? lead.mark(value) : {}) });
     }
   }
 
@@ -145,7 +150,7 @@ export function scoreOne(
 
   return {
     score,
-    drivers: drivers.slice(0, 4),
+    drivers: drivers.filter((d, i) => i < 4 || 'lead' in d),   // a trailing value is small by design; the receipt still names it
     confidence: judged?.a ?? 0,
     thetaOut: judgedSpec?.thetaOut ?? input.config.thetaOut,
   };

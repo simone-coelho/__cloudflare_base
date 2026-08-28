@@ -41,13 +41,14 @@ export const SURFACES = {
     },
     {
       id: 'form-quiz', kind: 'form', from: 'Partner site · style quiz',
-      subject: 'Declared: evening, statement, premium, silk',
+      subject: 'Declared: evening, statement, premium, the Aster line',
       preview: 'Four taps on a partner survey. No account created.',
       action: 'Submit the form',
       act: 'declared',
       chain: ['submitted', 'declared preference stored', 'joined to observed behaviour'],
       touches: [{ dim: 'occasion', value: 'evening' }, { dim: 'styleWorld', value: 'statement' },
-                { dim: 'priceBand', value: 'premium' }, { dim: 'subcategory', value: 'silk' }],
+                // Aster is the silk-and-cashmere scarves line — the fourth tap names a family, not a fabric.
+                { dim: 'priceBand', value: 'premium' }, { dim: 'line', value: 'Aster' }],
       hero: { kicker: 'You told us: evening', title: 'For the evening you said you had',
               body: 'What you told us, alongside what you have actually looked at.' },
     },
