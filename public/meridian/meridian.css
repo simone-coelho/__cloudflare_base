@@ -105,7 +105,7 @@ body{
 @keyframes glow{0%{box-shadow:0 0 0 0 rgba(168,118,63,.5)}100%{box-shadow:0 0 0 18px rgba(168,118,63,0)}}
 
 /* HERO — the star. Large, simple, dominant. */
-.hero{margin:18px 0 0;min-height:0;padding:26px 34px;border-radius:10px;
+.hero{margin:18px 0 0;min-height:0;padding:26px 34px;border-radius:10px;position:relative;overflow:hidden;
   background:#fff;
   border:2px solid var(--line); border-top:10px solid var(--accent);
   box-shadow:0 1px 0 rgba(28,26,23,.04), 0 8px 24px -16px rgba(28,26,23,.4);
@@ -733,16 +733,19 @@ body.has-director .page{padding-bottom:250px}
    Ported from the Coach demo: glides in 0.7s, clicks with a scale ripple, and
    leaves a 1200ms outline on what it clicked. Hidden by opacity only, so the
    next appearance glides from where it last was. */
-#demo-cursor{position:fixed;z-index:950;width:28px;height:28px;left:0;top:0;margin:-4px 0 0 -4px;
+#demo-cursor{position:fixed;z-index:950;width:44px;height:44px;left:0;top:0;margin:-6px 0 0 -6px;
   pointer-events:none;opacity:0;
   transition:left .7s var(--ease),top .7s var(--ease),opacity .3s var(--ease);
-  filter:drop-shadow(0 2px 4px rgba(0,0,0,.45))}
+  filter:drop-shadow(0 3px 7px rgba(0,0,0,.55)) drop-shadow(0 0 2px rgba(0,0,0,.4))}
 #demo-cursor.show{opacity:1}
 #demo-cursor.click{animation:cursorClick .4s var(--ease)}
 @keyframes cursorClick{0%{transform:scale(1)}45%{transform:scale(.72)}100%{transform:scale(1)}}
-.clicked{outline:3px solid var(--ink) !important;outline-offset:3px;border-radius:6px;
-  box-shadow:0 0 0 6px rgba(28,26,23,.14) !important;animation:clickRing .4s var(--ease)}
-@keyframes clickRing{from{box-shadow:0 0 0 0 rgba(28,26,23,.3)}to{box-shadow:0 0 0 6px rgba(28,26,23,.14)}}
+.clicked{outline:5px solid #FF2222 !important;outline-offset:3px;border-radius:6px;
+  animation:clickShine 1.2s ease-out forwards}
+@keyframes clickShine{
+  0%{box-shadow:0 0 0 0 rgba(255,34,34,.85), 0 0 24px 6px rgba(255,34,34,.65)}
+  60%{box-shadow:0 0 0 10px rgba(255,34,34,.25), 0 0 30px 8px rgba(255,34,34,.35)}
+  100%{box-shadow:0 0 0 8px rgba(255,34,34,.18), 0 0 18px 4px rgba(255,34,34,.25)}}
 .controls button.busy{opacity:.55;cursor:wait}
 /* A card that only slipped down is not news; it carries a quiet badge, no green. */
 .card .delta.quiet{background:#EEECE7;color:var(--muted);box-shadow:none;padding:5px 8px}
@@ -932,3 +935,22 @@ body.has-director .world,body.has-director .engine{padding-bottom:var(--dir-h, 2
   background:#F4F5F7;border:1px solid var(--line);color:var(--ink)}
 .mo-chips button:hover{border-color:var(--accent);color:var(--accent)}
 .moment-box{border-top:6px solid var(--accent)}
+
+/* ── HERO LANDED — the star arrives. When the banner changes it must read as an
+     event, not a repaint: it rises in, pops, a shimmer sweeps across it, and a
+     red shadow sits underneath and fades over three seconds. One shot, only on
+     a real change (swap() adds .landed after the fade-out/render). */
+.hero.landed{animation:heroLand 3s var(--ease) both}
+@keyframes heroLand{
+  0%  {opacity:0;transform:translateY(14px) scale(.985);
+       box-shadow:0 0 0 0 rgba(214,71,47,0), 0 8px 24px -16px rgba(28,26,23,.4)}
+  14% {opacity:1;transform:translateY(0) scale(1.02);
+       box-shadow:0 0 0 8px rgba(214,71,47,.6), 0 34px 70px -8px rgba(214,71,47,.85)}
+  55% {transform:scale(1);
+       box-shadow:0 0 0 8px rgba(214,71,47,.5), 0 32px 66px -8px rgba(214,71,47,.75)}
+  100%{transform:scale(1);
+       box-shadow:0 0 0 0 rgba(214,71,47,0), 0 8px 24px -16px rgba(28,26,23,.4)}}
+.hero.landed::after{content:'';position:absolute;top:-30%;bottom:-30%;left:-45%;width:36%;pointer-events:none;
+  background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.8) 44%,rgba(255,236,230,.95) 50%,rgba(255,255,255,0) 100%);
+  transform:skewX(-14deg);animation:heroShimmer 1.3s .2s var(--ease) both}
+@keyframes heroShimmer{0%{left:-45%}100%{left:135%}}

@@ -697,7 +697,7 @@ async function scrollTargetIntoView(el) {
 
 function markClicked(el) {
   el.classList.remove('clicked'); void el.offsetWidth; el.classList.add('clicked');
-  clearTimeout(el._ck); el._ck = setTimeout(() => el.classList.remove('clicked'), 1200);
+  clearTimeout(el._ck); el._ck = setTimeout(() => el.classList.remove('clicked'), 2000);
 }
 
 async function moveCursorTo(el, { click = true } = {}) {
@@ -1100,7 +1100,11 @@ function swap(el, render, instant) {
   setTimeout(() => {
     render();
     el.classList.remove('swapping');
-    el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+    // The hero LANDS (rise, pop, shimmer, red shadow underneath); the blocks
+    // get the quieter glow. Both are one-shot, and only a real change gets here.
+    const fx = el.id === 'hero' ? 'landed' : 'pulse';
+    el.classList.remove(fx); void el.offsetWidth; el.classList.add(fx);
+    if (fx === 'landed') { clearTimeout(el._fx); el._fx = setTimeout(() => el.classList.remove('landed'), 3300); }
   }, 300);
 }
 
