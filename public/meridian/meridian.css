@@ -27,6 +27,10 @@
   --p-text:#171A20;      /* ≈15:1 on white */
   --p-dim:#4E5665;       /* ≈8:1 — readable, not decorative */
   --p-blue:#0E5FBF; --enter:#12703F; --exit:#9A5410;
+  /* "This just changed." One colour, used for movers and for an audience being
+     entered, so it means one thing everywhere. Swap for the brand green when
+     supplied — nothing else depends on the exact value. */
+  --changed:#14C46A; --changed-ink:#0B2E1B;
   --sans:'Inter',ui-sans-serif,-apple-system,'Segoe UI',system-ui,sans-serif;
   /* the display face, one source */
   --serif:'Playfair Display',ui-serif,Georgia,serif;
@@ -101,7 +105,7 @@ body{
 @keyframes glow{0%{box-shadow:0 0 0 0 rgba(168,118,63,.5)}100%{box-shadow:0 0 0 18px rgba(168,118,63,0)}}
 
 /* HERO — the star. Large, simple, dominant. */
-.hero{margin:26px 0 0;min-height:38vh;padding:44px 48px;border-radius:10px;
+.hero{margin:18px 0 0;min-height:0;padding:26px 34px;border-radius:10px;
   background:#fff;
   border:2px solid var(--line); border-top:10px solid var(--accent);
   box-shadow:0 1px 0 rgba(28,26,23,.04), 0 8px 24px -16px rgba(28,26,23,.4);
@@ -110,11 +114,11 @@ body{
 .hero.swapping{opacity:0;transition-duration:var(--t-hero-out)}
 .hero-copy{flex:1}
 .hero .kicker{font:600 13px/1 inherit;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
-.hero h2{font:300 44px/1.08 var(--serif);margin:14px 0 12px;letter-spacing:-.01em}
+.hero h2{font:300 34px/1.1 var(--serif);margin:9px 0 8px;letter-spacing:-.01em}
 .hero p{font-size:20px;color:var(--muted);margin:0 0 26px;max-width:46ch}
 .hero .cta{display:inline-block;padding:13px 26px;border-radius:4px;background:var(--ink);color:#fff;
   font:500 16px/1 inherit;border:0;cursor:pointer}
-.hero-art{width:390px;height:390px;border-radius:8px;overflow:hidden;border:2px solid var(--line);background:#fff;flex:none}
+.hero-art{width:250px;height:250px;border-radius:8px;overflow:hidden;border:2px solid var(--line);background:#fff;flex:none}
 .hero-art svg{width:100%;height:100%;display:block}
 
 /* SORT ZONE — one tight row, one axis of movement, quiet around it */
@@ -124,15 +128,25 @@ body{
 .sortzone{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.55);padding:20px}
 .row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
 
-.card{background:var(--card);border:2px solid var(--line);border-top:10px solid var(--hue,#999);
-  box-shadow:0 1px 0 rgba(28,26,23,.04), 0 6px 18px -12px rgba(28,26,23,.35);
+.card{background:var(--card);border:2px solid #E1DCD3;
+  box-shadow:0 1px 0 rgba(28,26,23,.03), 0 4px 14px -12px rgba(28,26,23,.25);
   border-radius:10px;overflow:hidden;position:relative;cursor:pointer}
 /* "this just changed" is INK, never the item's own hue — the hue is its identity,
    and a ring in the same colour reads as more of the same card, not as news. */
-.card.moved{outline:3px solid var(--ink);outline-offset:-2px}
+/* The mover lifts off the shelf while it travels. Verified against the previous
+   build, where the only cue was a 3px ring you had to already be looking at. */
+.card.travelling{
+  z-index:3; transform-origin:center;
+  box-shadow:0 18px 40px -14px rgba(28,26,23,.55), 0 0 0 3px var(--hue);
+}
+.card.landed{animation:landflash 900ms cubic-bezier(.2,.7,.3,1)}
+@keyframes landflash{
+  0%{box-shadow:0 0 0 6px color-mix(in srgb,var(--hue) 55%,transparent)}
+  100%{box-shadow:0 1px 0 rgba(28,26,23,.04), 0 6px 18px -12px rgba(28,26,23,.35)}
+}
 .card .rank{position:absolute;top:10px;left:10px;z-index:2;width:26px;height:26px;border-radius:50%;
-  background:var(--hue);color:#fff;font:700 13px/26px ui-monospace,monospace;text-align:center}
-.card .delta{position:absolute;top:12px;right:10px;z-index:2;background:var(--ink);color:#fff;
+  background:var(--ink);color:#fff;font:700 13px/26px ui-monospace,monospace;text-align:center}
+.card .delta{position:absolute;top:10px;right:10px;z-index:2;background:var(--changed);color:var(--changed-ink);
   font:700 11px/1 ui-monospace,monospace;padding:5px 7px;border-radius:3px;letter-spacing:.04em}
 .card .ph{aspect-ratio:1/1;background:#fff;position:relative}
 .card .ph svg{width:100%;height:100%;display:block}
@@ -142,7 +156,8 @@ body{
   opacity:0;transition:opacity .12s linear;background:none}
 .card .ph img[data-loaded]{opacity:1}
 .card .meta{padding:10px 12px 12px}
-.card .nm{font:500 15.5px/1.22 var(--serif)}
+.card .nm{font:500 15.5px/1.22 var(--serif);padding-left:11px;position:relative}
+.card .nm::before{content:'';position:absolute;left:0;top:3px;bottom:3px;width:4px;border-radius:2px;background:var(--hue)}
 .card .mt{font-size:12px;color:var(--muted);margin-top:3px}
 .card .pr{font:600 16.5px/1 ui-monospace,monospace;margin-top:7px}
 
@@ -161,7 +176,7 @@ body{
 .eng-head{padding:16px 18px 12px;border-bottom:1px solid var(--p-line)}
 .eng-head .t{font:600 12px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--p-dim)}
 .eng-head .v{font:500 15px/1.35 inherit;margin-top:7px;color:var(--p-text)}
-.eng-scroll{flex:1;overflow-y:auto;padding:14px 18px 24px}
+.eng-scroll{flex:1;min-height:0;overflow:hidden;padding:12px 16px 10px;display:flex;flex-direction:column}
 .esec{margin:0 0 16px;background:var(--p-panel);border:1px solid var(--p-line);
   border-radius:8px;padding:0 0 14px;
   box-shadow:0 1px 0 rgba(23,26,32,.04), 0 6px 16px -12px rgba(23,26,32,.45)}
@@ -174,7 +189,7 @@ body{
 .esec>*:not(h5){margin-left:15px;margin-right:15px}
 
 /* The instrument is what the room watches, so its header carries the accent. */
-.esec.instrument{border-color:#7FA9DE;box-shadow:0 1px 0 rgba(23,26,32,.04), 0 8px 20px -12px rgba(14,95,191,.5)}
+.esec.instrument{flex:0 0 auto;border-color:#7FA9DE;box-shadow:0 1px 0 rgba(23,26,32,.04), 0 8px 20px -12px rgba(14,95,191,.5)}
 .esec.instrument>h5{background:#DCEAFB;border-bottom-color:#7FA9DE;color:#0D2E5C}
 .esec.accent>h5{background:#E6EFFB;border-bottom-color:#93B8E6;color:#12203A}
 
@@ -183,12 +198,12 @@ body{
   border-radius:6px;padding:12px 14px;font:500 14px/1.5 inherit;color:var(--p-text)}
 
 /* bars — the hysteresis band is DRAWN, not described */
-.bar{margin-bottom:13px}
-.bar .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.bar{margin-bottom:8px}
+.bar .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
 .bar .k{font:700 13.5px/1 inherit;color:var(--p-text)}
 .bar .k em{color:var(--p-dim);font-style:normal;font-weight:500}
 .bar .a{font:500 13px/1 ui-monospace,monospace;color:var(--p-dim)}
-.bar .track{position:relative;height:9px;border-radius:5px;background:#D4DAE3}
+.bar .track{position:relative;height:7px;border-radius:4px;background:#D4DAE3}
 .bar .band{position:absolute;top:0;height:100%;background:rgba(154,84,16,.16)}
 .bar .fill{height:100%;border-radius:5px;background:var(--p-dim);
   transition:width var(--t-bar) var(--ease),background 300ms}
@@ -206,11 +221,11 @@ body{
 .chips .none{color:var(--p-dim);font-size:13px;font-style:italic}
 
 /* presenter controls — label and CURRENT STATE, never one merged string */
-.cgroup{margin-bottom:13px}
+.cgroup{margin-bottom:8px}
 .cgroup:last-child{margin-bottom:0}
 .clabel{display:block;font:600 10px/1 ui-monospace,monospace;letter-spacing:.16em;
   text-transform:uppercase;color:#4E5665;margin-bottom:7px}
-.controls{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:0}
+.controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:0}
 .controls button{min-height:46px;padding:8px 11px;border-radius:5px;cursor:pointer;text-align:left;
   background:var(--p-panel);color:var(--p-text);border:1px solid var(--p-line);
   font:500 13px/1.25 inherit}
@@ -589,13 +604,13 @@ body.has-director .page{padding-bottom:250px}
 }
 .eng-controls::-webkit-scrollbar{width:8px}
 .eng-controls::-webkit-scrollbar-thumb{background:#BFC7D2;border-radius:4px}
-.eng-controls .controls button{min-height:42px;font-size:12.5px}
-.eng-controls .controls button small{font-size:10px}
+.eng-controls .controls button{min-height:36px;font-size:11.5px;padding:6px 8px}
+.eng-controls .controls button small{font-size:9.5px;margin-top:2px}
 
 /* A fade over the last line was worse than the cut it was hiding — it greyed out
    text that was perfectly readable. Give the scroller room to run its last
    section fully clear of the pinned controls instead. */
-.eng-scroll{position:relative;padding-bottom:34px}
+.eng-scroll{position:relative}
 
 /* The department nav — a real control, so it has to look and behave like one. */
 .brand nav .navc{
@@ -604,3 +619,128 @@ body.has-director .page{padding-bottom:250px}
 }
 .brand nav .navc:hover{color:var(--ink)}
 .brand nav .navc.on{color:var(--ink);font-weight:500;border-bottom-color:var(--accent)}
+
+/* ── The evidence trail ────────────────────────────────────────────────────
+   One card per act, carrying the whole chain: what she did, the countable
+   evidence, the arithmetic on the dimension it moved, the threshold it crossed,
+   and what changed on the page. This is the affinity engine's argument; without
+   it the demo shows products swapping places and asks the room to infer why. */
+.ev{
+  background:var(--p-panel); border:1px solid var(--p-line); border-left:4px solid var(--p-blue);
+  border-radius:6px; padding:11px 13px 12px; margin-bottom:9px;
+  animation:ep-land var(--t-episode) var(--ease);
+}
+.ev-act{font:400 14.5px/1.35 inherit;color:var(--p-text)}
+.ev-verb{font:600 11px/1 ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--p-blue);margin-right:7px}
+.ev-meta{font:400 11.5px/1.4 ui-monospace,monospace;color:var(--p-dim);margin-top:3px}
+
+.ev-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.ev-chips span{
+  font:500 11px/1 ui-monospace,monospace;color:#2A3442;background:#E3E9F1;
+  border:1px solid #C3CDDB;border-radius:3px;padding:5px 7px;
+}
+
+/* The arithmetic. The old score is grey, the increment is blue, and the entry
+   threshold is a hard line you can see the increment cross. */
+.ev-math{margin-top:10px;padding-top:9px;border-top:1px solid var(--p-line)}
+.ev-dim{font:600 12px/1 ui-monospace,monospace;color:var(--p-text)}
+.ev-nums{font:500 15px/1 ui-monospace,monospace;color:var(--p-text);margin:6px 0 7px;
+  font-variant-numeric:tabular-nums}
+.ev-nums b{color:var(--p-blue);margin:0 3px}
+.ev-track{position:relative;height:10px;border-radius:5px;background:#D4DAE3;overflow:visible}
+.ev-was{position:absolute;left:0;top:0;height:100%;border-radius:5px 0 0 5px;background:#8B97A8}
+.ev-now{position:absolute;top:0;height:100%;background:var(--p-blue);
+  animation:evgrow 620ms cubic-bezier(.2,.7,.3,1)}
+@keyframes evgrow{from{width:0 !important}}
+.ev-thr{position:absolute;top:-4px;width:2px;height:18px;background:var(--p-text)}
+.ev-thrlab{font:400 10.5px/1 ui-monospace,monospace;color:var(--p-dim);margin-top:7px}
+
+.ev-entered{
+  margin-top:9px;font:600 12px/1.45 ui-monospace,monospace;color:#0C5C35;
+  background:#DCF3E6;border:1px solid #9BD3B4;border-radius:4px;padding:7px 9px;
+}
+.ev-entered code{font:600 11.5px/1 ui-monospace,monospace;color:#0C5C35;background:none;padding:0}
+.ev-changed{margin-top:9px;font:400 12.5px/1.5 inherit;color:var(--p-text)}
+.ev-changed b{font-weight:600}
+.ev-changed.quiet{color:var(--p-dim)}
+
+/* ── What changed ──────────────────────────────────────────────────────────
+   Every resting card is quiet, so one colour can be loud. A mover wears it on
+   all four sides, thick, with the position it landed on and where it came from. */
+.card.changed{border-color:var(--changed);box-shadow:0 0 0 3px var(--changed), 0 10px 26px -12px rgba(20,196,106,.55)}
+.card.changed .rank{background:var(--changed);color:var(--changed-ink)}
+.card .delta{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 9px 4px;border-radius:4px;
+  font:700 15px/1 ui-monospace,monospace;box-shadow:0 2px 8px -3px rgba(0,0,0,.35)}
+.card .delta small{font:600 9.5px/1 ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+.card .delta[hidden]{display:none}
+/* Fades out rather than snapping off, so the end of the hold is not itself an event. */
+.card{transition:border-color .6s ease,box-shadow .6s ease}
+
+/* ── Tabs on the engine panel ──────────────────────────────────────────────
+   Below the instrument, one pane at a time. A tab that receives content while
+   hidden gets a dot, so nothing lands unseen. */
+.tabbar{flex:0 0 auto;display:flex;gap:4px;margin:0 0 10px;padding:4px;background:#C2CBD8;border-radius:7px}
+.tab{flex:1;font:600 12px/1 inherit;padding:9px 6px;border:0;border-radius:5px;cursor:pointer;
+  background:transparent;color:#3C4452;position:relative;letter-spacing:.01em}
+.tab:hover{background:rgba(255,255,255,.55)}
+.tab.on{background:#FFFFFF;color:var(--p-text);box-shadow:0 1px 0 rgba(23,26,32,.06)}
+.tab.unread::after{content:'';position:absolute;top:6px;right:8px;width:8px;height:8px;border-radius:50%;
+  background:var(--changed);box-shadow:0 0 0 2px #fff}
+.tabpane[hidden]{display:none}
+.tabpane{flex:1 1 auto;min-height:0;overflow-y:auto;margin-bottom:0}
+.tabpane::-webkit-scrollbar{width:8px}
+.tabpane::-webkit-scrollbar-thumb{background:#C2CBD8;border-radius:4px}
+.glass[open] summary{margin-bottom:8px}
+
+/* ── Collapsible cause cards on the left ───────────────────────────────────
+   A fired surface folds to one line and gives its height to the ledger.
+   Click it again to open it back up. */
+.surface.done{padding:8px 12px;opacity:1;cursor:pointer;border-left-color:var(--changed)}
+.surface.done .prev,.surface.done .act{display:none}
+.surface.done .subj{font-size:13px;margin-top:3px}
+.surface.done .from::after{content:'  ✓ fired';color:#0C5C35;letter-spacing:.02em;text-transform:none}
+.surface.done.open .prev,.surface.done.open .act{display:block}
+.surface.done.open .act{display:inline-block;pointer-events:none;opacity:.55}
+
+/* ── The audience strip ────────────────────────────────────────────────────
+   Green when she enters, amber when she leaves. It names the audience and the
+   consequence, sits above the hero, and retires on its own. */
+.strip[hidden]{display:none}
+.strip{display:flex;align-items:center;gap:12px;margin:14px 0 0;padding:11px 16px;border-radius:7px;
+  font:400 15px/1.4 inherit;color:var(--ink);background:#DCF3E6;border:2px solid var(--changed);
+  animation:offerIn .4s cubic-bezier(.2,.7,.3,1)}
+.strip.out{background:#FBEFDF;border-color:#E39A3C}
+.strip-k{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;
+  color:#0C5C35;background:#fff;padding:6px 8px;border-radius:4px;white-space:nowrap}
+.strip.out .strip-k{color:#8A4B00}
+.strip b{font-weight:600}
+
+/* ── The tuning dial ───────────────────────────────────────────────────────
+   Per-slot weights, turned live. Precedence between two audiences is a number
+   in a table, and this is the table. */
+.dial{margin-top:12px;padding-top:10px;border-top:1px solid var(--p-line)}
+.dial-h{font:600 11.5px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--p-text);
+  display:flex;justify-content:space-between;gap:8px;margin-bottom:9px}
+.dial-h .cfg{font:400 10.5px/1 ui-monospace,monospace;letter-spacing:0;text-transform:none;color:var(--p-dim)}
+.dial-row{display:grid;grid-template-columns:78px 1fr 44px;align-items:center;gap:9px;margin-bottom:6px}
+.dial-row label{font:500 12px/1 ui-monospace,monospace;color:var(--p-text)}
+.dial-row input[type=range]{width:100%;accent-color:var(--p-blue)}
+.dial-row output{font:500 12px/1 ui-monospace,monospace;color:var(--p-text);text-align:right;font-variant-numeric:tabular-nums}
+.dial-foot{font:400 11px/1.5 ui-monospace,monospace;color:var(--p-dim);margin-top:6px}
+
+/* ── The simulated visitor ─────────────────────────────────────────────────
+   Ported from the Coach demo: glides in 0.7s, clicks with a scale ripple, and
+   leaves a 1200ms outline on what it clicked. Hidden by opacity only, so the
+   next appearance glides from where it last was. */
+#demo-cursor{position:fixed;z-index:950;width:28px;height:28px;left:0;top:0;margin:-4px 0 0 -4px;
+  pointer-events:none;opacity:0;
+  transition:left .7s var(--ease),top .7s var(--ease),opacity .3s var(--ease);
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.45))}
+#demo-cursor.show{opacity:1}
+#demo-cursor.click{animation:cursorClick .4s var(--ease)}
+@keyframes cursorClick{0%{transform:scale(1)}45%{transform:scale(.72)}100%{transform:scale(1)}}
+.clicked{outline:3px solid var(--ink) !important;outline-offset:3px;border-radius:6px;
+  box-shadow:0 0 0 6px rgba(28,26,23,.14) !important;animation:clickRing .4s var(--ease)}
+@keyframes clickRing{from{box-shadow:0 0 0 0 rgba(28,26,23,.3)}to{box-shadow:0 0 0 6px rgba(28,26,23,.14)}}
+.controls button.busy{opacity:.55;cursor:wait}

@@ -148,7 +148,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 **1:50** · C35 · LIVE
 > ### ⏸ STOP
 
-**You do —** Browse away from the campaign. She arrived on handbags — click a wallet, another wallet, a dress.
+**You do —** Press "Wanders to bags". Watch her leave the campaign: the department, then two bags, with the cursor.
 
 **They watch —** Bars shift off the arrival category. The hero stops being about the campaign. The episode closes itself.
 
@@ -191,7 +191,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **0:50** · C8 · LIVE
 
-**You do —** Click two items.
+**You do —** Press "Three coats". Watch the cursor click the first two — say the line over the third.
 
 **They watch —** Bars move at different rates. Taste is slow; this session is fast.
 
@@ -206,9 +206,9 @@ Print this. The director bar on screen shows the room the beat and what to watch
 **0:55** · C9 · LIVE
 > ### ⏸ SLOW DOWN
 
-**You do —** Click a third.
+**You do —** Let the third click land. Point at the strip that appears above the hero.
 
-**They watch —** A bar crosses θin, turns green, a chip appears.
+**They watch —** A bar crosses θin, turns green, a chip appears — and a green strip above the hero says she entered the audience and why.
 
 **You say —** It waited until it was sure. That shaded band is the gap between entering and leaving — it is why she will not flicker in and out of an audience all afternoon.
 
@@ -262,7 +262,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **0:55** · C13 · C18 · LIVE
 
-**You do —** Add the hero item to the bag.
+**You do —** Press "Adds to bag". The cursor does it; the row restructures.
 
 **They watch —** The row becomes "Complete the look" — nothing from the same category. A dimension read from the verb, not the item.
 
@@ -322,7 +322,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 **1:55** · C10 · C33 · LIVE
 > ### ⏸ THE BEAT NOBODY ELSE HAS
 
-**You do —** Stop touching it. Talk.
+**You do —** Stop touching it. Talk. When the first audience lapses, an amber strip names it.
 
 **They watch —** Three separate retreats — hero at ~28s on category, row at ~64s on price band, story at ~74s on taste. Each names its dimension and its number. The offer ends and says why. The row returns to discovery.
 

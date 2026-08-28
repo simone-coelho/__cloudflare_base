@@ -54,6 +54,11 @@
         </div>
       </section>
 
+      <!-- The audience strip: entering and leaving, said where the room is
+           already looking. Coach does this in a coloured band; it is the beat
+           "in and out of an audience" that had no on-page voice here. -->
+      <div class="strip" id="strip" hidden><span class="strip-k" id="strip-k"></span><span id="strip-t"></span></div>
+
       <section class="hero zone" id="hero" data-label="PERSONALIZED · HERO">
         <div class="hero-copy">
           <div class="kicker" id="hero-kicker">Welcome</div>
@@ -103,26 +108,36 @@
         <div class="chips" id="chips"><span class="none">no audiences yet</span></div>
       </div>
 
-      <div class="esec accent">
+      <!-- Everything below the instrument is a TAB, not a stack. A presenter must
+           never scroll the panel mid-demo; they switch. The instrument itself
+           stays pinned above, always visible. -->
+      <div class="tabbar" role="tablist">
+        <button class="tab on" data-tab="why" role="tab">Why</button>
+        <button class="tab" data-tab="trail" role="tab">The trail</button>
+        <button class="tab" data-tab="cold" role="tab">Cold start</button>
+        <button class="tab" data-tab="glass" role="tab">Glass box</button>
+      </div>
+      <div class="esec accent tabpane" data-tab="why">
         <h5>Why</h5>
         <div class="sentence" id="sentence">Nothing has happened yet.</div>
       </div>
-
-      <div class="esec">
-        <h5>What happened next</h5>
+      <div class="esec tabpane" data-tab="trail" hidden>
+        <h5>The trail <span class="cfg">what she did → what it moved</span></h5>
         <div class="conseq" id="conseq"></div>
       </div>
-
-      <div class="esec">
+      <div class="esec tabpane" data-tab="cold" hidden>
         <h5>Cold start — before any behaviour</h5>
         <div class="cold" id="cold"></div>
       </div>
-
-      <div class="esec">
+      <div class="esec tabpane" data-tab="glass" hidden>
         <h5>The glass box</h5>
-        <details class="glass" id="glass"><summary>Why this hero, exactly</summary><div id="glass-body"></div></details>
+        <details class="glass" id="glass" open><summary>Why this hero, exactly</summary><div id="glass-body"></div></details>
+        <div class="dial">
+          <div class="dial-h">Tune the hero <span class="cfg">weights are config, applied hot</span></div>
+          <div id="dial-rows"></div>
+          <div class="dial-foot" id="dial-foot"></div>
+        </div>
       </div>
-
     </div>
 
     <div class="eng-controls">
@@ -141,8 +156,16 @@
             <button id="btn-moment">Signal detected<small>the moment</small></button>
           </div>
         </div>
+        <div class="cgroup"><span class="clabel">She browses</span>
+          <div class="controls">
+            <button id="bz-coats">Three coats<small>Outerwear · 3 clicks</small></button>
+            <button id="bz-bags">Wanders to bags<small>Bags · 2 clicks</small></button>
+            <button id="bz-decide">Adds to bag<small>the hero item</small></button>
+          </div>
+        </div>
         <div class="cgroup"><span class="clabel">Merchandiser</span>
           <div class="controls">
+            <button id="btn-replay" disabled>Show what changed<small>re-highlight 10s</small></button>
             <button id="btn-pin">Pin the hero<small>merchandiser wins</small></button>
             <button id="btn-soldout">Sell out the top<small>make a rule refuse</small></button>
           </div>
@@ -168,6 +191,11 @@
 <!-- The director. Audience-safe by default: the room sees the beat and what to
      watch, never the presenter's script. ?prompter=1 reveals the SAY line for
      rehearsal or a confidence monitor. -->
+<!-- The simulated visitor. Points at what it clicks; never at chrome. -->
+<div id="demo-cursor" aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="none"><path d="M3 2l6.5 18 2.7-7.3L19.5 10 3 2z" fill="#FFFFFF" stroke="#1C1A17" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</div>
+
 <div class="director" id="director" hidden>
   <div class="dir-left">
     <div class="dir-where"><span id="dir-act"></span><span id="dir-count"></span></div>

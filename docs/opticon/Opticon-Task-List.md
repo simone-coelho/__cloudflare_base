@@ -168,6 +168,43 @@ Simone approved the layout after several rounds. What was wrong, and what it is 
 
 ---
 
+## 10 · Phase 2 — what the room needs (agreed 2026-08-28)
+
+Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap places with no visible reason; the affinity engine — the thing being sold — has no on-screen argument; the compare tool from the brief is missing; the panels need scrolling mid-demo. This phase fixes that. Decisions below are settled; do not relitigate.
+
+### Decisions
+- **D1 Movers.** One loud green (Optimizely green), thick on all four sides, carrying the landed position with "was N" beneath. Holds ~12s then fades to rest. A **replay button** re-highlights the last change for 10s, as many times as pressed — a question three minutes later must not cost the moment. **Resting cards go quiet**: thin neutral border, colour reduced to a small identity mark. Green means *"just changed"* everywhere it appears (movers, audience entry).
+- **D2 Recency leads, accumulation gates — an ADDITION to the Tapestry spec.** The docs specify decay only (doc 16 worked example: tote rises while Tabby decays; co-membership expected) and are blank on precedence between overlapping audiences. Under the documented algorithm three 501 clicks then one 545 click keeps pushing 501 for ~30s. New rule: in a single-valued dimension, the most recently touched value LEADS the page on one click; accumulated score decides MEMBERSHIP, which persists until it decays out. Per-dimension flag, tunable. ⚠️ Must be added to the Tapestry Solution & Algorithm doc — flag to Simone before it goes to the customer.
+- **D3 Product lines.** The retail catalogue gets `line` (Calder's Tabby): families of ≥3 pieces, names led by the line. `line` becomes the NARROW dimension for retail; material stays a display attribute. This is what makes "three Drover pieces, then a Linden" tellable.
+- **D4 Section ordering** per doc 15: intent-stage priority → weight → deterministic tie-break, over fixed vs re-orderable sections, with hysteresis. Sections physically travel (700ms). A **store-card offer** is a section scored on band + stage (blocks carry neither). This is the six-month tier in the docs; the demo shows it built.
+- **D5 Scripted browse** on the Coach model: presenter-triggered beats, a visible cursor that scrolls the target into view *before* reading its rect, glides 740ms, clicks with a ripple, leaves a 1200ms outline, then pauses so the room can see. **Pause is BETWEEN beats** (Coach has no mid-beat pause); beats are kept short — one department, three clicks — so gaps come often. Audience enter/leave is said on screen: *"You drifted out of Drover — the offer retired with it."*
+- **D6 Tuning dial**, live, so precedence is *turned* rather than asserted. ⚠️ The docs promise hot config; the delivery ledger says the real build is compile-time today. Real on the demo, a commitment on the product.
+- **D7 Panels.** Right panel = tabs (affinity / why / trail / glass box); left cards collapsible to a one-line summary. **No new sections.**
+- **D8 Compare restored.** It existed in v1 (`_meridian-v1.js.bak`: capture, crossfade/wipe) and was lost in the rebuild — and I wrongly said it had never been built.
+
+### Tasks
+- [x] P2-1 **Row reconciled, never rebuilt — DONE.** Cards persist across paints; DOM is reordered and only the rank chip and change badge update. Verified: every card that stayed is the same node, its photograph not reloaded. The flicker was `innerHTML` destroying ten cards per re-rank and each new `<img>` fading in from opacity 0.
+- [x] P2-2 **Mover highlight + replay — DONE.** `.changed`: thick `--changed` green on all four sides, badge with landed position and "was N" (or "new in" for arrivals), holds 12s then fades. "Show what changed" re-applies it to the last movers for 10s, any number of times.
+- [x] P2-3 **Quiet resting cards — DONE.** Thin neutral border, rank chip in ink, the product's hue reduced to a 4px mark beside the name. The 10px coloured top bar is gone, so green has the page to itself.
+- [ ] P2-4 Catalogue lines per D3 *(agent, worktree)*
+- [ ] P2-5 Recency-leads rule + test per D2 *(agent, worktree)*
+- [x] P2-6 **Tuning dial — DONE.** Five sliders over the hero's per-shape weights in the Glass box tab; `SLOT_STRATEGIES` is the live table the composer reads, so a slider IS the tuning surface — the hero recomposes on the next decision and the foot stamps `<version>+tuned`. ⚠️ Real on the demo; the product build is compile-time today (ledger).
+- [ ] P2-7 Section-ordering composer + test per D4 *(agent, worktree)*
+- [ ] P2-8 Section ordering on the page (FLIP 700ms) + the store-card offer section
+- [x] P2-9 **Scripted browse — DONE.** Ported from Coach: scroll target into view, settle 560ms, THEN read the rect; glide 740ms; click ripple; real handler fired (`el.click()` → `signal()` / `navTo()`); 1200ms outline; 700ms between clicks. Three presenter beats under *She browses*: Three coats (dept + 3 clicks), Wanders to bags (dept + 2), Adds to bag. Buttons disable while a beat runs; pause is between beats. Verified mid-beat: cursor visible over the page, outline on the clicked card, bar climbing, audience entered.
+- [x] P2-10 **Audience strips — DONE.** Above the hero: green *"You entered category · outerwear — the edit re-centred on it. Nobody wrote a rule; the score crossed its entry threshold."*; amber on exit *"You drifted out of … — what it was holding on the page let go."* Retires after 9s. Stage audiences are excluded (the offer and the row already narrate those).
+- [ ] P2-11 Compare restored per D8 *(agent, worktree)* + the two buttons
+- [x] P2-12 **Right panel tabs — DONE.** Live affinity stays pinned above; Why / The trail / Cold start / Glass box are tabs, one pane at a time. A tab that receives content while hidden gets a green dot.
+- [x] P2-13 **Left cards collapsible — DONE.** A fired surface folds to one line (`✓ fired`) and gives its height to the ledger; click it to open it again.
+- [x] P2-14 **Trail in a tab — DONE.** No new section. Each act posts a card: verb + subject, evidence chips (products viewed, category ×n, departments, events), the arithmetic on the dimension it moved most with the entry threshold drawn on the track, the audience it entered, and what changed on the page.
+- [ ] P2-15 Beat 16 ("which box comes first") and beat 23 corrected to what is real; run-of-show + talk track regenerated
+- [ ] P2-16 `block_b` is scored by the composer but has no element on the page — render it or drop it
+- [ ] P2-17 The Drover→Linden story written as a beat (three Drover, one Linden, the line audience persists, the page follows)
+- [ ] P2-18 Walk end to end again with real mouse input; redeploy
+- [ ] P2-19 Recency-leads rule written into the Tapestry Solution & Algorithm doc as an addition — **Simone reviews before it is sent**
+
+---
+
 ## 8 · Verification
 
 **Two defects only human pace could expose:**

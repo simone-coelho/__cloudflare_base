@@ -9,7 +9,7 @@
 import { SURFACES, KIND_LABEL } from '/meridian/surfaces.js';
 import { BEATS, ACTS } from '/meridian/beats.js';
 import {
-  compose, SHAPE_OF_KEY, SHAPE_ORDER, configFor, packshot,
+  compose, SHAPE_OF_KEY, SHAPE_ORDER, SLOT_STRATEGIES, configFor, packshot,
   apply, tick, snapshot, emptyState, extractTouches,
   stageTouchFor, decidingValueFor, stageKeyFor, expiryOf, audienceKey,
 } from '/meridian/engine.bundle.js';
@@ -85,6 +85,7 @@ async function load(vertical) {
   $('row-title').textContent = vertical === 'retail' ? 'Selected for you' : 'Suited to you';
   $('cfgv').textContent = r.registry.version;
   renderSurfaces(); renderBars(); renderChips([], []); $('episodes').innerHTML = '';
+  renderDial();
 
   // Ask the edge what it still holds BEFORE seeding, because cold start only
   // describes a visitor who has done nothing. Seeding over a live profile would
@@ -163,7 +164,10 @@ function renderSurfaces() {
       <span class="act">${s.action}</span>
     </article>`).join('');
   $('surfaces').querySelectorAll('.surface').forEach((el) => {
-    el.onclick = () => fireSurface(SURFACES[S.vertical].find((x) => x.id === el.dataset.id));
+    el.onclick = () => {
+      if (el.classList.contains('done')) { el.classList.toggle('open'); return; }
+      fireSurface(SURFACES[S.vertical].find((x) => x.id === el.dataset.id));
+    };
   });
 }
 
@@ -174,7 +178,7 @@ function renderSurfaces() {
 function fireSurface(s) {
   if (!s || S.usedSurfaces.has(s.id)) return;
   S.usedSurfaces.add(s.id);
-  document.querySelector(`.surface[data-id="${s.id}"]`)?.style.setProperty('opacity', '.45');
+  document.querySelector(`.surface[data-id="${s.id}"]`)?.classList.add('done');
 
   S.heroOverride = { ...s.hero, from: s.id };
   // The hero repaints when the DECISION changes. A surface changes the override
@@ -285,20 +289,142 @@ function checkHandoff(snap) {
 // ── Signals from the page ───────────────────────────────────────────────────
 /** Browsing a department: a category touch with no single item behind it. */
 function navTo(category) {
+  const before = snapshot(S.reflex, Date.now(), S.config);
+  const audBefore = new Set(S.audiences);
   const touches = [{ dim: S.vertical === 'retail' ? 'category' : 'productFamily', value: category }];
   const stage = stageTouchFor('nav_click', S.vertical);
   const res = apply(S.reflex, { action: 'nav_click', touches: stage ? [...touches, stage] : touches },
                     Date.now(), S.config);
   S.reflex = res.state; absorb(res.changes);
   S.behaved = true; S.sinceArrival += 1;
+  TALLY.events += 1; TALLY.departments.add(category);
+  const prevDecisions = S.decisions;
   recompose();
   post('/action', { vertical: S.vertical, events: [{ action: 'nav_click', touches }] });
-  consequence('Department', `Browsing ${category}`,
-    'A department is a broader statement than one product — it says which aisle she is in.');
+  evidenceCard({
+    verb: 'Browsed', subject: category, meta: 'department',
+    before, after: snapshot(S.reflex, Date.now(), S.config),
+    prevDecisions, nextDecisions: S.decisions,
+    entered: [...S.audiences].filter((a) => !audBefore.has(a)),
+  });
 }
+
+// ── Tabs ────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+  document.querySelectorAll('.tabpane').forEach((p) => { p.hidden = p.dataset.tab !== name; });
+  const t = document.querySelector(`.tab[data-tab="${name}"]`); if (t) t.classList.remove('unread');
+}
+/** Content landed in a pane. If it is hidden, say so on its tab. */
+function markTab(name) {
+  const pane = document.querySelector(`.tabpane[data-tab="${name}"]`);
+  if (pane && pane.hidden) document.querySelector(`.tab[data-tab="${name}"]`)?.classList.add('unread');
+}
+document.querySelectorAll('.tab').forEach((b) => { b.onclick = () => showTab(b.dataset.tab); });
+
+// ── THE EVIDENCE TRAIL ───────────────────────────────────────────────────────
+// The panel showed STATE — bars, chips, a hero that had changed — and never
+// showed CAUSE. Asked why something moved, the screen's only answer was a number
+// on a bar, which is not an answer a business person can hold.
+//
+// Every action now posts a card carrying the whole causal chain: what she did,
+// the evidence as countable acts, the arithmetic on the dimension it moved, the
+// threshold it crossed, and what changed on the page as a result. That chain is
+// the product. Without it we are selling an affinity engine while showing
+// nothing but products swapping places.
+
+const TALLY = { events: 0, products: new Set(), byCat: {}, departments: new Set() };
+
+function resetTally() {
+  TALLY.events = 0; TALLY.products = new Set(); TALLY.byCat = {}; TALLY.departments = new Set();
+}
+
+function evidenceChips() {
+  const out = [];
+  if (TALLY.products.size) out.push(`${TALLY.products.size} product${TALLY.products.size === 1 ? '' : 's'} viewed`);
+  const top = Object.entries(TALLY.byCat).sort((a, b) => b[1] - a[1])[0];
+  if (top) out.push(`${top[0]} ×${top[1]}`);
+  if (TALLY.departments.size) out.push(`${TALLY.departments.size} department${TALLY.departments.size === 1 ? '' : 's'}`);
+  out.push(`${TALLY.events} event${TALLY.events === 1 ? '' : 's'}`);
+  return out;
+}
+
+/** The dimension this act moved most, with the arithmetic that moved it. */
+function biggestMove(before, after) {
+  let best = null;
+  for (const spec of S.registry.dimensions) {
+    const b = before?.dims?.[spec.key] || {}; const a = after?.dims?.[spec.key] || {};
+    for (const v of Object.keys(a)) {
+      const from = b[v] ?? 0; const to = a[v];
+      if (to - from <= 0.0005) continue;
+      if (!best || to - from > best.delta) {
+        best = { dim: spec.key, value: v, from, to, delta: to - from,
+                 thetaIn: spec.thetaIn, thetaOut: spec.thetaOut,
+                 crossed: from < spec.thetaIn && to >= spec.thetaIn };
+      }
+    }
+  }
+  return best;
+}
+
+function slotsChanged(prev, next) {
+  const out = [];
+  const pick2 = (ds, slot) => ds.find((d) => d.slot === slot);
+  if (pick2(prev, 'hero')?.itemId !== pick2(next, 'hero')?.itemId) out.push('the hero');
+  const pr = prev.filter((d) => d.slot === 'row').map((d) => d.itemId);
+  const nx = next.filter((d) => d.slot === 'row').map((d) => d.itemId);
+  const movers = nx.filter((id, i) => pr.includes(id) && pr.indexOf(id) !== i).length;
+  if (movers) out.push(`${movers} of ${nx.length} products re-ranked`);
+  if (pick2(prev, 'block_a')?.blockId !== pick2(next, 'block_a')?.blockId) out.push('the story block');
+  return out;
+}
+
+function evidenceCard({ verb, subject, meta, before, after, prevDecisions, nextDecisions, entered }) {
+  const move = biggestMove(before, after);
+  const changes = slotsChanged(prevDecisions, nextDecisions);
+  const pct = (n) => `${(n * 100).toFixed(0)}%`;
+
+  const el = document.createElement('article');
+  el.className = 'ev';
+  el.innerHTML = `
+    <div class="ev-act"><span class="ev-verb">${verb}</span> ${escapeHtml(subject)}</div>
+    ${meta ? `<div class="ev-meta">${escapeHtml(meta)}</div>` : ''}
+    <div class="ev-chips">${evidenceChips().map((c) => `<span>${c}</span>`).join('')}</div>
+    ${move ? `
+      <div class="ev-math">
+        <div class="ev-dim">${move.dim} · ${move.value}</div>
+        <div class="ev-nums">${move.from.toFixed(3)} <b>→</b> ${move.to.toFixed(3)}</div>
+        <div class="ev-track">
+          <div class="ev-was" style="width:${pct(move.from)}"></div>
+          <div class="ev-now" style="left:${pct(move.from)};width:${pct(Math.max(0, move.to - move.from))}"></div>
+          <div class="ev-thr" style="left:${pct(move.thetaIn)}" title="entry threshold"></div>
+        </div>
+        <div class="ev-thrlab">entry threshold ${move.thetaIn}</div>
+      </div>` : ''}
+    ${entered?.length
+      ? `<div class="ev-entered">✓ entered ${entered.map((a) => `<code>${a}</code>`).join(' ')}</div>`
+      : (move && move.crossed ? '<div class="ev-entered">✓ crossed the entry threshold</div>' : '')}
+    ${changes.length
+      ? `<div class="ev-changed"><b>the page changed:</b> ${changes.join(' · ')}</div>`
+      : '<div class="ev-changed quiet">the page did not change — not enough signal yet</div>'}`;
+  const feed = $('conseq');
+  feed.prepend(el);
+  while (feed.children.length > 8) feed.lastElementChild.remove();
+  markTab('trail');
+}
+
+const VERB_LABEL = {
+  row_click: 'Clicked', view: 'Viewed', rail_click: 'Clicked', block_read: 'Read',
+  intent_start: 'Added to bag', convert: 'Bought', search: 'Searched for',
+  nav_click: 'Browsed', save: 'Saved',
+};
 
 function signal(action, record) {
   S.sinceArrival += 1;
+  const before = snapshot(S.reflex, Date.now(), S.config);
+  const prevDecisions = S.decisions;
+  const audBefore = new Set(S.audiences);
+
   const stage = stageTouchFor(action, S.vertical);
   if (record) {
     const touches = extractTouches(record, S.config);
@@ -306,10 +432,27 @@ function signal(action, record) {
                       Date.now(), S.config);
     S.reflex = res.state;
     absorb(res.changes);
+    TALLY.events += 1;
+    if (record.category) {
+      TALLY.products.add(record.id);
+      TALLY.byCat[record.category] = (TALLY.byCat[record.category] || 0) + 1;
+    }
   }
   // The piece she committed to. Everything the completion row does hangs off it.
   if ((action === 'intent_start' || action === 'convert') && record?.id) S.anchorId = record.id;
   recompose();
+
+  if (record) {
+    evidenceCard({
+      verb: VERB_LABEL[action] || action,
+      subject: record.name || record.title || record.id,
+      meta: [record.category, record.subcategory, record.value_usd != null ? money(record.value_usd) : null]
+        .filter(Boolean).join(' · '),
+      before, after: snapshot(S.reflex, Date.now(), S.config),
+      prevDecisions, nextDecisions: S.decisions,
+      entered: [...S.audiences].filter((a) => !audBefore.has(a)),
+    });
+  }
   post('/action', {
     vertical: S.vertical,
     events: [{ action, itemId: record?.id?.startsWith('MRD-B') ? undefined : record?.id,
@@ -338,9 +481,148 @@ function onFrame(f) {
   recompose();
 }
 
+// ── The scripted browse ─────────────────────────────────────────────────────
+// The room has to WATCH her browse: a visible visitor clicks a coat, then
+// another, then another, and the bar climbs while they watch. That is the
+// affinity engine's entire argument, shown instead of narrated. Ported from the
+// Coach demo: scroll the target into view FIRST, let it settle, THEN read the
+// rect — the cursor must never land on an off-screen element.
+//
+// Presenter-triggered, always. A beat is short — one department, three clicks —
+// and runs to completion; the pause is between beats, which is where the
+// presenter talks. Nothing here fires on its own.
+const BZ = { busy: false };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function scrollTargetIntoView(el) {
+  const r = el.getBoundingClientRect();
+  const inView = r.top >= 70 && r.bottom <= innerHeight - 12;
+  if (inView) return;
+  try { el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); } catch (_) {}
+  await sleep(560);
+}
+
+function markClicked(el) {
+  el.classList.remove('clicked'); void el.offsetWidth; el.classList.add('clicked');
+  clearTimeout(el._ck); el._ck = setTimeout(() => el.classList.remove('clicked'), 1200);
+}
+
+async function moveCursorTo(el, { click = true } = {}) {
+  const cur = $('demo-cursor');
+  if (!el) return;
+  await scrollTargetIntoView(el);
+  const r = el.getBoundingClientRect();                       // recompute AFTER the scroll settles
+  const x = r.left + r.width / 2; const y = r.top + Math.min(r.height / 2, 40);
+  cur.classList.add('show');
+  cur.style.left = `${x}px`; cur.style.top = `${y}px`;
+  await sleep(740);                                            // the glide — matches the 0.7s transition
+  cur.classList.remove('click'); void cur.offsetWidth; cur.classList.add('click');
+  if (click) {
+    markClicked(el);
+    await sleep(360);                                          // let the ripple register
+    el.click();                                                // the REAL handler — signal(), navTo()
+    await sleep(420);                                          // so the room sees it land
+  }
+}
+const hideCursor = () => $('demo-cursor').classList.remove('show');
+
+/** One beat: a list of targets, resolved lazily so a re-rank between clicks is honoured. */
+async function browse(btn, targets) {
+  if (BZ.busy) return;
+  BZ.busy = true; btn.classList.add('busy');
+  document.querySelectorAll('[id^="bz-"]').forEach((b) => { b.disabled = true; });
+  try {
+    for (const t of targets) {
+      const el = typeof t === 'function' ? t() : document.querySelector(t);
+      if (!el) continue;
+      await moveCursorTo(el);
+      await sleep(700);                                        // between clicks — Coach's cadence
+    }
+  } finally {
+    hideCursor();
+    BZ.busy = false; btn.classList.remove('busy');
+    document.querySelectorAll('[id^="bz-"]').forEach((b) => { b.disabled = false; });
+  }
+}
+
+/** Nth card of a category currently on the row; falls back to any card so a beat never stalls. */
+const cardOf = (category, n) => () => {
+  const cards = [...$('row').querySelectorAll('.card')];
+  const inCat = cards.filter((c) => (byId(c.dataset.id)?.category === category));
+  return inCat[n] || cards[n] || cards[0];
+};
+const dept = (name) => () => document.querySelector(`.navc[data-cat="${name}"]`);
+
+$('bz-coats').onclick = (e) => browse(e.currentTarget,
+  [dept('Outerwear'), cardOf('Outerwear', 0), cardOf('Outerwear', 1), cardOf('Outerwear', 2)]);
+$('bz-bags').onclick = (e) => browse(e.currentTarget,
+  [dept('Bags'), cardOf('Bags', 0), cardOf('Bags', 1)]);
+$('bz-decide').onclick = (e) => browse(e.currentTarget, ['#hero-cta']);
+
+// ── The tuning dial ─────────────────────────────────────────────────────────
+// SLOT_STRATEGIES is the live table the composer reads on every recompose, so
+// turning a slider IS the tuning surface: no rebuild, no redeploy, the next
+// decision uses the new weight and the receipt stamps a tuned version. The docs
+// promise exactly this; the delivery ledger says the real build is compile-time
+// today — this is real on the demo and a commitment on the product.
+const SHAPE_LABEL = { broad: 'category', narrow: 'line', need: 'occasion', band: 'price band', durable: 'taste', content: 'content', stage: 'stage' };
+let TUNED = false;
+
+function renderDial() {
+  const st = SLOT_STRATEGIES.hero;
+  const shapes = ['broad', 'narrow', 'band', 'durable', 'need'];
+  $('dial-rows').innerHTML = shapes.map((sh) => `
+    <div class="dial-row">
+      <label for="dial-${sh}">${SHAPE_LABEL[sh] || sh}</label>
+      <input type="range" id="dial-${sh}" min="0" max="0.6" step="0.05" value="${st[sh] ?? 0}">
+      <output id="dialv-${sh}">${(st[sh] ?? 0).toFixed(2)}</output>
+    </div>`).join('');
+  shapes.forEach((sh) => {
+    $(`dial-${sh}`).oninput = (e) => {
+      const v = parseFloat(e.target.value);
+      SLOT_STRATEGIES.hero[sh] = v;
+      $(`dialv-${sh}`).textContent = v.toFixed(2);
+      TUNED = true;
+      S.heroDirty = true;
+      recompose();
+      $('dial-foot').textContent = `hero · ${SHAPE_LABEL[sh] || sh} = ${v.toFixed(2)} · applied to the next decision · ${S.config.version}+tuned`;
+    };
+  });
+  $('dial-foot').textContent = 'Turn one. The hero recomposes on the new weight and the receipt records the version.';
+}
+
+// ── The audience strip ──────────────────────────────────────────────────────
+let STRIP_TIMER = null;
+const prettyAudience = (key) => key.replace(/_affinity$/, '').replace(/_/g, ' · ');
+
+function strip(kind, html, ttl) {
+  clearTimeout(STRIP_TIMER);
+  const el = $('strip');
+  el.classList.toggle('out', kind === 'out');
+  $('strip-k').textContent = kind === 'out' ? 'Left an audience' : 'Entered an audience';
+  $('strip-t').innerHTML = html;
+  el.hidden = false;
+  STRIP_TIMER = setTimeout(() => { el.hidden = true; }, ttl);
+}
+
+/** What entering and leaving MEAN for the page, said on the page. */
+function announceAudiences(entered, exited) {
+  const skipStage = (a) => /stage/.test(a);   // stage is narrated by the offer and the row already
+  const inn = entered.filter((a) => !skipStage(a));
+  const out = exited.filter((a) => !skipStage(a));
+  if (inn.length) {
+    strip('in', `You entered <b>${prettyAudience(inn[0])}</b> — the edit re-centred on it. `
+      + 'Nobody wrote a rule; the score crossed its entry threshold.', 9000);
+  } else if (out.length) {
+    strip('out', `You drifted out of <b>${prettyAudience(out[0])}</b> — what it was holding on the page let go. `
+      + 'The score decayed under its exit threshold on its own.', 9000);
+  }
+}
+
 function absorb(changes) {
   changes.entered.forEach((a) => S.audiences.add(a));
   changes.exited.forEach((a) => S.audiences.delete(a));
+  if (changes.entered.length || changes.exited.length) announceAudiences(changes.entered, changes.exited);
   if (changes.entered.length || changes.exited.length) renderChips(changes.entered, changes.exited);
   if (changes.explain?.length) say(changes.explain[0]);
 }
@@ -556,7 +838,8 @@ function flipRow(before) {
   // Sit every mover back where it came from, with no transition...
   for (const { el, dx, dy } of moves) {
     el.style.transition = 'none';
-    el.style.transform = `translate(${dx}px, ${dy}px)`;
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(1.06)`;
+    el.classList.add('travelling');
   }
   // ...then release them one at a time, in the order they will come to rest.
   requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -573,40 +856,98 @@ function flipRow(before) {
         if (e.target !== el || e.propertyName !== 'transform') return;
         el.removeEventListener('transitionend', done);
         el.style.transition = ''; el.style.transform = '';
+        el.classList.remove('travelling');
+        el.classList.remove('landed'); void el.offsetWidth; el.classList.add('landed');
       };
       el.addEventListener('transitionend', done);
     });
   }));
 }
 
+// ── The row: reconciled, never rebuilt ───────────────────────────────────────
+// innerHTML on every re-rank destroyed all ten cards and built ten new ones.
+// Each new <img> started at opacity 0 and faded in on load, so the products
+// blinked out and reappeared — the flicker — and the travel animation was
+// moving brand-new nodes into place. Cards now persist across paints: the DOM
+// is reordered, only the rank chip and the change badge are updated, and the
+// photograph is never reloaded.
+const ROW = { nodes: new Map(), lastMovers: [], holdTimer: null };
+
+function cardNode(it, hue) {
+  const el = document.createElement('article');
+  el.className = 'card';
+  el.dataset.id = it.id;
+  el.style.setProperty('--hue', hue);
+  const val = S.vertical === 'retail' ? money(it.value_usd)
+    : (it.rate_pct != null ? `${it.rate_pct.toFixed(2)}% APR` : 'See terms');
+  el.innerHTML = `
+    <div class="rank"></div>
+    <div class="delta" hidden></div>
+    <div class="ph${S.vertical === 'financial' ? ' fin' : ''}">${S.vertical === 'financial'
+      ? financeArt(it)
+      : packshot(it, { withName: false }) + (it.image
+        ? `<img src="${it.image}" alt="" loading="lazy" onload="this.dataset.loaded=1" onerror="this.remove()">`
+        : '')}</div>
+    <div class="meta"><div class="nm">${it.name}</div>
+      <div class="mt">${it.category} · ${it.subcategory}</div>
+      <div class="pr">${val}</div>
+      ${S.vertical === 'financial' ? '<div class="fin-cta">Check eligibility</div>' : ''}</div>`;
+  el.onclick = () => signal('row_click', byId(el.dataset.id));
+  return el;
+}
+
+/**
+ * Movers wear one loud colour on all four sides, with the position they landed
+ * on and where they came from. It holds long enough to be talked about, then
+ * fades — so green always means "this JUST changed", never "this changed at
+ * some point". Replay re-applies it to the same cards for a question that
+ * arrives three minutes later.
+ */
+function highlightMovers(movers, holdMs) {
+  clearTimeout(ROW.holdTimer);
+  $('row').querySelectorAll('.card.changed').forEach((el) => el.classList.remove('changed'));
+  for (const { id, was, now } of movers) {
+    const el = ROW.nodes.get(id); if (!el) continue;
+    el.classList.add('changed');
+    const d = el.querySelector('.delta');
+    d.hidden = false;
+    d.innerHTML = `<b>${now}</b><small>${was == null ? 'new in' : `was ${was}`}</small>`;
+  }
+  ROW.holdTimer = setTimeout(() => {
+    $('row').querySelectorAll('.card.changed').forEach((el) => el.classList.remove('changed'));
+  }, holdMs);
+}
+
 function paintRow(ds, prevIds, first) {
+  const row = $('row');
+  if (first) { ROW.nodes.clear(); row.innerHTML = ''; ROW.lastMovers = []; }
   const geometryBefore = first ? new Map() : captureRow();
   const rankBefore = new Map(prevIds.map((id, i) => [id, i + 1]));
-  const hues = distinctHues(ds.map((d) => byId(d.itemId)).filter(Boolean));
-  $('row').innerHTML = ds.map((d, i) => {
-    const it = byId(d.itemId); if (!it) return '';
+  const items = ds.map((d) => byId(d.itemId)).filter(Boolean);
+  const hues = distinctHues(items);
+  const keep = new Set(items.map((it) => it.id));
+
+  // Remove what left, create what arrived, and put everything in order without
+  // touching the nodes that merely moved.
+  for (const [id, el] of ROW.nodes) if (!keep.has(id)) { el.remove(); ROW.nodes.delete(id); }
+  const movers = [];
+  items.forEach((it, i) => {
+    let el = ROW.nodes.get(it.id);
+    if (!el) { el = cardNode(it, hues.get(it.id) || it.hex); ROW.nodes.set(it.id, el); }
+    else el.style.setProperty('--hue', hues.get(it.id) || it.hex);
+    if (row.children[i] !== el) row.insertBefore(el, row.children[i] || null);
+    el.querySelector('.rank').textContent = i + 1;
     const was = rankBefore.get(it.id);
-    const moved = !first && was && was !== i + 1;
-    const val = S.vertical === 'retail' ? money(it.value_usd)
-      : (it.rate_pct != null ? `${it.rate_pct.toFixed(2)}% APR` : 'See terms');
-    return `<article class="card${moved ? ' moved' : ''}" style="--hue:${hues.get(it.id) || it.hex}" data-id="${it.id}">
-      <div class="rank">${i + 1}</div>
-      ${moved ? `<div class="delta">${was} → ${i + 1}</div>` : ''}
-      <div class="ph${S.vertical === 'financial' ? ' fin' : ''}">${S.vertical === 'financial'
-        ? financeArt(it)
-        : packshot(it, { withName: false }) + (it.image
-          ? `<img src="${it.image}" alt="" loading="lazy" onload="this.dataset.loaded=1" onerror="this.remove()">`
-          : '')}</div>
-      <div class="meta"><div class="nm">${it.name}</div>
-        <div class="mt">${it.category} · ${it.subcategory}</div>
-        <div class="pr">${val}</div>
-        ${S.vertical === 'financial' ? '<div class="fin-cta">Check eligibility</div>' : ''}</div>
-    </article>`;
-  }).join('');
-  $('row').querySelectorAll('.card').forEach((el) => {
-    el.onclick = () => signal('row_click', byId(el.dataset.id));
+    // A product that ENTERED the row is as much a change as one that moved —
+    // three arrivals with no mark was the first thing visible in the screenshot.
+    if (!first && was && was !== i + 1) movers.push({ id: it.id, was, now: i + 1 });
+    else if (!first && !was && prevIds.length) movers.push({ id: it.id, was: null, now: i + 1 });
+    else { el.querySelector('.delta').hidden = true; }
   });
+
   flipRow(geometryBefore);
+  if (movers.length) { ROW.lastMovers = movers; highlightMovers(movers, 12000); }
+
   const completing = ds.some((d) => d.strategy === 'completion');
   const anchor = completing && byId(ds.find((d) => d.anchorId)?.anchorId);
   const claims = ds.some((d) => d.strategy === 'affinity');
@@ -618,6 +959,7 @@ function paintRow(ds, prevIds, first) {
     ? `chosen to go with the ${anchor ? anchor.name : 'piece you chose'} — nothing from the same category`
     : claims ? 'ranked by what you have shown interest in'
     : ds.some((d) => d.strategy === 'fading') ? 'our usual order' : 'the same order every shopper sees';
+  $('btn-replay').disabled = !ROW.lastMovers.length;
 }
 
 function paintBlock(d) {
@@ -744,6 +1086,7 @@ function announceRetreat(prev, next) {
 
 /** What the action CAUSED downstream — not what it changed on screen. */
 function consequence(head, msg, sub, decay) {
+  markTab('trail');
   const el = document.createElement('div');
   el.className = 'cq' + (decay ? ' decay' : '');
   el.innerHTML = `<div class="h">${head}</div><div class="m">${msg}</div>${sub ? `<div class="s">${sub}</div>` : ''}`;
@@ -924,6 +1267,7 @@ $('btn-radar').onclick = async () => {
   await radar([]);
 };
 $('rad-close').onclick = () => $('radar').classList.remove('open');
+$('btn-replay').onclick = () => { if (ROW.lastMovers.length) highlightMovers(ROW.lastMovers, 10000); };
 $('btn-conc').onclick = () => { $('conc').classList.add('open'); $('conc-q').focus(); };
 $('conc-close').onclick = () => $('conc').classList.remove('open');
 $('conc-reset').onclick = () => {

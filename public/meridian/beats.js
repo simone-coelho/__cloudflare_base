@@ -94,7 +94,7 @@ export const BEATS = [
   // ── ACT 2 · the handoff and the session · 900s ─────────────────────────────
   { n: 9, act: 2, cap: 'C35', title: 'The handoff', secs: 110, mark: 'STOP',
     why: 'The hinge of the whole session. Marked STOP in the script; rushing this loses the argument.',
-    do: 'Browse away from the campaign. She arrived on handbags — click a wallet, another wallet, a dress.',
+    do: 'Press "Wanders to bags". Watch her leave the campaign: the department, then two bags, with the cursor.',
     watch: 'Bars shift off the arrival category. The hero stops being about the campaign. The episode closes itself.',
     say: 'Stop. This is the most important sixty seconds in the session. The email said handbags. The ad said handbags. She is looking at wallets. Watch what the page decides to believe. … The campaign did not have to be wrong for that to matter. She simply moved on, and the page moved with her.',
     real: 'LIVE' },
@@ -115,15 +115,15 @@ export const BEATS = [
 
   { n: 12, act: 2, cap: 'C8', title: 'Different memories, different speeds', secs: 50,
     why: 'Sets up the staircase in beat 21. Without it, the retreats later look arbitrary.',
-    do: 'Click two items.',
+    do: 'Press "Three coats". Watch the cursor click the first two — say the line over the third.',
     watch: 'Bars move at different rates. Taste is slow; this session is fast.',
     say: 'Seven things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both.',
     real: 'LIVE' },
 
   { n: 13, act: 2, cap: 'C9', title: 'It waited until it was sure', secs: 55, mark: 'SLOW DOWN',
     why: 'The hysteresis idea is the least intuitive thing in the session and the most defensible.',
-    do: 'Click a third.',
-    watch: 'A bar crosses θin, turns green, a chip appears.',
+    do: 'Let the third click land. Point at the strip that appears above the hero.',
+    watch: 'A bar crosses θin, turns green, a chip appears — and a green strip above the hero says she entered the audience and why.',
     say: 'It waited until it was sure. That shaded band is the gap between entering and leaving — it is why she will not flicker in and out of an audience all afternoon.',
     real: 'LIVE' },
 
@@ -150,7 +150,7 @@ export const BEATS = [
 
   { n: 17, act: 2, cap: 'C13 · C18', title: 'The page gains a section', secs: 55,
     why: 'Two capabilities land together and the causal link needs saying out loud.',
-    do: 'Add the hero item to the bag.',
+    do: 'Press "Adds to bag". The cursor does it; the row restructures.',
     watch: 'The row becomes "Complete the look" — nothing from the same category. A dimension read from the verb, not the item.',
     say: 'She stopped browsing and started deciding. That is a seventh dimension, and it is the only one not read off a product — it is read off what she did. So the page stops offering her more coats and starts completing the one she chose. It gained a section, not just different contents.',
     real: 'LIVE' },
@@ -179,7 +179,7 @@ export const BEATS = [
 
   { n: 21, act: 2, cap: 'C10 · C33', title: 'Watch her leave', secs: 115, mark: 'THE BEAT NOBODY ELSE HAS',
     why: 'Measured at human pace with the real sequence: retreats land at 28s, 64s and 74s. 115 leaves ~40s of headroom so the presenter is never waiting on it in silence.',
-    do: 'Stop touching it. Talk.',
+    do: 'Stop touching it. Talk. When the first audience lapses, an amber strip names it.',
     watch: 'Three separate retreats — hero at ~28s on category, row at ~64s on price band, story at ~74s on taste. Each names its dimension and its number. The offer ends and says why. The row returns to discovery.',
     say: 'Everyone demonstrates joining an audience. Watch her leave one. And it does not collapse at once — the hero goes first, on category, because what aisle she is in is the most perishable thing about her. Then the row, on price band. Taste goes last, because taste is the slowest thing about anyone. Nobody wrote an exit rule for any of that. It is the same arithmetic running backwards. … And there is the offer ending, naming the number that ended it.',
     real: 'LIVE' },
