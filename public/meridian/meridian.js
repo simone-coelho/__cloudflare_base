@@ -48,6 +48,12 @@ function applyHighlight(el, c = HL.cur) {
 /** The shelf she is looking at: the department she clicked, or the whole store. */
 const rowPool = () => (S.dept ? S.items.filter((i) => i.category === S.dept) : S.items);
 
+/** ONE OVERLAY AT A TIME. Opening any modal closes whatever is open — no stacking, one scrim. */
+function openMoment(id) {
+  document.querySelectorAll('.moment.open').forEach((m) => { if (m.id !== id) m.classList.remove('open'); });
+  $(id).classList.add('open');
+}
+
 /** Engine time. Everything the reflex engine sees goes through this. */
 const NOW = () => S.clock;
 /** An act happened: carry forward a LITTLE real time (never a conversation). */
@@ -331,7 +337,7 @@ function openDy() {
     <div class="dy-pin">👤 Shoppers like her, from here · first-party</div>
     <ul>${lines}${cohortUsable(c) ? `<li>Modal price band: ${escapeHtml(c.modalBand)} (curation only)</li>` : ''}${c?.attachRate != null ? `<li>Attach a companion ${Math.round(c.attachRate * 100)}% of the time</li>` : ''}</ul>
     <div class="dy-foot">Curates the storefront, never the price — aggregate, never the individual</div>`;
-  $('dyvs').classList.add('open');
+  openMoment('dyvs');
 }
 $('dyvs-close').onclick = () => $('dyvs').classList.remove('open');
 $('btn-dyvs').onclick = openDy;
@@ -2036,7 +2042,7 @@ function say(r) {
 // written before the demo started.
 
 let SCENE_COUNT = null;
-$('btn-ask').onclick = () => { $('ask').classList.add('open'); $('q').focus(); };
+$('btn-ask').onclick = () => { openMoment('ask'); renderAskPre(); $('q').focus(); };
 $('ask-close').onclick = () => $('ask').classList.remove('open');
 
 $('ask-form').onsubmit = async (e) => {
@@ -2102,7 +2108,7 @@ $('ask-form').onsubmit = async (e) => {
         <div class="pr">${S.vertical === 'retail' ? money(it.value_usd)
           : (it.rate_pct != null ? it.rate_pct.toFixed(2) + '% APR' : 'See terms')}</div></div>
     </article>`).join('');
-  $('ask-answer').hidden = false;
+  $('ask-answer').hidden = false; $('ask-pre').hidden = true;
   consequence('Search', `Routed to "${a.scene.id}" by the ${a.source === 'model' ? 'model' : 'local classifier'}`,
     `One of ${SCENE_COUNT} approved scenes. The set is closed — the schema is an enum, so it cannot invent one.`);
 };
@@ -2187,7 +2193,7 @@ $('btn-receipts').onclick = async () => {
       const v = row[c]; const t = v == null ? '' : String(v);
       return `<td title="${t.replace(/"/g, '&quot;')}">${t.length > 42 ? t.slice(0, 42) + '…' : t}</td>`;
     }).join('')}</tr>`).join('') + '</tbody>';
-  $('receipts').classList.add('open');
+  openMoment('receipts');
   consequence('Receipts', `${r.rows.length} decision rows exported`,
     'Every slot, every candidate count, every driver, every refusal, and the config version it ran under. We hand you the rows; you compute the lift.');
   $('sentence').textContent =
@@ -2196,7 +2202,7 @@ $('btn-receipts').onclick = async () => {
 };
 $('rec-close').onclick = () => $('receipts').classList.remove('open');
 $('btn-radar').onclick = async () => {
-  $('radar').classList.add('open');
+  openMoment('radar');
   // Always open on the blended view. The lie has to be seen before it is caught.
   RAD.baseline = null; RAD.recovered = null;
   await radar('all');
@@ -2218,7 +2224,7 @@ $('btn-capture').onclick = async () => {
   if (r.ok) consequence('Compare', 'Baseline captured', 'Compare will show this frame against whatever the page looks like then.');
 };
 $('btn-compare').onclick = () => openCompare($('page'));
-$('btn-conc').onclick = () => { $('conc').classList.add('open'); $('conc-q').focus(); };
+$('btn-conc').onclick = () => { openMoment('conc'); $('conc-q').focus(); };
 $('conc-close').onclick = () => $('conc').classList.remove('open');
 $('conc-reset').onclick = () => {
   CONC.history = []; CONC.shown = []; $('conc-thread').innerHTML = '';
@@ -2296,7 +2302,7 @@ $('btn-soldout').onclick = () => {
 S.published = [];
 
 $('btn-opal').onclick = async () => {
-  $('opal').classList.add('open'); $('oq').focus();
+  openMoment('opal'); $('oq').focus();
   const v = await fetch(`${API}/opal/vocabulary?vertical=${S.vertical}`, { credentials: 'omit' })
     .then((x) => x.json()).catch(() => null);
   if (v?.ok) {
@@ -2535,7 +2541,7 @@ addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') { e.preventDefault(); goBeat(DIR.i + 1); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); goBeat(DIR.i - 1); }
   if (e.key === ' ') { e.preventDefault(); setAuto(!DIR.auto); }
-  if (e.key === 'Escape') { if (BZ.busy) BZ.abort = true; }
+  if (e.key === 'Escape') { const m = document.querySelector('.moment.open'); if (m) { m.classList.remove('open'); return; } if (BZ.busy) BZ.abort = true; }
 });
 setInterval(dirTick, 500);
 
@@ -2673,6 +2679,36 @@ async function conciergeAsk(message) {
     + 'invented product and a repeat are both unrepresentable — not discouraged, unrepresentable.');
 }
 
+/** A compact product tile for the search page (the same shape as a result). */
+function tileHtml(it, i) {
+  return `<article class="card" data-id="${it.id}" style="--hue:${it.hex || '#999'}">
+      <div class="rank">${i + 1}</div>
+      <div class="ph">${packshot(it, { withName: false })}${it.image
+        ? `<img src="${it.image}" alt="" loading="lazy" onload="this.dataset.loaded=1" onerror="this.remove()">`
+        : ''}</div>
+      <div class="meta"><div class="nm">${escapeHtml(it.name)}</div>
+        <div class="mt">${escapeHtml(it.category)} · ${escapeHtml(it.subcategory || it.colour || '')}</div>
+        <div class="pr">${S.vertical === 'retail' ? money(it.value_usd) : (it.rate_pct != null ? it.rate_pct.toFixed(2) + '% APR' : 'See terms')}</div></div>
+    </article>`;
+}
+/**
+ * AI SEARCH, before she types: the empty height was a lost opportunity. Two rows —
+ * what her own affinity already says, and what shoppers near her bought — so the
+ * page reinforces the profile even before a query. Both from data already computed.
+ */
+function renderAskPre() {
+  const pre = $('ask-pre'); if (!pre) return;
+  const picked = S.decisions.filter((d) => d.slot === 'row' && (d.strategy === 'affinity' || d.strategy === 'completion')).map((d) => byId(d.itemId)).filter(Boolean).slice(0, 4);
+  const snap = snapshot(S.reflex, NOW(), S.config);
+  const lead = Object.entries(snap.dims || {}).flatMap(([d, vs]) => Object.entries(vs).map(([v, a]) => ({ d, v, a }))).filter((x) => x.a > 0.1).sort((x, y) => y.a - x.a)[0];
+  const near = cohortUsable(S.cohort) ? coldPicksFor(S.cohort).map(byId).filter(Boolean).slice(0, 4) : [];
+  const blocks = [];
+  if (picked.length) blocks.push(`<h6>Because of what you have looked at${lead ? ` <span>· ${escapeHtml(lead.d)} · ${escapeHtml(lead.v)} ${lead.a.toFixed(2)}</span>` : ''}</h6><div class="row ask-tiles">${picked.map(tileHtml).join('')}</div>`);
+  if (near.length) blocks.push(`<h6>Shoppers near you bought <span>· ${escapeHtml(S.cohort.grainLabel)}${S.cohort.sampleSize ? ` · N=${S.cohort.sampleSize}` : ' · representative'} · your receipts + census</span></h6><div class="row ask-tiles">${near.map(tileHtml).join('')}</div>`);
+  if (!blocks.length) blocks.push('<h6>Nothing known yet</h6><div class="ask-empty">No behaviour and no cohort for this location — ask, and the answer is still ranked to what she does next.</div>');
+  pre.innerHTML = blocks.join('');
+  pre.hidden = $('ask-answer') && !$('ask-answer').hidden;
+}
 const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -2810,7 +2846,7 @@ function openCheckout() {
     : `<div class="co-bnpl"><span class="chip">New · for you</span><h4>Save your place — finish by link</h4><div class="terms">We text you a link; the identity check runs when you are ready, on any device.</div><div class="proof">★★★★★ Most applicants finish within the hour</div><a class="co-btn">Send me the link</a></div>`;
   $('co-body').innerHTML = lines + (fix ? remedy : control)
     + `<div class="co-foot">${fix ? `Served by the experiment <b>${escapeHtml(fix.flagKey || '')}</b> to <b>${escapeHtml(fix.audienceNoun || 'the cohort')}</b> — real flag, real audience; this session is in the treatment.` : 'The control. Launch the fix in Revenue Radar, then open this again.'}</div>`;
-  $('checkout').classList.add('open');
+  openMoment('checkout');
   consequence('Checkout', fix ? 'The fix is live for that shopper, in-session' : 'The control payment step', fix ? `${fix.remedy} — served by ${fix.flagKey}.` : 'A plain card form. Nothing has been fixed yet.');
 }
 $('co-close').onclick = () => $('checkout').classList.remove('open');
