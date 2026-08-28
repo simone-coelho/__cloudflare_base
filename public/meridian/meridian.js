@@ -2781,27 +2781,27 @@ async function radar(cohort, opts = {}) {
 
 function renderRadar() {
   const d = RAD.data; const base = RAD.baseline;
-  const cohortKey = cohortParam(d.cohort ?? RAD.cohort);
+  const cohortKey = d.cohortKey || cohortParam(d.cohort ?? RAD.cohort);
   $('rad-sub').textContent = `· ${d.cohortLabel} · ${d.sessions.toLocaleString('en-US')} sessions`
     + (!isAll(d.cohort) ? ` · ${share(d.shareOfTraffic)} of traffic` : '');
 
   // THE PILLS. Generations lead (that is the story: the average hides a cohort);
   // the dimension chips stay so the room can filter to something never rehearsed.
-  const gens = (d.cohortOptions || []).map((o) => ({ label: o.label, key: o.key, gen: true }));
+  const gens = (d.cohortOptions || []).map((o) => ({ label: `${o.label}${o.sessions ? ` · ${Number(o.sessions).toLocaleString('en-US')}` : ''}`, key: o.key, gen: true }));
   const legacy = [];
   if (!gens.length && d.suggested) {
     legacy.push({ label: 'Everyone', key: [] }, { label: d.suggested.first.map((k) => k.value).join(' + '), key: d.suggested.first },
                 { label: d.suggested.drilldown.map((k) => k.value).join(' + '), key: d.suggested.drilldown });
   }
   const covered = new Set([...gens, ...legacy].map((c) => cohortParam(c.key)));
-  const extra = (d.available || []).filter((a) => a.dim !== 'region')
+  const extra = (d.available || []).filter((a) => a.dim !== 'region' && a.dim !== 'cohort')
     .map((a) => ({ label: a.label, key: [{ dim: a.dim, value: a.value }] }))
     .filter((c) => !covered.has(cohortParam(c.key)));
   const pill = (c) => `<button class="rad-c${c.gen ? ' gen lead' : ''}${cohortParam(c.key) === cohortKey ? ' on' : ''}" id="rad-c-${String(cohortParam(c.key) || 'all').replace(/[^a-z0-9_]/gi, '_')}" data-k='${JSON.stringify(c.key)}'>${escapeHtml(c.label)}</button>`;
   $('rad-cohorts').innerHTML = [...gens, ...legacy, ...extra].map(pill).join('');
   $('rad-cohorts').querySelectorAll('.rad-c').forEach((b) => { b.onclick = () => radar(JSON.parse(b.dataset.k)); });
 
-  const rec = RAD.recovered && cohortParam(RAD.recovered.cohort) === cohortKey ? RAD.recovered : null;
+  const rec = RAD.recovered && RAD.recovered.key === cohortKey ? RAD.recovered : null;
   $('rad-funnel').innerHTML = d.steps.map((st, i) => {
     const bad = d.worst && st.key === d.worst.key && (st.severity ? st.severity === 'high' : true);
     const mid = st.severity === 'mid';
@@ -2828,14 +2828,14 @@ function renderRadar() {
   $('rad-find').innerHTML = `
     <h6>Where it breaks</h6>
     <div class="rad-gap">${w.dropPct != null ? `${Number(w.dropPct).toFixed(1)}% drop` : `${(w.gapPoints * 100).toFixed(1)} points`}</div>
-    <div class="rad-remedy"><b>${escapeHtml(w.label)}</b> — ${share(w.cohortRate)} for this cohort against ${share(w.baselineRate)} for everyone${w.skew ? ` · <b>${escapeHtml(w.skew)}</b>` : ''}.</div>
+    <div class="rad-remedy"><b>${w.fromLabel ? `${escapeHtml(w.fromLabel)} → ${escapeHtml(w.label)}` : escapeHtml(w.label)}</b> — ${share(w.cohortRate)} make it through for this cohort against ${share(w.baselineRate)} for everyone${w.expectedDropPct != null ? ` · expected drop ${Number(w.expectedDropPct).toFixed(0)}%, actual ${Number(w.dropPct).toFixed(1)}%` : ''}${w.skew ? ` · <b>${escapeHtml(w.skew)}</b>` : ''}.</div>
     <h6>Recoverable</h6>
     <div class="rad-money" id="rad-money">${usd(r.amountUsd)}</div>
     <div class="rad-math">${m
       ? `${Number(m.excessLostSessions).toLocaleString('en-US')} sessions lost beyond the expected drop × ${usd(m.aov)} average order × ${m.fraction} recoverable = <b>${usd(r.amountUsd)}</b>`
       : `${r.lostSessions.toLocaleString('en-US')} sessions lost to the gap × ${usd(r.aov)} average order = ${usd(r.amountUsd)}`}</div>
     <h6>The remedy</h6>
-    <div class="rad-remedy">${escapeHtml(r.remedy)}${r.audienceNoun ? ` → <b>${escapeHtml(r.audienceNoun)}</b>` : ''}</div>
+    <div class="rad-remedy">${escapeHtml(r.remedy)}${(r.audienceNoun || r.audience) ? ` → <b>${escapeHtml(r.audienceNoun || r.audience)}</b>` : ''}</div>
     <div id="rad-recover"></div>
     <button class="rad-launch" id="rad-launch">Launch the fix</button>
     <div class="rad-out" id="rad-out"></div>
@@ -2846,7 +2846,7 @@ function renderRadar() {
       <span class="tg dv">lift representative</span>
     </div>`;
   $('rad-launch').onclick = (e) => launchFix(e.currentTarget);
-  if (RAD.launched && cohortParam(RAD.launched.cohort) === cohortKey) paintLaunched(RAD.launched.r);
+  if (RAD.launched && RAD.launched.key === cohortKey) paintLaunched(RAD.launched.r);
 }
 
 /** PROVE THE FIX: the same rows, the remedy applied to the diagnosed cohort — the funnel recovers on screen. */
@@ -2854,7 +2854,7 @@ async function proveFix() {
   const before = RAD.data; if (!before?.recoverable) return;
   const after = await radar(before.cohort ?? RAD.cohort, { remedy: true });
   if (!after?.ok) return;
-  RAD.recovered = { cohort: before.cohort ?? RAD.cohort, steps: after.steps, amountUsd: after.recoverable?.amountUsd ?? 0, recovered: after.recovered };
+  RAD.recovered = { key: before.cohortKey || cohortParam(before.cohort ?? RAD.cohort), steps: after.steps, amountUsd: after.recoverable?.amountUsd ?? 0, recovered: after.recovered };
   renderRadar();
   const b = after.recovered?.before || { dropPct: before.worst?.dropPct, amountUsd: before.recoverable.amountUsd };
   const a = after.recovered?.after || { dropPct: after.worst?.dropPct ?? 0, amountUsd: after.recoverable?.amountUsd ?? 0 };
@@ -2911,7 +2911,8 @@ function paintLaunched(r) {
 async function launchFix(btn) {
   const d = RAD.data;
   btn.disabled = true; btn.textContent = 'creating…';
-  const cohortKeys = Array.isArray(d.cohort) ? d.cohort : (d.cohortKeys || (isAll(d.cohort) ? [] : [{ dim: 'cohort', value: String(d.cohort) }]));
+  const cohortKeys = Array.isArray(d.cohort) && d.cohort.length ? d.cohort
+    : (d.cohortKey && d.cohortKey !== 'all' ? d.cohortKey.split(',').map((t) => (t.includes(':') ? { dim: t.split(':')[0], value: t.split(':')[1] } : { dim: 'cohort', value: t })) : []);
   const r = await fetch(`${API}/experiment/dispatch`, {
     method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ vertical: S.vertical, source: 'radar', flavour: 'ab', cohort: cohortKeys }),
@@ -2927,8 +2928,8 @@ async function launchFix(btn) {
     ? `Targeted at <b>${r.audience.name}</b> — real Optimizely audience <code>${r.audience.id}</code>, `
       + `${r.audience.created ? 'created just now' : 'already there and reused'}.`
     : '<span class="refuse">No audience was attached — this rule runs on everyone.</span>';
-  RAD.launched = { cohort: d.cohort ?? RAD.cohort, r };
-  S.fixLive = { flagKey: r.flagKey, remedy: d.recoverable?.remedy, audienceNoun: d.recoverable?.audienceNoun || d.cohortLabel };
+  RAD.launched = { key: d.cohortKey || cohortParam(d.cohort ?? RAD.cohort), r };
+  S.fixLive = { flagKey: r.flagKey, remedy: d.recoverable?.remedy, audienceNoun: d.recoverable?.audienceNoun || d.recoverable?.audience || d.cohortLabel };
   paintLaunched(r);
   consequence('Revenue Radar', 'Fix launched as a real experiment',
     `${r.flagKey} targeted at ${d.cohortLabel}. Diagnosis representative, experiment live.`);

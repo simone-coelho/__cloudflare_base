@@ -18,7 +18,7 @@ import { itemsFor, blocksFor, catalogStats } from './catalog';
 import { configFor, SHAPE_OF_KEY, SHAPE_ORDER } from './reflexConfig';
 import { coldStart } from './coldstart';
 import { computeGeoCohort, getGeoCohortSource, type GeoInput } from './geoCohort';
-import { funnel, defectCohortFor, defectDrilldownFor } from './funnel';
+import { funnel, parseCohort, defectCohortFor, defectDrilldownFor } from './funnel';
 import { concierge } from './concierge';
 import { search } from './search';
 import { propose, vocabularyFor, audienceKeyFor } from './opal';
@@ -97,16 +97,23 @@ meridian.post('/concierge', async (c) => {
   return c.json(await concierge(c.env, vertical, message, history, shown, affinity));
 });
 
+/**
+ * The Revenue Radar. GET /funnel?vertical=retail|financial&cohort=&remedy=
+ *   cohort — either form, or both mixed: a generational key (`gen_z`, `all`) or
+ *            dim:value pairs (`priceBand:premium,device:mobile`). Absent = everyone.
+ *   remedy — `1` re-runs the SAME simulated rows with the defect lifted for the
+ *            sessions the remedy targets, and returns `recovered` (before/after)
+ *            so the fix can be proved in the room with the same arithmetic.
+ * Pure compute over simulated rows: no D1, no cookies, nothing written.
+ */
 meridian.get('/funnel', (c) => {
-  const vertical = (c.req.query('vertical') === 'financial' ? 'financial' : 'retail') as Vertical;
-  const raw = c.req.query('cohort') ?? '';
-  const cohort = raw
-    ? raw.split(',').map((p) => p.split(':')).filter((x) => x.length === 2)
-        .map(([dim, value]) => ({ dim: dim!.trim(), value: value!.trim() }))
-    : [];
+  const vertical = verticalOf(c.req.query('vertical'));
+  const cohort = parseCohort(c.req.query('cohort'));
+  const remedyRaw = (c.req.query('remedy') ?? '').toLowerCase();
+  const remedyApplied = remedyRaw === '1' || remedyRaw === 'true' || remedyRaw === 'yes';
   return c.json({
     ok: true,
-    ...funnel(vertical, cohort),
+    ...funnel(vertical, cohort, { remedyApplied }),
     suggested: { first: defectCohortFor(vertical), drilldown: defectDrilldownFor(vertical) },
   });
 });
