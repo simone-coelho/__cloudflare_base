@@ -9,7 +9,7 @@
    Faces: Playfair Display (title) · Inter (body) · IBM Plex Mono (clock, eyebrow, badge).
    The page loads Inter and Playfair; Plex Mono is pulled here so the module
    stands alone. Fallback stacks everywhere. */
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&display=swap');
+600&display=swap');
 
 .mmt-host{
   --mmt-serif:var(--serif,'Playfair Display',ui-serif,Georgia,serif);
