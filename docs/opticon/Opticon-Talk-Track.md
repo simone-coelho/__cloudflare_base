@@ -206,7 +206,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 **0:55** · C9 · LIVE
 > ### ⏸ SLOW DOWN
 
-**You do —** Let the third click land. Point at the strip that appears above the hero.
+**You do —** Press Next. The band predicts what the third click will cause — read it to the room, close it, and watch it come true.
 
 **They watch —** A bar crosses θin, turns green, a chip appears — and a green strip above the hero says she entered the audience and why.
 
@@ -262,7 +262,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **0:55** · C13 · C18 · LIVE
 
-**You do —** Press "Adds to bag". The cursor does it; the row restructures.
+**You do —** Press Next. The band predicts the add to bag — the offer, the completion row — then the cursor performs it.
 
 **They watch —** The row becomes "Complete the look" — nothing from the same category. A dimension read from the verb, not the item.
 

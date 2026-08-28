@@ -131,9 +131,9 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 13, act: 2, cap: 'C9', title: 'It waited until it was sure', secs: 55, mark: 'SLOW DOWN',
-    perform: [{ card: { cat: 'Outerwear', n: 2 } }],
+    perform: [{ predict: { card: { cat: 'Outerwear', n: 2 } } }],
     why: 'The hysteresis idea is the least intuitive thing in the session and the most defensible.',
-    do: 'Let the third click land. Point at the strip that appears above the hero.',
+    do: 'Press Next. The band predicts what the third click will cause — read it to the room, close it, and watch it come true.',
     watch: 'A bar crosses θin, turns green, a chip appears — and a green strip above the hero says she entered the audience and why.',
     say: 'It waited until it was sure. That shaded band is the gap between entering and leaving — it is why she will not flicker in and out of an audience all afternoon.',
     real: 'LIVE' },
@@ -161,9 +161,9 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 17, act: 2, cap: 'C13 · C18', title: 'The page gains a section', secs: 55,
-    perform: [{ sel: '#hero-cta' }],
+    perform: [{ predict: { sel: '#hero-cta' } }],
     why: 'Two capabilities land together and the causal link needs saying out loud.',
-    do: 'Press "Adds to bag". The cursor does it; the row restructures.',
+    do: 'Press Next. The band predicts the add to bag — the offer, the completion row — then the cursor performs it.',
     watch: 'The row becomes "Complete the look" — nothing from the same category. A dimension read from the verb, not the item.',
     say: 'She stopped browsing and started deciding. That is a seventh dimension, and it is the only one not read off a product — it is read off what she did. So the page stops offering her more coats and starts completing the one she chose. It gained a section, not just different contents.',
     real: 'LIVE' },
