@@ -208,7 +208,7 @@ Simone's third review. The pattern he named: I rebuilt capabilities the Coach de
 - [ ] P3-7 **Compare** — Coach's divider *(agent D)*
 - [ ] P3-8 **Catalogue** — 12 families × 3 colourways + 4 fragrances, colour as the eighth dimension (financial: card tier), packshots per colourway, reviewed *(agent A)*
 - [x] P3-9 **The rule** — charter amended: state isolated, stateless services shared, match Coach first
-- [ ] P3-10 **Reflex moments** — Coach's six stories + the hold on add-to-bag, countdown-to-exit honesty, cooldowns, queue, dock *(agent E)*; **add-to-bag on every card — done**
+- [x] P3-10 **Reflex moments — DONE and integrated.** Coach's system ported whole (agent, 36/36 harness): the hold on add-to-bag (15:00, "your bag returned to the shelf"), monogramming on entering premium with the countdown ending at the audience's OWN exit, curated, shift, occasion, revert — one card at a time, 3-min cooldown, 6s spacing, queue-never-drop, offers dock to a pill at 20s, early expiry when the backing audience leaves. Verified on the page: the hold appears from a card's Add to bag at 14:59 and the queue survives a browse beat. The predict band pauses the moment clocks (the presenter is talking); closing it resumes them. Financial voices included ("We're holding your rate").
 - [x] P3-11 **Research — DONE**, saved to `docs/opticon/Research-Personalization-Demos.md` (DY, Adobe, Bloomreach, Salesforce, Optimizely, Insider, Algolia, Coveo; every claim cited). The eight recurring patterns and the recommendations feed P3-2/P3-3; headline: ordered priority + "highest wins, none → nothing" is the industry rule, and Algolia's simulator is the reference for side-by-side with position deltas.
 
 ### Tasks

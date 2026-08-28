@@ -10,6 +10,7 @@ import { SURFACES, KIND_LABEL } from '/meridian/surfaces.js';
 import { BEATS, ACTS } from '/meridian/beats.js';
 import { captureBaseline, openCompare, clearBaseline } from '/meridian/compare.js';
 import { paintLayout } from '/meridian/layout.js';
+import { initMoments } from '/meridian/moments.js';
 import {
   compose, composeLayout, SHAPE_OF_KEY, SHAPE_ORDER, SLOT_STRATEGIES, configFor, packshot,
   apply, tick, snapshot, emptyState, extractTouches,
@@ -440,6 +441,7 @@ function signal(action, record) {
   }
   // The piece she committed to. Everything the completion row does hangs off it.
   if ((action === 'intent_start' || action === 'convert') && record?.id) S.anchorId = record.id;
+  if (action === 'intent_start' && record && window.MOMENTS) window.MOMENTS.addToBag(record);
   recompose();
 
   if (record) {
@@ -605,9 +607,10 @@ function predictThenProve(action, record, touchesOverride, label) {
   if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
   $('pd-will').innerHTML = will.map((w) => `<li>${w}</li>`).join('');
   $('predict').hidden = false; PD.open = true;
+  if (window.MOMENTS) window.MOMENTS.pause();
   return new Promise((resolve) => { PD.resolve = resolve; });
 }
-$('pd-go').onclick = () => { $('predict').hidden = true; PD.open = false; PD.resolve?.(); PD.resolve = null; };
+$('pd-go').onclick = () => { $('predict').hidden = true; PD.open = false; if (window.MOMENTS) window.MOMENTS.resume(); PD.resolve?.(); PD.resolve = null; };
 
 // ── The scripted browse ─────────────────────────────────────────────────────
 // The room has to WATCH her browse: a visible visitor clicks a coat, then
@@ -831,6 +834,10 @@ function absorb(changes) {
   changes.entered.forEach((a) => S.audiences.add(a));
   changes.exited.forEach((a) => S.audiences.delete(a));
   if (changes.entered.length || changes.exited.length) announceAudiences(changes.entered, changes.exited);
+  if ((changes.entered.length || changes.exited.length) && window.MOMENTS) {
+    window.MOMENTS.audienceChange({ entered: changes.entered, exited: changes.exited,
+      snapshot: snapshot(S.reflex, Date.now(), S.config) });
+  }
   if (changes.entered.length || changes.exited.length) renderChips(changes.entered, changes.exited);
   if (changes.explain?.length) say(changes.explain[0]);
 }
@@ -1181,9 +1188,7 @@ function cardNode(it, hue) {
   // The bag button is INTENT, not a view — and it must not also count as a click.
   el.querySelector('.add').onclick = (e) => {
     e.stopPropagation();
-    const item = byId(el.dataset.id);
-    signal('intent_start', item);
-    if (window.MOMENTS) window.MOMENTS.addToBag(item);
+    signal('intent_start', byId(el.dataset.id));
   };
   return el;
 }
@@ -2227,6 +2232,7 @@ async function setVertical(v) {
   $('btn-financial').classList.toggle('on', v === 'financial');
   await post('/vertical', { vertical: v });
   await load(v); connect();
+  if (window.MOMENTS) window.MOMENTS.setVertical(v);
   $('sentence').textContent = 'Same engine. Same seven dimensions. Different vocabulary.';
 }
 $('btn-retail').onclick = () => setVertical('retail');
@@ -2239,6 +2245,15 @@ $('btn-reset').onclick = async () => {
   $('btn-capture').innerHTML = 'Capture baseline<small>freeze the page now</small>';
   $('takeover').hidden = true; $('hero').style.display = '';
 };
+
+// Reflex moments: Coach's six stories, the hold, the honest countdowns.
+window.MOMENTS = initMoments({
+  mount: $('moments'),
+  vertical: S.vertical,
+  prettyAudience,
+  onCta: () => { $('page').scrollTo({ top: 0, behavior: 'smooth' }); },
+  expiryOf: (key, ctx) => (ctx?.dim && ctx?.value) ? expiryOf(S.reflex, ctx.dim, ctx.value, S.config) : null,
+});
 
 if (new URLSearchParams(location.search).has('debug')) window.__S = S;
 paintPinButton();
