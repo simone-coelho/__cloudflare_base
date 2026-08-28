@@ -714,6 +714,9 @@ body.has-director .page{padding-bottom:250px}
   font:400 15px/1.4 inherit;color:var(--ink);background:#DCF3E6;border:2px solid var(--changed);
   animation:offerIn .4s cubic-bezier(.2,.7,.3,1)}
 .strip.out{background:#FBEFDF;border-color:#E39A3C}
+/* A REARRANGEMENT gets its own strip, in the step colour: moving the page top to bottom needs its own explanation. */
+.strip.order{background:#fff;border-color:var(--hl);border-left:8px solid var(--hl)}
+.strip.order .strip-k{color:var(--p-text)}
 .strip-k{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;
   color:#0C5C35;background:#fff;padding:6px 8px;border-radius:4px;white-space:nowrap}
 .strip.out .strip-k{color:#8A4B00}

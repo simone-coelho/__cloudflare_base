@@ -937,6 +937,25 @@ function renderDial() {
 // ── The audience strip ──────────────────────────────────────────────────────
 const prettyAudience = (key) => key.replace(/_affinity$/, '').replace(/_/g, ' · ');
 
+let OSTRIP_UNTIL = 0;
+/** "We rearranged the page" — a change of ORDER is explained separately from a change of products. */
+function orderStrip(html, ttl) {
+  const el = $('ostrip');
+  applyHighlight(el);
+  $('ostrip-t').innerHTML = html;
+  el.hidden = false;
+  OSTRIP_UNTIL = NOW() + ttl;
+}
+/** Content that moved out of view is brought into view once the sections have finished moving. */
+function revealSection(id, delay = 0) {
+  setTimeout(() => {
+    const el = document.querySelector(`[data-section="${id}"]`) || document.getElementById(id);
+    const page = $('page'); if (!el || !page) return;
+    const r = el.getBoundingClientRect(), p = page.getBoundingClientRect();
+    if (r.top < p.top || r.bottom > p.bottom) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, delay);
+}
+
 let STRIP_UNTIL = 0;
 function strip(kind, html, ttl) {
   const el = $('strip');
@@ -1057,6 +1076,14 @@ function recompose(first, opts = {}) {
     $('sentence').textContent = top
       ? `${SECTION_NAME[top.section] || top.section} leads the page — ${top.explain.movedBecause}`
       : 'The page re-ordered its sections.';
+    // A rearrangement is a different kind of change from a product changing, and
+    // it gets its own explanation on the page — and whatever moved DOWN, out of
+    // view, is scrolled into view once the sections have finished moving.
+    const down = movedSections.filter((m) => m.to > m.from).sort((a, b) => b.to - a.to)[0];
+    const lead = top ? (SECTION_NAME[top.section] || top.section) : 'A different section';
+    orderStrip(`<b>${lead}</b> now leads the page — ${top?.explain?.movedBecause || 'ranked on the same vector as the products'}`
+      + (down ? `. <b>${SECTION_NAME[down.section] || down.section}</b> moved below it.` : '.'), 14000);
+    if (down) revealSection(down.section, 780);
   }
   renderGlass(pick(next, 'hero'));
   captureDecisions(next);
@@ -1548,7 +1575,8 @@ setInterval(() => {
       const d = el.querySelector('.delta'); if (d) d.hidden = true;
     });
   }
-  if (STRIP_UNTIL && NOW() >= STRIP_UNTIL) { STRIP_UNTIL = 0; $('strip').hidden = true; }
+  if (STRIP_UNTIL && NOW() >= STRIP_UNTIL) { STRIP_UNTIL = 0; $('strip').hidden = true; $('ostrip').hidden = true; }
+  if (OSTRIP_UNTIL && NOW() >= OSTRIP_UNTIL) { OSTRIP_UNTIL = 0; $('ostrip').hidden = true; }
 }, 1000);
 
 const isStageAudience = (a) => /^(journeystage|applicationstage)_/.test(a);

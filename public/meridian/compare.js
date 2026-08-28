@@ -77,12 +77,16 @@ async function capture(rootEl) {
   const lib = await html2canvasLib();
   if (document.fonts && document.fonts.ready) await document.fonts.ready.catch(() => {});
   const scrollTop = rootEl.scrollTop;
-  const w = rootEl.clientWidth, h = rootEl.clientHeight;
+  // THE WHOLE PAGE. A viewport-only frame missed everything that moved below
+  // the fold — which is exactly what a rearrangement does. The clone's root is
+  // expanded to its full content height so html2canvas paints all of it.
+  const w = rootEl.clientWidth, h = rootEl.scrollHeight;
+  const rootId = rootEl.id;
   const canvas = await lib(rootEl, {
     useCORS: true, logging: false,
     backgroundColor: getComputedStyle(rootEl).backgroundColor,
     scale: Math.min(2, window.devicePixelRatio || 1),
-    width: w, height: h,
+    width: w, height: h, windowHeight: h, scrollY: 0,
     // html2canvas RESTARTS every CSS animation inside its clone, so anything
     // that animates in from opacity 0 is captured at 0 — the hero came out
     // blank in the Now frame after an email. Freeze the clone at its final,
@@ -92,8 +96,16 @@ async function capture(rootEl) {
       // Box-shadows too: html2canvas paints a large blurred shadow as a solid
       // fill over the element's interior (the hero came out as a red block).
       // Borders still paint, so highlighted cards keep their coloured edge.
-      st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}';
+      // html2canvas paints EVERY box-shadow as a solid fill over the element —
+      // blurred or flat, spread or not (both were tried; both flooded the card).
+      // Borders paint correctly, so the hero's drop shadow and the picks' rings
+      // are re-expressed as borders in the clone and stay visible in the frame.
+      st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}'
+        + '#hero.landed{border-bottom:14px solid var(--hl)!important}'
+        + '#row .card.changed{border:3px solid var(--hl)!important}';
       doc.head.appendChild(st);
+      const r = rootId ? doc.getElementById(rootId) : null;
+      if (r) { r.style.height = `${h}px`; r.style.maxHeight = 'none'; r.style.overflow = 'visible'; r.scrollTop = 0; }
     },
   });
   return { url: canvas.toDataURL('image/png'), at: Date.now(), scrollTop, w, h };
@@ -210,12 +222,16 @@ function fit() {
   const maxW = Math.min(window.innerWidth * ENVELOPE.vw, ENVELOPE.maxW);
   const maxH = Math.min(window.innerHeight * ENVELOPE.vh, ENVELOPE.maxH);
   let w = maxW, h = maxH;
+  let contentH = h;
   if (view.frameW > 0 && view.frameH > 0) {
-    const s = Math.min(maxW / view.frameW, maxH / view.frameH);
-    w = view.frameW * s; h = view.frameH * s;
+    // Fit the WIDTH; the frames are full-page tall and scroll inside the stage,
+    // so what changed below the fold is in the comparison, not cropped out.
+    const s = Math.min(1, maxW / view.frameW);        // never upscale — pixels stay pixels
+    w = view.frameW * s; contentH = view.frameH * s; h = Math.min(maxH, contentH);
   }
   ui.stage.style.width = `${Math.round(w)}px`;
   ui.stage.style.height = `${Math.round(h)}px`;
+  for (const el of [ui.before, ui.after, ui.divider]) el.style.height = `${Math.round(contentH)}px`;
 }
 
 function onDialogKey(e) {
@@ -266,7 +282,10 @@ function open(focusEl) {
 function showFrames(before, now, note) {
   const u = ensureOverlay();
   view.note = note || '';
-  view.frameW = now.w; view.frameH = now.h;
+  // Full-page frames legitimately differ in height (a rearrangement makes the
+  // page taller). Both are anchored at the top inside the taller box; nothing
+  // is stretched to fit.
+  view.frameW = now.w; view.frameH = Math.max(now.h, before.h);
   view.disabled = false;
   u.msg.hidden = true;
   u.before.hidden = false; u.after.hidden = false; u.divider.hidden = false;
@@ -337,7 +356,7 @@ export async function openCompare(rootEl) {
     if (!note && now.scrollTop !== baseline.scrollTop) {
       note = `The page could not return to the baseline offset (${baseline.scrollTop}px, now ${now.scrollTop}px); the frames may not register.`;
     }
-    if (!note && (now.w !== baseline.w || now.h !== baseline.h)) {
+    if (!note && now.w !== baseline.w) {
       note = 'The window was resized since the baseline; the frames may not register.';
     }
     showFrames(baseline, now, note);

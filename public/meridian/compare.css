@@ -61,13 +61,13 @@
 
 /* ── stage: one surface, two frames, a seam ─────────────────────────────── */
 .cmp-stage{
-  position:relative;overflow:hidden;margin:0 auto;
+  position:relative;overflow-x:hidden;overflow-y:auto;margin:0 auto;
   background:var(--cmp-ground);
   touch-action:none;user-select:none;-webkit-user-select:none;cursor:ew-resize;
 }
 .cmp-frame{
-  position:absolute;inset:0;
-  background:var(--cmp-paper) center top / 100% 100% no-repeat;
+  position:absolute;top:0;left:0;right:0;   /* height is set by fit(): the full page */
+  background:var(--cmp-paper) center top / 100% auto no-repeat;   /* never stretched */
 }
 /* The Coach mechanic: Now underneath (#cmp-after, plain), Before on top,
    clipped to the LEFT of the seam — everything right of it reveals Now. */
@@ -75,7 +75,7 @@
 
 /* the divider rides the seam; the ↔ handle sits at its middle */
 .cmp-divider{
-  position:absolute;top:0;bottom:0;left:var(--cmp-seam,50%);width:2px;margin-left:-1px;
+  position:absolute;top:0;left:var(--cmp-seam,50%);width:2px;margin-left:-1px;
   background:var(--cmp-blue);pointer-events:none;
   box-shadow:0 0 0 1px rgba(255,255,255,.55);
 }
