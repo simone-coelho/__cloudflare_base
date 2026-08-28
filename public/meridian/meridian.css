@@ -709,6 +709,11 @@ body.has-director .page{padding-bottom:250px}
 /* ── The audience strip ────────────────────────────────────────────────────
    Green when she enters, amber when she leaves. It names the audience and the
    consequence, sits above the hero, and retires on its own. */
+/* The strips PIN to the top of the page as it scrolls — a banner that explains a
+   rearrangement must survive the scroll that the rearrangement causes. */
+.strips{position:sticky;top:0;z-index:30;background:var(--paper);display:flex;flex-direction:column;gap:8px}
+.strips:has(.strip:not([hidden])){padding:6px 0 8px;box-shadow:0 10px 16px -14px rgba(0,0,0,.35)}
+.strips .strip{margin:0}
 .strip[hidden]{display:none}
 .strip{display:flex;align-items:center;gap:12px;margin:14px 0 0;padding:11px 16px;border-radius:7px;
   font:400 15px/1.4 inherit;color:var(--ink);background:#DCF3E6;border:2px solid var(--changed);

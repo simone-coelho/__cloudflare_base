@@ -1258,6 +1258,10 @@ function recompose(first, opts = {}) {
   checkOffer(); offerTick();
   const stratOf = (lay) => lay ? lay.sections.map((x) => x.section + ':' + x.strategy).join('|') : '';
   if (opts.tick && prevLayout && stratOf(prevLayout) === stratOf(S.layout)) S.layout = { ...S.layout, order: prevLayout.order };
+  // A FIRST paint applies the order instantly and says nothing. Skipping it left
+  // the previous session's arrangement in the DOM, and the next tick "moved"
+  // the sections back — announcing a rearrangement that was only the reset.
+  if (first) paintLayout(S.layout.order, { duration: 0 });
   const movedSections = first ? [] : paintLayout(S.layout.order, { duration: 700 });
   if (movedSections.length) {
     const top = S.layout.sections.filter((x) => x.strategy !== 'locked' && x.strategy !== 'template')
@@ -1273,8 +1277,16 @@ function recompose(first, opts = {}) {
     // it gets its own explanation on the page — and whatever moved DOWN, out of
     // view, is scrolled into view once the sections have finished moving.
     const down = movedSections.filter((m) => m.to > m.from).sort((a, b) => b.to - a.to)[0];
-    const lead = top ? (SECTION_NAME[top.section] || top.section) : 'A different section';
-    orderStrip(`<b>${lead}</b> now leads the page — ${top?.explain?.movedBecause || 'ranked on the same vector as the products'}`
+    // NAME THE LEADER, and say why in its own terms. "A different section" was
+    // the fallback when the leader held a template position — it named nothing.
+    const first = S.layout.sections.slice().sort((a, b) => a.rank - b.rank).find((x) => x.section !== 'takeover');
+    const leadSec = top || first;
+    const lead = SECTION_NAME[leadSec?.section] || leadSec?.section || 'A different section';
+    const why = leadSec?.explain?.movedBecause
+      || (leadSec?.strategy === 'locked' ? 'it is pinned by the merchandiser'
+        : leadSec?.strategy === 'template' ? 'nothing outranks it, so it holds the template position'
+        : 'ranked on the same vector as the products');
+    orderStrip(`<b>${lead}</b> now leads the page — ${why}`
       + (down ? `. <b>${SECTION_NAME[down.section] || down.section}</b> moved below it.` : '.'), 14000);
     if (down) revealSection(down.section, 780);
   }
@@ -2661,7 +2673,13 @@ async function setVertical(v) {
 $('btn-retail').onclick = () => setVertical('retail');
 $('btn-financial').onclick = () => setVertical('financial');
 $('btn-return').onclick = () => location.reload();   // same id, same object, same profile
+/** A new demo starts clean: both strips gone, their clocks zeroed. */
+function hideStrips() {
+  STRIP_UNTIL = 0; OSTRIP_UNTIL = 0;
+  $('strip').hidden = true; $('ostrip').hidden = true;
+}
 $('btn-reset').onclick = async () => {
+  hideStrips();                                    // the last session's banners are not this session's
   await post('/reset', {}); S.seq = -1;
   await load(S.vertical); connect();
   clearBaseline(); $('btn-capture').classList.remove('on'); DONE.length = 0;
