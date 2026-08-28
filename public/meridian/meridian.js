@@ -674,7 +674,7 @@ function predictThenProve(action, record, touchesOverride, label) {
   const f = forecast(action, record, touchesOverride);
   const pct = (n) => n.toFixed(3);
   $('pd-done').innerHTML = DONE.length
-    ? DONE.map((d) => `<li><b>${d.verb}</b> ${escapeHtml(d.subject)}${d.move ? ` — <code>${d.move}</code>` : ''}</li>`).join('')
+    ? DONE.map((d) => `<li><b>${d.verb}</b> ${escapeHtml(d.subject)}${d.move ? `<div><span class="pd-v">${escapeHtml(d.move)}</span></div>` : ''}</li>`).join('')
     : '<li>Nothing yet — she arrived, that is all.</li>';
   $('pd-act').textContent = label || `${VERB_PAST[action] || action} ${record?.name || ''}`;
   const top = f.moves.slice(0, 3);
@@ -817,31 +817,56 @@ function forecastSequence(acts) {
 }
 
 /** Declare a sequence before it happens; resolves when the presenter presses OK. */
+/** One score per row: dimension · value | before → after | threshold | result. */
+function movesTable(moves, { empty = 'No dimension moves.' } = {}) {
+  const pct = (n) => n.toFixed(3);
+  if (!moves.length) return `<div>${empty}</div>`;
+  return `<table class="pd-t">${moves.map((m) => {
+    const res = m.crosses ? '<span class="enters">enters</span>'
+      : m.leaves ? '<span class="leaves">leaves</span>'
+      : m.to < m.from ? '<span class="decays">decays</span>' : '';
+    const th = m.thetaIn != null ? `θ<sub>in</sub> ${m.thetaIn}` : m.thetaOut != null ? `θ<sub>out</sub> ${m.thetaOut}` : '';
+    return `<tr><td class="dim">${escapeHtml(m.dim)} · ${escapeHtml(String(m.value))}</td>`
+      + `<td class="num">${pct(m.from)} → <span class="to">${pct(m.to)}</span></td>`
+      + `<td class="th">${th}</td><td class="res">${res}</td></tr>`;
+  }).join('')}</table>`;
+}
+
+/** A "what will change" line: a headline, then the reasons as their own bullets. */
+const willItem = (head, subs = []) =>
+  `${head}${subs.length ? `<ul class="pd-sub">${subs.map((x) => `<li>${x}</li>`).join('')}</ul>` : ''}`;
+const pill = (t, cls = '') => `<span class="pd-v${cls ? ` ${cls}` : ''}">${escapeHtml(t)}</span>`;
+
+/** Declare a sequence before it happens; resolves when the presenter presses OK. */
 async function sequenceBand(acts) {
   const f = forecastSequence(acts);
   if (!f.did.length) return;
-  const pct = (n) => n.toFixed(3);
   const count = {}; for (const x of f.weights) count[x.action] = (count[x.action] || 0) + 1;
-  const weightLine = Object.entries(count)
-    .map(([a, n]) => `${VERB_PAST[a] || a} ×${n} · weight <b>${(S.config.weights?.[a] ?? 1).toFixed(1)}</b>`).join(' &nbsp;·&nbsp; ');
-  const math = `<div class="pd-w">${weightLine || 'time only'}</div>`
-    + (f.moves.slice(0, 4).map((m) => `${m.dim} · ${m.value} &nbsp;${pct(m.from)} → <b>${pct(m.to)}</b>${m.crosses ? ` &nbsp;≥ θ<sub>in</sub> ${m.thetaIn} → <b>enters</b>` : ` &nbsp;(θ<sub>in</sub> ${m.thetaIn})`}`).join('<br>')
-       || 'No dimension moves.');
+  const chips = Object.entries(count)
+    .map(([a, n]) => `<span>${escapeHtml(VERB_PAST[a] || a)} ×${n} · weight <b>${(S.config.weights?.[a] ?? 1).toFixed(1)}</b></span>`).join('');
+  const actHtml = f.did.map((d, i) => `<span class="l">${i + 1}. ${escapeHtml(d)}</span>`).join('')
+    + `<div class="pd-w">${chips || '<span>time only</span>'}</div>`;
+  // A row must earn its place: a real move (≥ 0.01) or a threshold crossed.
+  // Two-thousandths of decay is arithmetic, not information, at a glance.
+  const math = movesTable(f.moves.filter((m) => m.crosses || Math.abs(m.to - m.from) >= 0.01).slice(0, 6));
   const will = [];
-  for (const a of f.entered.filter((x) => !isStageAudience(x))) will.push(`She <b>enters ${prettyAudience(a)}</b>.`);
-  for (const a of f.exited.filter((x) => !isStageAudience(x))) will.push(`She <b>leaves ${prettyAudience(a)}</b>.`);
-  if (f.deptChanged) will.push(`The shelf becomes <b>${escapeHtml(f.dept)}</b>.`);
-  if (f.heroChanges) will.push(`The hero becomes <b>${escapeHtml(f.heroNextTitle)}</b>.`);
-  if (f.completion) will.push('The row becomes <b>Complete the look</b>.');
+  for (const a of f.entered.filter((x) => !isStageAudience(x))) will.push(willItem(`She enters ${pill(prettyAudience(a), 'g')}`));
+  for (const a of f.exited.filter((x) => !isStageAudience(x))) will.push(willItem(`She leaves ${pill(prettyAudience(a), 'o')}`));
+  if (f.deptChanged) will.push(willItem(`The shelf becomes ${pill(f.dept)}`));
+  if (f.heroChanges) will.push(willItem(`The hero becomes ${pill(f.heroNextTitle)}`));
+  if (f.completion) will.push(willItem('The row becomes <b>Complete the look</b>'));
   else if (f.picksNext.length && JSON.stringify(f.picksNow) !== JSON.stringify(f.picksNext)) {
-    will.push(`Picked for her, first line: <b>${f.picksNext.slice(0, 3).map(escapeHtml).join('</b>, <b>')}</b>${f.picksNext.length > 3 ? '…' : ''}.`);
+    will.push(willItem('<b>Picked for her</b>, first line', f.picksNext.slice(0, 5).map(escapeHtml)));
   }
-  if (f.rearranged) will.push(`The page <b>rearranges</b> — ${escapeHtml(SECTION_NAME[f.lead?.section] || f.lead?.section || 'a different section')} leads${f.lead?.explain?.movedBecause ? `: ${escapeHtml(f.lead.explain.movedBecause)}` : ''}.`);
+  if (f.rearranged) {
+    const why = String(f.lead?.explain?.movedBecause || '');
+    const subs = why.split(/;\s*/).flatMap((part) => part.split(/,\s*(?=[a-z])/)).map((x) => x.trim()).filter(Boolean).map(escapeHtml);
+    will.push(willItem(`The page <b>rearranges</b> — ${pill(SECTION_NAME[f.lead?.section] || f.lead?.section || 'a different section')} now leads`, subs));
+  }
   if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
   await openPredictBand({
     mode: f.did.length === 1 ? 'before her next act' : `before her next ${f.did.length} acts`,
-    act: f.did.map((d, i) => `${i + 1}. ${d}`).join('\n'),
-    math, will,
+    act: f.did.join('\n'), actHtml, math, will,
     note: 'Computed on a copy of her real profile — the same engine, the same weights. Nothing has happened yet; press OK and she does it.',
     button: 'OK — let her do it',
   });
@@ -856,12 +881,12 @@ async function gateThen(acts, fn) {
 }
 
 /** The shared band plumbing: fill arbitrary columns, await the consent press. */
-function openPredictBand({ mode, act, math, will, note, button }) {
+function openPredictBand({ mode, act, actHtml, math, will, note, button }) {
   $('pd-mode').textContent = mode;
   $('pd-done').innerHTML = DONE.length
-    ? DONE.map((d) => `<li><b>${d.verb}</b> ${escapeHtml(d.subject)}${d.move ? ` — <code>${d.move}</code>` : ''}</li>`).join('')
+    ? DONE.map((d) => `<li><b>${d.verb}</b> ${escapeHtml(d.subject)}${d.move ? `<div><span class="pd-v">${escapeHtml(d.move)}</span></div>` : ''}</li>`).join('')
     : '<li>Nothing yet — she arrived, that is all.</li>';
-  $('pd-act').textContent = act;
+  if (actHtml) $('pd-act').innerHTML = actHtml; else $('pd-act').textContent = act;
   $('pd-math').innerHTML = math;
   $('pd-will').innerHTML = will.map((w) => `<li>${w}</li>`).join('');
   if (note) $('pd-note').textContent = note;
@@ -1029,15 +1054,15 @@ async function skipTime(seconds) {
   }
   drops.sort((x, y) => (y.from - y.to) - (x.from - x.to));
   const will = [];
-  for (const a of lapses) will.push('She <b>leaves ' + prettyAudience(a) + '</b>.');
-  if (OFFER.live && OFFER.expiresAt <= NOW() + ms) will.push('The <b>offer expires</b>, naming the number that ended it.');
+  for (const a of lapses) will.push(willItem('She leaves ' + pill(prettyAudience(a), 'o')));
+  if (OFFER.live && OFFER.expiresAt <= NOW() + ms) will.push(willItem('The <b>offer expires</b>', ['it names the number that ended it']));
   if (!will.length) will.push('Scores drop; nothing crosses out yet.');
 
   await openPredictBand({
     mode: 'time is about to pass — with your consent',
     act: Math.round(seconds / 60) + ' minutes pass',
-    math: drops.slice(0, 3).map((d) => d.dim + ' \u00b7 ' + d.value + ' \u00a0' + d.from.toFixed(3) + ' \u2192 <b>' + d.to.toFixed(3) + '</b>').join('<br>')
-      || 'Nothing measurable decays.',
+    math: movesTable(drops.slice(0, 6).map((d) => ({ ...d, thetaOut: S.registry.dimensions.find((x) => x.key === d.dim)?.thetaOut,
+      leaves: lapses.some((a) => a.startsWith((d.dim + '_' + String(d.value)).toLowerCase().replace(/\s+/g, '_'))) })), { empty: 'Nothing measurable decays.' }),
     will,
     note: 'Nothing has happened yet. Close this and the minutes pass - the same decay, at the moment you chose.',
     button: 'Close - let ' + Math.round(seconds / 60) + ' minutes pass',

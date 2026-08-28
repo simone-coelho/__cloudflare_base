@@ -247,26 +247,29 @@
   <div class="pd-box">
     <div class="pd-head">
       <span class="pd-k">Predict, then prove</span>
-      <span class="pd-mode" id="pd-mode">watching for her next act</span>
+      <span class="pd-mode" id="pd-mode">before her next act</span>
     </div>
     <div class="pd-grid">
-      <div class="pd-col">
-        <h6>What she has done</h6>
-        <ol id="pd-done"></ol>
-      </div>
-      <div class="pd-col pd-watch">
-        <h6>What we are watching for</h6>
-        <div class="pd-act" id="pd-act"></div>
-        <div class="pd-math" id="pd-math"></div>
-      </div>
-      <div class="pd-col">
-        <h6>What will change if she does it</h6>
-        <ul id="pd-will"></ul>
-      </div>
+      <section class="pd-card pd-done-card">
+        <h6 class="pd-h">What she has done</h6>
+        <ol id="pd-done" class="pd-body"></ol>
+      </section>
+      <section class="pd-card pd-watch">
+        <h6 class="pd-h">What we are watching for</h6>
+        <div class="pd-body"><div class="pd-act" id="pd-act"></div></div>
+        <div class="pd-calc">
+          <div class="pd-calc-k">The arithmetic · score before → after · entry threshold</div>
+          <div class="pd-math" id="pd-math"></div>
+        </div>
+      </section>
+      <section class="pd-card pd-will-card">
+        <h6 class="pd-h">What will change if she does it</h6>
+        <ul id="pd-will" class="pd-body"></ul>
+      </section>
     </div>
     <div class="pd-foot">
       <span id="pd-note">Computed on a copy of her real profile — the same engine, the same numbers. Nothing here is a guess.</span>
-      <button id="pd-go">Close — let her do it</button>
+      <button id="pd-go">OK — let her do it</button>
     </div>
   </div>
 </div>
