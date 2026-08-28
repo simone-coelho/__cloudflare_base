@@ -10,6 +10,9 @@
 // on the network — without the dishonesty of a local lookup table pretending to
 // be an engine. Pull the ethernet cable and the page keeps deciding correctly.
 export { compose, SLOT_STRATEGIES, type AffinityView, type ComposeInput } from './composer';
+// Section order (D4): where each region sits, per visitor, with its receipt.
+export { composeLayout, SECTIONS, OFFER_COPY, type LayoutInput, type LayoutResult } from './layout';
+export type { SectionDecision, SectionSpec, SectionStrategy, OfferCopy } from './types';
 export { SHAPE_OF_KEY, SHAPE_ORDER, configFor, DEMO_TAUS, PROD_TAUS,
          stageTouchFor, decidingValueFor, stageKeyFor, STAGE_LABELS, expiryOf } from './reflexConfig';
 export {
