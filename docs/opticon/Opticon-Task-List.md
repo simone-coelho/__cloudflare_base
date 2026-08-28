@@ -225,9 +225,9 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 
 ## 9 · Pre-flight
 
-- [ ] Deployed URL, not local
-- [ ] `?region=` override rehearsed, not just known about
-- [ ] Write gate confirmed enabled on the deployed environment
+- [x] **Deployed URL — DONE.** https://edge-platform.expedge.workers.dev/meridian/ · page 128ms · all modules served · `/__shot` 404.
+- [x] **`?region=` rehearsed on the live origin — DONE.** CA → premium, NC → entry, TX → core, each from the real census row; without the override the edge resolves the presenter's actual location.
+- [x] **Write gate confirmed live — DONE.** `/experiment/status`: writeGate enabled, token present, project 4919568555048960.
 - [x] **`/__shot` gated — DONE.** It evaluates arbitrary JS in a real browser on our own origin, so ungated it is remote code execution wearing a screenshot tool's clothes, and it burns account-wide Browser Rendering quota. Now CLOSED BY DEFAULT: no `SHOT_TOKEN` configured means the route does not exist; with one set a request must present it. Both failures return **404, not 401** — a 401 confirms there is something to attack. Verified: no token → 404, wrong token → 404, correct token → 200. ⚠️ `.dev.vars` needs a **restart**, not a hot reload. **Leave `SHOT_TOKEN` unset on the conference deployment** — nothing on stage needs this route.
 - [ ] Second-visitor flow via incognito
 - [ ] Printed talk track — *artifact is ready and current: `docs/opticon/Opticon-Talk-Track.md`. Re-run the generator, then physically print it. This stays open until paper exists in a hand.*
