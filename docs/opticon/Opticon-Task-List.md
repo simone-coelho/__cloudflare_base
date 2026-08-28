@@ -195,6 +195,22 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 - [x] **The dial did nothing.** Two causes: no affinity to weigh (a weight times nothing is nothing — it now says "nothing to weigh yet" instead of sitting there), and the campaign's hero copy was masking the re-decision. Turning a slider now clears the override: the merchandiser outranks the campaign. Verified: line weight to 0.60 → hero re-decides to the Shorewell Trench, kicker "because of what you have looked at", driver `line=Shorewell w=0.3851`.
 - [x] "fell to 0.42, under the exit threshold of 0.42" — exit and entry sentences at 4dp, same fix as the offer.
 
+## 11 · Phase 3 — match the Coach demo (agreed 2026-08-28)
+
+Simone's third review. The pattern he named: I rebuilt capabilities the Coach demo already had, and each rebuild changed how they worked. The ten below were agreed item by item before any building. **Standing rule:** state stays isolated; Coach's stateless services are reused; every capability matches Coach's behaviour first and differs only where Simone asks.
+
+- [ ] P3-1 **Personalization reads as a block** — promotion requires membership; promoted items form a contiguous top block, everything else keeps the standard order *(agent B)*
+- [ ] P3-2 **Predict, then prove** — a band before the decisive click: what she did (rule, weight, score), what we watch for, what will change; close → it happens → compare *(after research)*
+- [ ] P3-3 **Audience priority** as a merchandiser control — two audiences match, the higher priority wins the slot, drag to flip *(agent B + client)*
+- [x] P3-4 **Three signals enter an audience, never one** — Coach's weights (view 1.0, arrival 1.0, declared 2.0); journey stage never shown as a chip *(weights: agent A; chips: done)*
+- [x] P3-5 **Restart restarts everything** — new visitor, ledger, surfaces, baseline, beat one, clock zero
+- [ ] P3-6 **Search** — Coach's intent parser with a hard category filter; scene plates pre-generated with the real product composited, reviewed before they ship *(agent C)*
+- [ ] P3-7 **Compare** — Coach's divider *(agent D)*
+- [ ] P3-8 **Catalogue** — 12 families × 3 colourways + 4 fragrances, colour as the eighth dimension (financial: card tier), packshots per colourway, reviewed *(agent A)*
+- [x] P3-9 **The rule** — charter amended: state isolated, stateless services shared, match Coach first
+- [ ] P3-10 **Reflex moments** — Coach's six stories + the hold on add-to-bag, countdown-to-exit honesty, cooldowns, queue, dock *(agent E)*; **add-to-bag on every card — done**
+- [ ] P3-11 Research: how Dynamic Yield and others show impact *(agent, internet)* — feeds P3-2 and P3-3
+
 ### Tasks
 - [x] P2-1 **Row reconciled, never rebuilt — DONE.** Cards persist across paints; DOM is reordered and only the rank chip and change badge update. Verified: every card that stayed is the same node, its photograph not reloaded. The flicker was `innerHTML` destroying ten cards per re-rank and each new `<img>` fading in from opacity 0.
 - [x] P2-2 **Mover highlight + replay — DONE.** `.changed`: thick `--changed` green on all four sides, badge with landed position and "was N" (or "new in" for arrivals), holds 12s then fades. "Show what changed" re-applies it to the last movers for 10s, any number of times.

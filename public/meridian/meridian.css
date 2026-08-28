@@ -857,3 +857,9 @@ body.has-director .world,body.has-director .engine{padding-bottom:var(--dir-h, 2
   .strip{padding:7px 12px;font-size:13px;margin-top:8px}
   .brand{padding-bottom:10px}
 }
+
+/* Add to bag on every card — intent, reachable where she shops. */
+.card .add{margin-top:8px;width:100%;font:600 12px/1 var(--sans);padding:8px 10px;border-radius:4px;cursor:pointer;
+  background:#fff;color:var(--ink);border:1.5px solid var(--ink);transition:background .15s,color .15s}
+.card .add:hover{background:var(--ink);color:#fff}
+@media (max-height:820px){.card .add{padding:6px 8px;font-size:11px;margin-top:6px}}

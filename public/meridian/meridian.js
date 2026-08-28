@@ -777,7 +777,7 @@ function recompose(first, opts = {}) {
   }
   renderGlass(pick(next, 'hero'));
   captureDecisions(next);
-  const n = S.audiences.size, dims = Object.keys(snap.dims).length;
+  const n = [...S.audiences].filter((a) => !isStageAudience(a)).length, dims = Object.keys(snap.dims).length;
   $('eng-status').textContent =
     dims === 0 ? 'Cold start — nothing observed yet'
     : n === 0 ? `Learning — ${dims} dimension${dims === 1 ? '' : 's'} moving, none past the entry threshold`
@@ -1029,10 +1029,17 @@ function cardNode(it, hue) {
         ? `<img src="${it.image}" alt="" loading="lazy" onload="this.dataset.loaded=1" onerror="this.remove()">`
         : '')}</div>
     <div class="meta"><div class="nm">${it.name}</div>
-      <div class="mt">${it.category} · ${it.subcategory}</div>
+      <div class="mt">${it.category} · ${it.colour || it.subcategory}</div>
       <div class="pr">${val}</div>
-      ${S.vertical === 'financial' ? '<div class="fin-cta">Check eligibility</div>' : ''}</div>`;
+      <button class="add" type="button">${S.vertical === 'financial' ? 'Start application' : 'Add to bag'}</button></div>`;
   el.onclick = () => signal('row_click', byId(el.dataset.id));
+  // The bag button is INTENT, not a view — and it must not also count as a click.
+  el.querySelector('.add').onclick = (e) => {
+    e.stopPropagation();
+    const item = byId(el.dataset.id);
+    signal('intent_start', item);
+    if (window.MOMENTS) window.MOMENTS.addToBag(item);
+  };
   return el;
 }
 
@@ -1218,8 +1225,10 @@ setInterval(() => {
   recompose(false, { tick: true });
 }, 1000);
 
+const isStageAudience = (a) => /^(journeystage|applicationstage)_/.test(a);
 function renderChips(entered, exited) {
-  const el = $('chips'); const live = [...S.audiences];
+  const el = $('chips'); const live = [...S.audiences].filter((a) => !isStageAudience(a));
+  entered = entered.filter((a) => !isStageAudience(a)); exited = exited.filter((a) => !isStageAudience(a));
   if (!live.length && !exited.length) { el.innerHTML = '<span class="none">none yet</span>'; return; }
   el.innerHTML = live.map((a) => `<span class="chip${entered.includes(a) ? ' new' : ''}">${a}</span>`).join('')
     + exited.map((a) => `<span class="chip gone">${a}</span>`).join('');
@@ -1751,9 +1760,12 @@ function openDirector() {
 $('dir-next').onclick = () => goBeat(DIR.i + 1);
 $('dir-prev').onclick = () => { setAuto(false); goBeat(DIR.i - 1); };
 $('dir-play').onclick = () => setAuto(!DIR.auto);
-$('dir-stop').onclick = () => {
+$('dir-stop').onclick = async () => {
   setAuto(false); dirPlay(false); DIR.elapsedBefore = 0; DIR.i = 0;
-  sessionStorage.removeItem('mrd_dir'); renderBeat();
+  sessionStorage.removeItem('mrd_dir');
+  await $('btn-reset').onclick();                  // a new visitor, in the object and on the page
+  if (window.MOMENTS) window.MOMENTS.reset();
+  renderBeat();
 };
 addEventListener('keydown', (e) => {
   if ($('director').hidden) { if (e.key === 'd' && e.target === document.body) openDirector(); return; }
