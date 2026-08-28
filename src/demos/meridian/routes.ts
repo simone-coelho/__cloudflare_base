@@ -188,7 +188,9 @@ meridian.post('/reset', async (c) => {
 meridian.post('/search', async (c) => {
   const body = await c.req.json().catch(() => null as any);
   const vertical = verticalOf(body?.vertical);
-  const answer = await search(c.env, vertical, String(body?.query ?? ''));
+  // The client may send its live AffinityView so the ranker's affinity term is
+  // the SAME vector the instrument shows. Absent or malformed, the term is 0.
+  const answer = await search(c.env, vertical, String(body?.query ?? ''), body?.affinity);
   return c.json(answer);
 });
 
