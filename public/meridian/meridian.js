@@ -224,6 +224,7 @@ function renderSurfaces() {
  */
 function fireSurface(s) {
   if (!s || S.usedSurfaces.has(s.id)) return;
+  if (PD.open && !GATE.open) return;               // a band is open: read it, press OK — nothing sneaks past it
   if (needsGate()) { gateThen([{ kind: 'surface', s }], () => fireSurface(s)); return; }
   S.usedSurfaces.add(s.id);
   document.querySelector(`.surface[data-id="${s.id}"]`)?.classList.add('done');
@@ -332,6 +333,7 @@ function checkHandoff(snap) {
 // ── Signals from the page ───────────────────────────────────────────────────
 /** Browsing a department: a category touch with no single item behind it. */
 function navTo(category) {
+  if (PD.open && !GATE.open) return;
   if (needsGate()) { gateThen([{ kind: 'nav', category }], () => navTo(category)); return; }
   advanceClock();
   // A department click SHOWS the department. The shelf becomes that category —
@@ -473,6 +475,7 @@ const VERB_LABEL = {
 };
 
 function signal(action, record) {
+  if ((action === 'row_click' || action === 'intent_start') && record && PD.open && !GATE.open) return;
   if ((action === 'row_click' || action === 'intent_start') && record && needsGate()) {
     gateThen([{ kind: 'item', item: record, action }], () => signal(action, record)); return;
   }
@@ -698,7 +701,7 @@ function predictThenProve(action, record, touchesOverride, label) {
 // same band that used to guard two or three targets; now it is the rule, for
 // scripted sequences and for the presenter's own hand alike.
 const GATE = { open: false };
-const needsGate = () => !GATE.open && !PD.open;
+const needsGate = () => !GATE.open;
 
 /** A perform spec → the act it will cause (null for pure UI: tabs, waits, pins). */
 function actOf(t) {
