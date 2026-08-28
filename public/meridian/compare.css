@@ -119,6 +119,12 @@
   padding:10px 18px 13px;background:var(--cmp-paper);border-top:1px solid var(--cmp-line);
   font:400 12px/1.4 var(--cmp-mono);color:var(--cmp-dim);text-align:center;
 }
+/* A diagnostic — no baseline, nothing changed, still moving, resized — is not a
+   hint: it is the reason the two sides look alike, and it has to be read from
+   the back of the room, not found in 12px dim mono. */
+.cmp-hint.warn{
+  font:600 14px/1.45 var(--cmp-sans);color:#7A2E0E;background:#FFF1E8;border-top-color:#E8B39B;
+}
 
 /* ── keyboard focus, visible on every control ───────────────────────────── */
 .cmp-btn:focus-visible{outline:2px solid var(--cmp-blue);outline-offset:2px}

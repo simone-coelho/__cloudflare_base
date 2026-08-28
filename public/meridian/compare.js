@@ -13,6 +13,11 @@
 //     1.4.1) and loaded lazily. If it cannot load, the overlay says so — the
 //     stage is never blank and no call here rejects for that reason.
 //   - Pair with compare.css (linked after meridian.css; it reads its tokens).
+//   - THE PRESS IS THE CAPTURE. On first use this module listens (capture
+//     phase) for clicks on #btn-capture and starts the baseline capture in the
+//     same task as the press, so captureInFlight() is true from that instant
+//     and the page's own captureBaseline() call receives that capture. See
+//     armPress() for the failure this closes.
 //
 // What it is, honestly: a PIXEL tool, not a state tool. html2canvas paints what
 // the DOM looks like at that instant, so any "this just changed" marker on the
@@ -28,8 +33,8 @@
 // scroll offset was when either button was pressed; the live page is never
 // scrolled by this module.
 //
-// Exports: captureBaseline(rootEl), hasBaseline(), openCompare(rootEl),
-//          clearBaseline(), closeCompare()
+// Exports: captureBaseline(rootEl), captureInFlight(), hasBaseline(),
+//          openCompare(rootEl), clearBaseline(), closeCompare()
 
 const LIB_URL = '/html2canvas.min.js';
 
@@ -62,7 +67,7 @@ let pending = null;    // the captureBaseline() in flight, if any — a second p
 let gen = 0;           // bumped by clearBaseline(): a capture that started before it is discarded
 let h2c = null;        // html2canvas, once loaded
 let ui = null;         // overlay element refs, once injected
-const view = { seam: SEAM_DEFAULT, open: false, disabled: false, lastFocus: null, frameW: 0, frameH: 0, note: '' };
+const view = { seam: SEAM_DEFAULT, open: false, disabled: false, lastFocus: null, frameW: 0, frameH: 0, scale: 1, note: '' };
 
 // ── html2canvas ─────────────────────────────────────────────────────────────
 
@@ -162,6 +167,35 @@ function differing(a, b) {
     if (Math.abs(A[i] - B[i]) > 16 || Math.abs(A[i + 1] - B[i + 1]) > 16 || Math.abs(A[i + 2] - B[i + 2]) > 16) n += 1;
   }
   return n / (A.length / 4);
+}
+
+/** A signature row counts as a CHANGE when at least this fraction of its
+    samples differ. The first differing row on the handoff beat was the 1px
+    underline under the department that had just been clicked — true, and not
+    where the room should be sent; a strip, a hero or a row of cards is. */
+const CHANGE_ROW_MIN = 0.08;
+
+/** The topmost signature row where two frames visibly differ, in frame pixels
+    — where the room should look first: the first row with a real change, or,
+    when every difference is hairline, the first differing row. null when
+    nothing differs. Frames of different widths are different pages (0); a
+    taller frame differs from the row where the shorter one ends. */
+function firstChangeY(a, b) {
+  if (!a || !b) return null;
+  if (a.w !== b.w) return 0;
+  const A = a.data, B = b.data, rows = Math.min(a.h, b.h);
+  let hairline = null;
+  for (let y = 0; y < rows; y++) {
+    let n = 0;
+    for (let x = 0; x < a.w; x++) {
+      const i = (y * a.w + x) * 4;
+      if (Math.abs(A[i] - B[i]) > 16 || Math.abs(A[i + 1] - B[i + 1]) > 16 || Math.abs(A[i + 2] - B[i + 2]) > 16) n += 1;
+    }
+    if (n >= a.w * CHANGE_ROW_MIN) return y * SAMPLE_STEP;
+    if (n && hairline === null) hairline = y * SAMPLE_STEP;
+  }
+  if (a.h !== b.h) return hairline === null ? rows * SAMPLE_STEP : Math.min(hairline, rows * SAMPLE_STEP);
+  return hairline;
 }
 
 /** Take the WHOLE page: rootEl's content from the top, at rootEl's width, as
@@ -344,13 +378,14 @@ function fit() {
   const maxW = Math.min(window.innerWidth * ENVELOPE.vw, ENVELOPE.maxW);
   const maxH = Math.min(window.innerHeight * ENVELOPE.vh, ENVELOPE.maxH);
   let w = maxW, h = maxH;
-  let contentH = h;
+  let contentH = h, s = 1;
   if (view.frameW > 0 && view.frameH > 0) {
     // Fit the WIDTH; the frames are full-page tall and scroll inside the stage,
     // so what changed below the fold is in the comparison, not cropped out.
-    const s = Math.min(1, maxW / view.frameW);        // never upscale — pixels stay pixels
+    s = Math.min(1, maxW / view.frameW);              // never upscale — pixels stay pixels
     w = view.frameW * s; contentH = view.frameH * s; h = Math.min(maxH, contentH);
   }
+  view.scale = s;
   ui.stage.style.width = `${Math.round(w)}px`;
   ui.stage.style.height = `${Math.round(h)}px`;
   for (const el of [ui.before, ui.after, ui.divider]) el.style.height = `${Math.round(contentH)}px`;
@@ -401,7 +436,7 @@ function open(focusEl) {
   if (focusEl) focusEl.focus({ preventScroll: true });
 }
 
-function showFrames(before, now, note) {
+function showFrames(before, now, note, changeY = null) {
   const u = ensureOverlay();
   view.note = note || '';
   // Full-page frames legitimately differ in height (a rearrangement makes the
@@ -417,9 +452,23 @@ function showFrames(before, now, note) {
   u.tagBefore.innerHTML = `Before<span>· ${fmtTime(before.at)}</span>`;
   u.tagNow.innerHTML = `Now<span>· ${fmtTime(now.at)} · ${fmtDelta(now.at - before.at)}</span>`;
   u.stage.tabIndex = 0;
-  u.hint.textContent = view.note || HINT;
   setSeam(SEAM_DEFAULT);   // the seam opens at the middle — Before left, Now right
   open(u.stage);
+  // THE CHANGE MUST BE IN VIEW. The stage opens on the top of a full-page
+  // frame; when the first pixel that differs sits below its fold — the handoff
+  // beat: a reflex card and two strips above the row put the changed cards on
+  // the bottom edge of a 576px stage at 1440×800 — the room reads two identical
+  // tops and calls it the same image. So the stage is scrolled to put the first
+  // change a third of the way down, and the hint says so.
+  let scrolled = 0;
+  u.stage.scrollTop = 0;
+  if (!view.note && changeY != null) {
+    const y = changeY * view.scale, h = u.stage.clientHeight;
+    if (h > 0 && y > h * 0.6) { scrolled = Math.round(Math.max(0, y - h * 0.3)); u.stage.scrollTop = scrolled; }
+  }
+  u.hint.textContent = view.note
+    || (scrolled ? `Scrolled to the first change, ${Math.round(changeY)}px down the page · ${HINT}` : HINT);
+  u.hint.classList.toggle('warn', !!view.note);
 }
 
 /** Never a blank stage: when html2canvas is missing or a render fails, the
@@ -436,22 +485,58 @@ function showFailure(title, detail) {
   u.msg.hidden = false;
   u.stage.tabIndex = -1;
   u.hint.textContent = 'Nothing to drag — see the message above.';
+  u.hint.classList.remove('warn');
   open(u.close);
 }
 
-// ── API ─────────────────────────────────────────────────────────────────────
+// ── The press is the capture ────────────────────────────────────────────────
+// A baseline is the page as it was WHEN CAPTURE WAS PRESSED. The page's click
+// handler (meridian.js) waits for the page to settle BEFORE it calls
+// captureBaseline() — up to 1.6s after the last paint, up to 5s while a beat is
+// running. During that wait nothing here was in flight, so every gate that asks
+// captureInFlight() — the band's OK, browse(), gateThen() — let the next act run
+// first, and the baseline was taken AFTER the change: the same image twice.
+// Measured, the fourth report: Capture 300ms after a beat's paint, Next 800ms
+// later, OK 1.5s after that → the baseline landed 5.4s after the press on the
+// changed page, byte-identical to Now. Capture pressed while the band was open,
+// OK 2.5s later → the same.
+//
+// So the click on the Capture button starts the capture ITSELF, in the capture
+// phase of the event, before the page's handler runs: `pending` is set in the
+// same task as the press, every gate sees it from that instant, and the page's
+// later captureBaseline() call receives this capture instead of taking a second
+// one. The listener is installed on the first call into this module (the page
+// asks captureInFlight() from its first gated act, long before any press) and
+// does nothing on a page without the button.
+const CAPTURE_BUTTON = '#btn-capture';   // compare.css already knows this id (.busy)
+/** How long a press keeps answering captureBaseline() calls. TWO callers claim
+    one press — the button's own handler (after a settle wait of up to ~15s)
+    and performBeat's automatic pre-beat capture — so the claim is IDEMPOTENT:
+    consuming it on the first claim let the second caller take a fresh frame of
+    a page that had changed by then, which is the clobber this whole block
+    exists to prevent. While a press is fresh it outranks the automatic
+    refresh; the TTL outlives the longest settle wait and no more. */
+const PRESS_TTL_MS = 25000;
+let pressed = null;       // { root, at, gen, promise } — the capture the press itself started
+let lastRoot = null;      // the rootEl the page last passed in
+let pressArmed = false;
 
-/** Capture rootEl — the whole page, from the top — as the Before frame.
-    Resolves { at, ok, scrollTop } — or { at, ok:false, error } after opening the
-    overlay on the failure message. Never rejects for a capture failure.
-    One capture at a time: a second press while the first is still rendering
-    joins it rather than starting another. A capture that started before
-    clearBaseline() is discarded when it lands. */
-/** True while a baseline capture is in flight — the page must not change until it is done. */
-export function captureInFlight() { return !!pending; }
+function armPress() {
+  if (pressArmed || typeof document === 'undefined') return;
+  pressArmed = true;
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    const btn = t && typeof t.closest === 'function' ? t.closest(CAPTURE_BUTTON) : null;
+    if (!btn || btn.disabled || btn.classList.contains('busy')) return;
+    const root = lastRoot && lastRoot.isConnected ? lastRoot : document.getElementById('page');
+    if (!root || typeof root.scrollTop !== 'number') return;
+    pressed = { root, at: Date.now(), gen, promise: startCapture(root) };
+  }, true);
+}
 
-export async function captureBaseline(rootEl) {
-  assertRoot(rootEl, 'captureBaseline');
+/** One capture at a time: a call while one is rendering joins it. A capture
+    that started before clearBaseline() is discarded when it lands. */
+function startCapture(rootEl) {
   if (pending) return pending;
   const myGen = gen;
   pending = (async () => {
@@ -473,7 +558,27 @@ export async function captureBaseline(rootEl) {
   return pending;
 }
 
-export function hasBaseline() { return baseline !== null; }
+// ── API ─────────────────────────────────────────────────────────────────────
+
+/** True while a baseline capture is in flight — the page must not change until it is done. */
+export function captureInFlight() { armPress(); return !!pending; }
+
+/** Capture rootEl — the whole page, from the top — as the Before frame.
+    Resolves { at, ok, scrollTop } — or { at, ok:false, error } after opening the
+    overlay on the failure message. Never rejects for a capture failure.
+    If the Capture button was just pressed, this resolves to THAT capture — the
+    page at the press — rather than taking another one now; otherwise one
+    capture at a time: a call while one is still rendering joins it. */
+export async function captureBaseline(rootEl) {
+  assertRoot(rootEl, 'captureBaseline');
+  lastRoot = rootEl; armPress();
+  const p = pressed;
+  if (p && p.root === rootEl && p.gen === gen && Date.now() - p.at < PRESS_TTL_MS) return p.promise;
+  if (p) pressed = null;   // stale, wrong root, or cleared-over: a fresh capture, and the press stops answering
+  return startCapture(rootEl);
+}
+
+export function hasBaseline() { armPress(); return baseline !== null; }
 
 /** Re-capture rootEl (the whole page, from the top) and open the overlay,
     Before vs Now behind the seam (at 50%). A Capture still in flight is waited
@@ -484,14 +589,16 @@ export function hasBaseline() { return baseline !== null; }
     the failure message. */
 export async function openCompare(rootEl) {
   assertRoot(rootEl, 'openCompare');
+  lastRoot = rootEl; armPress();
   let note = '';
   try {
     if (pending) await pending;
     if (!baseline) {
       baseline = await capture(rootEl);
-      note = 'No baseline had been captured, so this is the page against itself. Capture, change something, then compare.';
+      note = 'No baseline had been captured, so this is the page against itself. Press Capture, wait for "Baseline captured", change something, then compare.';
     }
     const now = await capture(rootEl);
+    const changeY = firstChangeY(baseline.sig, now.sig);
     if (!note && now.w !== baseline.w) {
       note = 'The window was resized since the baseline; the frames may not register.';
     }
@@ -504,7 +611,7 @@ export async function openCompare(rootEl) {
     if (!note && (baseline.clipped || now.clipped)) {
       note = 'A frame laid out taller than the page and may be cut off at the bottom.';
     }
-    showFrames(baseline, now, note);
+    showFrames(baseline, now, note, changeY);
     return { before: baseline.url, now: now.url, beforeAt: baseline.at, nowAt: now.at, scrollTop: baseline.scrollTop };
   } catch (err) {
     showFailure('Nothing to compare', `Compare could not capture the page: ${reason(err)}`);
@@ -516,10 +623,10 @@ export async function openCompare(rootEl) {
 }
 
 /** Drop the Before frame (and close the overlay if it is up). A capture still
-    in flight lands on the floor, not on the next visitor. */
+    in flight — pressed or called — lands on the floor, not on the next visitor. */
 export function clearBaseline() {
   gen += 1;
-  baseline = null;
+  baseline = null; pressed = null;
   if (ui) { ui.before.style.backgroundImage = ''; ui.after.style.backgroundImage = ''; }
   closeCompare();
 }

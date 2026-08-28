@@ -881,6 +881,11 @@ body.has-director .world,body.has-director .engine{padding-bottom:var(--dir-h, 2
 /* ── Predict, then prove ──────────────────────────────────────────────────── */
 .predict[hidden]{display:none}
 .predict{position:fixed;inset:0;z-index:940;background:rgba(23,26,32,.55);display:grid;place-items:start center;padding-top:6vh}
+/* The scrim must not swallow real presses on the bar's controls (Capture was
+   eaten silently — 'No baseline had been captured' over identical frames).
+   Acts behind the band are already refused by the PD.open guards. */
+.predict{pointer-events:none}
+.predict > *{pointer-events:auto}
 .pd-box{width:min(1460px,96vw);max-height:90vh;overflow:auto;background:#EEF1F6;border-radius:12px;border-top:8px solid var(--changed);
   box-shadow:0 30px 80px -20px rgba(0,0,0,.6);padding:18px 22px 16px;animation:offerIn .35s cubic-bezier(.2,.7,.3,1)}
 .pd-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}

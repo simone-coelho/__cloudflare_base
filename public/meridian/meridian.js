@@ -98,7 +98,7 @@ async function captureIdle() {
 async function pageSettled() {
   await captureIdle();
   const running = () => !!document.querySelector('.controls button.running, #dir-next.running');
-  for (let i = 0; i < 100; i++) {                                         // ≤ 5s
+  for (let i = 0; i < 600; i++) {                    // ≤ 30s — a scripted sequence runs ~10s and must finish inside this
     const quiet = Date.now() - (S.lastPaintAt || 0) >= 1600 && !running() && !document.querySelector('.hero.swapping');
     if (quiet) return;
     await sleep(50);
@@ -2401,7 +2401,13 @@ $('btn-capture').onclick = async () => {
   if (b.classList.contains('busy')) return;        // one capture at a time (compare.js joins a pending one anyway)
   b.classList.add('busy'); b.classList.remove('on');
   b.innerHTML = 'Capture baseline<small>capturing — one moment</small>';
-  await pageSettled();
+  // THE PRESS IS THE CAPTURE. No settle wait before it: captureBaseline() clones
+  // the DOM at the call, and its in-flight flag is what holds the band's OK,
+  // browse() and gateThen() until the Before frame is in the box. The wait that
+  // sat here left captureInFlight() false for up to 5s after the press — OK ran
+  // the act first and the baseline was taken AFTER the change (fourth report;
+  // measured: Before == Now byte-for-byte). compare.js's own settled() still
+  // waits (<=2s) for a hero swap or a FLIP mid-flight before it clones.
   const r = await captureBaseline($('page'));
   b.classList.remove('busy');
   b.classList.toggle('on', !!r.ok);
