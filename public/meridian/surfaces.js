@@ -10,12 +10,12 @@ export const SURFACES = {
     {
       id: 'email-outerwear', kind: 'email', from: 'Calder & Co.',
       subject: 'The Autumn Edit is here',
-      preview: 'Waxed cotton, wool, and the coat we make every year.',
+      preview: 'Waxed cotton, wool, and the field jacket we make every year.',
       action: 'Open email',
       chain: ['opened', 'pixel fired', 'identity resolved', 'landed'],
       touches: [{ dim: 'category', value: 'Outerwear' }, { dim: 'styleWorld', value: 'heritage' }],
       hero: { kicker: 'Because you opened The Autumn Edit',
-              title: 'The coat we make every year',
+              title: 'The field jacket we make every year',
               body: 'Waxed cotton that earns its keep, and wool that outlives the season.' },
     },
     {
@@ -47,7 +47,7 @@ export const SURFACES = {
       act: 'declared',
       chain: ['submitted', 'declared preference stored', 'joined to observed behaviour'],
       touches: [{ dim: 'occasion', value: 'evening' }, { dim: 'styleWorld', value: 'statement' },
-                // Aster is the silk-and-cashmere scarves line — the fourth tap names a family, not a fabric.
+                // Aster is the silk scarves line — the fourth tap names a family, not a fabric.
                 { dim: 'priceBand', value: 'premium' }, { dim: 'line', value: 'Aster' }],
       hero: { kicker: 'You told us: evening', title: 'For the evening you said you had',
               body: 'What you told us, alongside what you have actually looked at.' },

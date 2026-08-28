@@ -13,7 +13,7 @@ for (const [name,path] of [['Coach storefront','/storefront'],['Meridian','/meri
 console.log('\n── drive BOTH engines, interleaved ─────────────────');
 // Meridian visitor
 for (let i=0;i<4;i++) await j(`${B}/meridian/api/action`,{method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({visitorId:MRD,vertical:'retail',events:[{action:'view',touches:[{dim:'category',value:'Tools'}]}]})});
+  body:JSON.stringify({visitorId:MRD,vertical:'retail',events:[{action:'view',touches:[{dim:'category',value:'Outerwear'}]}]})});
 // Coach visitor through the SHARED pipeline, at the same time
 const coach = await j(`${B}/realtime/action`,{method:'POST',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({type:'product_view',userId:COA,data:{productId:'COA-CH857'},source:'storefront'})});

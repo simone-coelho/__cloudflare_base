@@ -2,8 +2,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // THE PARALLEL REGISTRIES — the structural argument for agnosticism.
 //
-// Retail and financial declare the SAME SEVEN DIMENSION SHAPES, with the SAME
-// τ / K / θ tuning, and six of the seven read the SAME RECORD FIELD. Only the
+// Retail and financial declare the SAME EIGHT DIMENSION SHAPES, with the SAME
+// τ / K / θ tuning, and six of the eight read the SAME RECORD FIELD. Only the
 // dimension KEY changes — the word the room reads on the instrument.
 //
 //   shape     retail key    ← retail field   financial key      ← financial field
@@ -11,26 +11,34 @@
 //   narrow    line          ← line           subFamily          ← subcategory
 //   band      priceBand     ← value_usd      amountBand         ← value_usd
 //   durable   styleWorld    ← world          lifeStage          ← world
+//   hue       colour        ← colour         tier               ← tier
 //   need      occasion      ← needs[]        intent             ← needs[]
 //   content   contentType   ← contentType    contentType        ← contentType
 //   stage     journeyStage  ← (the verb)     applicationStage   ← (the verb)
 //
-// THE NARROW SHAPE IS THE ONE EXCEPTION (decision D3, 2026-08-28). Retail's
-// narrow dimension is the product LINE — Drover, Linden, Halden — the family a
-// luxury house actually merchandises by, the way Coach merchandises "Tabby".
-// Material stays on the retail record as `subcategory` for the card's display
-// string ("Outerwear · wool") and is no longer a dimension. Financial has no
-// lines; its narrow dimension keeps reading `subcategory` (fixed / variable /
-// revolving …) under the key subFamily.
+// NARROW AND HUE ARE THE TWO EXCEPTIONS. Narrow (decision D3, 2026-08-28):
+// retail's narrow dimension is the product LINE — Drover, Linden, Halden — the
+// family a luxury house actually merchandises by, the way Coach merchandises
+// "Tabby". Material stays on the retail record as `subcategory` for the card's
+// display string ("Outerwear · canvas") and is no longer a dimension. Financial
+// has no lines; its narrow dimension keeps reading `subcategory` (fixed /
+// variable / revolving …) under the key subFamily.
 //
-// SIX OF THE SEVEN READ THE NOUN. The seventh reads the VERB: journeyStage is
+// Hue (decision D8, 2026-08-28): the catalogue is FAMILIES × COLOURWAYS now, so
+// colour is a value that recurs across families — an affinity for black is
+// finally observable — and it reads `colour` in retail. Financial's colour is
+// the card in your wallet: `tier` (black / gold / silver / blue), carried by the
+// Card products only. A sparse source is fine — extractTouches skips an absent
+// field — which is itself part of the agnosticism argument.
+//
+// SEVEN OF THE EIGHT READ THE NOUN. The eighth reads the VERB: journeyStage is
 // not carried by any item, it is carried by WHAT THE VISITOR DID — a click is
 // browsing, an add-to-bag is deciding. It therefore scores no item and carries
 // zero weight in every slot. What it changes is the page's SHAPE: when it tips
 // to deciding, the row stops offering more choices and starts completing the
 // one already made. A dimension that restructures rather than re-ranks.
 //
-// So when the catalog swaps on stage, seven bars stay exactly where they were and
+// So when the catalog swaps on stage, eight bars stay exactly where they were and
 // only their labels change. Nobody has to be told the engine is the same engine.
 //
 // TWO SPEEDS SHIP IN BOTH. The durable axes (priceBand/styleWorld, amountBand/
@@ -52,12 +60,13 @@ const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-/** The seven shapes. Anything not in this union is not a Meridian dimension. */
+/** The eight shapes. Anything not in this union is not a Meridian dimension. */
 export type MeridianShape =
   | 'broad'      // what aisle / what product family
   | 'narrow'     // the specific kind
   | 'band'       // value: price, or principal
   | 'durable'    // taste, or life stage — the slow axis
+  | 'hue'        // colour of the thing: colourway, or card tier
   | 'need'       // multi-valued: occasion, or intent
   | 'content'    // which kind of asset earns attention
   | 'stage';     // where in the journey — read from the verb, not the item
@@ -75,6 +84,9 @@ export const DEMO_TAUS: Readonly<Record<MeridianShape, number>> = {
   narrow: 120 * SECOND,
   band: 600 * SECOND,
   durable: 480 * SECOND,
+  // Colour taste sits between the session's aisle and the durable axes: faster
+  // than taste, slower than "which line is she in right now".
+  hue: 240 * SECOND,
   need: 240 * SECOND,
   content: 180 * SECOND,
   // Intent is still the most perishable thing here.
@@ -87,6 +99,7 @@ export const PROD_TAUS: Readonly<Record<MeridianShape, number>> = {
   narrow: 7 * DAY,
   band: 45 * DAY,
   durable: 60 * DAY,
+  hue: 30 * DAY,
   need: 21 * DAY,
   content: 14 * DAY,
   stage: 3 * DAY,
@@ -98,6 +111,7 @@ const SHAPE_TUNING: Readonly<Record<MeridianShape, { K: number; thetaIn: number;
   narrow: { K: 1.6, thetaIn: 0.60, thetaOut: 0.45 },
   band: { K: 2.4, thetaIn: 0.55, thetaOut: 0.40 },
   durable: { K: 2.2, thetaIn: 0.58, thetaOut: 0.42 },
+  hue: { K: 1.8, thetaIn: 0.60, thetaOut: 0.45 },
   need: { K: 1.8, thetaIn: 0.60, thetaOut: 0.45 },
   content: { K: 1.6, thetaIn: 0.60, thetaOut: 0.45 },
   // Low K on purpose: one add-to-bag (weight 3.0) gives a = 3.0/(3.0+1.4) =
@@ -109,6 +123,13 @@ const SHAPE_TUNING: Readonly<Record<MeridianShape, { K: number; thetaIn: number;
  * Action → accumulation weight. Unknown actions weigh 0 but still re-evaluate,
  * so a tick with no signal can still produce an EXIT. That is the mechanism
  * behind the beat where the page changes with nobody touching it.
+ *
+ * THREE SIGNALS ENTER AN AUDIENCE, NEVER ONE (decision D4 — these are the
+ * Coach demo's values). Every browsing verb weighs exactly 1.0, so with K 1.8
+ * and θ_in 0.60 three of them enter — 3/(3+1.8) = 0.625 — and two do not —
+ * 2/3.8 = 0.53. One click is noise, two is a hint, three is a pattern, and the
+ * ladder above browsing (search 1.5, declared/save 2.0, intent 3.0, convert
+ * 5.0) buys steps up that staircase rather than a way around it.
  */
 export const MERIDIAN_WEIGHTS: Readonly<Record<string, number>> = {
   /** The cold-start seed, derived from published census figures. Sized to land
@@ -119,28 +140,29 @@ export const MERIDIAN_WEIGHTS: Readonly<Record<string, number>> = {
       announced its own retreat. 1.35 gives a = 0.36: unmistakably non-zero on
       the bar, and comfortably short of committing. */
   prior: 1.35,
-  /** An off-site arrival — email opened, ad clicked, form submitted. Someone
-      chose to act on a surface that is not your website, which is a stronger
-      statement than a page view and weaker than adding to a bag. */
-  arrival: 2.0,
-  /** Zero-party: the visitor STATED this rather than revealed it. Weighted above
-      an arrival because it is unambiguous, and below a purchase because saying
-      you like evening pieces is not the same as buying one. Critically it lands
-      in the SAME vector as observed behaviour and decays on the SAME clock — a
-      preference declared once stops driving the page unless behaviour agrees. */
-  declared: 3.2,
-  /** Choosing a department is a broader statement than opening one product —
-      it is the visitor telling you which aisle they are in. */
-  nav_click: 2.0,
+  /** An off-site arrival — email opened, ad clicked, form submitted — counts as
+      one browsing signal, no more: someone acted somewhere, which starts the
+      pattern but never is one by itself. */
+  arrival: 1.0,
+  /** Zero-party: the visitor STATED this rather than revealed it. Two signals'
+      worth — unambiguous, so it outweighs any single observed act, and short of
+      entry on its own, because saying you like evening pieces is not the same
+      as buying one. Critically it lands in the SAME vector as observed
+      behaviour and decays on the SAME clock — a preference declared once stops
+      driving the page unless behaviour agrees. */
+  declared: 2.0,
+  /** One browsing signal, like every other browsing verb — the aisle chosen,
+      the card opened, the rail followed: each is a third of an audience. */
+  nav_click: 1.0,
   view: 1.0,
   scroll_depth: 0.5,
-  rail_click: 1.5,
-  block_read: 1.2,
-  row_click: 1.5,
-  search: 2.0,
-  save: 3.0,
+  rail_click: 1.0,
+  block_read: 1.0,
+  row_click: 1.0,
+  search: 1.5,         // typed words beat a click, but not a declaration
+  save: 2.0,
   intent_start: 3.0,   // add to cart · begin application
-  convert: 4.0,        // purchase · submit application
+  convert: 5.0,        // purchase · submit application
   reflex_tick: 0,      // re-evaluate only — never accumulates
   time_skip: 0,        // the presenter let time pass; nothing accumulates, decay runs
 };
@@ -173,6 +195,10 @@ function buildConfig(vertical: Vertical, taus: Readonly<Record<MeridianShape, nu
         labels: retail ? ['entry', 'core', 'premium'] : ['modest', 'core', 'major'],
       }),
       dim('durable', retail ? 'styleWorld' : 'lifeStage', 'world', taus),
+      // The second place the registries read different fields (D8): a colourway
+      // in retail, the card's tier in financial — where only the five Card
+      // products carry the source, and extractTouches skips everything else.
+      dim('hue', retail ? 'colour' : 'tier', retail ? 'colour' : 'tier', taus),
       dim('need', retail ? 'occasion' : 'intent', 'needs', taus, { multi: true }),
       dim('content', 'contentType', 'contentType', taus),
       // Source deliberately names no item field. extractTouches skips a source
@@ -214,6 +240,7 @@ export const SHAPE_OF_KEY: Readonly<Record<string, MeridianShape>> = {
   line: 'narrow', subFamily: 'narrow',
   priceBand: 'band', amountBand: 'band',
   styleWorld: 'durable', lifeStage: 'durable',
+  colour: 'hue', tier: 'hue',
   occasion: 'need', intent: 'need',
   contentType: 'content',
   journeyStage: 'stage', applicationStage: 'stage',
@@ -221,7 +248,7 @@ export const SHAPE_OF_KEY: Readonly<Record<string, MeridianShape>> = {
 
 /** Display order on the instrument. Fixed across verticals — that is the point. */
 export const SHAPE_ORDER: readonly MeridianShape[] =
-  ['broad', 'narrow', 'need', 'band', 'durable', 'content', 'stage'];
+  ['broad', 'narrow', 'need', 'band', 'durable', 'hue', 'content', 'stage'];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RECENCY LEADS, ACCUMULATION GATES — AN ADDITION TO THE SPEC.
@@ -309,7 +336,7 @@ for (const key of new Set([...Object.keys(LEAD_BY), ...Object.keys(TRAILING)])) 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// THE VERB MAP — the seventh dimension's only evidence.
+// THE VERB MAP — the stage dimension's only evidence.
 //
 // Every other dimension is read off the item. This one is read off what the
 // visitor DID with it, which is why it lives here as a table rather than in a

@@ -69,7 +69,7 @@ But `REFLEX_HOST` is a single global var. Flipping it to `do` to get our beat wo
 
 ## The two catalogs are structurally parallel — on purpose
 
-Retail and financial declare **the same six dimension shapes** in different vocabulary:
+Retail and financial declare **the same eight dimension shapes** in different vocabulary:
 
 | Shape | Meridian & Co. | Meridian Financial |
 |---|---|---|
@@ -77,10 +77,12 @@ Retail and financial declare **the same six dimension shapes** in different voca
 | narrow | `line` | `subFamily` |
 | value band | `priceBand` | `amountBand` |
 | durable taste | `styleWorld` | `lifeStage` |
+| hue | `colour` (colourway) | `tier` (card colour) |
 | multi-valued need | `occasion` | `intent` |
 | content | `contentType` | `contentType` |
+| journey stage | `journeyStage` (the verb) | `applicationStage` (the verb) |
 
-This is the whole vertical-swap argument made structural. When the catalog swaps on stage, **the same seven bars stay on screen and only their labels change.** The room does not have to take agnosticism on faith — they watch the instrument stay identical while the business underneath it changes.
+This is the whole vertical-swap argument made structural. When the catalog swaps on stage, **the same eight bars stay on screen and only their labels change.** The room does not have to take agnosticism on faith — they watch the instrument stay identical while the business underneath it changes.
 
 Two speeds ship in both: the durable axes (`priceBand`, `styleWorld` / `amountBand`, `lifeStage`) visibly do not move while the fast axes spike. Same engine, same math, different τ.
 

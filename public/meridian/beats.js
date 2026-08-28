@@ -127,7 +127,7 @@ export const BEATS = [
     why: 'Sets up the staircase in beat 21. Without it, the retreats later look arbitrary.',
     do: 'Press "Three coats". Watch the cursor click the first two — say the line over the third.',
     watch: 'Bars move at different rates. Taste is slow; this session is fast.',
-    say: 'Seven things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both. And the line she is in follows her last click, not her running total — step from Drover to Linden and Linden leads at once, while Drover trails until it decays out on its own.',
+    say: 'Eight things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both. And the line she is in follows her last click, not her running total — step from Drover to Linden and Linden leads at once, while Drover trails until it decays out on its own.',
     real: 'LIVE' },
 
   { n: 13, act: 2, cap: 'C9', title: 'It waited until it was sure', secs: 55, mark: 'SLOW DOWN',
@@ -165,7 +165,7 @@ export const BEATS = [
     why: 'Two capabilities land together and the causal link needs saying out loud.',
     do: 'Press "Adds to bag". The cursor does it; the row restructures.',
     watch: 'The row becomes "Complete the look" — nothing from the same category. A dimension read from the verb, not the item.',
-    say: 'She stopped browsing and started deciding. That is a seventh dimension, and it is the only one not read off a product — it is read off what she did. So the page stops offering her more coats and starts completing the one she chose. It gained a section, not just different contents.',
+    say: 'She stopped browsing and started deciding. That is an eighth dimension, and it is the only one not read off a product — it is read off what she did. So the page stops offering her more coats and starts completing the one she chose. It gained a section, not just different contents.',
     real: 'LIVE' },
 
   { n: 18, act: 2, cap: 'C33', title: 'An offer that cannot be extended', secs: 45,
@@ -214,8 +214,8 @@ export const BEATS = [
     why: 'The act’s payoff. It needs the silence after it more than it needs the words in it.',
     arm: { vertical: 'financial' },
     do: 'Switch the business.',
-    watch: 'Seven bars stay in exactly their places and re-label. The four surfaces keep their KINDS — email, paid social, SMS, partner form — and re-vocabularise. Cold start recomputes from median home value at 80% LTV. The centre becomes unrecognisable.',
-    say: 'I changed what we sell. Watch what did not change: seven bars, in the same seven places, relabelled. Category became product family, taste became life stage, journey stage became application stage. Same four kinds of surface on the left, speaking a different language. The centre you would not recognise — a bank does not merchandise, it makes offers and asks you to apply, so it renders as rates and cards and eligibility. One engine. Your front end paints it. You already know this customer, you just do not know him in this vocabulary yet.',
+    watch: 'Eight bars stay in exactly their places and re-label. The four surfaces keep their KINDS — email, paid social, SMS, partner form — and re-vocabularise. Cold start recomputes from median home value at 80% LTV. The centre becomes unrecognisable.',
+    say: 'I changed what we sell. Watch what did not change: eight bars, in the same eight places, relabelled. Category became product family, taste became life stage, colour became card tier, journey stage became application stage. Same four kinds of surface on the left, speaking a different language. The centre you would not recognise — a bank does not merchandise, it makes offers and asks you to apply, so it renders as rates and cards and eligibility. One engine. Your front end paints it. You already know this customer, you just do not know him in this vocabulary yet.',
     real: 'LIVE' },
 
   // ── ACT 3 · the operator · 480s ────────────────────────────────────────────

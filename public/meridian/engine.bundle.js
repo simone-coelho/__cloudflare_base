@@ -15,6 +15,9 @@ var DEMO_TAUS = {
   narrow: 120 * SECOND,
   band: 600 * SECOND,
   durable: 480 * SECOND,
+  // Colour taste sits between the session's aisle and the durable axes: faster
+  // than taste, slower than "which line is she in right now".
+  hue: 240 * SECOND,
   need: 240 * SECOND,
   content: 180 * SECOND,
   // Intent is still the most perishable thing here.
@@ -25,6 +28,7 @@ var PROD_TAUS = {
   narrow: 7 * DAY,
   band: 45 * DAY,
   durable: 60 * DAY,
+  hue: 30 * DAY,
   need: 21 * DAY,
   content: 14 * DAY,
   stage: 3 * DAY
@@ -34,6 +38,7 @@ var SHAPE_TUNING = {
   narrow: { K: 1.6, thetaIn: 0.6, thetaOut: 0.45 },
   band: { K: 2.4, thetaIn: 0.55, thetaOut: 0.4 },
   durable: { K: 2.2, thetaIn: 0.58, thetaOut: 0.42 },
+  hue: { K: 1.8, thetaIn: 0.6, thetaOut: 0.45 },
   need: { K: 1.8, thetaIn: 0.6, thetaOut: 0.45 },
   content: { K: 1.6, thetaIn: 0.6, thetaOut: 0.45 },
   // Low K on purpose: one add-to-bag (weight 3.0) gives a = 3.0/(3.0+1.4) =
@@ -49,29 +54,31 @@ var MERIDIAN_WEIGHTS = {
       announced its own retreat. 1.35 gives a = 0.36: unmistakably non-zero on
       the bar, and comfortably short of committing. */
   prior: 1.35,
-  /** An off-site arrival — email opened, ad clicked, form submitted. Someone
-      chose to act on a surface that is not your website, which is a stronger
-      statement than a page view and weaker than adding to a bag. */
-  arrival: 2,
-  /** Zero-party: the visitor STATED this rather than revealed it. Weighted above
-      an arrival because it is unambiguous, and below a purchase because saying
-      you like evening pieces is not the same as buying one. Critically it lands
-      in the SAME vector as observed behaviour and decays on the SAME clock — a
-      preference declared once stops driving the page unless behaviour agrees. */
-  declared: 3.2,
-  /** Choosing a department is a broader statement than opening one product —
-      it is the visitor telling you which aisle they are in. */
-  nav_click: 2,
+  /** An off-site arrival — email opened, ad clicked, form submitted — counts as
+      one browsing signal, no more: someone acted somewhere, which starts the
+      pattern but never is one by itself. */
+  arrival: 1,
+  /** Zero-party: the visitor STATED this rather than revealed it. Two signals'
+      worth — unambiguous, so it outweighs any single observed act, and short of
+      entry on its own, because saying you like evening pieces is not the same
+      as buying one. Critically it lands in the SAME vector as observed
+      behaviour and decays on the SAME clock — a preference declared once stops
+      driving the page unless behaviour agrees. */
+  declared: 2,
+  /** One browsing signal, like every other browsing verb — the aisle chosen,
+      the card opened, the rail followed: each is a third of an audience. */
+  nav_click: 1,
   view: 1,
   scroll_depth: 0.5,
-  rail_click: 1.5,
-  block_read: 1.2,
-  row_click: 1.5,
-  search: 2,
-  save: 3,
+  rail_click: 1,
+  block_read: 1,
+  row_click: 1,
+  search: 1.5,
+  // typed words beat a click, but not a declaration
+  save: 2,
   intent_start: 3,
   // add to cart · begin application
-  convert: 4,
+  convert: 5,
   // purchase · submit application
   reflex_tick: 0,
   // re-evaluate only — never accumulates
@@ -97,6 +104,10 @@ function buildConfig(vertical, taus) {
         labels: retail ? ["entry", "core", "premium"] : ["modest", "core", "major"]
       }),
       dim("durable", retail ? "styleWorld" : "lifeStage", "world", taus),
+      // The second place the registries read different fields (D8): a colourway
+      // in retail, the card's tier in financial — where only the five Card
+      // products carry the source, and extractTouches skips everything else.
+      dim("hue", retail ? "colour" : "tier", retail ? "colour" : "tier", taus),
       dim("need", retail ? "occasion" : "intent", "needs", taus, { multi: true }),
       dim("content", "contentType", "contentType", taus),
       // Source deliberately names no item field. extractTouches skips a source
@@ -133,13 +144,15 @@ var SHAPE_OF_KEY = {
   amountBand: "band",
   styleWorld: "durable",
   lifeStage: "durable",
+  colour: "hue",
+  tier: "hue",
   occasion: "need",
   intent: "need",
   contentType: "content",
   journeyStage: "stage",
   applicationStage: "stage"
 };
-var SHAPE_ORDER = ["broad", "narrow", "need", "band", "durable", "content", "stage"];
+var SHAPE_ORDER = ["broad", "narrow", "need", "band", "durable", "hue", "content", "stage"];
 var LEAD_BY = {
   line: "recency"
 };
