@@ -431,16 +431,16 @@ var SLOT_STRATEGIES = {
   // inactivity into three separate, nameable retreats instead of one collapse.
   //
   // The hero commits. It leans on the slow axes so it does not flap.
-  hero: { broad: 0.35, durable: 0.3, need: 0.2, band: 0.15, narrow: 0, content: 0, stage: 0 },
+  hero: { broad: 0.35, durable: 0.3, need: 0.2, band: 0.15, narrow: 0, hue: 0, content: 0, stage: 0 },
   // The rail is fast-twitch: it answers the last thing you did.
-  rail: { narrow: 0.4, broad: 0.3, need: 0.2, band: 0.1, durable: 0, content: 0, stage: 0 },
+  rail: { narrow: 0.35, broad: 0.25, need: 0.2, hue: 0.1, band: 0.1, durable: 0, content: 0, stage: 0 },
   // The row ranks merchandise. Led by NEED rather than narrow so it outlives the
   // rail — a row about "things for a project" stays true longer than a row about
   // "cordless sanders specifically".
-  row: { need: 0.3, narrow: 0.25, broad: 0.25, band: 0.15, durable: 0.05, content: 0, stage: 0 },
+  row: { need: 0.25, narrow: 0.25, broad: 0.25, band: 0.15, hue: 0.1, durable: 0, content: 0, stage: 0 },
   // Blocks are content: what KIND of asset earns attention matters most.
-  block_a: { content: 0.35, broad: 0.25, need: 0.2, durable: 0.2, narrow: 0, band: 0, stage: 0 },
-  block_b: { content: 0.35, broad: 0.25, need: 0.2, durable: 0.2, narrow: 0, band: 0, stage: 0 }
+  block_a: { content: 0.35, broad: 0.25, need: 0.2, durable: 0.2, narrow: 0, hue: 0, band: 0, stage: 0 },
+  block_b: { content: 0.35, broad: 0.25, need: 0.2, durable: 0.2, narrow: 0, hue: 0, band: 0, stage: 0 }
 };
 function match(record, source, value) {
   const raw = record[source];

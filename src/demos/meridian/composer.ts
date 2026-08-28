@@ -52,16 +52,16 @@ export const SLOT_STRATEGIES: Record<MeridianSlot, Record<string, number>> = {
   // inactivity into three separate, nameable retreats instead of one collapse.
   //
   // The hero commits. It leans on the slow axes so it does not flap.
-  hero:    { broad: 0.35, durable: 0.30, need: 0.20, band: 0.15, narrow: 0.00, content: 0.00 , stage: 0.00 },
+  hero:    { broad: 0.35, durable: 0.30, need: 0.20, band: 0.15, narrow: 0.00, hue: 0.00, content: 0.00, stage: 0.00 },
   // The rail is fast-twitch: it answers the last thing you did.
-  rail:    { narrow: 0.40, broad: 0.30, need: 0.20, band: 0.10, durable: 0.00, content: 0.00 , stage: 0.00 },
+  rail:    { narrow: 0.35, broad: 0.25, need: 0.20, hue: 0.10, band: 0.10, durable: 0.00, content: 0.00, stage: 0.00 },
   // The row ranks merchandise. Led by NEED rather than narrow so it outlives the
   // rail — a row about "things for a project" stays true longer than a row about
   // "cordless sanders specifically".
-  row:     { need: 0.30, narrow: 0.25, broad: 0.25, band: 0.15, durable: 0.05, content: 0.00 , stage: 0.00 },
+  row:     { need: 0.25, narrow: 0.25, broad: 0.25, band: 0.15, hue: 0.10, durable: 0.00, content: 0.00, stage: 0.00 },
   // Blocks are content: what KIND of asset earns attention matters most.
-  block_a: { content: 0.35, broad: 0.25, need: 0.20, durable: 0.20, narrow: 0.00, band: 0.00 , stage: 0.00 },
-  block_b: { content: 0.35, broad: 0.25, need: 0.20, durable: 0.20, narrow: 0.00, band: 0.00 , stage: 0.00 },
+  block_a: { content: 0.35, broad: 0.25, need: 0.20, durable: 0.20, narrow: 0.00, hue: 0.00, band: 0.00, stage: 0.00 },
+  block_b: { content: 0.35, broad: 0.25, need: 0.20, durable: 0.20, narrow: 0.00, hue: 0.00, band: 0.00, stage: 0.00 },
 };
 
 export interface ComposeInput {

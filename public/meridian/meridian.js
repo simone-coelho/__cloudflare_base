@@ -771,7 +771,7 @@ $('btn-skip').onclick = () => skipTime(120);
 // decision uses the new weight and the receipt stamps a tuned version. The docs
 // promise exactly this; the delivery ledger says the real build is compile-time
 // today — this is real on the demo and a commitment on the product.
-const SHAPE_LABEL = { broad: 'category', narrow: 'line', need: 'occasion', band: 'price band', durable: 'taste', content: 'content', stage: 'stage' };
+const SHAPE_LABEL = { broad: 'category', narrow: 'line', need: 'occasion', band: 'price band', durable: 'taste', hue: 'colour', content: 'content', stage: 'stage' };
 let TUNED = false;
 
 function renderDial() {
@@ -1051,7 +1051,7 @@ const ALL_HUES = ['#E8503A', '#E8A317', '#7CA82F', '#12968C', '#4257C4', '#9B45A
 //
 // This is also why finance needs no photography: a card face is a graphic
 // object that banks genuinely merchandise, and a mortgage has no packshot. The
-// engine underneath is untouched — same slots, same seven dimensions, same
+// engine underneath is untouched — same slots, same eight dimensions, same
 // decisions by id. Only the rendering changes, which is exactly the contract we
 // sell: we return the decision, the customer's front end paints it.
 
@@ -1246,7 +1246,12 @@ function highlightMovers(movers, holdMs, label = 'was') {
     d.innerHTML = `<b>${now}</b><small>${was == null ? (label === 'std' ? 'not in std' : 'new in') : `${label} ${was}`}</small>`;
   }
   ROW.holdTimer = setTimeout(() => {
-    $('row').querySelectorAll('.card.changed').forEach((el) => el.classList.remove('changed'));
+    // The badge fades WITH the border — a green "was 7" outliving its green
+    // border read as a leftover.
+    $('row').querySelectorAll('.card.changed').forEach((el) => {
+      el.classList.remove('changed');
+      const d = el.querySelector('.delta'); if (d) d.hidden = true;
+    });
   }, holdMs);
 }
 
@@ -2247,7 +2252,7 @@ async function setVertical(v) {
   await post('/vertical', { vertical: v });
   await load(v); connect();
   if (window.MOMENTS) window.MOMENTS.setVertical(v);
-  $('sentence').textContent = 'Same engine. Same seven dimensions. Different vocabulary.';
+  $('sentence').textContent = 'Same engine. Same eight dimensions. Different vocabulary.';
 }
 $('btn-retail').onclick = () => setVertical('retail');
 $('btn-financial').onclick = () => setVertical('financial');
