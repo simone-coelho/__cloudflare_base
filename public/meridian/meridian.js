@@ -2255,11 +2255,17 @@ async function performBeat(beat) {
 }
 
 async function goBeat(i) {
-  if (BZ.busy) return;                             // a beat is still being performed
-  DIR.i = Math.max(0, Math.min(BEATS.length - 1, i));
-  sessionStorage.setItem('mrd_dir', String(DIR.i));
-  await armBeat(BEATS[DIR.i]);
-  renderBeat();
+  if (BZ.busy || DIR.arming) return;               // a beat is still being armed or performed
+  DIR.arming = true;                               // Next pressed during a reset/reload/flip is ignored, not stacked
+  // Stage management: a modal left open by the previous beat (Ask, the
+  // Concierge, receipts, radar) closes when the next beat starts.
+  document.querySelectorAll('.moment.open').forEach((m) => m.classList.remove('open'));
+  try {
+    DIR.i = Math.max(0, Math.min(BEATS.length - 1, i));
+    sessionStorage.setItem('mrd_dir', String(DIR.i));
+    await armBeat(BEATS[DIR.i]);
+    renderBeat();
+  } finally { DIR.arming = false; }
   if (!DIR.running) dirPlay(true);                 // the clock starts on the first Next
   await performBeat(BEATS[DIR.i]);
   if (DIR.auto) scheduleAuto();
@@ -2645,7 +2651,7 @@ window.MOMENTS = initMoments({
   expiryOf: (key, ctx) => (ctx?.dim && ctx?.value) ? expiryOf(S.reflex, ctx.dim, ctx.value, S.config) : null,
 });
 
-if (new URLSearchParams(location.search).has('debug')) window.__S = S;
+if (new URLSearchParams(location.search).has('debug')) { window.__S = S; window.__goBeat = goBeat; }
 paintPinButton();
 // One click to start, and it survives the reload that beat 22 performs.
 // The director is on by default: it holds the transport AND the palette now.
