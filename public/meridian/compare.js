@@ -206,7 +206,7 @@ async function capture(rootEl) {
     const canvas = await lib(rootEl, {
       useCORS: true, logging: false,
       backgroundColor: cs.backgroundColor,
-      scale: Math.min(2, window.devicePixelRatio || 1),
+      scale: 1,   // a comparison, not a print: 1x is fast on every display, and fast is what keeps Before honest
       width: w, height, scrollX: 0, scrollY: 0,
       windowWidth: window.innerWidth, windowHeight: window.innerHeight,
       onclone: (doc) => {
@@ -447,6 +447,9 @@ function showFailure(title, detail) {
     One capture at a time: a second press while the first is still rendering
     joins it rather than starting another. A capture that started before
     clearBaseline() is discarded when it lands. */
+/** True while a baseline capture is in flight — the page must not change until it is done. */
+export function captureInFlight() { return !!pending; }
+
 export async function captureBaseline(rootEl) {
   assertRoot(rootEl, 'captureBaseline');
   if (pending) return pending;

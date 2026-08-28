@@ -8,7 +8,7 @@
 
 import { SURFACES, KIND_LABEL } from '/meridian/surfaces.js';
 import { BEATS, ACTS } from '/meridian/beats.js';
-import { captureBaseline, openCompare, clearBaseline } from '/meridian/compare.js';
+import { captureBaseline, openCompare, clearBaseline, captureInFlight } from '/meridian/compare.js';
 import { paintLayout } from '/meridian/layout.js';
 import { initMoments } from '/meridian/moments.js';
 import {
@@ -86,6 +86,24 @@ function capDone(n) {
   if (CAPS_DONE.size === 15) consequence('The 15', '15 of 15 — all seen in this session', 'Every capability on the checklist has been shown live, in the room, in this session.');
 }
 function resetCaps() { CAPS_DONE.clear(); renderCaps(); }
+
+// ── CAPTURE DISCIPLINE ──────────────────────────────────────────────────────
+// A baseline is the page as it was WHEN CAPTURE WAS PRESSED. So while a capture
+// is in flight nothing may change the page — no act, no OK, no sequence — and
+// Compare takes its Now frame only after the last paint and movement have
+// finished. Third report of "the same image twice"; this closes it structurally.
+async function captureIdle() {
+  for (let i = 0; i < 200 && captureInFlight(); i++) await sleep(50);   // ≤ 10s
+}
+async function pageSettled() {
+  await captureIdle();
+  const running = () => !!document.querySelector('.controls button.running, #dir-next.running');
+  for (let i = 0; i < 100; i++) {                                         // ≤ 5s
+    const quiet = Date.now() - (S.lastPaintAt || 0) >= 1600 && !running() && !document.querySelector('.hero.swapping');
+    if (quiet) return;
+    await sleep(50);
+  }
+}
 
 /** Engine time. Everything the reflex engine sees goes through this. */
 const NOW = () => S.clock;
@@ -1082,6 +1100,7 @@ async function sequenceBand(acts) {
 async function gateThen(acts, fn) {
   if (PD.open) return;
   await sequenceBand(acts);
+  await captureIdle();
   GATE.open = true;
   try { fn(); } finally { GATE.open = false; }
 }
@@ -1105,7 +1124,10 @@ function openBandRaw() {
   if (window.MOMENTS) window.MOMENTS.pause();
   return new Promise((resolve) => { PD.resolve = resolve; });
 }
-$('pd-go').onclick = () => { $('predict').hidden = true; PD.open = false; if (window.MOMENTS) window.MOMENTS.resume(); PD.resolve?.(); PD.resolve = null; };
+$('pd-go').onclick = async () => {
+  if (captureInFlight()) { const t = $('pd-go').textContent; $('pd-go').textContent = 'capturing the baseline — one moment…'; await captureIdle(); $('pd-go').textContent = t; }
+  $('predict').hidden = true; PD.open = false; if (window.MOMENTS) window.MOMENTS.resume(); PD.resolve?.(); PD.resolve = null;
+};
 
 // ── The scripted browse ─────────────────────────────────────────────────────
 // The room has to WATCH her browse: a visible visitor clicks a coat, then
@@ -1162,6 +1184,7 @@ async function browse(btn, targets) {   // targets are perform SPECS
     // anything moves; OK lets her do it. Then each act runs for real, ungated.
     const acts = targets.map(actOf).filter(Boolean);
     if (acts.length && !GATE.open) { await sequenceBand(acts); if (BZ.abort) return; }
+    await captureIdle();
     GATE.open = true;
     for (const t of targets) {
       if (BZ.abort) break;                                     // the presenter said stop
@@ -1551,6 +1574,7 @@ function renderGlass(d) {
 }
 
 function paint(prev, next, first, rowMoved = false, tick = false) {
+  if (!first && !tick) S.lastPaintAt = Date.now();
   const heroChanged = pick(prev, 'hero')?.itemId !== pick(next, 'hero')?.itemId || S.heroDirty;
   S.heroDirty = false;
   const nextRow = next.filter((d) => d.slot === 'row').map((d) => d.itemId);
@@ -2257,13 +2281,20 @@ $('btn-capture').onclick = async () => {
   if (b.classList.contains('busy')) return;        // one capture at a time (compare.js joins a pending one anyway)
   b.classList.add('busy'); b.classList.remove('on');
   b.innerHTML = 'Capture baseline<small>capturing — one moment</small>';
+  await pageSettled();
   const r = await captureBaseline($('page'));
   b.classList.remove('busy');
   b.classList.toggle('on', !!r.ok);
   b.innerHTML = r.ok ? 'Baseline captured<small>compare when ready</small>' : 'Capture baseline<small>freeze the page now</small>';
   if (r.ok) consequence('Compare', 'Baseline captured', 'Compare will show this frame against whatever the page looks like then.');
 };
-$('btn-compare').onclick = () => openCompare($('page'));
+$('btn-compare').onclick = async () => {
+  const b = $('btn-compare'); const t = b.innerHTML;
+  b.innerHTML = 'Compare<small>waiting for the page to settle…</small>';
+  await pageSettled();                                   // never a Now frame mid-move
+  b.innerHTML = t;
+  openCompare($('page'));
+};
 $('btn-conc').onclick = () => { openMoment('conc'); $('conc-q').focus(); };
 $('conc-close').onclick = () => $('conc').classList.remove('open');
 $('conc-reset').onclick = () => {
