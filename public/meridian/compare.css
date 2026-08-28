@@ -1,0 +1,146 @@
+/* compare.css — the Before / Now compare overlay (decision D8).
+   Standalone: link it AFTER meridian.css. It reads the demo's tokens and carries
+   the same literal values as fallbacks, so it also stands on its own.
+
+   Light theme, at home on the demo: the box is the page ground (white), the
+   chrome is the panel ground, text is the panel ink, the accent is the panel
+   blue, the title is the display serif, labels and readouts are mono.
+
+   The stage is sized by compare.js: the captured frame fitted inside
+   min(86vw, 1180px) × min(72vh, 760px) at its own aspect ratio. */
+
+.cmp-back{
+  --cmp-paper:var(--paper,#FFFFFF);
+  --cmp-ground:var(--p-bg,#CDD5E0);
+  --cmp-ink:var(--p-text,#171A20);
+  --cmp-dim:var(--p-dim,#4E5665);
+  --cmp-line:var(--p-line,#9BA7B8);
+  --cmp-blue:var(--p-blue,#0E5FBF);
+  --cmp-serif:var(--serif,'Playfair Display',ui-serif,Georgia,serif);
+  --cmp-sans:var(--sans,'Inter',ui-sans-serif,-apple-system,'Segoe UI',system-ui,sans-serif);
+  --cmp-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+  position:fixed;inset:0;z-index:950;   /* above the director strip (900) — this moment owns the screen */
+  display:none;place-items:center;padding:28px;
+  background:rgba(11,14,19,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  color:var(--cmp-ink);font:14px/1.45 var(--cmp-sans);
+  outline:none;   /* focusable scrim (tabindex=-1) so a click inside keeps keys in the dialog; the ring belongs on controls */
+}
+.cmp-back.open{display:grid}
+
+.cmp-box{
+  background:var(--cmp-paper);border-radius:14px;overflow:hidden;
+  display:flex;flex-direction:column;
+  max-width:calc(100vw - 56px);max-height:calc(100vh - 56px);
+  box-shadow:0 30px 90px rgba(11,14,19,.5);
+}
+
+/* ── chrome ─────────────────────────────────────────────────────────────── */
+.cmp-bar{
+  display:flex;align-items:center;gap:10px;padding:13px 18px;
+  background:var(--cmp-ground);border-bottom:1px solid var(--cmp-line);
+}
+.cmp-title{
+  flex:1;min-width:0;margin:0;
+  font:500 22px/1 var(--cmp-serif);letter-spacing:-.01em;color:var(--cmp-ink);
+}
+.cmp-btn{
+  min-height:38px;padding:8px 13px;border-radius:5px;cursor:pointer;
+  background:var(--cmp-paper);color:var(--cmp-ink);border:1px solid var(--cmp-line);
+  font:500 13px/1.25 var(--cmp-sans);white-space:nowrap;
+}
+.cmp-btn:hover{border-color:var(--cmp-blue)}
+.cmp-btn:disabled{opacity:.5;cursor:default}
+.cmp-btn:disabled:hover{border-color:var(--cmp-line)}
+/* the mode toggle reads as a readout — what it is, and what it currently is */
+.cmp-mode{font:600 12.5px/1.25 var(--cmp-mono);letter-spacing:.04em}
+.cmp-btn kbd{
+  font:500 10.5px/1 var(--cmp-mono);color:var(--cmp-dim);
+  padding:3px 5px;margin-left:6px;border:1px solid var(--cmp-line);border-radius:3px;background:var(--cmp-ground);
+}
+
+/* ── stage ──────────────────────────────────────────────────────────────── */
+.cmp-stage{
+  position:relative;overflow:hidden;margin:0 auto;
+  background:var(--cmp-ground);
+  touch-action:none;user-select:none;-webkit-user-select:none;cursor:ew-resize;
+}
+.cmp-frame{
+  position:absolute;inset:0;
+  background:var(--cmp-paper) center top / 100% 100% no-repeat;
+}
+/* Crossfade: Now sits on top and dissolves; --now is its opacity (1 - slider) */
+.cmp-stage.fade .cmp-after{opacity:var(--now,0)}
+/* Wipe: Now is clipped to the right of the seam, Before shows through on the left */
+.cmp-stage.wipe .cmp-after{opacity:1;clip-path:inset(0 0 0 var(--seam,100%))}
+
+.cmp-seam{
+  position:absolute;top:0;bottom:0;left:var(--seam,100%);width:2px;margin-left:-1px;
+  background:var(--cmp-blue);display:none;pointer-events:none;
+  box-shadow:0 0 0 1px rgba(255,255,255,.55);
+}
+.cmp-stage.wipe .cmp-seam{display:block}
+.cmp-seam[hidden]{display:none}
+.cmp-grip{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:38px;height:38px;border-radius:50%;
+  background:var(--cmp-blue);color:#fff;border:2px solid #fff;
+  display:grid;place-items:center;
+  font:600 15px/1 var(--cmp-mono);letter-spacing:.05em;
+  box-shadow:0 2px 10px rgba(11,14,19,.35);
+}
+
+/* the frame labels: the word, then the capture time, on the frame they belong to.
+   They ride with their frame, so what is visible is what is being looked at. */
+.cmp-tag{
+  position:absolute;top:12px;left:12px;z-index:2;
+  display:inline-flex;align-items:baseline;gap:9px;
+  padding:7px 10px;border-radius:4px;
+  background:var(--cmp-ink);color:#fff;
+  font:600 11px/1 var(--cmp-mono);letter-spacing:.12em;text-transform:uppercase;
+  pointer-events:none;white-space:nowrap;
+}
+.cmp-tag span{font-weight:500;letter-spacing:.02em;text-transform:none;opacity:.85}
+.cmp-after .cmp-tag{left:auto;right:12px}
+/* Crossfade has no sides, so the tags follow the slider's ends instead:
+   Now at the left, Before at the right. */
+.cmp-stage.fade .cmp-before .cmp-tag{left:auto;right:12px}
+.cmp-stage.fade .cmp-after .cmp-tag{right:auto;left:12px}
+
+/* the failure state — never a blank stage */
+.cmp-msg{
+  position:absolute;inset:0;z-index:3;
+  display:grid;place-items:center;align-content:center;
+  padding:40px;text-align:center;
+  background:var(--cmp-ground);color:var(--cmp-ink);
+  font:400 16px/1.5 var(--cmp-sans);
+}
+.cmp-msg[hidden]{display:none}
+.cmp-msg b{display:block;font:500 26px/1.2 var(--cmp-serif);margin-bottom:10px}
+
+/* ── foot: the slider drives either mode ────────────────────────────────── */
+.cmp-foot{
+  display:flex;flex-direction:column;gap:6px;
+  padding:10px 18px 13px;background:var(--cmp-paper);border-top:1px solid var(--cmp-line);
+}
+.cmp-slider{
+  width:100%;height:28px;margin:0;background:transparent;cursor:ew-resize;
+  -webkit-appearance:none;appearance:none;
+}
+.cmp-slider:disabled{cursor:default;opacity:.4}
+.cmp-slider::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--cmp-line)}
+.cmp-slider::-moz-range-track{height:4px;border-radius:2px;background:var(--cmp-line)}
+.cmp-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:22px;height:22px;margin-top:-9px;border-radius:50%;
+  background:var(--cmp-blue);border:3px solid #fff;box-shadow:0 0 0 1px var(--cmp-line);
+}
+.cmp-slider::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;
+  background:var(--cmp-blue);border:3px solid #fff;box-shadow:0 0 0 1px var(--cmp-line);
+}
+.cmp-hint{font:400 12px/1.4 var(--cmp-mono);color:var(--cmp-dim);text-align:center}
+
+/* ── keyboard focus, visible on every control ───────────────────────────── */
+.cmp-btn:focus-visible,
+.cmp-slider:focus-visible{outline:2px solid var(--cmp-blue);outline-offset:2px}
