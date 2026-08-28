@@ -1291,10 +1291,13 @@ function paintRow(ds, prevIds, first, rowMoved = false, tick = false) {
   $('row-title').textContent = completing
     ? (S.vertical === 'retail' ? 'Complete the look' : 'Complete your application')
     : (S.vertical === 'retail' ? 'Selected for you' : 'Suited to you');
+  // The row is a promoted BLOCK over a standard shelf now, and the note says so:
+  // membership earns the block, everything below it is what every shopper sees.
+  const promoted = ds.filter((d) => d.strategy === 'affinity' || d.strategy === 'completion').length;
   $('row-note').textContent = completing
     ? `chosen to go with the ${anchor ? anchor.name : 'piece you chose'} — nothing from the same category`
-    : claims ? 'ranked by what you have shown interest in'
-    : ds.some((d) => d.strategy === 'fading') ? 'our usual order' : 'the same order every shopper sees';
+    : claims ? `your audiences lead — ${promoted} promoted, the rest in the standard order`
+    : 'the standard order — the same for every shopper';
 }
 
 function paintBlock(d, slot = 'block_a') {

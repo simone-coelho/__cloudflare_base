@@ -1,3 +1,157 @@
+// src/reflex/core.ts
+function slugValue(v) {
+  return v.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+function audienceKey(dim2, value) {
+  return `${slugValue(dim2)}_${slugValue(value)}_affinity`;
+}
+function dimParams(config, spec) {
+  return {
+    tauMs: spec?.tauMs ?? config.tauMs,
+    K: spec?.K ?? config.K,
+    thetaIn: spec?.thetaIn ?? config.thetaIn,
+    thetaOut: spec?.thetaOut ?? config.thetaOut
+  };
+}
+function specOf(config, dim2) {
+  return config.dimensions.find((d) => d.key === dim2);
+}
+function effectiveScore(entry, now, tauMs) {
+  const dt = Math.max(0, now - entry.t);
+  return entry.s * Math.exp(-dt / tauMs);
+}
+function affinityOf(effScore, K) {
+  return effScore <= 0 ? 0 : effScore / (effScore + K);
+}
+function emptyState(config) {
+  return { v: 1, dims: {}, audiences: [], configVersion: config.version };
+}
+function extractTouches(product, config) {
+  const touches = [];
+  for (const spec of config.dimensions) {
+    const raw = product[spec.source];
+    if (raw === void 0 || raw === null) continue;
+    if (spec.derive === "band") {
+      const n = typeof raw === "number" ? raw : Number(raw);
+      if (!Number.isFinite(n) || !spec.cuts || !spec.labels) continue;
+      let idx = spec.cuts.findIndex((cut) => n < cut);
+      if (idx === -1) idx = spec.cuts.length;
+      const label = spec.labels[idx];
+      if (label) touches.push({ dim: spec.key, value: label });
+      continue;
+    }
+    if (spec.multi && Array.isArray(raw)) {
+      for (const v of raw) {
+        if (typeof v === "string" && v.trim()) touches.push({ dim: spec.key, value: v });
+      }
+      continue;
+    }
+    if (typeof raw === "string" && raw.trim()) {
+      touches.push({ dim: spec.key, value: raw });
+    }
+  }
+  return touches;
+}
+function apply(prev, input, now, config) {
+  const base = prev && prev.v === 1 ? prev : emptyState(config);
+  const weight = config.weights[input.action] ?? 0;
+  const dims = {};
+  for (const d of Object.keys(base.dims)) dims[d] = { ...base.dims[d] };
+  if (weight > 0) {
+    for (const touch of input.touches) {
+      if (!touch.value) continue;
+      const spec = specOf(config, touch.dim);
+      if (!spec) continue;
+      const p = dimParams(config, spec);
+      const dimMap = dims[touch.dim] = dims[touch.dim] ?? {};
+      const prevEntry = dimMap[touch.value];
+      const carried = prevEntry ? effectiveScore(prevEntry, now, p.tauMs) : 0;
+      dimMap[touch.value] = { s: carried + weight, t: now };
+    }
+  }
+  for (const d of Object.keys(dims)) {
+    const p = dimParams(config, specOf(config, d));
+    const dimMap = dims[d];
+    for (const v of Object.keys(dimMap)) {
+      if (effectiveScore(dimMap[v], now, p.tauMs) < config.epsilon) delete dimMap[v];
+    }
+    const values = Object.keys(dimMap);
+    if (values.length > config.maxValuesPerDim) {
+      values.map((v) => ({ v, eff: effectiveScore(dimMap[v], now, p.tauMs) })).sort((a, b) => a.eff - b.eff || (a.v < b.v ? -1 : 1)).slice(0, values.length - config.maxValuesPerDim).forEach(({ v }) => delete dimMap[v]);
+    }
+    if (Object.keys(dimMap).length === 0) delete dims[d];
+  }
+  const prevAudiences = new Set(base.audiences);
+  const next = /* @__PURE__ */ new Set();
+  const explain = [];
+  const meta = /* @__PURE__ */ new Map();
+  for (const d of Object.keys(dims).sort()) {
+    const p = dimParams(config, specOf(config, d));
+    const dimMap = dims[d];
+    for (const v of Object.keys(dimMap).sort()) {
+      const a = affinityOf(effectiveScore(dimMap[v], now, p.tauMs), p.K);
+      const key = audienceKey(d, v);
+      meta.set(key, { dim: d, value: v, a, p });
+      const wasMember = prevAudiences.has(key);
+      if (wasMember ? a >= p.thetaOut : a >= p.thetaIn) next.add(key);
+    }
+  }
+  const entered = [...next].filter((k) => !prevAudiences.has(k)).sort();
+  const exited = [...prevAudiences].filter((k) => !next.has(k)).sort();
+  for (const key of entered) {
+    const m = meta.get(key);
+    explain.push({
+      ts: now,
+      audience: key,
+      dim: m.dim,
+      value: m.value,
+      direction: "enter",
+      score: round4(m.a),
+      thetaIn: m.p.thetaIn,
+      thetaOut: m.p.thetaOut,
+      trigger: input.action,
+      configVersion: config.version
+    });
+  }
+  for (const key of exited) {
+    const m = meta.get(key);
+    explain.push({
+      ts: now,
+      audience: key,
+      dim: m?.dim ?? "",
+      value: m?.value ?? "",
+      direction: "exit",
+      score: round4(m?.a ?? 0),
+      thetaIn: m?.p.thetaIn ?? config.thetaIn,
+      thetaOut: m?.p.thetaOut ?? config.thetaOut,
+      trigger: input.action,
+      configVersion: config.version
+    });
+  }
+  return {
+    state: { v: 1, dims, audiences: [...next].sort(), configVersion: config.version },
+    changes: { entered, exited, explain }
+  };
+}
+function tick(state, now, config) {
+  return apply(state, { action: "tick", touches: [] }, now, config);
+}
+function snapshot(state, now, config) {
+  const dims = {};
+  for (const d of Object.keys(state.dims).sort()) {
+    const p = dimParams(config, specOf(config, d));
+    const out = {};
+    for (const v of Object.keys(state.dims[d]).sort()) {
+      out[v] = round4(affinityOf(effectiveScore(state.dims[d][v], now, p.tauMs), p.K));
+    }
+    dims[d] = out;
+  }
+  return { dims, audiences: [...state.audiences] };
+}
+function round4(n) {
+  return Math.round(n * 1e4) / 1e4;
+}
+
 // src/demos/meridian/reflexConfig.ts
 var SECOND = 1e3;
 var MINUTE = 60 * SECOND;
@@ -337,6 +491,27 @@ function compose(input) {
   let order = 0;
   const usedItems = /* @__PURE__ */ new Set();
   const usedBlocks = /* @__PURE__ */ new Set();
+  const stagePrefixes = Object.entries(input.shapeOfKey).filter(([, shape]) => shape === "stage").map(([key]) => `${slugValue(key)}_`);
+  const entered = new Set(
+    input.affinity.audiences.filter((k) => !stagePrefixes.some((p) => k.startsWith(p)))
+  );
+  const matchedCache = /* @__PURE__ */ new Map();
+  const matchedOf = (r) => {
+    const hit = matchedCache.get(r.id);
+    if (hit) return hit;
+    const matched = [];
+    if (entered.size > 0) {
+      for (const t of extractTouches(r, config)) {
+        if (input.shapeOfKey[t.dim] === "stage") continue;
+        const key = audienceKey(t.dim, t.value);
+        if (entered.has(key) && !matched.includes(key)) matched.push(key);
+      }
+    }
+    matchedCache.set(r.id, matched);
+    return matched;
+  };
+  const catIndex = new Map(items.map((it, i) => [it.id, i]));
+  const standardOrder = (a, b) => (catIndex.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (catIndex.get(b.id) ?? Number.MAX_SAFE_INTEGER);
   const rank = (pool, slot, used) => {
     const strategy = SLOT_STRATEGIES[slot];
     const scored = pool.filter((r) => !used.has(r.id)).map((r) => ({ r, ...scoreOne(r, input, strategy) })).sort((a, b) => b.score - a.score || a.r.id.localeCompare(b.r.id));
@@ -377,7 +552,25 @@ function compose(input) {
       continue;
     }
     const { scored, gated, refused } = rank(items, slot, usedItems);
-    const top = scored[0];
+    let top = scored[0];
+    let wonBy;
+    if (slot === "hero" && input.audiencePriority && input.audiencePriority.length > 0) {
+      const inPriority = input.audiencePriority.filter((a) => input.affinity.audiences.includes(a));
+      if (inPriority.length >= 2) {
+        for (const audience of inPriority) {
+          const winner = scored.find((s) => matchedOf(s.r).includes(audience));
+          if (winner) {
+            top = winner;
+            wonBy = {
+              audience,
+              priority: input.audiencePriority.indexOf(audience),
+              over: inPriority.filter((a) => a !== audience)
+            };
+            break;
+          }
+        }
+      }
+    }
     if (top && slot === "hero") usedItems.add(top.r.id);
     decisions.push({
       slot,
@@ -386,7 +579,8 @@ function compose(input) {
       strategy: strategyFor(top),
       explain: {
         ...explainOf(top?.drivers ?? [], scored.length, gated, 0, top?.confidence, top?.thetaOut),
-        refused: refused.slice(0, 3)
+        refused: refused.slice(0, 3),
+        ...wonBy ? { wonBy } : {}
       }
     });
   }
@@ -404,7 +598,8 @@ function compose(input) {
         "row",
         usedItems
       );
-      const cohered = scored.map((s) => {
+      const withMatch = scored.map((s) => ({ ...s, matched: matchedOf(s.r) }));
+      const promoted = withMatch.filter((s) => s.matched.length > 0).map((s) => {
         const it = s.r;
         const drivers = [...s.drivers];
         let bonus = 0;
@@ -423,28 +618,40 @@ function compose(input) {
           drivers.push({ dim: "completes", value: `same occasion \xB7 ${shared[0]}`, a: 1, weight: 0.3 });
         }
         return { ...s, drivers, score: s.score + bonus };
-      }).sort((a, b) => b.score - a.score || a.r.id.localeCompare(b.r.id));
-      cohered.slice(0, rowSize).forEach((s, i) => {
+      }).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
+      const standard = withMatch.filter((s) => s.matched.length === 0).sort((a, b) => standardOrder(a.r, b.r));
+      [...promoted, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
+        const isPromoted = s.matched.length > 0;
         decisions.push({
           slot: "row",
           order: order++,
           itemId: s.r.id,
-          strategy: "completion",
-          anchorId: anchor.id,
-          explain: explainOf(s.drivers, cohered.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut)
+          strategy: isPromoted ? "completion" : "standard",
+          ...isPromoted ? { anchorId: anchor.id } : {},
+          explain: {
+            ...explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
+            ...isPromoted ? { matched: s.matched } : {}
+          }
         });
       });
     } else {
       const { scored, gated } = rank(items, "row", usedItems);
-      scored.slice(0, rowSize).forEach((s, i) => {
+      const withMatch = scored.map((s) => ({ ...s, matched: matchedOf(s.r) }));
+      const promoted = withMatch.filter((s) => s.matched.length > 0).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
+      const standard = withMatch.filter((s) => s.matched.length === 0).sort((a, b) => standardOrder(a.r, b.r));
+      [...promoted, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
+        const isPromoted = s.matched.length > 0;
         decisions.push({
           slot: "row",
           order: order++,
           itemId: s.r.id,
-          strategy: strategyFor(s),
-          explain: explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut)
+          strategy: isPromoted ? "affinity" : "standard",
+          explain: {
+            ...explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
+            ...isPromoted ? { matched: s.matched } : {}
+          }
         });
       });
     }
@@ -697,160 +904,6 @@ function composeLayout(input) {
     });
   });
   return { order: sections.map((s) => s.section), sections };
-}
-
-// src/reflex/core.ts
-function slugValue(v) {
-  return v.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-}
-function audienceKey(dim2, value) {
-  return `${slugValue(dim2)}_${slugValue(value)}_affinity`;
-}
-function dimParams(config, spec) {
-  return {
-    tauMs: spec?.tauMs ?? config.tauMs,
-    K: spec?.K ?? config.K,
-    thetaIn: spec?.thetaIn ?? config.thetaIn,
-    thetaOut: spec?.thetaOut ?? config.thetaOut
-  };
-}
-function specOf(config, dim2) {
-  return config.dimensions.find((d) => d.key === dim2);
-}
-function effectiveScore(entry, now, tauMs) {
-  const dt = Math.max(0, now - entry.t);
-  return entry.s * Math.exp(-dt / tauMs);
-}
-function affinityOf(effScore, K) {
-  return effScore <= 0 ? 0 : effScore / (effScore + K);
-}
-function emptyState(config) {
-  return { v: 1, dims: {}, audiences: [], configVersion: config.version };
-}
-function extractTouches(product, config) {
-  const touches = [];
-  for (const spec of config.dimensions) {
-    const raw = product[spec.source];
-    if (raw === void 0 || raw === null) continue;
-    if (spec.derive === "band") {
-      const n = typeof raw === "number" ? raw : Number(raw);
-      if (!Number.isFinite(n) || !spec.cuts || !spec.labels) continue;
-      let idx = spec.cuts.findIndex((cut) => n < cut);
-      if (idx === -1) idx = spec.cuts.length;
-      const label = spec.labels[idx];
-      if (label) touches.push({ dim: spec.key, value: label });
-      continue;
-    }
-    if (spec.multi && Array.isArray(raw)) {
-      for (const v of raw) {
-        if (typeof v === "string" && v.trim()) touches.push({ dim: spec.key, value: v });
-      }
-      continue;
-    }
-    if (typeof raw === "string" && raw.trim()) {
-      touches.push({ dim: spec.key, value: raw });
-    }
-  }
-  return touches;
-}
-function apply(prev, input, now, config) {
-  const base = prev && prev.v === 1 ? prev : emptyState(config);
-  const weight = config.weights[input.action] ?? 0;
-  const dims = {};
-  for (const d of Object.keys(base.dims)) dims[d] = { ...base.dims[d] };
-  if (weight > 0) {
-    for (const touch of input.touches) {
-      if (!touch.value) continue;
-      const spec = specOf(config, touch.dim);
-      if (!spec) continue;
-      const p = dimParams(config, spec);
-      const dimMap = dims[touch.dim] = dims[touch.dim] ?? {};
-      const prevEntry = dimMap[touch.value];
-      const carried = prevEntry ? effectiveScore(prevEntry, now, p.tauMs) : 0;
-      dimMap[touch.value] = { s: carried + weight, t: now };
-    }
-  }
-  for (const d of Object.keys(dims)) {
-    const p = dimParams(config, specOf(config, d));
-    const dimMap = dims[d];
-    for (const v of Object.keys(dimMap)) {
-      if (effectiveScore(dimMap[v], now, p.tauMs) < config.epsilon) delete dimMap[v];
-    }
-    const values = Object.keys(dimMap);
-    if (values.length > config.maxValuesPerDim) {
-      values.map((v) => ({ v, eff: effectiveScore(dimMap[v], now, p.tauMs) })).sort((a, b) => a.eff - b.eff || (a.v < b.v ? -1 : 1)).slice(0, values.length - config.maxValuesPerDim).forEach(({ v }) => delete dimMap[v]);
-    }
-    if (Object.keys(dimMap).length === 0) delete dims[d];
-  }
-  const prevAudiences = new Set(base.audiences);
-  const next = /* @__PURE__ */ new Set();
-  const explain = [];
-  const meta = /* @__PURE__ */ new Map();
-  for (const d of Object.keys(dims).sort()) {
-    const p = dimParams(config, specOf(config, d));
-    const dimMap = dims[d];
-    for (const v of Object.keys(dimMap).sort()) {
-      const a = affinityOf(effectiveScore(dimMap[v], now, p.tauMs), p.K);
-      const key = audienceKey(d, v);
-      meta.set(key, { dim: d, value: v, a, p });
-      const wasMember = prevAudiences.has(key);
-      if (wasMember ? a >= p.thetaOut : a >= p.thetaIn) next.add(key);
-    }
-  }
-  const entered = [...next].filter((k) => !prevAudiences.has(k)).sort();
-  const exited = [...prevAudiences].filter((k) => !next.has(k)).sort();
-  for (const key of entered) {
-    const m = meta.get(key);
-    explain.push({
-      ts: now,
-      audience: key,
-      dim: m.dim,
-      value: m.value,
-      direction: "enter",
-      score: round4(m.a),
-      thetaIn: m.p.thetaIn,
-      thetaOut: m.p.thetaOut,
-      trigger: input.action,
-      configVersion: config.version
-    });
-  }
-  for (const key of exited) {
-    const m = meta.get(key);
-    explain.push({
-      ts: now,
-      audience: key,
-      dim: m?.dim ?? "",
-      value: m?.value ?? "",
-      direction: "exit",
-      score: round4(m?.a ?? 0),
-      thetaIn: m?.p.thetaIn ?? config.thetaIn,
-      thetaOut: m?.p.thetaOut ?? config.thetaOut,
-      trigger: input.action,
-      configVersion: config.version
-    });
-  }
-  return {
-    state: { v: 1, dims, audiences: [...next].sort(), configVersion: config.version },
-    changes: { entered, exited, explain }
-  };
-}
-function tick(state, now, config) {
-  return apply(state, { action: "tick", touches: [] }, now, config);
-}
-function snapshot(state, now, config) {
-  const dims = {};
-  for (const d of Object.keys(state.dims).sort()) {
-    const p = dimParams(config, specOf(config, d));
-    const out = {};
-    for (const v of Object.keys(state.dims[d]).sort()) {
-      out[v] = round4(affinityOf(effectiveScore(state.dims[d][v], now, p.tauMs), p.K));
-    }
-    dims[d] = out;
-  }
-  return { dims, audiences: [...state.audiences] };
-}
-function round4(n) {
-  return Math.round(n * 1e4) / 1e4;
 }
 
 // src/demos/meridian/silhouettes.ts
