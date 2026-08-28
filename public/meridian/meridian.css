@@ -1098,3 +1098,13 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 .ask-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .ask-tiles .card{cursor:default}
 .ask-empty{font-size:14px;color:var(--muted);padding:6px 0 12px}
+
+/* ── The 15 — Coach's checklist, ticking as the beats land ─────────────── */
+.tab .tabn{display:inline-block;min-width:18px;padding:2px 5px;margin-left:4px;border-radius:9px;background:var(--p-line);color:var(--p-text);font:700 10.5px/1 ui-monospace,monospace;text-align:center}
+.tab .tabn.some{background:#0E5FBF;color:#fff} .tab .tabn.all{background:var(--changed);color:var(--changed-ink)}
+.caps{margin:0;padding:0;list-style:none}
+.caps li{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;padding:6px 0;border-bottom:1px solid var(--p-line);font:400 13px/1.4 inherit;color:var(--p-dim)}
+.caps li .tick{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--p-line);display:inline-flex;align-items:center;justify-content:center;font:700 11px/1 ui-monospace,monospace;color:transparent}
+.caps li.done{color:var(--p-text)} .caps li.done .tick{background:var(--changed);border-color:var(--changed);color:var(--changed-ink)}
+.caps li small{display:block;font:400 11.5px/1.35 inherit;color:var(--p-dim)}
+.caps-note{margin-top:10px;font:400 11.5px/1.5 ui-monospace,monospace;color:var(--p-dim)}

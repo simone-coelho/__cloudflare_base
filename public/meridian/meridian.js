@@ -54,6 +54,39 @@ function openMoment(id) {
   $(id).classList.add('open');
 }
 
+// ── THE 15 — Coach's RFP checklist, ticked only when the room has seen it ──
+const CAPS = [
+  ['Customer profile (no sign-in)', 'identity minted at the edge; no login, no cookie wall'],
+  ['Cold-start data', 'your receipts + free census open the page before any behaviour'],
+  ['Real-time updates', 'the page reacts inside the click, not on the next visit'],
+  ['Recommendations', 'her picks, first line — one-to-one, not one-to-many'],
+  ['Sort rules (baseline)', 'the standard order every shopper sees — the control'],
+  ['Personalized sort', 'the same shelf re-ranks; her favourites rise'],
+  ['Personalized page structure', 'sections re-order; Complete the look assembles'],
+  ['Personalized page content', 'the same slot, her content — hero and story'],
+  ['Journey-stage detection', 'add to bag → deciding; the offer and the hold answer it'],
+  ['Opal audience creation', 'an audience proposed from plain English, over the live vocabulary'],
+  ['A/B testing', 'a real a/b rule in the real project'],
+  ['Multi-armed bandit (MAB)', 'a real multi_armed_bandit rule; allocation representative'],
+  ['Contextual bandit (CMAB)', 'a real contextual_multi_armed_bandit rule; a winner per context'],
+  ['AI search', 'intent read by the model; real pieces, ranked to her'],
+  ['AI chat — Style Concierge', 'a look, with advice; every pick a real SKU'],
+];
+const CAPS_DONE = new Set();
+function renderCaps() {
+  const el = $('caps'); if (!el) return;
+  el.innerHTML = CAPS.map(([name, sub], i) => `<li class="${CAPS_DONE.has(i + 1) ? 'done' : ''}"><span class="tick">✓</span><span>${i + 1} · ${name}<small>${sub}</small></span></li>`).join('');
+  const n = CAPS_DONE.size;
+  $('caps-count').textContent = `${n} of 15`;
+  const badge = $('caps-n'); badge.textContent = String(n); badge.className = 'tabn' + (n >= 15 ? ' all' : n ? ' some' : '');
+}
+function capDone(n) {
+  if (CAPS_DONE.has(n)) return;
+  CAPS_DONE.add(n); renderCaps(); markTab('caps');
+  if (CAPS_DONE.size === 15) consequence('The 15', '15 of 15 — all seen in this session', 'Every capability on the checklist has been shown live, in the room, in this session.');
+}
+function resetCaps() { CAPS_DONE.clear(); renderCaps(); }
+
 /** Engine time. Everything the reflex engine sees goes through this. */
 const NOW = () => S.clock;
 /** An act happened: carry forward a LITTLE real time (never a conversation). */
@@ -149,6 +182,7 @@ async function load(vertical) {
   const restored = !!(snap?.state?.dims && Object.keys(snap.state.dims).length > 0);
 
   await seedColdStart(!restored);
+  capDone(1); capDone(5);
 
   if (restored) {
     S.behaved = true;
@@ -255,7 +289,7 @@ function arrive() {
   if (S.arrived) return;
   if (PD.open && !GATE.open) return;
   if (needsGate()) { gateThen([{ kind: 'arrive' }], () => arrive()); return; }
-  S.arrived = true;
+  S.arrived = true; capDone(2);
   advanceClock();
   const touches = coldTouches();
   if (touches.length) {
@@ -391,6 +425,7 @@ function fireSurface(s) {
   // A stated preference is not an arrival. It weighs more, and it says nothing
   // about journey stage, so it gets its own verb rather than being flattened.
   const act = s.act ?? 'arrival';
+  capDone(8);
   recordDone(act === 'declared' ? 'Told us' : 'Arrived from', `${KIND_LABEL[s.kind]} — ${s.subject}`, '');
   advanceClock();
   const res = apply(S.reflex, { action: act, touches: s.touches }, NOW(), S.config);
@@ -655,7 +690,8 @@ function signal(action, record) {
   // The piece she committed to. Everything the completion row does hangs off it.
   if ((action === 'intent_start' || action === 'convert') && record?.id) S.anchorId = record.id;
   if (action === 'intent_start' && record && window.MOMENTS) window.MOMENTS.addToBag(record);
-  recompose();
+  if (action === 'intent_start') capDone(9);
+  recompose(); capDone(3);
 
   if (record) {
     const mv = biggestMove(before, snapshot(S.reflex, NOW(), S.config));
@@ -1436,6 +1472,7 @@ function recompose(first, opts = {}) {
   if (first) paintLayout(S.layout.order, { duration: 0 });
   const movedSections = first ? [] : paintLayout(S.layout.order, { duration: 700 });
   if (movedSections.length) {
+    capDone(7);
     const top = S.layout.sections.filter((x) => x.strategy !== 'locked' && x.strategy !== 'template')
       .sort((a, b) => a.rank - b.rank)[0];
     consequence('Which box comes first',
@@ -1858,6 +1895,9 @@ function paintRow(ds, prevIds, first, rowMoved = false, tick = false) {
   const anchor = completing && byId(ds.find((d) => d.anchorId)?.anchorId);
   const cohortLeads = ds.some((d) => d.strategy === 'cohort');
   const claims = ds.some((d) => d.strategy === 'affinity') || cohortLeads;
+  if (claims || completing) capDone(4);
+  if (ds.some((d) => d.strategy === 'affinity')) capDone(6);
+  if (completing) capDone(7);
   document.querySelector('.row-head').classList.toggle('quiet', !completing && !claims && ds.some((d) => d.strategy === 'fading'));
   $('row-title').textContent = completing
     ? (S.vertical === 'retail' ? 'Complete the look' : 'Complete your application')
@@ -2108,7 +2148,7 @@ $('ask-form').onsubmit = async (e) => {
         <div class="pr">${S.vertical === 'retail' ? money(it.value_usd)
           : (it.rate_pct != null ? it.rate_pct.toFixed(2) + '% APR' : 'See terms')}</div></div>
     </article>`).join('');
-  $('ask-answer').hidden = false; $('ask-pre').hidden = true;
+  $('ask-answer').hidden = false; $('ask-pre').hidden = true; capDone(14);
   consequence('Search', `Routed to "${a.scene.id}" by the ${a.source === 'model' ? 'model' : 'local classifier'}`,
     `One of ${SCENE_COUNT} approved scenes. The set is closed — the schema is an enum, so it cannot invent one.`);
 };
@@ -2343,6 +2383,7 @@ $('opal-form').onsubmit = async (e) => {
       <button id="opal-publish">Publish</button>
     </div></div>`;
   $('opal-publish').onclick = () => publishAudience(p);
+  capDone(10);
   consequence('Opal', `Proposed "${p.name}"`,
     `${p.conditions.length} condition${p.conditions.length === 1 ? '' : 's'} over the real registry. Not published — a person still has to say yes.`);
 };
@@ -2674,6 +2715,7 @@ async function conciergeAsk(message) {
   </div>`;
   thread.scrollTop = thread.scrollHeight;
 
+  capDone(15);
   consequence('Style concierge', r.unmet ? 'Said what it does not have' : 'Built a look',
     `${r.title}. Ids are enum-bound to the live catalogue minus everything already shown, so an `
     + 'invented product and a repeat are both unrepresentable — not discouraged, unrepresentable.');
@@ -3018,6 +3060,7 @@ async function dispatchExperiment(flavour, btn, opts = {}) {
     : !r.ok ? `Refused by the API — <b>${escapeHtml(r.reason || 'see note')}</b>. Not downgraded to a rollout: a rollout is not a test.`
     : `${r.created ? 'Created' : 'Found live and reused'} — flag <b>${escapeHtml(r.flagKey)}</b>, rule <b>${escapeHtml(r.ruleKey || '')}</b> in <b>${escapeHtml(r.environment || '')}</b> · ${r.ms ?? '—'}ms`;
   xpBadge(r); xpRows(r, flavour);
+  if (r?.ok && !r.simulated) capDone({ ab: 11, mab: 12, cmab: 13 }[flavour]);
   $('xc-state').hidden = true;
   XP.arms = xpArmNames(r);
   XP.startedAt = NOW();
@@ -3058,6 +3101,7 @@ function hideStrips() {
   $('strip').hidden = true; $('ostrip').hidden = true;
   XP.open = false; XP.arms = []; $('xcard').hidden = true;
   S.fixLive = null; RAD.launched = null; RAD.recovered = null;
+  resetCaps();
 }
 $('btn-reset').onclick = async () => {
   hideStrips();                                    // the last session's banners are not this session's
@@ -3078,6 +3122,7 @@ window.MOMENTS = initMoments({
   expiryOf: (key, ctx) => (ctx?.dim && ctx?.value) ? expiryOf(S.reflex, ctx.dim, ctx.value, S.config) : null,
 });
 
+renderCaps();
 if (new URLSearchParams(location.search).has('debug')) { window.__S = S; window.__goBeat = goBeat; }
 paintPinButton();
 // One click to start, and it survives the reload that beat 22 performs.
