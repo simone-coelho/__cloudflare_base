@@ -234,59 +234,52 @@ function fireSurface(s) {
  * have to be wrong — she simply moved on, and the page moves with her.
  */
 function checkHandoff(snap) {
-  if (!S.heroOverride) return;
   // She has to actually do something before she can be said to have moved on.
   if (S.sinceArrival < 2) return;
 
-  const src = SURFACES[S.vertical].find((x) => x.id === S.heroOverride.from);
-  if (!src) return;
-
-  // THE TEST: has the thing the campaign was about stopped being the thing she
-  // is looking at?
-  //
-  // The first version asked whether every arrival touch had decayed, and that
-  // was wrong in a way only a real session exposes: she left Outerwear for Bags,
-  // but the bags she clicked were ALSO heritage, so the taste dimension stayed
-  // high and the campaign read as still alive. Taste is not what the email was
-  // about. The BROAD dimension is — and it either still leads, or it does not.
+  // EVERY fired campaign with a claim is judged, not just the one whose copy
+  // happens to be on the hero. On stage all four surfaces fire before she
+  // browses, so the hero belongs to the quiz — which claims no department — and
+  // the version that only judged the hero's own surface never closed the email.
   const broadKey = S.registry.dimensions.find((d) => d.shape === 'broad')?.key;
-  const claimed = src.touches.find((t) => t.dim === broadKey)?.value;
-  if (!claimed) return;
-
-  const per = snap.dims?.[broadKey] || {};
-  // The arrival's own claim expires too. If what the campaign was about has
-  // decayed under its exit threshold, the hero stops citing the email even when
-  // nothing else has overtaken it.
   const spec = S.registry.dimensions.find((d) => d.key === broadKey);
-  if ((per[claimed] ?? 0) < (spec?.thetaOut ?? 0.45)) {
-    const elx = document.querySelector(`.ep[data-id="${S.heroOverride.from}"]`);
-    if (elx && !elx.querySelector('.closed')) {
-      const dx = document.createElement('div');
-      dx.className = 'closed';
-      dx.textContent = `expired — interest in ${claimed} decayed`;
-      elx.appendChild(dx);
-    }
-    S.heroOverride = null; S.heroDirty = true;
-    return;
-  }
+  const per = snap.dims?.[broadKey] || {};
   let leader = null, best = 0;
   for (const [v, a] of Object.entries(per)) if (a > best) { best = a; leader = v; }
-  if (!leader || leader === claimed) return;
 
-  const el = document.querySelector(`.ep[data-id="${S.heroOverride.from}"]`);
-  if (el && !el.querySelector('.closed')) {
-    const d = document.createElement('div');
-    d.className = 'closed';
-    d.textContent = `superseded — ${claimed} gave way to ${leader}`;
-    el.appendChild(d);
+  let closedOne = false;
+  for (const id of S.usedSurfaces) {
+    const src = SURFACES[S.vertical].find((x) => x.id === id);
+    const claimed = src?.touches.find((t) => t.dim === broadKey)?.value;
+    if (!claimed) continue;                                       // declared surfaces claim no aisle
+    const el = document.querySelector(`.ep[data-id="${id}"]`);
+    if (!el || el.querySelector('.closed')) continue;
+
+    // The claim EXPIRES when what the campaign was about decays under θ_out —
+    // the hero stops citing the email even if nothing overtook it.
+    if ((per[claimed] ?? 0) < (spec?.thetaOut ?? 0.45)) {
+      const dx = document.createElement('div');
+      dx.className = 'closed'; dx.textContent = `expired — interest in ${claimed} decayed`;
+      el.appendChild(dx); closedOne = true; continue;
+    }
+    // THE TEST: has the thing the campaign was about stopped being the thing
+    // she is looking at? The BROAD dimension is what the email was about; taste
+    // is not — she left Outerwear for Bags that were also heritage, and the old
+    // version read the campaign as alive.
+    if (leader && leader !== claimed) {
+      const d = document.createElement('div');
+      d.className = 'closed'; d.textContent = `superseded — ${claimed} gave way to ${leader}`;
+      el.appendChild(d); closedOne = true;
+      $('sentence').textContent =
+        `The campaign was about ${claimed}. She is looking at ${leader}. The page followed her, not the campaign.`;
+      S.sayLockUntil = Date.now() + 8000;
+      consequence('Handoff', `${claimed} gave way to ${leader}`,
+        'No backend job ran, no segment rebuilt, nothing downloaded. The connection was already open.');
+    }
   }
-  $('sentence').textContent =
-    `The campaign was about ${claimed}. She is looking at ${leader}. The page followed her, not the campaign.`;
-  S.sayLockUntil = Date.now() + 8000;
-  consequence('Handoff', `${claimed} gave way to ${leader}`,
-    'No backend job ran, no segment rebuilt, nothing downloaded. The connection was already open.');
-  S.heroOverride = null;
-  S.heroDirty = true;
+  // Once any arrival claim is gone, the page follows her — whatever surface's
+  // copy was on the hero.
+  if (closedOne && S.heroOverride) { S.heroOverride = null; S.heroDirty = true; }
 }
 
 // ── Signals from the page ───────────────────────────────────────────────────
