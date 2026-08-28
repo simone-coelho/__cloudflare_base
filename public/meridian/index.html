@@ -65,22 +65,6 @@
         <div class="strip" id="strip" hidden><span class="strip-k" id="strip-k"></span><span id="strip-t"></span></div>
         <div class="strip order" id="ostrip" hidden><span class="strip-k">Page rearranged</span><span id="ostrip-t"></span></div>
       </div>
-      <!-- OPAL DOING IT: the experiment card. Steps stream in, the real flag and rule
-           land with their ids, then the readout — arms, allocation moving on the demo
-           clock, or a winner per context. Labelled real/representative on every line. -->
-      <section class="xcard" id="xcard" hidden>
-        <div class="xc-head">
-          <span class="xc-tool">⚙ launchExperiment</span>
-          <span class="xc-title" id="xc-title"></span>
-          <span class="xc-state" id="xc-state">running…</span>
-          <span class="xc-badge" id="xc-badge" hidden></span>
-          <span class="xc-clock" id="xc-clock" hidden></span>
-        </div>
-        <ol class="xc-steps" id="xc-steps"></ol>
-        <div class="xc-rows" id="xc-rows" hidden></div>
-        <div class="xc-readout" id="xc-readout" hidden></div>
-        <div class="xc-foot" id="xc-foot" hidden></div>
-      </section>
 
       <section class="hero zone" id="hero" data-section="hero" data-label="PERSONALIZED · HERO">
         <div class="hero-copy">
@@ -143,6 +127,15 @@
       </div>
       <div class="esec instrument tabpane" data-tab="affinity">
         <h5>Live affinity <span class="cfg" id="cfgv"></span></h5>
+        <div class="clockbar" id="clockbar">
+          <div class="cb-l"><span class="cb-k" id="cb-state">Demo clock · paused</span><span class="cb-t" id="cb-next">nothing to expire yet</span></div>
+          <div class="cb-r">
+            <button type="button" id="cb-resume">Resume ×15<small>4 real s = 1 demo min</small></button>
+            <button type="button" id="cb-pause" hidden>Pause</button>
+            <button type="button" id="cb-reset">Reset</button>
+          </div>
+          <div class="cb-bar"><i id="cb-fill"></i></div>
+        </div>
         <div id="bars"></div>
         <div class="chips" id="chips"><span class="none">no audiences yet</span></div>
         <div class="prio">
@@ -187,10 +180,10 @@
 <div class="director" id="director">
   <div class="dir-top">
     <div class="dir-transport">
-      <button id="dir-prev" title="Previous beat (←)">&#8592;</button>
-      <button id="dir-next" title="Next beat — performs it (→)">Next &#9654;</button>
-      <button id="dir-play" title="Auto-advance through the beats (space)">Auto</button>
-      <button id="dir-stop" title="Restart from the top">&#8635;</button>
+      <button id="dir-prev">&#8592;</button>
+      <button id="dir-next">Next &#9654;</button>
+      <button id="dir-play">Auto</button>
+      <button id="dir-stop">&#8635;</button>
     </div>
     <div class="dir-left">
       <div class="dir-where"><span id="dir-act"></span><span id="dir-count"></span></div>
@@ -255,7 +248,7 @@
         </div>
         <div class="cgroup"><span class="clabel">Session</span>
           <div class="controls">
-            <button id="btn-dyvs">DY vs us<small>neighbourhood vs shopper</small></button>
+            <button id="btn-dyvs">How the cold start works<small>the area, then your sales</small></button>
             <button id="btn-receipts">Show the receipts<small>warehouse rows</small></button>
             <button id="btn-checkout">Checkout<small>the payment step, live</small></button>
             <button id="btn-skip">Let two minutes pass<small>decay, on your say-so</small></button>
@@ -270,6 +263,26 @@
      done, what we are watching for, and what will change if she does it — computed
      on a copy of her real state. The presenter closes it; the click performs; the
      page does what the band said. -->
+      <!-- OPAL DOING IT: the experiment card. Steps stream in, the real flag and rule
+           land with their ids, then the readout — arms, allocation moving on the demo
+           clock, or a winner per context. Labelled real/representative on every line. -->
+      <section class="xcard xdrawer" id="xcard" hidden>
+        <div class="xc-head">
+          <span class="xc-tool">⚙ launchExperiment</span>
+          <span class="xc-title" id="xc-title"></span>
+          <span class="xc-state" id="xc-state">running…</span>
+          <span class="xc-badge" id="xc-badge" hidden></span>
+          <span class="xc-clock" id="xc-clock" hidden></span>
+          <button type="button" class="xc-x" id="xc-close" aria-label="Close">×</button>
+        </div>
+        <ol class="xc-steps" id="xc-steps"></ol>
+        <div class="xc-rows" id="xc-rows" hidden></div>
+        <div class="xc-readout" id="xc-readout" hidden></div>
+        <div class="xc-foot" id="xc-foot" hidden></div>
+      </section>
+
+<div class="tip" id="tip" hidden><b id="tip-does"></b><span id="tip-look"></span></div>
+
 <div class="predict" id="predict" hidden>
   <div class="pd-box">
     <div class="pd-head">
@@ -389,8 +402,8 @@
   <div class="moment-box dy-box">
     <div class="mo-head">
       <div>
-        <h3>Dynamic Yield rents the <em>neighbourhood's</em> average wallet. Optimizely uses <em>your own receipts</em>.</h3>
-        <p>The same visitor, the same location. One side is a third-party postal-code average with no purchase intent. The other is what your customers from there actually bought — no licensing, real intent, and it compounds because it is yours.</p>
+        <h3>How the cold start works — <em>the area</em>, then <em>your own sales</em>.</h3>
+        <p>A first-time visitor, no profile. We already know where she is, and public census data tells us what the area earns and owns — that is free and it is ours to use. Then your own receipts tell us what people from there actually buy, matched to your range. We open the store on that. Others will sell you receipts that have nothing to do with what you sell; this is yours, and it compounds.</p>
       </div>
       <button type="button" id="dyvs-close">Close</button>
     </div>
@@ -398,7 +411,7 @@
       <div class="dy-col dy" id="dy-left"></div>
       <div class="dy-col opti" id="dy-right"></div>
     </div>
-    <div class="dy-cta">→ We open on what shoppers like her, from here, actually buy — your own receipts, not a ZIP-code average. We enrich, never gate. Aggregate, never the individual.</div>
+    <div class="dy-cta" id="dy-cta">→ We open on what shoppers like her, from here, actually buy — your own receipts, matched to your range. We curate, never price. Aggregate, never the individual.</div>
   </div>
 </div>
 <div class="moment" id="ask">

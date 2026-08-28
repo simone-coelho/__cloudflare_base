@@ -105,6 +105,111 @@ async function pageSettled() {
   }
 }
 
+// ── TOOLTIPS — one table, two lines each: what it does, where to look ────────
+const TIPS = {
+  'dir-prev':   ['Previous beat. Moves the script back one beat; performs nothing.', 'the beat title in the bar'],
+  'dir-next':   ['Next beat — and it PERFORMS it: the declaration band opens, you press OK, the cursor does her acts.', 'the band, then the cursor'],
+  'dir-play':   ['Auto-advance, one beat every ~6 seconds, still stopping at every band for your OK. Press again to pause.', 'the beat counter'],
+  'dir-stop':   ['Restart: a new visitor, everything cleared, the script back to beat 1. Aborts anything in flight first.', 'the page resets to the standard order'],
+  'btn-calder': ['Calder & Co. — the retail catalogue.', 'the eight bars keep their shape; the labels change'],
+  'btn-financial': ['Calder Financial — the same engine over banking products.', 'the eight bars keep their shape; the labels change'],
+  'btn-ask':    ['AI search: her picks and her neighbourhood before a query; after it, the model reads the intent and ranks real pieces.', 'the search page'],
+  'btn-conc':   ['The Style Concierge: a look with advice; every pick a real SKU; it never repeats itself.', 'the concierge page'],
+  'btn-opal':   ['Ask Opal to propose an audience from plain English, over the live vocabulary.', 'the Opal page, then the audience chips'],
+  'btn-moment': ['The moment: a simulated TikTok signal → Opal writes the copy → composed on approved art → shipped as a real bandit with a 28:00 window.', 'the takeover replaces the hero; the experiment panel shows the rule'],
+  'bz-arrive':  ['She arrives — the cold start: geo → census → your receipts. The band declares it; OK opens the page on the neighbourhood.', 'the hero, the first line, the welcome, the Cold start tab'],
+  'bz-coats':   ['Outerwear department, three coats. The band declares it first.', 'the bars, the audiences entered, the row re-ranking'],
+  'bz-bags':    ['Bags department, two bags — the handoff away from the campaign.', 'the hero leaves the campaign; the ledger closes the email'],
+  'bz-decide':  ['Adds the hero item to the bag — journey stage becomes “deciding”.', 'the hold banner, the offer, Complete the look'],
+  'bz-story':   ['The line story: three of one line, one of another — recency leads, membership stays.', 'the line bar and the first line of cards'],
+  'btn-capture':['Freezes a full-page “Before”. Every director beat captures one automatically too.', 'a strip confirms it; nothing else moves'],
+  'btn-compare':['Before vs Now, full page, with a draggable seam.', 'the compare window'],
+  'btn-replay': ['Re-highlights every card sitting above its standard-order position, badged with where it would normally be.', 'the row, and a strip with the count'],
+  'btn-pin':    ['Merchandiser override: pin the hero to an item the engine did not choose; ranking stops for that slot. Press again to release.', 'a PINNED badge on the hero'],
+  'btn-soldout':['Marks the hero’s item sold out, so a rule refuses it and the engine re-decides the hero in front of the room.', 'the hero changes; a strip says why; the Glass box shows the refusal'],
+  'btn-ab':     ['Opal creates a real a/b rule in the real project and shows the treatment on the page.', 'the floating experiment panel; the hero wears the treatment'],
+  'btn-mab':    ['Opal creates a real multi-armed bandit rule; the allocation moves one round per “two minutes”.', 'the floating experiment panel'],
+  'btn-cmab':   ['Opal creates a real contextual bandit rule; a winner per context.', 'the floating experiment panel'],
+  'btn-radar':  ['Revenue Radar: everyone looks fine, Gen-Z collapses at payment, launch the fix, prove it.', 'the Radar window, then Checkout'],
+  'btn-dyvs':   ['How the cold start works: what the area tells us, what your own sales tell us, matched to your range.', 'the cold-start window'],
+  'btn-receipts':['Every decision as warehouse rows — the receipts.', 'the receipts window'],
+  'btn-checkout':['The payment step as this shopper sees it: the control before a fix, Pay in 4 after.', 'the checkout window'],
+  'btn-skip':   ['Advances the demo clock two minutes — after a band shows what will lapse.', 'the bars fall, audiences lapse, the bandit advances a round'],
+};
+let TIP_T = null;
+function showTip(el) {
+  const t = TIPS[el.id]; if (!t) return;
+  const tip = $('tip'); $('tip-does').textContent = t[0]; $('tip-look').textContent = t[1];
+  tip.hidden = false;
+  const r = el.getBoundingClientRect(); const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2))}px`;
+  tip.style.top = `${Math.max(8, r.top - h - 10)}px`;
+}
+function wireTips() {
+  for (const id of Object.keys(TIPS)) {
+    const el = $(id); if (!el) continue;
+    el.removeAttribute('title');
+    el.addEventListener('mouseenter', () => { clearTimeout(TIP_T); TIP_T = setTimeout(() => showTip(el), 700); });
+    el.addEventListener('mouseleave', () => { clearTimeout(TIP_T); $('tip').hidden = true; });
+    el.addEventListener('mousedown', () => { clearTimeout(TIP_T); $('tip').hidden = true; });
+  }
+}
+
+/** The floating experiment drawer sits over the page's right edge, above the bar. */
+function placeDrawer() {
+  const d = $('xcard'); if (!d || d.hidden) return;
+  const p = $('page').getBoundingClientRect(); const bar = $('director');
+  const barH = bar && !bar.hidden ? bar.getBoundingClientRect().height : 0;
+  d.style.right = `${Math.max(12, innerWidth - p.right + 12)}px`;
+  d.style.bottom = `${barH + 14}px`;
+  d.style.maxHeight = `${Math.max(320, innerHeight - barH - 120)}px`;
+}
+window.addEventListener('resize', placeDrawer);
+
+// ── THE DEMO CLOCK, IN HAND. Paused by default (nothing moves while you talk).
+// Resume runs it at 15× — four real seconds are one demo minute — so the room can
+// watch an affinity expire; Pause stops it; Reset zeroes the readout.
+const CLOCK = { running: false, timer: null, base: 0 };
+function clockNextLapse() {
+  let best = null;
+  for (const a of S.audiences) {
+    if (isStageAudience(a)) continue;
+    const m = a.match(/^(.+?)_(.+)_affinity$/); if (!m) continue;
+    const spec = S.registry.dimensions.find((d) => d.key.toLowerCase() === m[1]);
+    const dim = spec?.key; if (!dim) continue;
+    const vals = Object.keys(S.reflex.dims?.[dim] || {});
+    const value = vals.find((v) => v.toLowerCase().replace(/\s+/g, '_') === m[2]);
+    if (!value) continue;
+    const at = expiryOf(S.reflex, dim, value, S.config);
+    if (at && (!best || at < best.at)) best = { at, label: prettyAudience(a) };
+  }
+  return best;
+}
+function renderClockBar() {
+  const bar = $('clockbar'); if (!bar) return;
+  const elapsed = Math.max(0, NOW() - (CLOCK.base || S.clock));
+  bar.classList.toggle('running', CLOCK.running);
+  $('cb-state').textContent = `Demo clock · ${CLOCK.running ? 'running at 15×' : 'paused'} · +${mmss2(elapsed)} demo time`;
+  const nx = clockNextLapse();
+  $('cb-next').textContent = nx ? `next to lapse: ${nx.label} in ${mmss2(Math.max(0, nx.at - NOW()))}${CLOCK.running ? '' : ' of demo time — press Resume to watch it'}` : 'nothing to expire yet — no audiences';
+  const total = nx ? Math.max(1, nx.at - (CLOCK.base || S.clock)) : 1;
+  $('cb-fill').style.width = nx ? `${Math.min(100, (elapsed / total) * 100).toFixed(1)}%` : '0%';
+  $('cb-resume').hidden = CLOCK.running; $('cb-pause').hidden = !CLOCK.running;
+}
+function clockResume() {
+  if (CLOCK.running) return;
+  CLOCK.running = true; if (!CLOCK.base) CLOCK.base = S.clock;
+  CLOCK.timer = setInterval(() => { S.clock += 15_000; }, 1000);   // the master tick applies the decay
+  consequence('Demo clock', 'Running at 15×', 'Four real seconds are one demo minute. The same decay, watched instead of skipped. Pause any time.');
+  renderClockBar();
+}
+function clockPause() {
+  if (!CLOCK.running) return;
+  CLOCK.running = false; clearInterval(CLOCK.timer); CLOCK.timer = null;
+  renderClockBar();
+}
+function clockReset() { clockPause(); CLOCK.base = S.clock; renderClockBar(); }
+
 /** Engine time. Everything the reflex engine sees goes through this. */
 const NOW = () => S.clock;
 /** An act happened: carry forward a LITTLE real time (never a conversation). */
@@ -376,20 +481,26 @@ function renderCohortTab(cs) {
 /** The contrast: DY rents the neighbourhood's AVERAGE wallet; we use your own receipts. */
 function openDy() {
   const c = S.cohort; const cen = c?.census;
-  document.querySelectorAll('.moment.open').forEach((m) => m.classList.remove('open'));
-  $('dy-left').innerHTML = `
-    <div class="dy-h">Dynamic Yield<span>third-party proxy · neighbourhood AVERAGE · no purchase intent</span></div>
-    <div class="dy-pin">📍 ${escapeHtml(place(c))}${c?.geo?.zip ? ` · ZIP ${escapeHtml(c.geo.zip)}` : ''}</div>
-    <div class="dy-quote">"This neighbourhood averages ${money(cen?.medianHhIncome)} household income${cen?.medianHomeValue ? ` · ${money(cen.medianHomeValue)} homes` : ''}."</div>
-    <ul><li>Third-party proxy — a postal-code average</li><li>Affluence guess, not purchase intent</li><li>Historical — yesterday's cohort</li><li>No idea what this shopper actually buys</li></ul>
-    <div class="dy-foot">Guesses the neighbourhood's wallet · ${escapeHtml(cen?.source || 'Census ACS 2024')}, free &amp; public</div>`;
-  const lines = cohortUsable(c) ? c.topLines.slice(0, 3).map((l) => `<li>Carry the ${escapeHtml(l.line)} · ${Math.round(l.share * 100)}% of shoppers here</li>`).join('') : '<li>No cohort clears the gate here yet</li>';
-  $('dy-right').innerHTML = `
-    <div class="dy-h">Optimizely<span>real intent · your own receipts · ${escapeHtml(c?.grainLabel || '—')}${c?.sampleSize ? ` · N=${c.sampleSize}` : ' · representative'}</span></div>
-    <div class="dy-pin">👤 Shoppers like her, from here · first-party</div>
-    <ul>${lines}${cohortUsable(c) ? `<li>Modal price band: ${escapeHtml(c.modalBand)} (curation only)</li>` : ''}${c?.attachRate != null ? `<li>Attach a companion ${Math.round(c.attachRate * 100)}% of the time</li>` : ''}</ul>
-    <div class="dy-foot">Curates the storefront, never the price — aggregate, never the individual</div>`;
   openMoment('dyvs');
+  $('dy-left').innerHTML = `
+    <div class="dy-h">What the area tells us<span>public census · free · ours to use</span></div>
+    <div class="dy-pin">📍 ${escapeHtml(place(c))}${c?.geo?.zip ? ` · ZIP ${escapeHtml(c.geo.zip)}` : ''} — resolved off the connection</div>
+    <ul>
+      <li>Median household income <b>${money(cen?.medianHhIncome)}</b></li>
+      ${cen?.medianHomeValue ? `<li>Median home value <b>${money(cen.medianHomeValue)}</b></li>` : ''}
+      <li>Source: ${escapeHtml(cen?.source || 'Census ACS')} · vintage ${escapeHtml(String(cen?.vintage || '2024'))}</li>
+      <li>Used for the price band and the curation — never a price, never a gate, never a protected class</li>
+    </ul>
+    <div class="dy-foot">The area sets the range we open in.</div>`;
+  const lines = cohortUsable(c) ? c.topLines.slice(0, 3).map((l) => `<li><b>${escapeHtml(l.line)}</b> · ${Math.round(l.share * 100)}% of shoppers here</li>`).join('') : '<li>No cohort clears the gate here yet — the area alone opens the page</li>';
+  $('dy-right').innerHTML = `
+    <div class="dy-h">What your own sales tell us<span>${escapeHtml(c?.grainLabel || '—')}${c?.sampleSize ? ` · N=${c.sampleSize} shoppers` : ' · representative'} · your receipts</span></div>
+    <div class="dy-pin">🧾 People from here, in your own tickets — matched to your range</div>
+    <ul>${lines}${cohortUsable(c) ? `<li>They buy in the <b>${escapeHtml(c.modalBand)}</b> band — so that is where we open</li>` : ''}${c?.attachRate != null ? `<li>They add a second piece <b>${Math.round(c.attachRate * 100)}%</b> of the time</li>` : ''}</ul>
+    <div class="dy-foot">${c?.dataSource === 'warehouse' ? 'Your warehouse, live.' : 'Representative rows today; your warehouse in production — one setting.'}</div>`;
+  $('dy-cta').innerHTML = cohortUsable(c) && cen?.medianHhIncome
+    ? `→ People here earn about <b>${money(cen.medianHhIncome)}</b> and buy your <b>${escapeHtml(c.modalBand)}</b> pieces — the <b>${escapeHtml(c.topLines[0].line)}</b> first. So that is how the store opens for her, before she has done anything. We curate, never price. Aggregate, never the individual.`
+    : '→ We open on what shoppers like her, from here, actually buy — your own receipts, matched to your range. We curate, never price. Aggregate, never the individual.';
 }
 $('dyvs-close').onclick = () => $('dyvs').classList.remove('open');
 $('btn-dyvs').onclick = openDy;
@@ -1641,6 +1752,9 @@ function paintHero(d) {
       + (it.image ? `<img src="${it.image}" alt="" onload="this.dataset.loaded=1" onerror="this.remove()">` : '');
   $('hero-art').classList.toggle('fin', S.vertical === 'financial');
   if (it) $('hero-cta').onclick = () => signal('intent_start', it);
+  $('hero').querySelectorAll('.xbadge,.pinbadge').forEach((b) => b.remove());
+  if (S.pins.hero) { const pb = document.createElement('span'); pb.className = 'pinbadge'; pb.textContent = 'Pinned by the merchandiser'; $('hero').appendChild(pb); }
+  if (S.heroXp) { const xb = document.createElement('span'); xb.className = 'xbadge'; xb.textContent = `${FLAVOUR_NAME[S.heroXp.flavour]} · treatment · ${S.heroXp.arm}`.slice(0, 64); $('hero').appendChild(xb); }
 }
 
 const ALL_HUES = ['#E8503A', '#E8A317', '#7CA82F', '#12968C', '#4257C4', '#9B45A0', '#DB4079', '#4E7AA8', '#C8452B', '#C08A12', '#6E9430', '#12786E', '#2F52A8', '#7E3A80', '#B8355F', '#3F6389'];
@@ -1834,10 +1948,15 @@ function showWhatChanged() {
   if (!promoted.length) {
     consequence('What changed', 'Nothing — this is the standard order',
       'Personalization has no claim on the row right now, so no card is out of its control position.');
+    strip('out', '<b>Nothing has moved</b> — this is the standard order, the same for every shopper.', 8000);
+    $('strip-k').textContent = 'What changed';
     return;
   }
   nextHighlight();
   highlightMovers(promoted, 10000, 'std');
+  strip('in', `<b>${promoted.length} card${promoted.length === 1 ? '' : 's'}</b> sit above where the standard order puts them — highlighted, each badged with its standard place.`, 10000);
+  $('strip-k').textContent = 'What changed';
+  revealSection('row', 200);
   consequence('What changed', `${promoted.length} card${promoted.length === 1 ? '' : 's'} sit above where the standard order puts them`,
     promoted.map((m) => `${byId(m.id)?.name ?? m.id}: ${m.was ? `${m.was} → ${m.now}` : `in at ${m.now}`}`).join(' · '));
 }
@@ -2023,6 +2142,7 @@ setInterval(() => {
   if (STRIP_UNTIL && NOW() >= STRIP_UNTIL) { STRIP_UNTIL = 0; $('strip').hidden = true; $('ostrip').hidden = true; }
   if (OSTRIP_UNTIL && NOW() >= OSTRIP_UNTIL) { OSTRIP_UNTIL = 0; $('ostrip').hidden = true; }
   renderXp();
+  renderClockBar();
 }, 1000);
 
 const isStageAudience = (a) => /^(journeystage|applicationstage)_/.test(a);
@@ -2286,7 +2406,8 @@ $('btn-capture').onclick = async () => {
   b.classList.remove('busy');
   b.classList.toggle('on', !!r.ok);
   b.innerHTML = r.ok ? 'Baseline captured<small>compare when ready</small>' : 'Capture baseline<small>freeze the page now</small>';
-  if (r.ok) consequence('Compare', 'Baseline captured', 'Compare will show this frame against whatever the page looks like then.');
+  if (r.ok) { consequence('Compare', 'Baseline captured', 'Compare will show this frame against whatever the page looks like then.');
+    strip('in', '<b>Before captured</b> — the whole page, as it is now. Act, then press Compare.', 8000); $('strip-k').textContent = 'Compare'; }
 };
 $('btn-compare').onclick = async () => {
   const b = $('btn-compare'); const t = b.innerHTML;
@@ -2352,15 +2473,31 @@ $('btn-pin').onclick = () => {
   }
   S.heroDirty = true; recompose();
   paintPinButton();
+  strip(S.pins.hero ? 'in' : 'out', S.pins.hero
+    ? `<b>Hero pinned</b> by the merchandiser to <b>${escapeHtml(byId(S.pins.hero)?.name || '')}</b> — ranking is skipped for that slot until released.`
+    : '<b>Pin released</b> — the engine ranks the hero again.', 12000);
+  $('strip-k').textContent = 'Merchandiser';
+  revealSection('hero', 300);
 };
 
 $('btn-soldout').onclick = () => {
-  const top = S.items.find((i) => i.id === pick(S.decisions, 'row')?.itemId);
+  // The HERO's item, so the refusal happens on the biggest surface in the room;
+  // the first card of the row if the hero is not a product.
+  const heroId = S.heroOverride?.item || pick(S.decisions, 'hero')?.itemId;
+  const top = S.items.find((i) => i.id === heroId && i.available !== false) || S.items.find((i) => i.id === pick(S.decisions, 'row')?.itemId);
   if (!top) return;
+  if (S.heroOverride && S.heroOverride.item === top.id) { S.heroOverride = null; S.heroDirty = true; }
+  S.heroDirty = true;
   top.available = false;
+  const heroBefore = pick(S.decisions, 'hero')?.itemId;
   consequence('Availability', `${top.name} sold out`,
     'An item property, never a visitor property. It drops out of the candidate set; her affinity is untouched.');
   recompose();
+  const heroAfter = pick(S.decisions, 'hero')?.itemId;
+  strip('out', `<b>${escapeHtml(top.name)} sold out</b> — a rule now refuses it.${heroAfter !== heroBefore ? ` The hero re-decided to <b>${escapeHtml(byId(heroAfter)?.name || '')}</b>.` : ' It leaves the shelf; the hero was not it.'} Her affinity is untouched — the refusal is in the Glass box.`, 12000);
+  $('strip-k').textContent = 'Sold out';
+  markTab('glass');
+  revealSection('row', 300);
 };
 
 // ── Opal: propose, then a person publishes ──────────────────────────────────
@@ -2543,6 +2680,8 @@ function resolveTarget(t) {
 
 async function performBeat(beat) {
   if (!beat.perform?.length || BZ.busy) return;
+  // Every performed beat starts with a Before, so Compare always has one.
+  if (beat.perform.some((t) => actOf(t))) { await pageSettled(); await captureBaseline($('page')).catch(() => {}); $('btn-capture').classList.add('on'); }
   $('dir-next').disabled = true; $('dir-next').classList.add('running');
   try { await browse($('dir-next'), beat.perform); }
   finally { $('dir-next').disabled = false; $('dir-next').classList.remove('running'); }
@@ -2600,6 +2739,8 @@ $('dir-next').onclick = () => goBeat(DIR.i + 1);
 $('dir-prev').onclick = () => { setAuto(false); goBeat(DIR.i - 1); };
 $('dir-play').onclick = () => { if (DIR.auto && BZ.busy) BZ.abort = true; setAuto(!DIR.auto); };
 $('dir-stop').onclick = async () => {
+  if (PD.open) $('pd-go').click();  // a band open is not a reason to refuse a restart
+  DIR.arming = false;               // nor is a beat still arming
   if (BZ.busy) BZ.abort = true;    // stop the visitor mid-stride — only if she is mid-stride
   setAuto(false); dirPlay(false); DIR.elapsedBefore = 0; DIR.i = 0;
   sessionStorage.removeItem('mrd_dir');
@@ -2992,14 +3133,14 @@ function openXpCard(flavour, title) {
   $('xc-steps').innerHTML = ''; $('xc-rows').hidden = true; $('xc-readout').hidden = true; $('xc-foot').hidden = true;
   applyHighlight($('xcard'));
   $('xcard').hidden = false;
-  $('xcard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  placeDrawer();
 }
 function xpBadge(r) {
   const b = $('xc-badge'); b.hidden = false;
   if (!r) { b.textContent = 'unreachable'; b.className = 'xc-badge sim'; return; }
   if (r.simulated) { b.textContent = 'writes off'; b.className = 'xc-badge off'; return; }
   if (!r.ok) { b.textContent = 'refused'; b.className = 'xc-badge sim'; return; }
-  b.textContent = r.created ? 'live · created now' : 'live · reused'; b.className = 'xc-badge';
+  b.textContent = 'live · created now'; b.className = 'xc-badge';
 }
 const RULE_TYPE_NAME = { ab: 'a/b', mab: 'multi_armed_bandit', cmab: 'contextual_multi_armed_bandit' };
 function xpRows(r, flavour) {
@@ -3011,8 +3152,8 @@ function xpRows(r, flavour) {
   if (r?.projectId) rows.push(['Project', r.projectId]);
   if (r?.audience) rows.push(['Audience', `${r.audience.name} · #${r.audience.id}`]);
   if (r?.ms != null) rows.push(['API', `${r.ms}ms`]);
-  if (r?.reason) rows.push(['Note', r.reason]);
-  $('xc-rows').innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${escapeHtml(String(v))}</b></div>`).join('')
+  if (r?.reason && !/reused|already live/i.test(r.reason)) rows.push(['Note', r.reason]);
+  $('xc-rows').innerHTML = rows.map(([k, v]) => `<div${['Flag', 'Rule', 'Project'].includes(k) ? ' data-mono' : ''}><span>${k}</span><b>${escapeHtml(String(v))}</b></div>`).join('')
     + (r?.consoleUrl ? `<div><span>Optimizely</span><b><a href="${r.consoleUrl}" target="_blank" rel="noopener">Open it now →</a></b></div>` : '');
   $('xc-rows').hidden = false;
 }
@@ -3079,24 +3220,33 @@ async function dispatchExperiment(flavour, btn, opts = {}) {
   await sleep(650);
   xpStep(`Drafting the variants — <b>control</b> vs the strategy to test${opts.moment ? ` · copy: “${escapeHtml(opts.moment.headline)}”` : ''}`);
   await sleep(650);
-  const creating = xpStep(`Creating the flag and the <b>${RULE_TYPE_NAME[flavour]}</b> rule in the real project — API call in flight…`, 'pending');
+  const creating = xpStep(`Creating the flag and the <b>${RULE_TYPE_NAME[flavour]}</b> rule in the real project — API call in flight… <span class="xc-step-ms">0.0s</span>`, 'pending');
+  const t0 = Date.now(); const msEl = creating.querySelector('.xc-step-ms');
+  const ticker = setInterval(() => { if (msEl) msEl.textContent = `${((Date.now() - t0) / 1000).toFixed(1)}s`; }, 100);
   const r = await fetch(`${API}/experiment/dispatch`, {
     method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ vertical: S.vertical, source: opts.source || 'tiktok', flavour }),
   }).then((x) => x.json()).catch(() => null);
+  clearInterval(ticker);
   if (btn) { btn.disabled = false; btn.innerHTML = label; }
   XP.r = r;
   creating.className = r?.ok && !r.simulated ? 'done' : 'pending';
   creating.innerHTML = !r ? 'The dispatch never reached the worker — nothing was created.'
     : r.simulated ? `Nothing written — <b>${escapeHtml(r.reason || 'writes are off')}</b>. Would have created ${escapeHtml(r.flagKey || 'the flag')}.`
     : !r.ok ? `Refused by the API — <b>${escapeHtml(r.reason || 'see note')}</b>. Not downgraded to a rollout: a rollout is not a test.`
-    : `${r.created ? 'Created' : 'Found live and reused'} — flag <b>${escapeHtml(r.flagKey)}</b>, rule <b>${escapeHtml(r.ruleKey || '')}</b> in <b>${escapeHtml(r.environment || '')}</b> · ${r.ms ?? '—'}ms`;
+    : `<b>Created just now</b> — rule <b>${escapeHtml(r.ruleKey || '')}</b> on flag <b>${escapeHtml(r.flagKey)}</b>, ${escapeHtml(r.environment || '')} · the API took <b>${((Date.now() - t0) / 1000).toFixed(1)}s</b>`;
   xpBadge(r); xpRows(r, flavour);
   if (r?.ok && !r.simulated) capDone({ ab: 11, mab: 12, cmab: 13 }[flavour]);
   $('xc-state').hidden = true;
   XP.arms = xpArmNames(r);
   XP.startedAt = NOW();
   renderXp();
+  if (r?.ok && !r.simulated) {
+    // THE TREATMENT ON THE PAGE, as Coach did it: this session is in the
+    // treatment arm — the hero wears it, and says so.
+    S.heroXp = { flavour, arm: XP.arms[1] || XP.arms[0], flagKey: r.flagKey };
+    S.heroDirty = true; recompose();
+  }
   $('xc-foot').hidden = false;
   $('xc-foot').innerHTML = r?.ok && !r.simulated
     ? `<b>Real:</b> the flag, the rule and its type in the Optimizely project — open it now. <b>Representative:</b> the figures on the readout; no traffic reaches this rule in this room.`
@@ -3132,16 +3282,20 @@ function hideStrips() {
   STRIP_UNTIL = 0; OSTRIP_UNTIL = 0;
   $('strip').hidden = true; $('ostrip').hidden = true;
   XP.open = false; XP.arms = []; $('xcard').hidden = true;
-  S.fixLive = null; RAD.launched = null; RAD.recovered = null;
+  S.fixLive = null; RAD.launched = null; RAD.recovered = null; S.heroXp = null;
   resetCaps();
 }
 $('btn-reset').onclick = async () => {
   hideStrips();                                    // the last session's banners are not this session's
+  S.sayLockUntil = 0; clockPause();
   await post('/reset', {}); S.seq = -1;
   await load(S.vertical); connect();
   clearBaseline(); $('btn-capture').classList.remove('on'); DONE.length = 0;
   $('btn-capture').innerHTML = 'Capture baseline<small>freeze the page now</small>';
   $('takeover').hidden = true; $('hero').style.display = '';
+  // A new visitor's Why is the cold sentence, whatever the last one said.
+  $('sentence').textContent = 'Nothing has happened yet.'; S.sayLockUntil = Date.now() + 4000;
+  clockReset(); renderClockBar();
 };
 
 // Reflex moments: Coach's six stories, the hold, the honest countdowns.
@@ -3154,7 +3308,13 @@ window.MOMENTS = initMoments({
   expiryOf: (key, ctx) => (ctx?.dim && ctx?.value) ? expiryOf(S.reflex, ctx.dim, ctx.value, S.config) : null,
 });
 
-renderCaps();
+renderCaps(); wireTips();
+$('cb-resume').onclick = clockResume; $('cb-pause').onclick = clockPause; $('cb-reset').onclick = clockReset;
+TIPS['cb-resume'] = ['Runs the demo clock at 15× — four real seconds are one demo minute — so the room watches an affinity expire. The same decay, not a skip.', 'the bars fall; the next-to-lapse audience leaves; the offer ends'];
+TIPS['cb-pause'] = ['Pauses the demo clock. Nothing moves while you talk.', 'the readout freezes'];
+TIPS['cb-reset'] = ['Zeroes the clock readout. Her profile is untouched.', 'the readout'];
+wireTips();
+$('xc-close').onclick = () => { $('xcard').hidden = true; };
 if (new URLSearchParams(location.search).has('debug')) { window.__S = S; window.__goBeat = goBeat; }
 paintPinButton();
 // One click to start, and it survives the reload that beat 22 performs.

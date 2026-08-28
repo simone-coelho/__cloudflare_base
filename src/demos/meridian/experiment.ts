@@ -203,7 +203,7 @@ export function experimentSpec(vertical: Vertical, source: string, flavour: Flav
     const key = `${KEY_PREFIX}checkout_remedy_${vertical}`;
     return {
       key,
-      ruleKey: `${key}_exp`,
+      ruleKey: `${key}_exp_${Date.now().toString(36)}`,   // a NEW rule on every press — 'created just now' is then always true
       name: `Calder checkout remedy · A/B — ${vertical} (Revenue Radar)`,
       variations: vertical === 'retail'
         ? [
@@ -220,7 +220,7 @@ export function experimentSpec(vertical: Vertical, source: string, flavour: Flav
   const key = `${KEY_PREFIX}hero_strategy_${vertical}${flavour === 'ab' ? '' : '_' + flavour}`;
   return {
     key,
-    ruleKey: `${key}_exp`,
+    ruleKey: `${key}_exp_${Date.now().toString(36)}`,   // a NEW rule on every press — 'created just now' is then always true
     name: `Calder hero strategy · ${flavour.toUpperCase()} — ${vertical} (${source} arrival)`,
     variations: [
       { key: 'affinity_led', name: 'Affinity leads the hero', isControl: true },

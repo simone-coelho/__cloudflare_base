@@ -599,13 +599,13 @@ function compose(input) {
     });
   }
   {
-    const rowPool = input.rowItems ?? items;
     const stageKey = Object.keys(input.shapeOfKey).find((k) => input.shapeOfKey[k] === "stage");
     const stageSpec = config.dimensions.find((d) => d.key === stageKey);
     const stageVals = stageKey ? input.affinity.dims[stageKey] ?? {} : {};
     const decidingA = input.decidingValue ? stageVals[input.decidingValue] ?? 0 : 0;
     const anchor = input.anchorId ? items.find((i) => i.id === input.anchorId) : void 0;
     const completing = !!anchor && !!input.decidingValue && decidingA >= (stageSpec?.thetaOut ?? config.thetaOut);
+    const rowPool = completing ? items : input.rowItems ?? items;
     if (completing && anchor) {
       const { scored, gated } = rank(
         // Complementary, not substitutable: a different category to the anchor's.

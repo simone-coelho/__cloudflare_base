@@ -158,13 +158,13 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **1:30** · C6 · C7 · geo LIVE · census LIVE public · first-party REPRESENTATIVE
 
-**You do —** Nothing. Point at the cold-start panel, then the contrast.
+**You do —** Nothing. Point at the cold-start panel, then the card.
 
-**They watch —** Region off the connection · census row and source · your receipts by line with their shares · the grain used · geo real / census real / first-party representative / behaviour none. Then: DY’s ZIP average versus your customers’ own purchases.
+**They watch —** Region off the connection · census row and source · your receipts by line with their shares · the grain used · geo real / census real / first-party representative / behaviour none. Then the card: what the area tells us, what your own sales tell us, matched to your range.
 
-**You say —** The geography is real — off the connection. The census is real and free — ACS, cited on the row. The receipts are yours: what shoppers from this metro bought, by line, with the share. We roll up only when your own counts are thin — never because the census is. And we curate, never price: no gate, no financing, no protected class, ever. This is the cold start every retailer is asking for, and it runs on data you already own.
+**You say —** The geography is real — off the connection. The census is real and free — ACS, cited on the row; we have income, home value, ZIP. And the receipts are yours: what shoppers from this metro bought, by line, with the share. Others will sell you receipts that have nothing to do with what you sell. This is your own data, matched to your own range: people here earn about this, buy in this band, so the store opens there. We roll up only when your own counts are thin — never because the census is. And we curate, never price.
 
-*Why 1:30:* Dense: geography, the census, the ladder, your receipts, and the DY contrast. The longest beat in the act by design — everybody in the room is looking for cold-start management.
+*Why 1:30:* Dense: geography, the census, the ladder, your receipts, and how they are matched. The longest beat in the act by design — everybody in the room is looking for cold-start management.
 
 ---
 

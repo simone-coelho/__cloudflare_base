@@ -332,7 +332,6 @@ export function compose(input: ComposeInput): MeridianDecision[] {
 
   // ── row: the promotion block, then the standard shelf ────────────────────
   {
-    const rowPool = input.rowItems ?? items;
     // Structure, not ranking. When the verb dimension says the visitor has
     // chosen, the row stops being a list of alternatives — offering more coats
     // to someone holding a coat is the moment personalization stops helping.
@@ -352,6 +351,10 @@ export function compose(input: ComposeInput): MeridianDecision[] {
     const completing = !!anchor
       && !!input.decidingValue
       && decidingA >= (stageSpec?.thetaOut ?? config.thetaOut);
+    // The department shelf scopes the row — except when she has committed:
+    // complements come from the whole store, never from the bag's own aisle
+    // (a Bags shelf minus bags is an empty shelf, which is what shipped).
+    const rowPool = completing ? items : (input.rowItems ?? items);
 
     // THE ROW READS AS A BLOCK. Re-scoring every item let promoted cards land
     // at positions 1–4 and 8–9 with untouched cards between them, and the tail

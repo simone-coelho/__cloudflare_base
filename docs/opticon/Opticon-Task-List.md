@@ -195,6 +195,17 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 - [x] **The dial did nothing.** Two causes: no affinity to weigh (a weight times nothing is nothing — it now says "nothing to weigh yet" instead of sitting there), and the campaign's hero copy was masking the re-decision. Turning a slider now clears the override: the merchandiser outranks the campaign. Verified: line weight to 0.60 → hero re-decides to the Shorewell Trench, kicker "because of what you have looked at", driver `line=Shorewell w=0.3851`.
 - [x] "fell to 0.42, under the exit threshold of 0.42" — exit and entry sentences at 4dp, same fix as the offer.
 
+## 14 · Phase 6 — Simone's walkthrough feedback (2026-08-28, evening)
+
+- [x] **A · The page is not a dumping ground.** The experiment card is a **floating drawer** over the page's right edge (never in the flow); the empty "Selected for you" after add-to-bag in a department was a real bug (Complete the look excluded the bag's own category inside a department-scoped shelf) — complements now come from the whole store; the hold / white-glove / offer modules are real offer banners (deep green, white type, gold edge; the deciding offer with its countdown labelled).
+- [x] **B · The experiment beat.** A **new rule on every press** (unique rule key on the flag) so "created just now" is always true — no "reused"; the creating step shows the API's **real elapsed time** ticking; the **hero wears the treatment** with a badge (A/B · treatment · campaign pins the hero); sans for words, mono only for ids.
+- [x] **C · The demo clock in hand.** A clock bar at the top of Live affinity: paused by default, **Resume ×15** (4 real seconds = 1 demo minute) so the room watches an affinity expire, Pause, Reset; shows demo time elapsed and the next audience to lapse. Verified: 4 → 1 audiences in 12 real seconds, bars falling, then Pause.
+- [x] **D · No competitor on screen.** "DY vs us" is now **How the cold start works — the area, then your own sales**: what the area tells us (income, home value, source — ours to use), what your own sales tell us (lines, band, attach), and the sentence *people here earn about $99,852 and buy your premium pieces — the Drover first — so that is how the store opens*. Beat 10 reworded.
+- [x] **E · Buttons.** **Tooltips** on every control (hover ~0.7s): what it does + where to look, from one table. Capture → a strip confirms "Before captured", and **every director beat captures a Before automatically**; Show what changed → a strip with the count; Pin → a PINNED badge on the hero + a strip; **Sell out** now refuses the *hero's* item so the re-decision happens on the biggest surface, with a strip and the Glass box; Restart always works (closes a band, aborts anything in flight) and resets the Why line.
+- [ ] **F · Compare** — agent investigating the four presenter flows (cold-start modal → handoff; any modal → act; the quiz via the director; a cursor sequence). Deploy waits for it.
+
+---
+
 ## 13 · Phase 5 — the abstract, ported (go given 2026-08-28)
 
 The marketing abstract is Coach's own material; see `docs/opticon/Opticon-Abstract-Coverage.md` for the claim-by-claim map. Order agreed: cold start first, then experiments visible, Radar, AI search, modal exclusivity + 15/15.

@@ -24,19 +24,21 @@
 /* ── The card ─────────────────────────────────────────────────────────────── */
 .mmt{
   /* the default hue is the offer green; the other kinds override the tokens */
-  --mmt-line:#14C46A; --mmt-ink:#0B2E1B; --mmt-bg:#DCF3E6; --mmt-bar:#B9E8CC;
-  --mmt-badge-bg:#14C46A; --mmt-badge-ink:#0B2E1B; --mmt-cta-bg:#0B2E1B; --mmt-cta-ink:#FFFFFF;
-  border:2px solid var(--mmt-line);background:var(--mmt-bg);color:var(--mmt-ink);
+  /* AN OFFER LANDS LIKE AN OFFER: deep green, white type, a gold edge. Not a pastel strip. */
+  --mmt-line:#0B6B3A; --mmt-ink:#FFFFFF; --mmt-bg:#0F8A4B; --mmt-bar:#0B6B3A;
+  --mmt-badge-bg:#FFD166; --mmt-badge-ink:#2A2200; --mmt-cta-bg:#FFFFFF; --mmt-cta-ink:#0B4A2B;
+  border:0;border-left:10px solid #FFD166;background:var(--mmt-bg);color:var(--mmt-ink);
+  box-shadow:0 18px 40px -18px rgba(11,107,58,.65);
   border-radius:7px;overflow:hidden;
   animation:mmtIn .4s cubic-bezier(.2,.7,.3,1);
 }
 .mmt[data-kind="curated"],.mmt[data-kind="shift"],.mmt[data-kind="occasion"]{
-  --mmt-line:#0E5FBF; --mmt-ink:#0E2F5C; --mmt-bg:#E8F0FB; --mmt-bar:#C4D8F3;
-  --mmt-badge-bg:#0E5FBF; --mmt-badge-ink:#FFFFFF; --mmt-cta-bg:#0E5FBF;
+  --mmt-line:#0E3F8A; --mmt-ink:#FFFFFF; --mmt-bg:#0E5FBF; --mmt-bar:#0E3F8A;
+  --mmt-badge-bg:#FFFFFF; --mmt-badge-ink:#0E3F8A; --mmt-cta-bg:#FFFFFF; --mmt-cta-ink:#0E3F8A;
 }
 .mmt[data-kind="revert"],.mmt[data-kind="ending"]{
-  --mmt-line:#9A5410; --mmt-ink:#9A5410; --mmt-bg:#FBEFDF; --mmt-bar:#EBD3B3;
-  --mmt-badge-bg:#9A5410; --mmt-badge-ink:#FFF8EE; --mmt-cta-bg:#9A5410;
+  --mmt-line:#9A5410; --mmt-ink:#FFFFFF; --mmt-bg:#B8641A; --mmt-bar:#9A5410;
+  --mmt-badge-bg:#FFFFFF; --mmt-badge-ink:#9A5410; --mmt-cta-bg:#FFFFFF; --mmt-cta-ink:#9A5410;
 }
 .mmt-strip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;padding:12px 14px 12px 14px}
 .mmt-badge{
@@ -48,8 +50,8 @@
   font:500 10.5px/1 var(--mmt-mono);letter-spacing:.12em;text-transform:uppercase;
   color:var(--mmt-ink);opacity:.8;margin-bottom:5px;
 }
-.mmt-title{font:400 19px/1.2 var(--mmt-serif);color:var(--mmt-ink);letter-spacing:-.005em}
-.mmt-body{font:400 14px/1.45 var(--mmt-sans);color:var(--mmt-ink);opacity:.9;margin-top:3px}
+.mmt-title{font:400 26px/1.15 var(--mmt-serif);color:var(--mmt-ink);letter-spacing:-.005em}
+.mmt-body{font:400 15px/1.45 var(--mmt-sans);color:var(--mmt-ink);opacity:1;margin-top:4px}
 .mmt-count{
   font:600 22px/1 var(--mmt-mono);font-variant-numeric:tabular-nums;letter-spacing:.02em;
   color:var(--mmt-ink);flex-shrink:0;
