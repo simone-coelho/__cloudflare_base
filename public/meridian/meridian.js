@@ -2775,7 +2775,7 @@ function offerTick() {
 
   if (left > 0) {
     const secs = Math.ceil(left / 1000);
-    $('offer-clock').textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+    $('offer-clock').innerHTML = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}<small>ends when “deciding”<br>decays under its threshold</small>`;
     el.classList.toggle('expiring', secs <= 15);
     return;
   }
