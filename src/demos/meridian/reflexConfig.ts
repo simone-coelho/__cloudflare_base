@@ -64,18 +64,21 @@ export type MeridianShape =
 
 /** Room pace. A bar crosses θ_in inside a sentence; durable bars visibly lag. */
 export const DEMO_TAUS: Readonly<Record<MeridianShape, number>> = {
-  // Retuned against a measured run. The three surfaces still retreat in order —
-  // narrow, then broad, then need — but the whole staircase now completes inside
-  // ~90s of narration instead of ~160s of silence.
-  broad: 45 * SECOND,
-  narrow: 30 * SECOND,
-  band: 150 * SECOND,
-  durable: 120 * SECOND,
-  need: 60 * SECOND,
-  content: 45 * SECOND,
-  // Intent is the most perishable thing here. Someone who was deciding two
-  // minutes ago and has been idle since is browsing again.
-  stage: 40 * SECOND,
+  // FOUR TIMES SLOWER THAN THE FIRST TUNING. At 30–60s the whole profile
+  // evaporated while the presenter talked for two minutes — every bar at zero,
+  // the row back to "our usual order", the tuning dial dead because a weight
+  // times nothing is nothing. A profile has to survive a conversation. The
+  // staircase ("watch her leave") is no longer something that happens while
+  // you wait: the presenter presses "Let two minutes pass" and the same decay
+  // runs on demand, which is also the only honest way to make it a beat.
+  broad: 180 * SECOND,
+  narrow: 120 * SECOND,
+  band: 600 * SECOND,
+  durable: 480 * SECOND,
+  need: 240 * SECOND,
+  content: 180 * SECOND,
+  // Intent is still the most perishable thing here.
+  stage: 160 * SECOND,
 };
 
 /** What a real deployment runs. Same math, same code path, different rate. */
@@ -139,6 +142,7 @@ export const MERIDIAN_WEIGHTS: Readonly<Record<string, number>> = {
   intent_start: 3.0,   // add to cart · begin application
   convert: 4.0,        // purchase · submit application
   reflex_tick: 0,      // re-evaluate only — never accumulates
+  time_skip: 0,        // the presenter let time pass; nothing accumulates, decay runs
 };
 
 /** One shape, expressed for a given vertical's vocabulary. */

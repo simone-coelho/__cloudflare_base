@@ -136,11 +136,14 @@ describe('recency leads, accumulation gates (D2)', () => {
 
   it('lets Drover exit on its own once its affinity decays under θ_out', () => {
     const { state, at } = session();
-    const still = tick(state, at + 15 * SECOND, cfg);
+    // Horizons come from the dimension's own τ so the test survives retuning —
+    // the demo clocks were slowed 4× so a profile survives a conversation.
+    const tau = cfg.dimensions.find((d) => d.key === 'line')!.tauMs;
+    const still = tick(state, at + tau / 8, cfg);
     expect(still.state.audiences).toContain(audienceKey('line', 'Drover'));
     expect(leadValue(still.state, 'line')).toBe('Linden');
 
-    const later = tick(state, at + 60 * SECOND, cfg);
+    const later = tick(state, at + 4 * tau, cfg);
     expect(later.state.audiences).not.toContain(audienceKey('line', 'Drover'));
     expect(later.changes.exited).toContain(audienceKey('line', 'Drover'));
     expect(later.changes.explain).toContainEqual(

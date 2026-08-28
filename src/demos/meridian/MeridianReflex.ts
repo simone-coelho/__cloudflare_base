@@ -65,6 +65,8 @@ export interface MeridianEvent {
   /** Free-form dimension touches — used by search, which has no single item. */
   touches?: Touch[];
   at?: number;
+  /** time_skip only: how many seconds the presenter let pass. */
+  seconds?: number;
 }
 
 /**
@@ -208,6 +210,17 @@ export class MeridianReflex {
     const applied: string[] = [];
 
     for (const ev of events) {
+      // "Let time pass": every accumulator's last-touch moves back by N seconds
+      // and the ordinary tick below does the rest. Same math, nothing invented —
+      // the only difference from waiting is that the presenter chose the moment.
+      if (ev.action === 'time_skip') {
+        const ms = Math.max(0, Math.min(3600, Number(ev.seconds) || 0)) * 1000;
+        for (const dim of Object.values(this.aff.reflex.dims)) {
+          for (const entry of Object.values(dim)) entry.t = Math.max(0, entry.t - ms);
+        }
+        applied.push('time_skip');
+        continue;
+      }
       const touches = this.touchesFor(ev, vertical, cfg);
       if (touches === null) continue;
       // An action with no entry in the weights table accumulates nothing and

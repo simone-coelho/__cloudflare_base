@@ -532,6 +532,7 @@ async function browse(btn, targets) {
     for (const t of targets) {
       const el = typeof t === 'function' ? t() : document.querySelector(t);
       if (!el) continue;
+      if (el.wait) { await sleep(el.wait); continue; }        // a beat may pause to let a retreat land
       await moveCursorTo(el);
       await sleep(700);                                        // between clicks — Coach's cadence
     }
@@ -591,6 +592,33 @@ $('bz-coats').onclick = (e) => browse(e.currentTarget, beatTargets('a'));
 $('bz-bags').onclick = (e) => browse(e.currentTarget, beatTargets('b'));
 $('bz-decide').onclick = (e) => browse(e.currentTarget, beatTargets('c'));
 
+// ── Let time pass ───────────────────────────────────────────────────────────
+// The clocks are slow enough now that a profile survives a conversation. So
+// decay is something the presenter asks for: every accumulator's last touch
+// moves back by N seconds, locally and in the object, and the ordinary tick
+// does the rest. Same math. The only thing that changed is who chose the moment.
+function skipTime(seconds) {
+  const ms = seconds * 1000;
+  for (const dim of Object.values(S.reflex.dims || {})) {
+    for (const entry of Object.values(dim)) entry.t = Math.max(0, entry.t - ms);
+  }
+  const before = new Set(S.audiences);
+  const res = tick(S.reflex, Date.now(), S.config);
+  S.reflex = res.state;
+  if (res.changes.entered.length || res.changes.exited.length) absorb(res.changes);
+  recompose(false, { tick: true });                 // retreats are allowed; nothing else moves
+  post('/action', { vertical: S.vertical, events: [{ action: 'time_skip', seconds }] });
+  const gone = [...before].filter((a) => !S.audiences.has(a));
+  consequence('Time', `${Math.round(seconds / 60)} minutes passed — because you said so`,
+    gone.length ? `Lapsed: ${gone.map(prettyAudience).join(', ')}. The same decay ran; the presenter chose the moment.`
+                : 'Nothing lapsed yet. Press again and the next retreat lands.');
+  $('sentence').textContent = gone.length
+    ? `Two minutes passed. ${prettyAudience(gone[0])} lapsed — its score decayed under the exit threshold. Nobody wrote an exit rule.`
+    : 'Two minutes passed. Every score decayed; nothing has crossed out yet.';
+  S.sayLockUntil = Date.now() + 6000;
+}
+$('btn-skip').onclick = () => skipTime(120);
+
 // ── The tuning dial ─────────────────────────────────────────────────────────
 // SLOT_STRATEGIES is the live table the composer reads on every recompose, so
 // turning a slider IS the tuning surface: no rebuild, no redeploy, the next
@@ -615,9 +643,14 @@ function renderDial() {
       SLOT_STRATEGIES.hero[sh] = v;
       $(`dialv-${sh}`).textContent = v.toFixed(2);
       TUNED = true;
+      S.heroOverride = null;                        // the merchandiser outranks the campaign's copy
       S.heroDirty = true;
+      const snap = snapshot(S.reflex, Date.now(), S.config);
+      const strongest = Math.max(0, ...Object.values(snap.dims || {}).flatMap((d) => Object.values(d)));
       recompose();
-      $('dial-foot').textContent = `hero · ${SHAPE_LABEL[sh] || sh} = ${v.toFixed(2)} · applied to the next decision · ${S.config.version}+tuned`;
+      $('dial-foot').textContent = strongest < 0.05
+        ? 'Nothing to weigh yet — she has no affinity. Browse first, then turn this.'
+        : `hero · ${SHAPE_LABEL[sh] || sh} = ${v.toFixed(2)} · re-decided now · ${S.config.version}+tuned`;
     };
   });
   $('dial-foot').textContent = 'Turn one. The hero recomposes on the new weight and the receipt records the version.';
@@ -1010,7 +1043,41 @@ function cardNode(it, hue) {
  * some point". Replay re-applies it to the same cards for a question that
  * arrives three minutes later.
  */
-function highlightMovers(movers, holdMs) {
+/** The order a cold visitor would see: personalization's control. */
+function controlOrder() {
+  const cold = compose({ affinity: { dims: {}, audiences: [] }, items: S.items, blocks: S.blocks,
+                         config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins });
+  return cold.filter((d) => d.slot === 'row').map((d) => d.itemId);
+}
+
+/**
+ * What personalization changed, measured against the standard order — so it is
+ * true whenever it is pressed, not a replay of whatever moved last. A card is
+ * green if it sits somewhere other than where the control would have put it;
+ * "was N" is its standard position. When the row IS the standard order, nothing
+ * is green, and the button says so.
+ */
+function showWhatChanged() {
+  const control = controlOrder();
+  const cards = [...$('row').querySelectorAll('.card')];
+  const movers = [];
+  cards.forEach((el, i) => {
+    const cp = control.indexOf(el.dataset.id);
+    if (cp === -1) movers.push({ id: el.dataset.id, was: null, now: i + 1, up: true });
+    else if (cp !== i) movers.push({ id: el.dataset.id, was: cp + 1, now: i + 1, up: cp > i });
+  });
+  const promoted = movers.filter((m) => m.up);
+  if (!promoted.length) {
+    consequence('What changed', 'Nothing — this is the standard order',
+      'Personalization has no claim on the row right now, so no card is out of its control position.');
+    return;
+  }
+  highlightMovers(promoted, 10000, 'std');
+  consequence('What changed', `${promoted.length} card${promoted.length === 1 ? '' : 's'} sit above where the standard order puts them`,
+    promoted.map((m) => `${byId(m.id)?.name ?? m.id}: ${m.was ? `${m.was} → ${m.now}` : `in at ${m.now}`}`).join(' · '));
+}
+
+function highlightMovers(movers, holdMs, label = 'was') {
   clearTimeout(ROW.holdTimer);
   $('row').querySelectorAll('.card.changed').forEach((el) => el.classList.remove('changed'));
   for (const { id, was, now } of movers) {
@@ -1019,7 +1086,7 @@ function highlightMovers(movers, holdMs) {
     const d = el.querySelector('.delta');
     d.classList.remove('quiet');
     d.hidden = false;
-    d.innerHTML = `<b>${now}</b><small>${was == null ? 'new in' : `was ${was}`}</small>`;
+    d.innerHTML = `<b>${now}</b><small>${was == null ? (label === 'std' ? 'not in std' : 'new in') : `${label} ${was}`}</small>`;
   }
   ROW.holdTimer = setTimeout(() => {
     $('row').querySelectorAll('.card.changed').forEach((el) => el.classList.remove('changed'));
@@ -1071,7 +1138,6 @@ function paintRow(ds, prevIds, first, rowMoved = false, tick = false) {
     ? `chosen to go with the ${anchor ? anchor.name : 'piece you chose'} — nothing from the same category`
     : claims ? 'ranked by what you have shown interest in'
     : ds.some((d) => d.strategy === 'fading') ? 'our usual order' : 'the same order every shopper sees';
-  $('btn-replay').disabled = !ROW.lastMovers.length;
 }
 
 function paintBlock(d, slot = 'block_a') {
@@ -1218,8 +1284,8 @@ function consequence(head, msg, sub, decay) {
 function say(r) {
   if (Date.now() < S.sayLockUntil) return;   // a headline beat holds the line
   $('sentence').textContent = r.direction === 'enter'
-    ? `Entered ${r.audience} — ${r.dim} ${r.value} reached ${r.score.toFixed(2)}, past the entry threshold of ${r.thetaIn}.`
-    : `Left ${r.audience} — ${r.dim} ${r.value} fell to ${r.score.toFixed(2)}, under the exit threshold of ${r.thetaOut}.`;
+    ? `Entered ${r.audience} — ${r.dim} ${r.value} reached ${r.score.toFixed(4)}, past the entry threshold of ${r.thetaIn}.`
+    : `Left ${r.audience} — ${r.dim} ${r.value} fell to ${r.score.toFixed(4)}, under the exit threshold of ${r.thetaOut}.`;
 }
 
 // ── Ask in words ────────────────────────────────────────────────────────────
@@ -1387,7 +1453,7 @@ $('btn-radar').onclick = async () => {
   await radar([]);
 };
 $('rad-close').onclick = () => $('radar').classList.remove('open');
-$('btn-replay').onclick = () => { if (ROW.lastMovers.length) highlightMovers(ROW.lastMovers, 10000); };
+$('btn-replay').onclick = () => showWhatChanged();
 // Compare captures pixels, so whatever "changed" highlight is on the page at
 // capture time is in the frame — before and after can be held side by side
 // three minutes later, which is the reason the tool exists.
@@ -1622,6 +1688,7 @@ function dirTick() {
  */
 function resolveTarget(t) {
   if (typeof t === 'string') return document.querySelector(t);
+  if (t.wait) return { wait: t.wait };
   if (t.tab) { showTab(t.tab); return null; }
   if (t.surface != null) return document.querySelectorAll('#surfaces .surface')[t.surface] || null;
   if (t.dept) return dept(t.dept)();

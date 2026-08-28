@@ -322,13 +322,13 @@ Print this. The director bar on screen shows the room the beat and what to watch
 **1:55** · C10 · C33 · LIVE
 > ### ⏸ THE BEAT NOBODY ELSE HAS
 
-**You do —** Stop touching it. Talk. When the first audience lapses, an amber strip names it.
+**You do —** Press "Let two minutes pass". The retreats land one after another; talk over them. Press it again for the rest.
 
 **They watch —** Three separate retreats — hero at ~28s on category, row at ~64s on price band, story at ~74s on taste. Each names its dimension and its number. The offer ends and says why. The row returns to discovery.
 
-**You say —** Everyone demonstrates joining an audience. Watch her leave one. And it does not collapse at once — the hero goes first, on category, because what aisle she is in is the most perishable thing about her. Then the row, on price band. Taste goes last, because taste is the slowest thing about anyone. Nobody wrote an exit rule for any of that. It is the same arithmetic running backwards. … And there is the offer ending, naming the number that ended it.
+**You say —** Everyone demonstrates joining an audience. Watch her leave one. I am going to let two minutes pass — nothing is faked, the same decay runs, I just chose the moment. It does not collapse at once: what aisle she is in goes first, because that is the most perishable thing about her. Taste goes last, because taste is the slowest thing about anyone. Nobody wrote an exit rule for any of that. It is the same arithmetic running backwards. … And there is the offer ending, naming the number that ended it.
 
-*Why 1:55:* Measured at human pace with the real sequence: retreats land at 28s, 64s and 74s. 115 leaves ~40s of headroom so the presenter is never waiting on it in silence.
+*Why 1:55:* Two presses of two minutes each and the three retreats have landed, in order, with their numbers. Nothing happens while you wait any more — time passes when you say so.
 
 ---
 

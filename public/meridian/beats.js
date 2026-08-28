@@ -193,10 +193,11 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 21, act: 2, cap: 'C10 · C33', title: 'Watch her leave', secs: 115, mark: 'THE BEAT NOBODY ELSE HAS',
-    why: 'Measured at human pace with the real sequence: retreats land at 28s, 64s and 74s. 115 leaves ~40s of headroom so the presenter is never waiting on it in silence.',
-    do: 'Stop touching it. Talk. When the first audience lapses, an amber strip names it.',
+    perform: [{ sel: '#btn-skip' }, { wait: 9000 }, { sel: '#btn-skip' }],
+    why: 'Two presses of two minutes each and the three retreats have landed, in order, with their numbers. Nothing happens while you wait any more — time passes when you say so.',
+    do: 'Press "Let two minutes pass". The retreats land one after another; talk over them. Press it again for the rest.',
     watch: 'Three separate retreats — hero at ~28s on category, row at ~64s on price band, story at ~74s on taste. Each names its dimension and its number. The offer ends and says why. The row returns to discovery.',
-    say: 'Everyone demonstrates joining an audience. Watch her leave one. And it does not collapse at once — the hero goes first, on category, because what aisle she is in is the most perishable thing about her. Then the row, on price band. Taste goes last, because taste is the slowest thing about anyone. Nobody wrote an exit rule for any of that. It is the same arithmetic running backwards. … And there is the offer ending, naming the number that ended it.',
+    say: 'Everyone demonstrates joining an audience. Watch her leave one. I am going to let two minutes pass — nothing is faked, the same decay runs, I just chose the moment. It does not collapse at once: what aisle she is in goes first, because that is the most perishable thing about her. Taste goes last, because taste is the slowest thing about anyone. Nobody wrote an exit rule for any of that. It is the same arithmetic running backwards. … And there is the offer ending, naming the number that ended it.',
     real: 'LIVE' },
 
   { n: 22, act: 2, cap: 'C12', title: 'She came back', secs: 50,
