@@ -224,6 +224,7 @@ function renderSurfaces() {
  */
 function fireSurface(s) {
   if (!s || S.usedSurfaces.has(s.id)) return;
+  if (needsGate()) { gateThen([{ kind: 'surface', s }], () => fireSurface(s)); return; }
   S.usedSurfaces.add(s.id);
   document.querySelector(`.surface[data-id="${s.id}"]`)?.classList.add('done');
 
@@ -331,6 +332,7 @@ function checkHandoff(snap) {
 // ── Signals from the page ───────────────────────────────────────────────────
 /** Browsing a department: a category touch with no single item behind it. */
 function navTo(category) {
+  if (needsGate()) { gateThen([{ kind: 'nav', category }], () => navTo(category)); return; }
   advanceClock();
   // A department click SHOWS the department. The shelf becomes that category —
   // her picks first, then its standard order — so "wanders to bags" has bags
@@ -471,6 +473,9 @@ const VERB_LABEL = {
 };
 
 function signal(action, record) {
+  if ((action === 'row_click' || action === 'intent_start') && record && needsGate()) {
+    gateThen([{ kind: 'item', item: record, action }], () => signal(action, record)); return;
+  }
   advanceClock();
   S.sinceArrival += 1;
   const before = snapshot(S.reflex, NOW(), S.config);
@@ -685,6 +690,168 @@ function predictThenProve(action, record, touchesOverride, label) {
   return openBandRaw();
 }
 
+// ── THE GATE: NOTHING CHANGES UNTIL IT HAS BEEN DECLARED ─────────────────────
+// Every act that would change the page — a surface firing, a department, a
+// product click, add-to-bag, time passing — is forecast on a COPY of her
+// profile and shown first: what she does, the weights, the scores against
+// their thresholds, and what the page will do. OK lets her do it. This is the
+// same band that used to guard two or three targets; now it is the rule, for
+// scripted sequences and for the presenter's own hand alike.
+const GATE = { open: false };
+const needsGate = () => !GATE.open && !PD.open;
+
+/** A perform spec → the act it will cause (null for pure UI: tabs, waits, pins). */
+function actOf(t) {
+  if (!t) return null;
+  if (typeof t === 'string') return t === '#hero-cta' ? { kind: 'cta' } : t === '#btn-skip' ? { kind: 'skip' } : null;
+  if (typeof t === 'function') return null;
+  if (t.predict) return actOf(t.predict);
+  if (t.surface != null) { const sf = SURFACES[S.vertical][t.surface]; return sf ? { kind: 'surface', s: sf } : null; }
+  if (t.dept) return { kind: 'nav', category: t.dept };
+  if (t.card) return { kind: 'card', cat: t.card.cat, n: t.card.n };
+  if (t.line) return { kind: 'card', line: t.line.name, n: t.line.n };
+  if (t.sel === '#hero-cta') return { kind: 'cta' };
+  if (t.sel === '#btn-skip') return { kind: 'skip' };
+  return null;
+}
+
+/** Simulate a whole sequence of acts on a copy; return what she does, the weights, the moves, and what the page will do. */
+function forecastSequence(acts) {
+  const cfg = S.config;
+  let reflex = JSON.parse(JSON.stringify(S.reflex));
+  let clock = NOW();
+  let dept = S.dept, override = S.heroOverride, anchor = S.anchorId;
+  const used = new Set(S.usedSurfaces);
+  const before = snapshot(reflex, clock, cfg);
+  const entered = [], exited = [], did = [], weights = [];
+  const poolOf = () => (dept ? S.items.filter((i) => i.category === dept) : S.items);
+  const composeSim = (snap) => compose({ affinity: snap, state: reflex, items: S.items, rowItems: poolOf(), blocks: S.blocks,
+    config: cfg, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
+    audiencePriority: S.priorityEngaged ? S.audiencePriority : undefined,
+    anchorId: anchor, decidingValue: decidingValueFor(S.vertical) });
+  const step = (action, touches) => {
+    const stage = stageTouchFor(action, S.vertical);
+    const res = apply(reflex, { action, touches: stage ? [...touches, stage] : touches }, clock, cfg);
+    reflex = res.state; entered.push(...res.changes.entered); exited.push(...res.changes.exited);
+    weights.push({ action, w: cfg.weights?.[action] ?? 1 });
+  };
+  for (const a of acts) {
+    clock += 2000;
+    if (a.kind === 'surface') {
+      if (used.has(a.s.id)) continue; used.add(a.s.id);
+      override = { ...a.s.hero, from: a.s.id };
+      const action = a.s.act ?? 'arrival';
+      did.push(`${action === 'declared' ? 'Tells us, on a' : 'Arrives from'} ${KIND_LABEL[a.s.kind].toLowerCase()} — ${a.s.subject}`
+        + ` (${a.s.touches.map((t) => `${t.dim}=${t.value}`).join(', ')})`);
+      step(action, a.s.touches);
+    } else if (a.kind === 'nav') {
+      dept = a.category;
+      did.push(`Browses the ${a.category} department`);
+      step('nav_click', [{ dim: S.vertical === 'retail' ? 'category' : 'productFamily', value: a.category }]);
+    } else if (a.kind === 'card' || a.kind === 'item') {
+      let item = a.item;
+      if (!item) {
+        const row = composeSim(snapshot(reflex, clock, cfg)).filter((d) => d.slot === 'row').map((d) => byId(d.itemId)).filter(Boolean);
+        const pool = row.filter((i) => (a.cat ? i.category === a.cat : i.line === a.line));
+        item = pool[a.n] || pool[0];
+      }
+      if (!item) continue;
+      const action = a.action || 'row_click';
+      if (action === 'intent_start') anchor = item.id;
+      did.push(`${action === 'intent_start' ? 'Adds to bag' : 'Clicks'} ${item.name}`);
+      step(action, extractTouches(item, cfg));
+    } else if (a.kind === 'cta') {
+      const heroD = composeSim(snapshot(reflex, clock, cfg)).find((d) => d.slot === 'hero');
+      const item = (override?.item && byId(override.item)) || (heroD?.itemId && byId(heroD.itemId));
+      if (!item) continue;
+      anchor = item.id;
+      did.push(`Adds to bag ${item.name} — the hero`);
+      step('intent_start', extractTouches(item, cfg));
+    } else if (a.kind === 'skip') {
+      clock += 120_000;
+      const res = tick(reflex, clock, cfg);
+      reflex = res.state; entered.push(...res.changes.entered); exited.push(...res.changes.exited);
+      did.push('Two minutes pass');
+    }
+  }
+  const after = snapshot(reflex, clock, cfg);
+  const next = composeSim(after);
+  const lay = composeLayout({ affinity: after, config: cfg, shapeOfKey: SHAPE_OF_KEY,
+    prevOrder: S.layout?.order, locked: $('takeover').hidden ? [] : ['takeover'] });
+
+  // The handoff rule, applied to the copy: a campaign's claim ends when what it
+  // was about stops leading, or decays under its exit threshold.
+  if (override && override === S.heroOverride) {
+    const src = SURFACES[S.vertical].find((x) => x.id === override.from);
+    const broadKey = S.registry.dimensions.find((d) => d.shape === 'broad')?.key;
+    const spec = S.registry.dimensions.find((d) => d.key === broadKey);
+    const claimed = src?.touches.find((t) => t.dim === broadKey)?.value;
+    const per = after.dims?.[broadKey] || {};
+    let leader = null, best = 0; for (const [v, x] of Object.entries(per)) if (x > best) { best = x; leader = v; }
+    if (claimed && ((per[claimed] ?? 0) < (spec?.thetaOut ?? 0.45) || (leader && leader !== claimed))) override = null;
+  }
+  const moves = [];
+  for (const spec of S.registry.dimensions) {
+    const b = before.dims?.[spec.key] || {}; const aa = after.dims?.[spec.key] || {};
+    for (const v of new Set([...Object.keys(b), ...Object.keys(aa)])) {
+      const from = b[v] ?? 0, to = aa[v] ?? 0;
+      if (Math.abs(to - from) > 0.0005) moves.push({ dim: spec.key, value: v, from, to, thetaIn: spec.thetaIn, crosses: from < spec.thetaIn && to >= spec.thetaIn });
+    }
+  }
+  moves.sort((x, y) => Math.abs(y.to - y.from) - Math.abs(x.to - x.from));
+  const heroNowTitle = $('hero-title').textContent;
+  const heroD = next.find((d) => d.slot === 'hero');
+  const heroNextTitle = override ? override.title : ((heroD?.itemId && byId(heroD.itemId)?.name) || heroNowTitle);
+  const picksOf = (ds) => ds.filter((d) => d.slot === 'row' && (d.strategy === 'affinity' || d.strategy === 'completion')).map((d) => byId(d.itemId)?.name).filter(Boolean);
+  const picksNow = picksOf(S.decisions), picksNext = picksOf(next);
+  const orderNow = (S.layout?.order || []).filter((x) => x !== 'takeover'), orderNext = lay.order.filter((x) => x !== 'takeover');
+  const lead = lay.sections.filter((x) => x.strategy !== 'locked' && x.strategy !== 'template').sort((a, b) => a.rank - b.rank)[0];
+  return { did, weights, moves, entered: [...new Set(entered)], exited: [...new Set(exited)],
+           heroChanges: heroNextTitle !== heroNowTitle, heroNextTitle, picksNow, picksNext,
+           rearranged: orderNow.length > 0 && JSON.stringify(orderNow) !== JSON.stringify(orderNext), lead,
+           dept, deptChanged: dept !== S.dept,
+           completion: next.some((d) => d.strategy === 'completion') && !S.decisions.some((d) => d.strategy === 'completion') };
+}
+
+/** Declare a sequence before it happens; resolves when the presenter presses OK. */
+async function sequenceBand(acts) {
+  const f = forecastSequence(acts);
+  if (!f.did.length) return;
+  const pct = (n) => n.toFixed(3);
+  const count = {}; for (const x of f.weights) count[x.action] = (count[x.action] || 0) + 1;
+  const weightLine = Object.entries(count)
+    .map(([a, n]) => `${VERB_PAST[a] || a} ×${n} · weight <b>${(S.config.weights?.[a] ?? 1).toFixed(1)}</b>`).join(' &nbsp;·&nbsp; ');
+  const math = `<div class="pd-w">${weightLine || 'time only'}</div>`
+    + (f.moves.slice(0, 4).map((m) => `${m.dim} · ${m.value} &nbsp;${pct(m.from)} → <b>${pct(m.to)}</b>${m.crosses ? ` &nbsp;≥ θ<sub>in</sub> ${m.thetaIn} → <b>enters</b>` : ` &nbsp;(θ<sub>in</sub> ${m.thetaIn})`}`).join('<br>')
+       || 'No dimension moves.');
+  const will = [];
+  for (const a of f.entered.filter((x) => !isStageAudience(x))) will.push(`She <b>enters ${prettyAudience(a)}</b>.`);
+  for (const a of f.exited.filter((x) => !isStageAudience(x))) will.push(`She <b>leaves ${prettyAudience(a)}</b>.`);
+  if (f.deptChanged) will.push(`The shelf becomes <b>${escapeHtml(f.dept)}</b>.`);
+  if (f.heroChanges) will.push(`The hero becomes <b>${escapeHtml(f.heroNextTitle)}</b>.`);
+  if (f.completion) will.push('The row becomes <b>Complete the look</b>.');
+  else if (f.picksNext.length && JSON.stringify(f.picksNow) !== JSON.stringify(f.picksNext)) {
+    will.push(`Picked for her, first line: <b>${f.picksNext.slice(0, 3).map(escapeHtml).join('</b>, <b>')}</b>${f.picksNext.length > 3 ? '…' : ''}.`);
+  }
+  if (f.rearranged) will.push(`The page <b>rearranges</b> — ${escapeHtml(SECTION_NAME[f.lead?.section] || f.lead?.section || 'a different section')} leads${f.lead?.explain?.movedBecause ? `: ${escapeHtml(f.lead.explain.movedBecause)}` : ''}.`);
+  if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
+  await openPredictBand({
+    mode: f.did.length === 1 ? 'before her next act' : `before her next ${f.did.length} acts`,
+    act: f.did.map((d, i) => `${i + 1}. ${d}`).join('\n'),
+    math, will,
+    note: 'Computed on a copy of her real profile — the same engine, the same weights. Nothing has happened yet; press OK and she does it.',
+    button: 'OK — let her do it',
+  });
+}
+
+/** The presenter's own hand: declare, wait for OK, then do it for real. */
+async function gateThen(acts, fn) {
+  if (PD.open) return;
+  await sequenceBand(acts);
+  GATE.open = true;
+  try { fn(); } finally { GATE.open = false; }
+}
+
 /** The shared band plumbing: fill arbitrary columns, await the consent press. */
 function openPredictBand({ mode, act, math, will, note, button }) {
   $('pd-mode').textContent = mode;
@@ -752,30 +919,27 @@ async function moveCursorTo(el, { click = true } = {}) {
 const hideCursor = () => $('demo-cursor').classList.remove('show');
 
 /** One beat: a list of targets, resolved lazily so a re-rank between clicks is honoured. */
-async function browse(btn, targets) {
+async function browse(btn, targets) {   // targets are perform SPECS
   if (BZ.busy) return;
   BZ.busy = true; BZ.abort = false; btn.classList.add('running');   // a fresh run never inherits a stale stop
   document.querySelectorAll('[id^="bz-"]').forEach((b) => { b.disabled = true; });
   try {
+    // DECLARE FIRST. The whole sequence is forecast on a copy and shown before
+    // anything moves; OK lets her do it. Then each act runs for real, ungated.
+    const acts = targets.map(actOf).filter(Boolean);
+    if (acts.length && !GATE.open) { await sequenceBand(acts); if (BZ.abort) return; }
+    GATE.open = true;
     for (const t of targets) {
       if (BZ.abort) break;                                     // the presenter said stop
-      const el = typeof t === 'function' ? t() : document.querySelector(t);
+      const spec = t && t.predict ? t.predict : t;
+      const el = typeof spec === 'function' ? spec() : typeof spec === 'string' ? document.querySelector(spec) : resolveTarget(spec);
       if (!el) continue;
       if (el.wait) { await sleep(el.wait); continue; }        // a beat may pause to let a retreat land
-      if (el.predict) {                                        // predict, then prove
-        const target = el.el;
-        const item = target?.dataset?.id ? byId(target.dataset.id) : null;
-        const dept = target?.dataset?.cat;
-        if (dept) await predictThenProve('nav_click', null, [{ dim: S.vertical === 'retail' ? 'category' : 'productFamily', value: dept }], `Browses ${dept}`);
-        else if (item) await predictThenProve(target.classList.contains('add') ? 'intent_start' : 'row_click', item);
-        await moveCursorTo(target);
-        await sleep(700);
-        continue;
-      }
       await moveCursorTo(el);
       await sleep(700);                                        // between clicks — Coach's cadence
     }
   } finally {
+    GATE.open = false;
     hideCursor();
     BZ.busy = false; BZ.abort = false; btn.classList.remove('busy'); btn.classList.remove('running');
     document.querySelectorAll('[id^="bz-"]').forEach((b) => { b.disabled = false; });
@@ -814,10 +978,8 @@ function renderBrowseBeats() {
 }
 const beatTargets = (k) => {
   const b = BROWSE_BEATS[S.vertical][k];
-  if (!b.dept) return [() => ({ predict: true, el: document.querySelector('#hero-cta') })];
-  const clicks = Array.from({ length: b.n }, (_, i) => cardOf(b.dept, i));
-  const last = clicks.pop();
-  return [dept(b.dept), ...clicks, () => ({ predict: true, el: last() })];
+  if (!b.dept) return [{ sel: '#hero-cta' }];
+  return [{ dept: b.dept }, ...Array.from({ length: b.n }, (_, i) => ({ card: { cat: b.dept, n: i } }))];
 };
 /** Nth card of a product LINE currently on the row. */
 const cardOfLine = (line, n) => () => {
@@ -829,8 +991,8 @@ const cardOfLine = (line, n) => () => {
 // another. Membership of the first stays; the page follows the second on the
 // single click.
 $('bz-story').onclick = (e) => browse(e.currentTarget,
-  [dept('Knitwear'), cardOfLine('Fenwick', 0), cardOfLine('Fenwick', 1), cardOfLine('Fenwick', 2),
-   dept('Bags'), cardOfLine('Linden', 0)]);
+  [{ dept: 'Knitwear' }, { line: { name: 'Fenwick', n: 0 } }, { line: { name: 'Fenwick', n: 1 } }, { line: { name: 'Fenwick', n: 2 } },
+   { dept: 'Bags' }, { line: { name: 'Linden', n: 0 } }]);
 $('bz-coats').onclick = (e) => browse(e.currentTarget, beatTargets('a'));
 $('bz-bags').onclick = (e) => browse(e.currentTarget, beatTargets('b'));
 $('bz-decide').onclick = (e) => browse(e.currentTarget, beatTargets('c'));
@@ -841,9 +1003,11 @@ $('bz-decide').onclick = (e) => browse(e.currentTarget, beatTargets('c'));
 // moves back by N seconds, locally and in the object, and the ordinary tick
 // does the rest. Same math. The only thing that changed is who chose the moment.
 async function skipTime(seconds) {
-  if (PD.open || BZ.busy) return;                 // one thing at a time
+  if (PD.open) return;                             // one thing at a time
+  if (BZ.busy && !GATE.open) return;
   advanceClock();
   const ms = seconds * 1000;
+  if (!GATE.open) {
 
   // PREVIEW FIRST. "Let me know that it's about to decay - do you want to
   // proceed?" The band shows what those minutes will take before they pass;
@@ -867,7 +1031,7 @@ async function skipTime(seconds) {
   if (!will.length) will.push('Scores drop; nothing crosses out yet.');
 
   await openPredictBand({
-    mode: 'time is about to pass - with your consent',
+    mode: 'time is about to pass — with your consent',
     act: Math.round(seconds / 60) + ' minutes pass',
     math: drops.slice(0, 3).map((d) => d.dim + ' \u00b7 ' + d.value + ' \u00a0' + d.from.toFixed(3) + ' \u2192 <b>' + d.to.toFixed(3) + '</b>').join('<br>')
       || 'Nothing measurable decays.',
@@ -875,6 +1039,7 @@ async function skipTime(seconds) {
     note: 'Nothing has happened yet. Close this and the minutes pass - the same decay, at the moment you chose.',
     button: 'Close - let ' + Math.round(seconds / 60) + ' minutes pass',
   });
+  }
 
   S.clock += ms;
   const before = new Set(S.audiences);
@@ -2084,9 +2249,8 @@ function resolveTarget(t) {
 
 async function performBeat(beat) {
   if (!beat.perform?.length || BZ.busy) return;
-  const targets = beat.perform.map((t) => () => resolveTarget(t));
   $('dir-next').disabled = true; $('dir-next').classList.add('running');
-  try { await browse($('dir-next'), targets); }
+  try { await browse($('dir-next'), beat.perform); }
   finally { $('dir-next').disabled = false; $('dir-next').classList.remove('running'); }
 }
 

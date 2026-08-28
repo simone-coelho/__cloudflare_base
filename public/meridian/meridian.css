@@ -960,3 +960,8 @@ body.has-director .world,body.has-director .engine{padding-bottom:var(--dir-h, 2
 .surface[data-kind="sms"] .from{color:#C4243D}
 .surface[data-kind="form"]{background:#FFEBD8;border-color:#F0C9A8;border-left-color:#C4571A}
 .surface[data-kind="form"] .from{color:#C4571A}
+
+/* the band lists a sequence of acts, one per line; the weights line sits above the arithmetic */
+.pd-act{white-space:pre-line}
+.pd-w{font:500 12.5px/1.5 var(--sans);color:var(--p-dim);margin:0 0 8px;padding-bottom:8px;border-bottom:1px dashed var(--p-line)}
+.pd-w b{color:var(--p-text)}
