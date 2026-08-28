@@ -1470,12 +1470,15 @@ $('ask-form').onsubmit = async (e) => {
 
   const a = await fetch(`${API}/search`, {
     method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ vertical: S.vertical, query }),
+    body: JSON.stringify({ vertical: S.vertical, query,
+                           affinity: snapshot(S.reflex, Date.now(), S.config) }),
   }).then((r) => r.json()).catch(() => null);
   input.disabled = false; input.placeholder = was; input.value = '';
 
-  if (!a?.scene) {
-    $('sentence').textContent = `Nothing in the approved set matched "${query}". Nothing was invented to fill the gap.`;
+  // ok can be true with scene null — a plain noun matched ("sweaters") and the
+  // results show without scene copy. Only a full miss says so and stops.
+  if (!a?.ok || (!a.scene && !(a.products || []).length)) {
+    $('sentence').textContent = `Nothing in the catalogue matched "${query}". Nothing was invented to fill the gap.`;
     return;
   }
   if (SCENE_COUNT === null) {
@@ -1488,21 +1491,29 @@ $('ask-form').onsubmit = async (e) => {
   S.reflex = res.state; absorb(res.changes); recompose();
   post('/action', { vertical: S.vertical, events: [{ action: 'search', touches: a.touches }] });
 
-  const snap = snapshot(S.reflex, Date.now(), S.config);
-  const ds = compose({ affinity: snap, state: S.reflex, items: S.items, blocks: S.blocks, config: S.config,
-                       shapeOfKey: SHAPE_OF_KEY, rowSize: 4 });
-  const picks = ds.filter((d) => d.slot === 'row').map((d) => byId(d.itemId)).filter(Boolean);
+  // The SERVER ranked the products: hard-filtered to the named category, scored
+  // on intent + her affinity. The client paints; it does not re-decide.
+  const picks = (a.products || []).map(byId).filter(Boolean).slice(0, 8);
   const hues = distinctHues(picks);
 
-  $('ask-art').style.backgroundImage = `url(${a.scene.art})`;
+  $('ask-art').style.backgroundImage = `url(${a.hero?.image || a.scene?.art || ''})`;
   $('ask-kick').textContent = query;
-  $('ask-title').textContent = a.scene.headline;
-  $('ask-sub').textContent = a.scene.subhead;
+  $('ask-title').textContent = a.scene?.headline
+    || (a.intent?.categories?.length ? `${a.intent.categories.join(' & ')}, for you` : 'Found for you');
+  $('ask-sub').textContent = a.scene?.subhead || 'Ranked over the live catalogue — every result is real and in stock.';
+  const intentBits = [
+    ...(a.intent?.categories || []).map((x) => `category ${x}`),
+    ...(a.intent?.lines || []).map((x) => `line ${x}`),
+    ...(a.intent?.colours || []).map((x) => `colour ${x}`),
+    ...(a.intent?.occasions || []).map((x) => `occasion ${x}`),
+    ...(a.intent?.priceCeilingUsd ? [`under $${a.intent.priceCeilingUsd}`] : []),
+  ];
   $('ask-prov').innerHTML =
-    `Routed by the <b>${a.source === 'model' ? 'model' : 'local classifier'}</b> to one of ` +
-    `<b>${SCENE_COUNT}</b> approved scenes · confidence <b>${a.confidence.toFixed(2)}</b> · <b>${a.ms}ms</b><br>` +
+    `Read by the <b>${a.source === 'model' ? 'model' : 'local classifier'}</b>: ` +
+    `<b>${intentBits.join(' · ') || 'no constraints — her affinity decides'}</b> · <b>${a.ms}ms</b><br>` +
     `Signal applied: <b>${a.touches.map((t) => `${t.dim}=${t.value}`).join(', ')}</b>. ` +
-    `Products ranked by the engine, not by the model. Copy and artwork were written before this demo.`;
+    `The model reads the sentence; the engine ranks the products — hard-filtered to what she asked for, ` +
+    `ordered by intent and her live affinity. The scene was generated and approved before this demo.`;
   $('ask-row').innerHTML = picks.map((it, i) => `
     <article class="card" style="--hue:${hues.get(it.id)}" data-id="${it.id}">
       <div class="rank">${i + 1}</div>
