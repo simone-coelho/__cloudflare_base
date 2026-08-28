@@ -138,7 +138,7 @@ describe('recency leads, accumulation gates (D2)', () => {
     const { state, at } = session();
     // Horizons come from the dimension's own τ so the test survives retuning —
     // the demo clocks were slowed 4× so a profile survives a conversation.
-    const tau = cfg.dimensions.find((d) => d.key === 'line')!.tauMs;
+    const tau = cfg.dimensions.find((d) => d.key === 'line')!.tauMs ?? cfg.tauMs;
     const still = tick(state, at + tau / 8, cfg);
     expect(still.state.audiences).toContain(audienceKey('line', 'Drover'));
     expect(leadValue(still.state, 'line')).toBe('Linden');
