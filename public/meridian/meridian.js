@@ -201,7 +201,7 @@ function connect() {
 // ── The rest of the world ───────────────────────────────────────────────────
 function renderSurfaces() {
   $('surfaces').innerHTML = SURFACES[S.vertical].map((s) => `
-    <article class="surface" data-id="${s.id}">
+    <article class="surface" data-id="${s.id}" data-kind="${s.kind}">
       <div class="from">${s.from}</div>
       <div class="subj">${s.subject}</div>
       <div class="prev">${s.preview}</div>

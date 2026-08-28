@@ -70,7 +70,7 @@ body{
 /* the surfaces the presenter acts on */
 .surface{background:#FFFFFF;border:1px solid var(--p-line);border-left:5px solid var(--p-blue);border-radius:7px;
   padding:12px 13px;margin-bottom:9px;cursor:pointer;transition:border-color .15s,transform .15s}
-.surface:hover{border-color:var(--p-blue);transform:translateY(-1px)}
+.surface:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(20,30,50,.12)}
 .surface .from{font:600 11px/1 ui-monospace,monospace;letter-spacing:.09em;color:#0E5FBF;text-transform:uppercase}
 .surface .subj{font:600 14px/1.35 inherit;margin-top:6px;color:var(--p-text)}
 .surface .prev{font-size:13px;color:var(--p-dim);margin-top:4px;line-height:1.4}
@@ -699,7 +699,7 @@ body.has-director .page{padding-bottom:250px}
 /* ── Collapsible cause cards on the left ───────────────────────────────────
    A fired surface folds to one line and gives its height to the ledger.
    Click it again to open it back up. */
-.surface.done{padding:8px 12px;opacity:1;cursor:pointer;border-left-color:var(--changed)}
+.surface.done{padding:8px 12px;opacity:1;cursor:pointer}
 .surface.done .prev,.surface.done .act{display:none}
 .surface.done .subj{font-size:13px;margin-top:3px}
 .surface.done .from::after{content:'  ✓ fired';color:#0C5C35;letter-spacing:.02em;text-transform:none}
@@ -756,10 +756,10 @@ body.has-director .page{padding-bottom:250px}
 /* ── Why, always visible ───────────────────────────────────────────────────
    The one line the room reads sits under the header, at the top of the panel,
    in every state. It is the thing that was below the fold on a laptop. */
-.why-strip{flex:0 0 auto;background:#fff;border:1px solid var(--p-line);border-left:5px solid var(--p-blue);
+.why-strip{flex:0 0 auto;background:#EEE8FB;border:1px solid #C9BDEB;border-left:5px solid #5B3FBF;
   border-radius:7px;padding:9px 12px 10px;margin-bottom:10px;
   box-shadow:0 1px 0 rgba(23,26,32,.04), 0 6px 16px -12px rgba(23,26,32,.45)}
-.why-k{font:600 10.5px/1 ui-monospace,monospace;letter-spacing:.15em;text-transform:uppercase;color:var(--p-blue);margin-bottom:5px}
+.why-k{font:600 10.5px/1 ui-monospace,monospace;letter-spacing:.15em;text-transform:uppercase;color:#5B3FBF;margin-bottom:5px}
 .why-strip .sentence{background:none;border:0;padding:0;font:500 14px/1.45 inherit;color:var(--p-text);
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .tabbar .tab{padding:9px 4px;font-size:11.5px}
@@ -786,11 +786,11 @@ body.has-director .page{padding-bottom:250px}
   display:flex;flex-wrap:wrap;gap:6px 18px;align-items:flex-start}
 .dir-palette .cgroup{margin:0;display:flex;align-items:center;gap:8px}
 .dir-palette .clabel{margin:0;color:#8FA0B5;white-space:nowrap}
-.dir-palette .controls{display:flex;flex-wrap:wrap;gap:5px;margin:0}
-.dir-palette .controls button{min-height:0;padding:6px 9px;font:600 11.5px/1.2 inherit;border-radius:4px;
-  background:#1B2430;border:1px solid #2A3644;color:#EDF2F8;text-align:left;display:flex;flex-direction:column;gap:2px}
-.dir-palette .controls button small{font:500 9.5px/1 ui-monospace,monospace;opacity:.7;margin:0;letter-spacing:0}
-.dir-palette .controls button:hover{border-color:#7FB8FF;color:#fff}
+.dir-palette .controls{display:flex;flex-wrap:wrap;gap:7px;margin:0}
+.dir-palette .controls button{min-height:0;padding:6px 10px;font:600 11.5px/1.2 inherit;border-radius:5px;
+  background:#243A57;border:1px solid #6B8DBE;color:#F2F6FC;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.dir-palette .controls button small{font:500 9.5px/1 ui-monospace,monospace;opacity:.8;margin:0;letter-spacing:0;color:#C9D8EE}
+.dir-palette .controls button:hover{background:#2F4D74;border-color:#9CC1F5;color:#fff}
 .dir-palette .controls button.on{background:#7FB8FF;border-color:#7FB8FF;color:#08121f}
 .dir-palette .controls button.on small{opacity:.85}
 .dir-palette .controls button:disabled{opacity:.45;cursor:default}
@@ -946,3 +946,14 @@ body.has-director .world,body.has-director .engine{padding-bottom:var(--dir-h, 2
      animations in its clone, which blanked the hero in Compare's Now frame. */
 .hero.landed{border-top-color:var(--hl);
   box-shadow:0 22px 44px -4px var(--hl), 0 8px 18px -2px var(--hl)}
+
+/* ── SURFACES BY KIND — a pastel fill and a darker edge of the same hue, so the
+     eye knows "email / ad / text / partner form" before it reads a word. */
+.surface[data-kind="email"]{background:#E3EEFF;border-color:#B9CFF2;border-left-color:#1D5FD0}
+.surface[data-kind="email"] .from{color:#1D5FD0}
+.surface[data-kind="ad"]{background:#E2F6E6;border-color:#B5DEC0;border-left-color:#1E8A45}
+.surface[data-kind="ad"] .from{color:#1E8A45}
+.surface[data-kind="sms"]{background:#FCE6EA;border-color:#EFBCC6;border-left-color:#C4243D}
+.surface[data-kind="sms"] .from{color:#C4243D}
+.surface[data-kind="form"]{background:#FFEBD8;border-color:#F0C9A8;border-left-color:#C4571A}
+.surface[data-kind="form"] .from{color:#C4571A}
