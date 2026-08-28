@@ -248,11 +248,11 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **0:50** · C17 · LIVE
 
-**You do —** Point below the grid.
+**You do —** Point at the page. Nothing to press — it moved on the third coat.
 
-**They watch —** The editorial block changes — full width, slow, structural.
+**They watch —** The SECTIONS re-order. The product row has climbed above the hero — she is browsing coats, so the products lead and the campaign hero dropped to second. 700ms, slow enough to read as structural. The trail says "Which box comes first · The hero 1 → 2" and why.
 
-**You say —** Not what is inside the box. Which box comes first. One profile decides the merchandising and the storytelling, so they agree with each other instead of arguing.
+**You say —** Not what is inside the box — which box comes first. She is browsing coats, so the product row just climbed above the hero, and the campaign that brought her here dropped to second. Watch it again when she decides: the offer will climb to the very top. Same vector, same arithmetic, but the candidates are the sections of the page rather than the products in them. In our own documents this is the six-month tier. It is running.
 
 *Why 0:50:* The content beat is the one that separates this from a recommender. Worth a real pause.
 
@@ -278,7 +278,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You do —** Point at the offer band.
 
-**They watch —** A white-glove offer with a countdown. Service, not a discount.
+**They watch —** A white-glove offer with a countdown — and it climbed to the TOP of the page the moment she decided. Service, not a discount.
 
 **You say —** That clock is not a marketing timer. It runs to the instant the engine calculates her intent crosses back under its threshold — so it cannot be extended, and when it ends it will tell you the number that ended it.
 

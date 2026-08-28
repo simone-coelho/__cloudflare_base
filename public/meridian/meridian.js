@@ -8,8 +8,10 @@
 
 import { SURFACES, KIND_LABEL } from '/meridian/surfaces.js';
 import { BEATS, ACTS } from '/meridian/beats.js';
+import { captureBaseline, openCompare, clearBaseline } from '/meridian/compare.js';
+import { paintLayout } from '/meridian/layout.js';
 import {
-  compose, SHAPE_OF_KEY, SHAPE_ORDER, SLOT_STRATEGIES, configFor, packshot,
+  compose, composeLayout, SHAPE_OF_KEY, SHAPE_ORDER, SLOT_STRATEGIES, configFor, packshot,
   apply, tick, snapshot, emptyState, extractTouches,
   stageTouchFor, decidingValueFor, stageKeyFor, expiryOf, audienceKey,
 } from '/meridian/engine.bundle.js';
@@ -657,9 +659,23 @@ function recompose(first) {
                          config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
                          anchorId: S.anchorId, decidingValue: decidingValueFor(S.vertical) });
   const prev = S.decisions; S.decisions = next;
+
+  // WHICH BOX COMES FIRST. The same snapshot ranks the SECTIONS: the offer
+  // answers price band + stage, the row answers the narrow interest, the hero
+  // answers breadth + taste. Doc 15's order — intent stage, then weight, then
+  // template — with hysteresis so nothing flaps. This is the six-month tier in
+  // the Tapestry documents, built.
+  const prevLayout = S.layout;
+  S.layout = composeLayout({
+    affinity: snap, config: S.config, shapeOfKey: SHAPE_OF_KEY,
+    prevOrder: prevLayout?.order, locked: $('takeover').hidden ? [] : ['takeover'],
+  });
+  const rankOf = (lay, id) => lay?.sections.find((x) => x.section === id)?.rank;
+  const rowMoved = !!prevLayout && rankOf(prevLayout, 'row') !== rankOf(S.layout, 'row');
+
   announceRetreat(prev, next);
   paintBars(snap.dims);
-  paint(prev, next, first);
+  paint(prev, next, first, rowMoved);
 
   // Published audiences join the chip row alongside the generated ones.
   for (const k of publishedMemberships(snap)) if (!S.audiences.has(k)) {
@@ -668,6 +684,18 @@ function recompose(first) {
   const coldTag = $('cold-behaviour');
   if (coldTag) coldTag.textContent = S.behaved ? 'superseded by behaviour' : 'behaviour none';
   checkOffer(); offerTick();
+  const movedSections = first ? [] : paintLayout(S.layout.order, { duration: 700 });
+  if (movedSections.length) {
+    const top = S.layout.sections.filter((x) => x.strategy !== 'locked' && x.strategy !== 'template')
+      .sort((a, b) => a.rank - b.rank)[0];
+    consequence('Which box comes first',
+      movedSections.map((m) => `${SECTION_NAME[m.section] || m.section} ${m.from} → ${m.to}`).join(' · '),
+      top?.explain?.movedBecause || 'The sections re-ordered on the same vector that ranks the products.');
+    S.sayLockUntil = Date.now() + 5000;
+    $('sentence').textContent = top
+      ? `${SECTION_NAME[top.section] || top.section} leads the page — ${top.explain.movedBecause}`
+      : 'The page re-ordered its sections.';
+  }
   renderGlass(pick(next, 'hero'));
   captureDecisions(next);
   const n = S.audiences.size, dims = Object.keys(snap.dims).length;
@@ -691,7 +719,11 @@ function renderGlass(d) {
            `${beat ? ` vs ${chosenScore.toFixed(4)} for the item we showed — it would have won` : ''}, ` +
            `declined by rule: ${r.gate}</span>`;
   }).join('');
-  $('glass-body').innerHTML =
+  const lay = S.layout ? `<b>section order</b> ${S.layout.order.filter((x) => x !== 'takeover').map((x) => SECTION_NAME[x] || x).join(' → ')}<br>`
+    + (S.layout.sections.find((x) => x.strategy === 'stage' || x.strategy === 'affinity')
+      ? `<b>moved because</b> ${S.layout.sections.filter((x) => x.strategy === 'stage' || x.strategy === 'affinity').sort((a, b) => a.rank - b.rank)[0].explain.movedBecause}<br>` : '')
+    : '';
+  $('glass-body').innerHTML = lay +
     `<b>chosen</b> ${it ? it.name : '—'}<br>` +
     `<b>strategy</b> ${d.strategy}${d.strategy === 'pin' ? '<span class="pin">pinned · ranking skipped</span>' : ''}<br>` +
     `<b>candidates</b> ${e.candidates ?? 0} eligible<br>` +
@@ -712,7 +744,7 @@ function renderGlass(d) {
   }
 }
 
-function paint(prev, next, first) {
+function paint(prev, next, first, rowMoved = false) {
   const heroChanged = pick(prev, 'hero')?.itemId !== pick(next, 'hero')?.itemId || S.heroDirty;
   S.heroDirty = false;
   const nextRow = next.filter((d) => d.slot === 'row').map((d) => d.itemId);
@@ -720,7 +752,7 @@ function paint(prev, next, first) {
   const rowChanged = JSON.stringify(prevRow) !== JSON.stringify(nextRow);
 
   if (first || heroChanged) swap($('hero'), () => paintHero(pick(next, 'hero')), first);
-  if (first || rowChanged) paintRow(next.filter((d) => d.slot === 'row'), prevRow, first);
+  if (first || rowChanged || rowMoved) paintRow(next.filter((d) => d.slot === 'row'), prevRow, first, rowMoved);
   if (first || pick(prev, 'block_a')?.blockId !== pick(next, 'block_a')?.blockId) {
     swap($('block_a'), () => paintBlock(pick(next, 'block_a')), first);
   }
@@ -940,10 +972,12 @@ function highlightMovers(movers, holdMs) {
   }, holdMs);
 }
 
-function paintRow(ds, prevIds, first) {
+function paintRow(ds, prevIds, first, rowMoved = false) {
   const row = $('row');
   if (first) { ROW.nodes.clear(); row.innerHTML = ''; ROW.lastMovers = []; }
-  const geometryBefore = first ? new Map() : captureRow();
+  // A parent section translating in the same frame would add its delta to
+  // every card's — so the card FLIP stands down when the section itself moves.
+  const geometryBefore = (first || rowMoved) ? new Map() : captureRow();
   const rankBefore = new Map(prevIds.map((id, i) => [id, i + 1]));
   const items = ds.map((d) => byId(d.itemId)).filter(Boolean);
   const hues = distinctHues(items);
@@ -1064,6 +1098,7 @@ function renderChips(entered, exited) {
 }
 
 const SURFACE_NAME = { hero: 'The hero', row: 'The product row', block_a: 'The story' };
+const SECTION_NAME = { hero: 'The hero', offer: 'The offer', row: 'The product row', block_a: 'The story', takeover: 'The takeover' };
 
 /**
  * The staircase, narrated. Each dimension carries its own decay constant, so a
@@ -1255,7 +1290,7 @@ function captureDecisions(ds) {
   lastCaptured = sig;
   clearTimeout(captureTimer);
   captureTimer = setTimeout(() => {
-    post('/decisions', { vertical: S.vertical, decisions: ds,
+    post('/decisions', { vertical: S.vertical, decisions: ds, sections: S.layout?.sections ?? [],
                          arrivalSurface: S.heroOverride?.from ?? null, demoRunId: S.runId });
   }, 400);
 }
@@ -1290,6 +1325,16 @@ $('btn-radar').onclick = async () => {
 };
 $('rad-close').onclick = () => $('radar').classList.remove('open');
 $('btn-replay').onclick = () => { if (ROW.lastMovers.length) highlightMovers(ROW.lastMovers, 10000); };
+// Compare captures pixels, so whatever "changed" highlight is on the page at
+// capture time is in the frame — before and after can be held side by side
+// three minutes later, which is the reason the tool exists.
+$('btn-capture').onclick = async () => {
+  const r = await captureBaseline($('page'));
+  $('btn-capture').classList.toggle('on', !!r.ok);
+  $('btn-capture').innerHTML = r.ok ? 'Baseline captured<small>compare when ready</small>' : 'Capture baseline<small>freeze the page now</small>';
+  if (r.ok) consequence('Compare', 'Baseline captured', 'Compare will show this frame against whatever the page looks like then.');
+};
+$('btn-compare').onclick = () => openCompare($('page'));
 $('btn-conc').onclick = () => { $('conc').classList.add('open'); $('conc-q').focus(); };
 $('conc-close').onclick = () => $('conc').classList.remove('open');
 $('conc-reset').onclick = () => {
@@ -1857,6 +1902,8 @@ $('btn-return').onclick = () => location.reload();   // same id, same object, sa
 $('btn-reset').onclick = async () => {
   await post('/reset', {}); S.seq = -1;
   await load(S.vertical); connect();
+  clearBaseline(); $('btn-capture').classList.remove('on');
+  $('btn-capture').innerHTML = 'Capture baseline<small>freeze the page now</small>';
   $('takeover').hidden = true; $('hero').style.display = '';
 };
 

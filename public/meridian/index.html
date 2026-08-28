@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/meridian/meridian.css">
+<link rel="stylesheet" href="/meridian/compare.css">
 </head>
 <body>
 <div class="stage">
@@ -42,7 +43,7 @@
         <nav id="nav"></nav>
       </div>
 
-      <section class="takeover" id="takeover" hidden>
+      <section class="takeover" id="takeover" data-section="takeover" hidden>
         <div class="tk-art" id="tk-art"></div>
         <div class="tk-copy">
           <div class="tk-chip">SIMULATED · partner social-listening layer, not Optimizely</div>
@@ -59,7 +60,7 @@
            "in and out of an audience" that had no on-page voice here. -->
       <div class="strip" id="strip" hidden><span class="strip-k" id="strip-k"></span><span id="strip-t"></span></div>
 
-      <section class="hero zone" id="hero" data-label="PERSONALIZED · HERO">
+      <section class="hero zone" id="hero" data-section="hero" data-label="PERSONALIZED · HERO">
         <div class="hero-copy">
           <div class="kicker" id="hero-kicker">Welcome</div>
           <h2 id="hero-title">Made to be kept</h2>
@@ -69,7 +70,7 @@
         <div class="hero-art" id="hero-art"></div>
       </section>
 
-      <section class="offer" id="offer" hidden>
+      <section class="offer" id="offer" data-section="offer" hidden>
         <div class="offer-main">
           <div class="offer-kick" id="offer-kick"></div>
           <div class="offer-title" id="offer-title"></div>
@@ -78,15 +79,15 @@
         <div class="offer-clock" id="offer-clock"></div>
       </section>
 
-      <div class="row-head">
+      <div class="row-head" data-follows="row">
         <h3 id="row-title">Selected for you</h3>
         <span id="row-note">the same order every shopper sees</span>
       </div>
-      <section class="sortzone zone" id="sortzone" data-label="PERSONALIZED · RANKING">
+      <section class="sortzone zone" id="sortzone" data-section="row" data-label="PERSONALIZED · RANKING">
         <div class="row" id="row"></div>
       </section>
 
-      <section class="zone" id="block_a" data-label="PERSONALIZED · CONTENT"></section>
+      <section class="zone" id="block_a" data-section="block_a" data-label="PERSONALIZED · CONTENT"></section>
 
     </div>
   </main>
@@ -161,6 +162,12 @@
             <button id="bz-coats">Three coats<small>Outerwear · 3 clicks</small></button>
             <button id="bz-bags">Wanders to bags<small>Bags · 2 clicks</small></button>
             <button id="bz-decide">Adds to bag<small>the hero item</small></button>
+          </div>
+        </div>
+        <div class="cgroup"><span class="clabel">Compare</span>
+          <div class="controls">
+            <button id="btn-capture">Capture baseline<small>freeze the page now</small></button>
+            <button id="btn-compare">Compare<small>before vs now</small></button>
           </div>
         </div>
         <div class="cgroup"><span class="clabel">Merchandiser</span>

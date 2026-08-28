@@ -141,7 +141,7 @@ body{
 }
 .card.landed{animation:landflash 900ms cubic-bezier(.2,.7,.3,1)}
 @keyframes landflash{
-  0%{box-shadow:0 0 0 6px color-mix(in srgb,var(--hue) 55%,transparent)}
+  0%{box-shadow:0 0 0 6px rgba(20,196,106,.55)}
   100%{box-shadow:0 1px 0 rgba(28,26,23,.04), 0 6px 18px -12px rgba(28,26,23,.35)}
 }
 .card .rank{position:absolute;top:10px;left:10px;z-index:2;width:26px;height:26px;border-radius:50%;
@@ -398,7 +398,7 @@ table.rec tr:hover td{background:var(--paper);color:var(--ink)}
   border-radius:5px;padding:9px 11px;margin-bottom:12px;max-width:74ch}
 .conc-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
 .conc-it{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
-.conc-it .art{aspect-ratio:1;background:color-mix(in srgb,var(--hue) 12%,#fff);display:grid;place-items:center}
+.conc-it .art{aspect-ratio:1;background:#F4F5F7;display:grid;place-items:center}
 .conc-it .art svg{width:74%;height:74%}
 .conc-it .nm{font-size:13.5px;padding:9px 10px 3px;line-height:1.3}
 .conc-it .mt{font:400 11.5px/1 ui-monospace,monospace;color:var(--muted);padding:0 10px 10px}
@@ -489,7 +489,7 @@ body.has-director .page{padding-bottom:250px}
    own accent IS the card — which makes it trackable through a re-rank for free. */
 .fin-card{
   width:calc(100% - 26px); margin:13px; aspect-ratio:1.5/1; border-radius:9px; position:relative;
-  background:linear-gradient(145deg, var(--h) 0%, color-mix(in srgb, var(--h) 62%, #101418) 100%);
+  background:linear-gradient(145deg, var(--h) 0%, var(--h) 40%, rgba(16,20,24,.55) 100%), var(--h);
   box-shadow:0 10px 22px -12px rgba(16,20,24,.6), inset 0 1px 0 rgba(255,255,255,.22);
   padding:11px 12px; display:flex; flex-direction:column; justify-content:flex-end; gap:2px;
   color:#fff; overflow:hidden;
