@@ -1,0 +1,724 @@
+// Meridian — the presenter surface.
+//
+// RULE ONE, inherited from the First National Bank demo: no visual beat ever
+// awaits the network. Every click applies to a local mirror of the affinity
+// vector using the SAME apply() the Durable Object runs, repaints immediately,
+// and is then reconciled by the authoritative server frame. Unplug the network
+// mid-demo and the page keeps deciding correctly.
+
+import { BEATS } from '/meridian/beats.js';
+import {
+  compose, SHAPE_OF_KEY, SHAPE_ORDER, configFor,
+  apply, tick, snapshot, emptyState, extractTouches,
+} from '/meridian/engine.bundle.js';
+
+const API = '/meridian/api';
+const FADE = 300;
+
+// ── Identity: our own namespace, never the origin-wide opt_* keys ───────────
+const VID = (() => {
+  let v = localStorage.getItem('mrd_visitor_id');
+  if (!v) { v = 'mrd-' + crypto.randomUUID(); localStorage.setItem('mrd_visitor_id', v); }
+  return v;
+})();
+
+const $ = (id) => document.getElementById(id);
+const post = (path, body) =>
+  fetch(API + path, {
+    method: 'POST', credentials: 'omit',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ visitorId: VID, ...body }),
+  }).then((r) => r.json()).catch(() => null);
+
+/** ?region=NC overrides detection. The venue-wifi net — rehearse with it. */
+const OVERRIDE = new URLSearchParams(location.search).get('region');
+
+const S = {
+  vertical: 'retail',
+  items: [], blocks: [], registry: null, config: null,
+  reflex: null,            // the local mirror
+  audiences: new Set(),
+  decisions: [],
+  seq: -1,
+  ws: null,
+  captured: null,
+  sceneCount: null,
+  scenes: [],
+};
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+async function load(vertical) {
+  const r = await fetch(`${API}/catalog?vertical=${vertical}`, { credentials: 'omit' }).then((x) => x.json());
+  S.vertical = vertical;
+  S.items = r.items; S.blocks = r.blocks; S.registry = r.registry;
+  S.config = configFor(vertical);
+  S.reflex = emptyState(S.config);
+  S.audiences = new Set();
+  document.documentElement.dataset.vertical = vertical;
+  $('biz').textContent = vertical === 'retail' ? '& Co.' : 'Financial';
+  $('nav').innerHTML = (vertical === 'retail'
+    ? ['Bags', 'Tools', 'Games', 'Apparel', 'Home']
+    : ['Mortgage', 'Auto', 'Card', 'Savings', 'Investing']
+  ).map((n, i) => (i === 0 ? `<b>${n}</b>` : `<span>${n}</span>`)).join('');
+  $('row-title').textContent = vertical === 'retail' ? 'Selected for you' : 'Suited to you';
+  $('nav').querySelectorAll('span,b').forEach((el) => {
+    el.style.cursor = 'pointer';
+    el.onclick = () => browse(el.textContent);
+  });
+  $('cfgv').textContent = r.registry.version;
+  const sc = await fetch(`${API}/scenes?vertical=${vertical}`, { credentials: 'omit' })
+    .then((x) => x.json()).catch(() => null);
+  S.scenes = sc?.scenes ?? [];
+  S.sceneCount = S.scenes.length || null;
+  $('q').placeholder = vertical === 'retail'
+    ? 'Ask for what you need… "a graduation gift under $150"'
+    : 'Ask for what you need… "buying our first house"';
+  renderBars(); renderChips([], []); recompose(true);
+  await seedColdStart();
+}
+
+/**
+ * Cold start. The region comes from the connection, the census figures are
+ * published ACS, and the band prior is arithmetic over the two — so a visitor
+ * who has done nothing still gets a page that is about somewhere real.
+ */
+async function seedColdStart() {
+  const q = new URLSearchParams({ vertical: S.vertical });
+  if (OVERRIDE) q.set('region', OVERRIDE);
+  const cs = await fetch(`${API}/coldstart?${q}`, { credentials: 'omit' })
+    .then((r) => r.json()).catch(() => null);
+  if (!cs?.ok) return;
+  renderColdStart(cs);
+  if (!cs.prior) return;
+
+  const touches = [{ dim: cs.prior.dim, value: cs.prior.value }];
+  const res = apply(S.reflex, { action: 'prior', touches }, Date.now(), S.config);
+  S.reflex = res.state;
+  absorb(res.changes, 'local');
+  recompose();
+  post('/action', { vertical: S.vertical, events: [{ action: 'prior', touches }] });
+  consequence('Cold start', cs.prior.why,
+    `${cs.census.source} · ${cs.census.label}. No behaviour yet — this is geography and public data only.`);
+}
+
+function renderColdStart(cs) {
+  const el = $('coldstart');
+  if (!cs.census) { el.innerHTML = '<div class="cs-note">No census row for this location — starting flat.</div>'; return; }
+  const c = cs.census;
+  const money = (n) => (n == null ? '—' : '$' + n.toLocaleString('en-US'));
+  el.innerHTML = `
+    <div class="cs-row"><span>Resolved at the edge</span><b>${[cs.geo.city, cs.geo.region, cs.geo.country].filter(Boolean).join(', ') || 'unknown'}${cs.overridden ? ' (override)' : ''}</b></div>
+    <div class="cs-row"><span>${c.label}</span><b>${c.source}</b></div>
+    <div class="cs-row"><span>Median household income</span><b>${money(c.medianHhIncomeUsd)}</b></div>
+    <div class="cs-row"><span>Median home value</span><b>${money(c.medianHomeValueUsd)}</b></div>
+    ${cs.prior ? `<div class="cs-why"><b>${cs.prior.dim} → ${cs.prior.value}</b><br>${cs.prior.why}</div>` : ''}
+    <div class="cs-tags">
+      <span class="tg ok">geo real</span><span class="tg ok">census real</span>
+      <span class="tg dv">prior derived</span><span class="tg no">behaviour none</span>
+    </div>`;
+}
+
+function connect() {
+  if (S.ws) try { S.ws.close(); } catch {}
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}${API}/ws?visitorId=${VID}&vertical=${S.vertical}`);
+  ws.onmessage = (e) => { try { onFrame(JSON.parse(e.data)); } catch {} };
+  ws.onclose = () => setTimeout(connect, 2500);
+  S.ws = ws;
+}
+
+// ── Signals ─────────────────────────────────────────────────────────────────
+/**
+ * One shopper action. Applies locally FIRST so the page answers within the click,
+ * then tells the engine. The server frame arrives a moment later and wins.
+ */
+function signal(action, record, label) {
+  if (record) {
+    const touches = extractTouches(record, S.config);
+    const res = apply(S.reflex, { action, touches }, Date.now(), S.config);
+    S.reflex = res.state;
+    absorb(res.changes, 'local');
+  }
+  recompose();
+  post('/action', {
+    vertical: S.vertical,
+    events: [{ action, itemId: record?.id?.startsWith('MRD-B') ? undefined : record?.id,
+               blockId: record?.id?.startsWith('MRD-B') ? record.id : undefined }],
+  });
+  if (label) consequence(label.head, label.msg, label.sub);
+}
+
+/** A category browse. Not a product view — one honest touch on one dimension. */
+function browse(category) {
+  $('nav').innerHTML = [...$('nav').children]
+    .map((el) => (el.textContent === category ? `<b>${el.textContent}</b>` : `<span>${el.textContent}</span>`)).join('');
+  $('nav').querySelectorAll('span,b').forEach((el) => {
+    el.style.cursor = 'pointer'; el.onclick = () => browse(el.textContent);
+  });
+  const dim = S.registry.dimensions.find((d) => d.shape === 'broad').key;
+  const touches = [{ dim, value: category }];
+  const res = apply(S.reflex, { action: 'view', touches }, Date.now(), S.config);
+  S.reflex = res.state;
+  absorb(res.changes, 'local');
+  recompose();
+  post('/action', { vertical: S.vertical, events: [{ action: 'view', touches }] });
+}
+
+function onFrame(f) {
+  if (f.type !== 'meridian_update') return;
+  if (f.seq <= S.seq && f.source !== 'snapshot') return;   // drop out-of-order
+  S.seq = f.seq;
+  // The server is authoritative, so ADOPT ITS STATE — not just its numbers.
+  // Everything downstream (bars, composition, the decay animation) then reads
+  // from one mirror instead of the bars showing server values while the page
+  // composes from a local copy that has quietly drifted.
+  if (f.state) S.reflex = f.state;
+  const before = new Set(S.audiences);
+  S.audiences = new Set(f.affinity.audiences);
+  const entered = f.changes.entered.filter((a) => !before.has(a));
+  const exited = f.changes.exited.filter((a) => before.has(a));
+  if (entered.length || exited.length) {
+    renderChips(entered, exited);
+    (f.explain || []).forEach(record);
+    if (f.source === 'alarm') {
+      consequence('Decay', `Interest fell below the exit threshold — ${exited.join(', ')}`,
+        'No one clicked anything. The engine let go on its own.');
+    }
+  }
+  recompose();   // paints bars from the adopted mirror via the shared path
+}
+
+function absorb(changes, origin) {
+  changes.entered.forEach((a) => S.audiences.add(a));
+  changes.exited.forEach((a) => S.audiences.delete(a));
+  if (origin === 'local' && (changes.entered.length || changes.exited.length)) {
+    renderChips(changes.entered, changes.exited);
+    changes.explain.forEach(record);
+  }
+}
+
+// ── Composition: pure, local, instant ───────────────────────────────────────
+function recompose(first) {
+  const snap = snapshot(S.reflex, Date.now(), S.config);
+  paintBars(snap.dims);   // one source of truth for the instrument and the page
+  const next = compose({
+    affinity: snap, items: S.items, blocks: S.blocks,
+    config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 6,
+  });
+  const prev = S.decisions;
+  S.decisions = next;
+  announceRetreat(prev, next);
+  paint(prev, next, first);
+  const n = S.audiences.size;
+  const dims = Object.keys(snap.dims).length;
+  // Three states, not two. The middle one matters: the page has already changed
+  // while every dimension is still inside the hysteresis band, which is exactly
+  // what the band is for — reacting is not the same as committing.
+  $('eng-status').textContent =
+    dims === 0 ? 'Cold start — nothing observed yet'
+    : n === 0  ? `Learning — ${dims} dimension${dims === 1 ? '' : 's'} moving, none past the entry threshold yet`
+    :            `${n} audience${n === 1 ? '' : 's'} · ${dims} dimension${dims === 1 ? '' : 's'} active`;
+}
+
+const SURFACE_NAME = { hero: 'The hero', rail: 'The rail', row: 'The product row',
+                       block_a: 'The lead story', block_b: 'The second story' };
+
+/**
+ * The staircase, narrated. Each dimension has its own decay constant, so a
+ * single stretch of inactivity produces several separate retreats — narrow
+ * interest is forgotten before broad interest, which goes before the underlying
+ * need. Each one is a different surface on the page giving up its claim, and
+ * naming which surface and why is the whole beat.
+ */
+function announceRetreat(prev, next) {
+  if (!prev.length) return;
+  const was = new Map(prev.map((d) => [d.slot + ':' + d.order, d.strategy]));
+  const seen = new Set();
+  for (const d of next) {
+    if (seen.has(d.slot)) continue;
+    const before = was.get(d.slot + ':' + d.order);
+    if (before === 'affinity' && (d.strategy === 'fading' || d.strategy === 'fallback')) {
+      seen.add(d.slot);
+      const drv = d.explain.drivers?.[0];
+      consequence(`${SURFACE_NAME[d.slot] ?? d.slot} stopped claiming`,
+        drv ? `${drv.dim} affinity fell to ${d.explain.confidence?.toFixed(3)} — under its exit threshold of ${d.explain.thetaOut}`
+            : 'the signal behind it fell below its exit threshold',
+        'It still ranks. It is no longer entitled to say the visitor is the reason.');
+    }
+  }
+}
+
+const byId = (id) => S.items.find((i) => i.id === id) || S.blocks.find((b) => b.id === id);
+const pick = (ds, slot) => ds.find((d) => d.slot === slot);
+const money = (n) => '$' + n.toLocaleString('en-US');
+
+function paint(prev, next, first) {
+  const heroChanged = pick(prev, 'hero')?.itemId !== pick(next, 'hero')?.itemId;
+  const railChanged = pick(prev, 'rail')?.itemId !== pick(next, 'rail')?.itemId;
+  const rowChanged = JSON.stringify(prev.filter((d) => d.slot === 'row').map((d) => d.itemId))
+                   !== JSON.stringify(next.filter((d) => d.slot === 'row').map((d) => d.itemId));
+
+  if (first || heroChanged) swap($('hero'), () => paintHero(pick(next, 'hero')), first);
+  if (first || railChanged) swap($('rail'), () => paintRail(pick(next, 'rail')), first);
+  if (first || rowChanged) {
+    const prevIds = prev.filter((d) => d.slot === 'row').map((d) => d.itemId);
+    swap($('row'), () => paintRow(next.filter((d) => d.slot === 'row'), prevIds), first);
+  }
+  for (const slot of ['block_a', 'block_b']) {
+    if (first || pick(prev, slot)?.blockId !== pick(next, slot)?.blockId) {
+      swap($(slot), () => paintBlock($(slot), pick(next, slot)), first);
+    }
+  }
+}
+
+/** Fade out, replace, fade in, then a one-second glow. Slow enough to see. */
+function swap(el, render, instant) {
+  if (instant) { render(); return; }
+  el.classList.add('swapping');
+  setTimeout(() => {
+    render();
+    el.classList.remove('swapping');
+    el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+  }, FADE);
+}
+
+function paintHero(d) {
+  const it = d?.itemId && byId(d.itemId);
+  if (!it) return;
+  const generic = d.strategy === 'cold-start' || d.strategy === 'fallback';
+  const fading = d.strategy === 'fading';
+  $('hero').classList.toggle('faded', fading);
+  // The claim is the thing that gets withdrawn first. The item can still be a
+  // reasonable lead; "because of what you looked at" is what stops being true.
+  $('hero-kicker').textContent =
+    generic ? 'Welcome' : d.strategy === 'pin' ? 'Featured' : fading ? 'Featured' : 'Because of what you have looked at';
+  $('hero-title').textContent = generic
+    ? (S.vertical === 'retail' ? 'Everything for the way you live' : 'Banking that fits the year you are having')
+    : it.name;
+  $('hero-body').textContent = generic
+    ? 'Made well, priced honestly, and chosen for how you actually use it.'
+    : it.blurb;
+  $('hero-shot').textContent = it.name;
+  $('hero-cta').textContent = S.vertical === 'retail' ? 'See it' : 'See your rate';
+  $('hero-cta').onclick = () => signal('intent_start', it, {
+    head: 'Downstream', msg: S.vertical === 'retail' ? 'Added to bag — abandonment recovery armed' : 'Application started — specialist notified',
+    sub: 'The consequence of the click, not just the pixel change.',
+  });
+}
+
+function paintRail(d) {
+  const it = d?.itemId && byId(d.itemId);
+  if (!it) return;
+  const railClaims = d.strategy === 'affinity' || d.strategy === 'pin';
+  $('rail').classList.toggle('faded', d.strategy === 'fading');
+  $('rail-lbl').textContent = railClaims ? 'Because you just looked' : 'Popular here';
+  $('rail-nm').textContent = it.name;
+  $('rail-mt').textContent = `${it.category} · ${it.needs?.[0] ?? ''}`;
+  $('rail-cta').textContent = S.vertical === 'retail' ? 'Take a look' : 'Check eligibility';
+  $('rail-cta').onclick = () => signal('rail_click', it);
+}
+
+function paintRow(ds, prevIds = []) {
+  const claims = ds.some((d) => d.strategy === 'affinity');
+  $('row-note').textContent = claims
+    ? 'ranked by what you have shown interest in'
+    : 'our usual order';
+  $('row').classList.toggle('faded', ds.some((d) => d.strategy === 'fading') && !claims);
+  $('row').innerHTML = ds.map((d, i) => {
+    const it = byId(d.itemId); if (!it) return '';
+    const sub = S.vertical === 'retail' ? `${it.category} · ${it.subcategory}` : `${it.category} · ${it.subcategory}`;
+    const val = S.vertical === 'retail' ? money(it.value_usd)
+      : (it.rate_pct != null ? `${it.rate_pct.toFixed(2)}% APR` : 'See terms');
+    const moved = prevIds.length && prevIds[i] !== it.id;
+    return `<article class="tile${moved ? ' moved' : ''}" data-id="${it.id}">
+      <div class="ph"></div><div class="nm">${it.name}</div>
+      <div class="mt">${sub}</div><div class="pr">${val}</div></article>`;
+  }).join('');
+  $('row').querySelectorAll('.tile').forEach((el) => {
+    el.onclick = () => signal('row_click', byId(el.dataset.id));
+  });
+}
+
+function paintBlock(el, d) {
+  const b = d?.blockId && byId(d.blockId);
+  if (!b) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="block" data-id="${b.id}">
+    <span class="type">${b.contentType}</span>
+    <h4>${b.title}</h4><p>${b.kicker}</p></div>`;
+  el.querySelector('.block').onclick = () => signal('block_read', b);
+}
+
+// ── The instrument ──────────────────────────────────────────────────────────
+function renderBars() {
+  const dims = [...S.registry.dimensions].sort(
+    (a, b) => SHAPE_ORDER.indexOf(a.shape) - SHAPE_ORDER.indexOf(b.shape));
+  $('bars').innerHTML = dims.map((d) => `
+    <div class="bar" data-dim="${d.key}">
+      <div class="top"><span class="k">${d.key} <em id="v-${d.key}"></em></span>
+        <span class="a" id="a-${d.key}">0.000</span></div>
+      <div class="track">
+        <div class="band" style="left:${d.thetaOut * 100}%;width:${(d.thetaIn - d.thetaOut) * 100}%"></div>
+        <div class="fill" style="width:0%"></div>
+        <div class="tick out" style="left:${d.thetaOut * 100}%"></div>
+        <div class="tick in" style="left:${d.thetaIn * 100}%"></div>
+      </div>
+    </div>`).join('');
+}
+
+/** Strongest value per dimension. The band between the ticks is hysteresis, drawn. */
+function paintBars(dims) {
+  for (const spec of S.registry.dimensions) {
+    const per = dims?.[spec.key] || {};
+    let top = null, a = 0;
+    for (const [v, x] of Object.entries(per)) if (x > a) { a = x; top = v; }
+    const bar = document.querySelector(`.bar[data-dim="${spec.key}"]`);
+    if (!bar) continue;
+    bar.querySelector('.fill').style.width = `${Math.min(100, a * 100)}%`;
+    bar.classList.toggle('in', a >= spec.thetaIn);
+    bar.classList.toggle('warm', a >= spec.thetaOut && a < spec.thetaIn);
+    $(`a-${spec.key}`).textContent = a.toFixed(3);
+    $(`v-${spec.key}`).textContent = top ? `· ${top}` : '';
+  }
+}
+
+/** Between frames, keep drifting: decay is read-time math, so the bars fall on their own. */
+setInterval(() => {
+  if (!S.reflex || !S.config) return;
+  paintBars(snapshot(S.reflex, Date.now(), S.config).dims);
+}, 500);
+
+function renderChips(entered, exited) {
+  const el = $('chips');
+  const live = [...S.audiences];
+  if (!live.length && !exited.length) { el.innerHTML = '<span class="none">none yet</span>'; return; }
+  el.innerHTML =
+    live.map((a) => `<span class="chip${entered.includes(a) ? ' new' : ''}">${a}</span>`).join('') +
+    exited.map((a) => `<span class="chip gone">${a}</span>`).join('');
+  setTimeout(() => el.querySelectorAll('.chip.gone').forEach((n) => n.remove()), 1200);
+}
+
+function record(r) {
+  const el = document.createElement('div');
+  el.className = `rec ${r.direction}`;
+  el.innerHTML = `<div class="l1"><span class="d">${r.direction.toUpperCase()}</span> ${r.audience}</div>
+    <div class="l2">${r.dim} · ${r.value} · a=${r.score.toFixed(3)} · θin ${r.thetaIn} / θout ${r.thetaOut} · ${r.trigger}</div>`;
+  $('feed').prepend(el);
+  while ($('feed').children.length > 14) $('feed').lastChild.remove();
+}
+
+function consequence(head, msg, sub) {
+  const el = document.createElement('div');
+  el.className = 'cq';
+  el.innerHTML = `<div class="h">${head}</div><div class="m">${msg}</div>${sub ? `<div class="s">${sub}</div>` : ''}`;
+  $('conseq').prepend(el);
+  while ($('conseq').children.length > 5) $('conseq').lastChild.remove();
+}
+
+// ── Ask in language ─────────────────────────────────────────────────────────
+//
+// The model routes the sentence to one of a fixed set of scenes. It does not
+// pick the products — the same ranker that composes the page does that, using
+// the scene's dimension touches like any other signal. And it does not make the
+// picture: every still was approved before the demo started.
+
+$('search-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const query = $('q').value.trim();
+  if (!query) return;
+  const input = $('q');
+  const restore = input.placeholder;
+  input.disabled = true;
+  input.placeholder = 'reading that…';   // never dead air
+
+  const a = await fetch(`${API}/search`, {
+    method: 'POST', credentials: 'omit',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vertical: S.vertical, query }),
+  }).then((r) => r.json()).catch(() => null);
+  input.disabled = false;
+  input.placeholder = restore;
+  input.value = '';
+
+  // Neither the model nor the classifier recognised the words. Rather than
+  // showing nothing — or inventing a scene to fill the gap — answer from what
+  // the engine already knows about this visitor. "We did not follow the
+  // sentence, so we went with what you have shown us" is an honest answer, and
+  // it is a better one than an empty state.
+  if (!a?.scene) {
+    const fallback = pickSceneByAffinity();
+    if (!fallback) {
+      consequence('Search', `Nothing matched "${query}"`,
+        'The scene set is closed on purpose. Nothing was invented to fill the gap.');
+      return;
+    }
+    a = { ...a, ok: true, scene: fallback.scene, touches: [], source: 'affinity',
+          confidence: fallback.score, query };
+    consequence('Search', 'Words did not match a scene — answered from affinity instead',
+      'No scene was invented. The engine used what it already knew about this visitor.');
+    renderAnswer(a);
+    return;
+  }
+
+  // A search is a real signal. It goes through apply() at the search weight,
+  // exactly like a click, and it moves the page behind the modal.
+  const res = apply(S.reflex, { action: 'search', touches: a.touches }, Date.now(), S.config);
+  S.reflex = res.state;
+  absorb(res.changes, 'local');
+  recompose();
+  post('/action', { vertical: S.vertical, events: [{ action: 'search', touches: a.touches }] });
+
+  renderAnswer(a);
+  consequence('Search', `Routed to "${a.scene.id}" by the ${a.source === 'model' ? 'model' : 'local classifier'}`,
+    `${a.touches.map((t) => `${t.dim}=${t.value}`).join(', ')} · ${a.ms}ms${a.fellBack ? ' · model did not answer, fell back' : ''}`);
+};
+
+/** The strongest scene for the vector we already hold. No model involved. */
+function pickSceneByAffinity() {
+  if (!S.scenes?.length) return null;
+  const snap = snapshot(S.reflex, Date.now(), S.config);
+  let best = null;
+  for (const scene of S.scenes) {
+    let score = 0;
+    for (const t of scene.touches) score += snap.dims?.[t.dim]?.[t.value] ?? 0;
+    if (!best || score > best.score) best = { scene, score };
+  }
+  return best;
+}
+
+function renderAnswer(a) {
+  const ceiling = a.ceiling;
+  // Ranked by the SAME composer the page uses — searching does not switch engines.
+  const snap = snapshot(S.reflex, Date.now(), S.config);
+  const pool = ceiling ? S.items.filter((i) => i.value_usd <= ceiling) : S.items;
+  const ds = compose({ affinity: snap, items: pool, blocks: S.blocks, config: S.config,
+                       shapeOfKey: SHAPE_OF_KEY, rowSize: 6 });
+  const picks = ds.filter((d) => d.slot === 'row').map((d) => pool.find((i) => i.id === d.itemId)).filter(Boolean);
+
+  $('ans-art').style.backgroundImage = `url(${a.scene.art})`;
+  $('ans-kick').textContent = a.query;
+  $('ans-title').textContent = a.scene.headline;
+  $('ans-sub').textContent = a.scene.subhead;
+  $('ans-prov').innerHTML =
+    `Routed by the <b>${a.source === 'model' ? 'model' : a.source === 'affinity' ? 'engine (no word match)' : 'local classifier'}</b> to one of ` +
+    `<b>${S.sceneCount ?? '—'}</b> approved scenes · confidence <b>${a.confidence.toFixed(2)}</b> · <b>${a.ms}ms</b>` +
+    `${ceiling ? ` · ceiling <b>$${ceiling.toLocaleString('en-US')}</b>` : ''}<br>` +
+    `Signal applied: <b>${a.touches.map((t) => `${t.dim}=${t.value}`).join(', ')}</b>. ` +
+    `Products ranked by the engine, not by the model. Copy and artwork were written before this demo.`;
+  $('ans-grid').innerHTML = picks.map((it) => `
+    <article class="tile" data-id="${it.id}">
+      <div class="ph"></div><div class="nm">${it.name}</div>
+      <div class="mt">${it.category} · ${it.subcategory}</div>
+      <div class="pr">${S.vertical === 'retail' ? money(it.value_usd)
+        : (it.rate_pct != null ? it.rate_pct.toFixed(2) + '% APR' : 'See terms')}</div>
+    </article>`).join('');
+  $('ans-grid').querySelectorAll('.tile').forEach((el) => {
+    el.onclick = () => { signal('row_click', byId(el.dataset.id)); $('ans-back').classList.remove('open'); };
+  });
+  $('ans-back').classList.add('open');
+}
+$('ans-close').onclick = () => $('ans-back').classList.remove('open');
+
+// ── Compare: capture now, compare later ─────────────────────────────────────
+let h2c = null;
+async function html2canvasLib() {
+  if (h2c) return h2c;
+  await import('/html2canvas.min.js').catch(() => {});
+  if (!window.html2canvas) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = '/html2canvas.min.js'; s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  return (h2c = window.html2canvas);
+}
+
+/** Scroll position is pinned with the shot — two captures at different offsets
+    would not register, which is the defect that made the old slider unreliable. */
+async function capture() {
+  const lib = await html2canvasLib();
+  const el = $('shop');
+  const canvas = await lib(el, {
+    useCORS: true, backgroundColor: getComputedStyle(el).backgroundColor,
+    scale: Math.min(2, window.devicePixelRatio || 1),
+    height: el.clientHeight, y: el.scrollTop, scrollY: -el.scrollTop,
+  });
+  return { url: canvas.toDataURL('image/png'), scrollTop: el.scrollTop };
+}
+
+$('btn-capture').onclick = async () => {
+  const b = $('btn-capture');
+  b.textContent = 'capturing…'; b.disabled = true;
+  S.captured = await capture();
+  b.textContent = '⤢ Captured'; b.classList.add('on'); b.disabled = false;
+  consequence('Presenter', 'Baseline captured', 'Compare will fade between this and whatever the page looks like then.');
+};
+
+$('btn-compare').onclick = async () => {
+  if (!S.captured) return $('btn-capture').click();
+  $('shop').scrollTop = S.captured.scrollTop;   // register the two frames
+  await new Promise((r) => setTimeout(r, 120));
+  const now = await capture();
+  $('cmp-before').style.backgroundImage = `url(${S.captured.url})`;
+  $('cmp-after').style.backgroundImage = `url(${now.url})`;
+  const st = $('cmp-stage');
+  st.style.width = Math.min(window.innerWidth * 0.86, 1180) + 'px';
+  st.style.height = Math.min(window.innerHeight * 0.72, 760) + 'px';
+  $('cmp-back').classList.add('open');
+};
+
+(() => {
+  const st = $('cmp-stage');
+  let fade = true;
+  const setFade = (on) => {
+    fade = on; st.classList.toggle('fade', on);
+    $('cmp-mode').textContent = on ? 'Crossfade' : 'Wipe';
+    $('cmp-mode').classList.toggle('on', on);
+    $('cmp-hint').textContent = on ? 'drag to dissolve between them' : 'drag the seam across';
+  };
+  setFade(true);
+  $('cmp-mode').onclick = () => setFade(!fade);
+  $('cmp-close').onclick = () => $('cmp-back').classList.remove('open');
+  const move = (e) => {
+    const r = st.getBoundingClientRect();
+    const p = Math.max(0, Math.min(1, ((e.touches?.[0]?.clientX ?? e.clientX) - r.left) / r.width));
+    if (fade) st.style.setProperty('--fadeamt', String(1 - p));
+    else st.style.setProperty('--seam', `${p * 100}%`);
+  };
+  let down = false;
+  st.addEventListener('pointerdown', (e) => { down = true; move(e); });
+  window.addEventListener('pointermove', (e) => down && move(e));
+  window.addEventListener('pointerup', () => { down = false; });
+})();
+
+// ── Campaign arrival → a real experiment ────────────────────────────────────
+//
+// The signal is the arrival itself: paid traffic is landing, and two teams
+// disagree about what the hero should lead with. We create the experiment that
+// settles it — for real, in the real project, while the room watches.
+//
+// We do NOT show a bandit picking a winner or a lift figure. Results come from
+// traffic, this room will not generate traffic in 45 minutes, and saying that
+// out loud is stronger than any invented chart.
+
+const CAMPAIGN = (() => {
+  const p = new URLSearchParams(location.search);
+  const src = p.get('utm_source');
+  return src ? { source: src, campaign: p.get('utm_campaign') || 'unnamed' } : null;
+})();
+
+if (CAMPAIGN) {
+  $('btn-experiment').classList.add('on');
+  consequence('Campaign arrival',
+    `Paid traffic detected — utm_source=${CAMPAIGN.source}, campaign=${CAMPAIGN.campaign}`,
+    'The media buy is live. The hero strategy is now worth settling with a test rather than an argument.');
+}
+
+$('btn-experiment').onclick = async () => {
+  const b = $('btn-experiment');
+  b.disabled = true; b.textContent = 'creating…';
+  const r = await fetch(`${API}/experiment/dispatch`, {
+    method: 'POST', credentials: 'omit',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vertical: S.vertical, source: CAMPAIGN?.source ?? 'direct' }),
+  }).then((x) => x.json()).catch(() => null);
+  b.disabled = false; b.textContent = '⚡ Dispatch experiment';
+
+  if (!r) return consequence('Experiment', 'Dispatch failed to reach the worker', 'Nothing was created.');
+
+  if (r.simulated) {
+    // Say plainly that nothing was written. Never dress a no-op as a success.
+    consequence('Experiment — nothing written', r.reason,
+      `Would have created flag ${r.flagKey} with ${r.variations?.join(' vs ')}. Writes are gated off in this environment.`);
+    return;
+  }
+  if (!r.ok) {
+    consequence('Experiment refused', r.reason,
+      'Not downgraded to a rollout. A rollout is not a test, and claiming otherwise would be worse than failing.');
+    return;
+  }
+  consequence(r.created ? 'Experiment created in Optimizely' : 'Experiment already live — reused',
+    `${r.flagKey} · ${r.variations.join(' vs ')} · 50/50 · ${r.environment} · ${r.ms}ms`,
+    r.created
+      ? `Written to project ${r.projectId} just now. Open it in the Optimizely UI — it is really there.`
+      : `Found already live in project ${r.projectId} from an earlier run, so nothing was recreated. Open it and see.`);
+  const el = $('conseq').firstChild;
+  if (el && r.consoleUrl) {
+    const a = document.createElement('a');
+    a.href = r.consoleUrl; a.target = '_blank'; a.className = 'cq-link';
+    a.textContent = 'Open in Optimizely →';
+    el.appendChild(a);
+  }
+};
+
+// ── Controls ────────────────────────────────────────────────────────────────
+async function setVertical(v) {
+  if (v === S.vertical) return;
+  $('btn-retail').classList.toggle('on', v === 'retail');
+  $('btn-financial').classList.toggle('on', v === 'financial');
+  await post('/vertical', { vertical: v });
+  await load(v);
+  connect();
+  // Clear BOTH panels first: emptying the vector legitimately fires "stopped
+  // claiming" cards, but at the swap they are noise from the previous business.
+  $('feed').innerHTML = '';
+  $('conseq').innerHTML = '';
+  consequence('Same engine', `Catalog swapped to ${v === 'retail' ? 'Meridian & Co.' : 'Meridian Financial'}`,
+    'Six dimensions, same shapes, same thresholds. Only the vocabulary changed.');
+}
+$('btn-retail').onclick = () => setVertical('retail');
+$('btn-financial').onclick = () => setVertical('financial');
+$('btn-reset').onclick = async () => {
+  await post('/reset', {});
+  S.seq = -1; S.captured = null;
+  $('btn-capture').textContent = '⤢ Capture'; $('btn-capture').classList.remove('on');
+  $('feed').innerHTML = ''; $('conseq').innerHTML = '';
+  await load(S.vertical); connect();
+};
+
+// ── Demo Director ───────────────────────────────────────────────────────────
+//
+// A teleprompter and a stage manager. It advances the narrative and it may do
+// setup — reset the visitor, swap the catalog, capture a baseline — but it never
+// performs the demo. No beat clicks a product or fires a signal on the
+// presenter's behalf, because a room can tell the difference between a system
+// reacting and a system playing back, and the entire argument depends on them
+// believing what they just watched.
+
+let beatIx = 0;
+
+async function arm(beat) {
+  const a = beat.arm;
+  if (!a) return;
+  if (a.reset) await $('btn-reset').click();
+  if (a.vertical && a.vertical !== S.vertical) await setVertical(a.vertical);
+  if (a.compare) await $('btn-compare').click();
+}
+
+async function showBeat(i, runArm = true) {
+  beatIx = Math.max(0, Math.min(BEATS.length - 1, i));
+  const b = BEATS[beatIx];
+  $('dir-n').textContent = `${beatIx + 1}/${BEATS.length}`;
+  $('dir-title').textContent = b.title;
+  $('dir-do').textContent = b.do;
+  $('dir-say').textContent = b.say;
+  $('dir-watch').textContent = b.watch ? `watch for — ${b.watch}` : '';
+  if (runArm) await arm(b);
+}
+
+$('dir-next').onclick = () => showBeat(beatIx + 1);
+$('dir-prev').onclick = () => showBeat(beatIx - 1);
+$('dir-hide').onclick = () => $('director').classList.add('hidden');
+
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;          // never steal the search box
+  if (e.key === 'ArrowRight') showBeat(beatIx + 1);
+  else if (e.key === 'ArrowLeft') showBeat(beatIx - 1);
+  else if (e.key.toLowerCase() === 'd') $('director').classList.toggle('hidden');
+});
+
+await load('retail');
+connect();
+showBeat(0, false);   // beat 1 arms itself only when the presenter asks for it
+consequence('Cold start', 'No profile, no login, nothing observed',
+  'Everything below is built from behaviour in this session alone.');

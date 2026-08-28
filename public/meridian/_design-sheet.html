@@ -1,0 +1,187 @@
+<!doctype html><meta charset=utf-8><style>
+:root{--paper:#FBF9F5;--ink:#1C1A17;--muted:#6B6459;--line:#E6DFD4;--accent:#A8763F}
+body{background:var(--paper);color:var(--ink);font:15px/1.55 'Inter',ui-sans-serif,system-ui;margin:0;padding:36px 48px}
+h2{font:600 12px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+p.sub{margin:0 0 18px;color:var(--muted);font-size:13px}
+.zone{border:1px solid var(--line);border-radius:12px;background:#fff8;padding:20px;margin-bottom:34px;position:relative}
+.zone::after{content:attr(data-label);position:absolute;top:10px;right:12px;font:600 11px/1 ui-monospace,monospace;
+ letter-spacing:.12em;background:var(--accent);color:#fff;padding:4px 8px;border-radius:3px;opacity:.92}
+.row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.card{background:#fff;border:1px solid var(--line);border-top:6px solid var(--hue);border-radius:10px;overflow:hidden;position:relative}
+/* "this just changed" must NOT be the item's own hue — the hue is its identity,
+   and a ring in the same colour reads as more of the same card, not as news. */
+.card.moved{outline:3px solid var(--ink);outline-offset:-1px}
+.rank{position:absolute;top:10px;left:10px;z-index:2;width:26px;height:26px;border-radius:50%;
+ background:var(--hue);color:#fff;font:700 13px/26px ui-monospace,monospace;text-align:center}
+.delta{position:absolute;top:12px;right:10px;z-index:2;background:var(--ink);color:#fff;
+ font:700 11px/1 ui-monospace,monospace;padding:5px 7px;border-radius:3px;letter-spacing:.04em}
+.ph{aspect-ratio:4/5;background:#fff}.ph svg{width:100%;height:100%;display:block}
+.meta{padding:12px 14px 14px}
+.nm{font:500 17px/1.25 'Playfair Display',ui-serif,Georgia,serif}
+.mt{font-size:13px;color:var(--muted);margin-top:3px}
+.pr{font:600 19px/1 ui-monospace,monospace;margin-top:9px}
+</style>
+<h2>Before — the baseline order</h2><p class="sub">The same order every shopper sees.</p>
+<div class="zone" data-label="PERSONALIZED · RANKING"><div class="row">
+  <article class="card" style="--hue:#E2664F">
+    <div class="rank">1</div>
+    
+    <div class="ph"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Ashby Leather Crossbody">
+  <defs><linearGradient id="gMRDR001" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#E2664F" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#E2664F" stop-opacity=".13"/>
+  </linearGradient></defs>
+  <rect width="100" height="125" fill="url(#gMRDR001)"/>
+  <ellipse cx="50" cy="86" rx="26" ry="3.5" fill="#E2664F" opacity=".18"/>
+  <g fill="none" stroke="#E2664F" stroke-opacity=".72" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"><path d="M35 40 Q35 23 50 23 Q65 23 65 40"/><path d="M23 40 L77 40 L72 79 L28 79 Z"/></g>
+</svg></div>
+    <div class="meta"><div class="nm">Ashby Leather Crossbody</div><div class="mt">Bags · leather</div>
+    <div class="pr">$248</div></div>
+  </article>
+  <article class="card" style="--hue:#4A5FA8">
+    <div class="rank">2</div>
+    
+    <div class="ph"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Bay Packable Tote">
+  <defs><linearGradient id="gMRDR005" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#4A5FA8" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#4A5FA8" stop-opacity=".13"/>
+  </linearGradient></defs>
+  <rect width="100" height="125" fill="url(#gMRDR005)"/>
+  <ellipse cx="50" cy="86" rx="26" ry="3.5" fill="#4A5FA8" opacity=".18"/>
+  <g fill="none" stroke="#4A5FA8" stroke-opacity=".72" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"><path d="M35 40 Q35 23 50 23 Q65 23 65 40"/><path d="M23 40 L77 40 L72 79 L28 79 Z"/></g>
+</svg></div>
+    <div class="meta"><div class="nm">Bay Packable Tote</div><div class="mt">Bags · canvas</div>
+    <div class="pr">$88</div></div>
+  </article>
+  <article class="card" style="--hue:#1F6B64">
+    <div class="rank">3</div>
+    
+    <div class="ph"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Cable Fisherman Sweater">
+  <defs><linearGradient id="gMRDR012" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#1F6B64" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#1F6B64" stop-opacity=".13"/>
+  </linearGradient></defs>
+  <rect width="100" height="125" fill="url(#gMRDR012)"/>
+  <ellipse cx="50" cy="86" rx="26" ry="3.5" fill="#1F6B64" opacity=".18"/>
+  <g fill="none" stroke="#1F6B64" stroke-opacity=".72" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"><path d="M33 33 L67 33 L69 72 L31 72 Z"/><path d="M42 33 Q50 41 58 33"/><path d="M33 33 L21 58 L29 63"/><path d="M67 33 L79 58 L71 63"/></g>
+</svg></div>
+    <div class="meta"><div class="nm">Cable Fisherman Sweater</div><div class="mt">Knitwear · wool</div>
+    <div class="pr">$165</div></div>
+  </article>
+  <article class="card" style="--hue:#8B5288">
+    <div class="rank">4</div>
+    
+    <div class="ph"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Pave Drop Earrings">
+  <defs><linearGradient id="gMRDR022" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#8B5288" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#8B5288" stop-opacity=".13"/>
+  </linearGradient></defs>
+  <rect width="100" height="125" fill="url(#gMRDR022)"/>
+  <ellipse cx="50" cy="86" rx="26" ry="3.5" fill="#8B5288" opacity=".18"/>
+  <g fill="none" stroke="#8B5288" stroke-opacity=".72" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="57" r="23"/><path d="M43 30 L50 18 L57 30 Z"/></g>
+</svg></div>
+    <div class="meta"><div class="nm">Pave Drop Earrings</div><div class="mt">Jewellery · metal</div>
+    <div class="pr">$395</div></div>
+  </article>
+  <article class="card" style="--hue:#9B3F5E">
+    <div class="rank">5</div>
+    
+    <div class="ph"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Acetate Aviator">
+  <defs><linearGradient id="gMRDR031" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#9B3F5E" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#9B3F5E" stop-opacity=".13"/>
+  </linearGradient></defs>
+  <rect width="100" height="125" fill="url(#gMRDR031)"/>
+  <ellipse cx="50" cy="86" rx="26" ry="3.5" fill="#9B3F5E" opacity=".18"/>
+  <g fill="none" stroke="#9B3F5E" stroke-opacity=".72" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"><circle cx="33" cy="53" r="14"/><circle cx="67" cy="53" r="14"/><path d="M47 51 Q50 46 53 51"/><path d="M19 48 L13 43"/><path d="M81 48 L87 43"/></g>
+</svg></div>
+    <div class="meta"><div class="nm">Acetate Aviator</div><div class="mt">Eyewear · acetate</div>
+    <div class="pr">$215</div></div>
+  </article></div></div>
+<h2>After — re-ranked for this shopper</h2><p class="sub">Only the cards that moved are marked, and they say how far.</p>
+<div class="zone" data-label="PERSONALIZED · RANKING"><div class="row">
+  <article class="card moved" style="--hue:#8B5288">
+    <div class="rank">1</div>
+    <div class="delta">4 → 1</div>
+    <div class="ph"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Pave Drop Earrings">
+  <defs><linearGradient id="gMRDR022" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#8B5288" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#8B5288" stop-opacity=".13"/>
+  </linearGradient></defs>
+  <rect width="100" height="125" fill="url(#gMRDR022)"/>
+  <ellipse cx="50" cy="86" rx="26" ry="3.5" fill="#8B5288" opacity=".18"/>
+  <g fill="none" stroke="#8B5288" stroke-opacity=".72" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="57" r="23"/><path d="M43 30 L50 18 L57 30 Z"/></g>
+</svg></div>
+    <div class="meta"><div class="nm">Pave Drop Earrings</div><div class="mt">Jewellery · metal</div>
+    <div class="pr">$395</div></div>
+  </article>
+  <article class="card" style="--hue:#E2664F">
+    <div class="rank">2</div>
+    
+    <div class="ph"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Ashby Leather Crossbody">
+  <defs><linearGradient id="gMRDR001" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#E2664F" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#E2664F" stop-opacity=".13"/>
+  </linearGradient></defs>
+  <rect width="100" height="125" fill="url(#gMRDR001)"/>
+  <ellipse cx="50" cy="86" rx="26" ry="3.5" fill="#E2664F" opacity=".18"/>
+  <g fill="none" stroke="#E2664F" stroke-opacity=".72" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"><path d="M35 40 Q35 23 50 23 Q65 23 65 40"/><path d="M23 40 L77 40 L72 79 L28 79 Z"/></g>
+</svg></div>
+    <div class="meta"><div class="nm">Ashby Leather Crossbody</div><div class="mt">Bags · leather</div>
+    <div class="pr">$248</div></div>
+  </article>
+  <article class="card moved" style="--hue:#9B3F5E">
+    <div class="rank">3</div>
+    <div class="delta">5 → 3</div>
+    <div class="ph"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Acetate Aviator">
+  <defs><linearGradient id="gMRDR031" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#9B3F5E" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#9B3F5E" stop-opacity=".13"/>
+  </linearGradient></defs>
+  <rect width="100" height="125" fill="url(#gMRDR031)"/>
+  <ellipse cx="50" cy="86" rx="26" ry="3.5" fill="#9B3F5E" opacity=".18"/>
+  <g fill="none" stroke="#9B3F5E" stroke-opacity=".72" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"><circle cx="33" cy="53" r="14"/><circle cx="67" cy="53" r="14"/><path d="M47 51 Q50 46 53 51"/><path d="M19 48 L13 43"/><path d="M81 48 L87 43"/></g>
+</svg></div>
+    <div class="meta"><div class="nm">Acetate Aviator</div><div class="mt">Eyewear · acetate</div>
+    <div class="pr">$215</div></div>
+  </article>
+  <article class="card" style="--hue:#1F6B64">
+    <div class="rank">4</div>
+    
+    <div class="ph"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Cable Fisherman Sweater">
+  <defs><linearGradient id="gMRDR012" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#1F6B64" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#1F6B64" stop-opacity=".13"/>
+  </linearGradient></defs>
+  <rect width="100" height="125" fill="url(#gMRDR012)"/>
+  <ellipse cx="50" cy="86" rx="26" ry="3.5" fill="#1F6B64" opacity=".18"/>
+  <g fill="none" stroke="#1F6B64" stroke-opacity=".72" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"><path d="M33 33 L67 33 L69 72 L31 72 Z"/><path d="M42 33 Q50 41 58 33"/><path d="M33 33 L21 58 L29 63"/><path d="M67 33 L79 58 L71 63"/></g>
+</svg></div>
+    <div class="meta"><div class="nm">Cable Fisherman Sweater</div><div class="mt">Knitwear · wool</div>
+    <div class="pr">$165</div></div>
+  </article>
+  <article class="card" style="--hue:#4A5FA8">
+    <div class="rank">5</div>
+    
+    <div class="ph"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 125" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Bay Packable Tote">
+  <defs><linearGradient id="gMRDR005" x1="0" y1="0" x2="0.6" y2="1">
+    <stop offset="0" stop-color="#4A5FA8" stop-opacity=".34"/>
+    <stop offset="1" stop-color="#4A5FA8" stop-opacity=".13"/>
+  </linearGradient></defs>
+  <rect width="100" height="125" fill="url(#gMRDR005)"/>
+  <ellipse cx="50" cy="86" rx="26" ry="3.5" fill="#4A5FA8" opacity=".18"/>
+  <g fill="none" stroke="#4A5FA8" stroke-opacity=".72" stroke-width="2.1"
+     stroke-linecap="round" stroke-linejoin="round"><path d="M35 40 Q35 23 50 23 Q65 23 65 40"/><path d="M23 40 L77 40 L72 79 L28 79 Z"/></g>
+</svg></div>
+    <div class="meta"><div class="nm">Bay Packable Tote</div><div class="mt">Bags · canvas</div>
+    <div class="pr">$88</div></div>
+  </article></div></div>

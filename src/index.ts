@@ -72,6 +72,7 @@ app.route('/optimizely', optimizelyRoutes);
 app.route('/cdp', cdpRoutes);
 app.route('/operator', operatorRoutes);
 app.route('/realtime', realtimeRoutes);
+app.route('/meridian/api', meridianRoutes);
 app.route('/ai', aiRoutes);
 app.route('/ai/scene', aiSceneRoutes);
 app.route('/__shot', shotRoutes);
@@ -123,7 +124,10 @@ app.notFound((c) => {
   return c.json({ error: 'Not Found' }, 404);
 });
 
-export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent };
+import { meridianRoutes } from '@/demos/meridian/routes';
+import { MeridianReflex } from '@/demos/meridian/MeridianReflex';
+
+export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent, MeridianReflex };
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

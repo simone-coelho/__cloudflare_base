@@ -4,8 +4,8 @@
   "description": "Comprehensive Cloudflare Workers platform with tracking, personalization, and experimentation",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "dev": "npm run build:meridian && wrangler dev",
+    "deploy": "npm run build:meridian && wrangler deploy",
     "build": "echo 'No build required for TypeScript with Cloudflare Workers'",
     "build:island": "node scripts/build-island.mjs",
     "tail": "wrangler tail",
@@ -23,7 +23,9 @@
     "optly-analytics": "node optly-npx-fix.cjs optly analytics templates",
     "optly-entity-flags": "node optly-npx-fix.cjs optly entity templates flag",
     "optly-entity-experiments": "node optly-npx-fix.cjs optly entity templates experiment",
-    "optly-entity-audiences": "node optly-npx-fix.cjs optly entity templates audience"
+    "optly-entity-audiences": "node optly-npx-fix.cjs optly entity templates audience",
+    "build:meridian": "node scripts/build-meridian.mjs",
+    "rehearse": "node scripts/meridian-rehearsal.mjs && node scripts/meridian-isolation.mjs"
   },
   "keywords": [
     "cloudflare-workers",

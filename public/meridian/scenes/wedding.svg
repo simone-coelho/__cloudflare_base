@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" width="480" height="640" role="img" aria-label="wedding">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#F3E8E4"/><stop offset="1" stop-color="#F3E8E4" stop-opacity=".55"/>
+  </linearGradient></defs>
+  <rect width="480" height="640" fill="url(#g)"/>
+  <g transform="translate(0,142)"><circle cx="240" cy="215" r="118" fill="#A9736A" opacity=".14"/>
+              <path d="M122 215 A118 118 0 0 1 358 215 Z" fill="#A9736A" opacity=".26"/></g>
+  <text x="24" y="614" font-family="ui-monospace, monospace" font-size="10" letter-spacing="1.6"
+        fill="#3A342C" opacity=".62">APPROVED STILL · WEDDING</text>
+</svg>

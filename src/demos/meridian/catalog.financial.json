@@ -1,0 +1,349 @@
+[
+  {
+    "id": "MRD-F001",
+    "vertical": "financial",
+    "name": "30-Year Fixed Mortgage",
+    "category": "Mortgage",
+    "subcategory": "fixed",
+    "value_usd": 385000,
+    "world": "building",
+    "needs": [
+      "borrow"
+    ],
+    "available": true,
+    "swatch": "coral",
+    "hex": "#E8503A",
+    "rate_pct": 6.24,
+    "blurb": "30-Year Fixed Mortgage \u2014 fixed mortgage.",
+    "image": "/meridian/img/MRD-F001.jpg"
+  },
+  {
+    "id": "MRD-F002",
+    "vertical": "financial",
+    "name": "15-Year Fixed Mortgage",
+    "category": "Mortgage",
+    "subcategory": "fixed",
+    "value_usd": 310000,
+    "world": "established",
+    "needs": [
+      "borrow",
+      "refinance"
+    ],
+    "available": true,
+    "swatch": "amber",
+    "hex": "#E8A317",
+    "rate_pct": 5.61,
+    "blurb": "15-Year Fixed Mortgage \u2014 fixed mortgage.",
+    "image": "/meridian/img/MRD-F002.jpg"
+  },
+  {
+    "id": "MRD-F003",
+    "vertical": "financial",
+    "name": "7/1 Adjustable Mortgage",
+    "category": "Mortgage",
+    "subcategory": "variable",
+    "value_usd": 420000,
+    "world": "building",
+    "needs": [
+      "borrow"
+    ],
+    "available": true,
+    "swatch": "olive",
+    "hex": "#7CA82F",
+    "rate_pct": 5.89,
+    "blurb": "7/1 Adjustable Mortgage \u2014 variable mortgage.",
+    "image": "/meridian/img/MRD-F003.jpg"
+  },
+  {
+    "id": "MRD-F004",
+    "vertical": "financial",
+    "name": "Home Equity Line",
+    "category": "Mortgage",
+    "subcategory": "variable",
+    "value_usd": 75000,
+    "world": "established",
+    "needs": [
+      "borrow",
+      "refinance"
+    ],
+    "available": true,
+    "swatch": "teal",
+    "hex": "#12968C",
+    "rate_pct": 7.15,
+    "blurb": "Home Equity Line \u2014 variable mortgage.",
+    "image": "/meridian/img/MRD-F004.jpg"
+  },
+  {
+    "id": "MRD-F005",
+    "vertical": "financial",
+    "name": "Renovation Loan",
+    "category": "Mortgage",
+    "subcategory": "variable",
+    "value_usd": 65000,
+    "world": "established",
+    "needs": [
+      "borrow",
+      "refinance"
+    ],
+    "available": true,
+    "swatch": "indigo",
+    "hex": "#4257C4",
+    "rate_pct": 7.02,
+    "blurb": "Renovation Loan \u2014 variable mortgage.",
+    "image": "/meridian/img/MRD-F005.jpg"
+  },
+  {
+    "id": "MRD-F006",
+    "vertical": "financial",
+    "name": "New Auto Loan",
+    "category": "Auto",
+    "subcategory": "fixed",
+    "value_usd": 34000,
+    "world": "building",
+    "needs": [
+      "borrow"
+    ],
+    "available": true,
+    "swatch": "plum",
+    "hex": "#9B45A0",
+    "rate_pct": 5.44,
+    "blurb": "New Auto Loan \u2014 fixed auto.",
+    "image": "/meridian/img/MRD-F006.jpg"
+  },
+  {
+    "id": "MRD-F007",
+    "vertical": "financial",
+    "name": "Used Auto Loan",
+    "category": "Auto",
+    "subcategory": "fixed",
+    "value_usd": 21000,
+    "world": "starting-out",
+    "needs": [
+      "borrow"
+    ],
+    "available": true,
+    "swatch": "rose",
+    "hex": "#DB4079",
+    "rate_pct": 6.32,
+    "blurb": "Used Auto Loan \u2014 fixed auto.",
+    "image": "/meridian/img/MRD-F007.jpg"
+  },
+  {
+    "id": "MRD-F008",
+    "vertical": "financial",
+    "name": "Auto Refinance",
+    "category": "Auto",
+    "subcategory": "fixed",
+    "value_usd": 18500,
+    "world": "building",
+    "needs": [
+      "refinance",
+      "save"
+    ],
+    "available": true,
+    "swatch": "slate",
+    "hex": "#4E7AA8",
+    "rate_pct": 5.19,
+    "blurb": "Auto Refinance \u2014 fixed auto.",
+    "image": "/meridian/img/MRD-F008.jpg"
+  },
+  {
+    "id": "MRD-F009",
+    "vertical": "financial",
+    "name": "Platinum Rewards Card",
+    "category": "Card",
+    "subcategory": "revolving",
+    "value_usd": 12000,
+    "world": "established",
+    "needs": [
+      "borrow",
+      "protect"
+    ],
+    "available": true,
+    "swatch": "ember",
+    "hex": "#C8452B",
+    "blurb": "Platinum Rewards Card \u2014 revolving card.",
+    "image": "/meridian/img/MRD-F009.jpg"
+  },
+  {
+    "id": "MRD-F010",
+    "vertical": "financial",
+    "name": "Everyday Cashback Card",
+    "category": "Card",
+    "subcategory": "revolving",
+    "value_usd": 6000,
+    "world": "building",
+    "needs": [
+      "borrow",
+      "save"
+    ],
+    "available": true,
+    "swatch": "ochre",
+    "hex": "#C08A12",
+    "blurb": "Everyday Cashback Card \u2014 revolving card.",
+    "image": "/meridian/img/MRD-F010.jpg"
+  },
+  {
+    "id": "MRD-F011",
+    "vertical": "financial",
+    "name": "Secured Starter Card",
+    "category": "Card",
+    "subcategory": "revolving",
+    "value_usd": 1000,
+    "world": "starting-out",
+    "needs": [
+      "borrow",
+      "protect"
+    ],
+    "available": true,
+    "swatch": "moss",
+    "hex": "#6E9430",
+    "blurb": "Secured Starter Card \u2014 revolving card.",
+    "image": "/meridian/img/MRD-F011.jpg"
+  },
+  {
+    "id": "MRD-F012",
+    "vertical": "financial",
+    "name": "Voyager Travel Card",
+    "category": "Card",
+    "subcategory": "revolving",
+    "value_usd": 15000,
+    "world": "established",
+    "needs": [
+      "borrow"
+    ],
+    "available": true,
+    "swatch": "pine",
+    "hex": "#12786E",
+    "blurb": "Voyager Travel Card \u2014 revolving card.",
+    "image": "/meridian/img/MRD-F012.jpg"
+  },
+  {
+    "id": "MRD-F013",
+    "vertical": "financial",
+    "name": "Personal Line of Credit",
+    "category": "Card",
+    "subcategory": "variable",
+    "value_usd": 20000,
+    "world": "building",
+    "needs": [
+      "borrow",
+      "protect"
+    ],
+    "available": true,
+    "swatch": "navy",
+    "hex": "#2F52A8",
+    "rate_pct": 9.15,
+    "blurb": "Personal Line of Credit \u2014 variable card.",
+    "image": "/meridian/img/MRD-F013.jpg"
+  },
+  {
+    "id": "MRD-F014",
+    "vertical": "financial",
+    "name": "High-Yield Savings",
+    "category": "Savings",
+    "subcategory": "deposit",
+    "value_usd": 18000,
+    "world": "building",
+    "needs": [
+      "save"
+    ],
+    "available": true,
+    "swatch": "mulberry",
+    "hex": "#7E3A80",
+    "rate_pct": 4.35,
+    "blurb": "High-Yield Savings \u2014 deposit savings.",
+    "image": "/meridian/img/MRD-F014.jpg"
+  },
+  {
+    "id": "MRD-F015",
+    "vertical": "financial",
+    "name": "12-Month Certificate",
+    "category": "Savings",
+    "subcategory": "deposit",
+    "value_usd": 25000,
+    "world": "planning",
+    "needs": [
+      "save",
+      "protect"
+    ],
+    "available": true,
+    "swatch": "garnet",
+    "hex": "#B8355F",
+    "rate_pct": 4.7,
+    "blurb": "12-Month Certificate \u2014 deposit savings.",
+    "image": "/meridian/img/MRD-F015.jpg"
+  },
+  {
+    "id": "MRD-F016",
+    "vertical": "financial",
+    "name": "Money Market Account",
+    "category": "Savings",
+    "subcategory": "deposit",
+    "value_usd": 42000,
+    "world": "established",
+    "needs": [
+      "save",
+      "protect"
+    ],
+    "available": true,
+    "swatch": "steel",
+    "hex": "#3F6389",
+    "rate_pct": 4.1,
+    "blurb": "Money Market Account \u2014 deposit savings.",
+    "image": "/meridian/img/MRD-F016.jpg"
+  },
+  {
+    "id": "MRD-F017",
+    "vertical": "financial",
+    "name": "Self-Directed Brokerage",
+    "category": "Investing",
+    "subcategory": "managed",
+    "value_usd": 60000,
+    "world": "established",
+    "needs": [
+      "invest"
+    ],
+    "available": true,
+    "swatch": "coral",
+    "hex": "#E8503A",
+    "blurb": "Self-Directed Brokerage \u2014 managed investing.",
+    "image": "/meridian/img/MRD-F017.jpg"
+  },
+  {
+    "id": "MRD-F018",
+    "vertical": "financial",
+    "name": "Roth Retirement Account",
+    "category": "Investing",
+    "subcategory": "managed",
+    "value_usd": 48000,
+    "world": "planning",
+    "needs": [
+      "invest",
+      "protect"
+    ],
+    "available": true,
+    "swatch": "amber",
+    "hex": "#E8A317",
+    "blurb": "Roth Retirement Account \u2014 managed investing.",
+    "image": "/meridian/img/MRD-F018.jpg"
+  },
+  {
+    "id": "MRD-F019",
+    "vertical": "financial",
+    "name": "Managed Portfolio",
+    "category": "Investing",
+    "subcategory": "managed",
+    "value_usd": 120000,
+    "world": "planning",
+    "needs": [
+      "invest",
+      "protect"
+    ],
+    "available": true,
+    "swatch": "olive",
+    "hex": "#7CA82F",
+    "blurb": "Managed Portfolio \u2014 managed investing.",
+    "image": "/meridian/img/MRD-F019.jpg"
+  }
+]

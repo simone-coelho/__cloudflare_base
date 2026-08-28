@@ -17,6 +17,32 @@ import type { Env } from '@/types/env';
 const shot = new Hono<{ Bindings: Env }>();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * THIS ROUTE EVALUATES ARBITRARY JAVASCRIPT IN A REAL BROWSER ON THIS ORIGIN.
+ *
+ * Ungated on a public host that is a remote-code-execution surface wearing a
+ * screenshot tool's clothes: `?js=` runs in our origin's context, so it can call
+ * our own API routes and post the answers anywhere, and every call burns
+ * account-wide Browser Rendering quota that is rate limited for everyone.
+ *
+ * So it is CLOSED BY DEFAULT. With no SHOT_TOKEN configured the route does not
+ * exist; with one configured, a request must present it. Both failures return
+ * 404 rather than 401, because a 401 confirms there is something here to
+ * attack. Set SHOT_TOKEN in .dev.vars locally, and simply leave it unset on the
+ * conference deployment — nothing on stage needs this route.
+ */
+function denied(c: { env: Env; req: { query: (k: string) => string | undefined; header: (k: string) => string | undefined } }): boolean {
+  const expected = c.env.SHOT_TOKEN;
+  if (!expected) return true;
+  const given = c.req.query('token') ?? c.req.header('x-shot-token') ?? '';
+  // Length-independent compare: never leak the token's length via timing.
+  let diff = given.length === expected.length ? 0 : 1;
+  for (let i = 0; i < Math.max(given.length, expected.length); i += 1) {
+    diff |= (given.charCodeAt(i) || 0) ^ (expected.charCodeAt(i) || 0);
+  }
+  return diff !== 0;
+}
+
 // rec=hero: record the #hero title sequence from document-start, so a DURING-LOAD flash
 // (e.g. "The Tabby Shop" → "The Summer Edit") is captured even though the screenshot settles after it.
 const REC_SCRIPT = `window.__herolog=[];(function(){var last=null,t0=Date.now();var iv=setInterval(function(){var el=document.querySelector('#hero-content .hero-title');var t=el?(el.textContent||'').trim():'';if(t!==last){window.__herolog.push({ms:Date.now()-t0,title:t||'(empty)'});last=t;}},16);setTimeout(function(){clearInterval(iv);},9000);})();`;
@@ -34,6 +60,7 @@ async function getBrowser(env: Env): Promise<any> {
 }
 
 shot.get('/', async (c) => {
+  if (denied(c as any)) return c.notFound();
   if (!c.env.BROWSER) return c.json({ ok: false, error: 'Browser Rendering not bound' }, 503);
   const q = c.req.query();
   // Diagnostics: ?diag=1 → live sessions + account acquisition limits (never guess again).
@@ -57,9 +84,22 @@ shot.get('/', async (c) => {
     if (rec) { try { await page.evaluateOnNewDocument(REC_SCRIPT); } catch (e) { /* recorder optional */ } }
     await page.goto(url.toString(), { waitUntil: 'networkidle0', timeout: 30000 });
     await sleep(wait);
+    // A swallowed click is how a screenshot "verifies" something that never
+    // happened: the selector misses, the catch eats it, and the PNG shows a page
+    // in exactly the state it would be in if the feature were broken. So every
+    // click reports, and the outcome rides back on a header the caller can assert.
+    const clickLog: string[] = [];
     for (const sel of clicks) {
-      try { await page.click(sel); await sleep(wait); } catch { /* selector may be absent in this state */ }
+      try {
+        await page.click(sel);
+        clickLog.push(`ok:${sel}`);
+        await sleep(wait);
+      } catch (e) {
+        clickLog.push(`FAIL:${sel}`);
+      }
     }
+    if (clickLog.length) c.header('x-shot-clicks', clickLog.join(' '));
+    if (clickLog.some((l) => l.startsWith('FAIL:'))) c.header('x-shot-ok', 'false');
     if (q.js) { try { await page.evaluate(q.js); await sleep(Math.max(900, wait)); } catch (e) { /* eval optional */ } }
     if (rec) { const herolog = await page.evaluate('window.__herolog || []'); return c.json({ ok: true, herolog }); }
     let buf: Uint8Array;

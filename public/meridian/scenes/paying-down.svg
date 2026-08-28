@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" width="480" height="640" role="img" aria-label="paying-down">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#EFEAE4"/><stop offset="1" stop-color="#EFEAE4" stop-opacity=".55"/>
+  </linearGradient></defs>
+  <rect width="480" height="640" fill="url(#g)"/>
+  <g transform="translate(0,142)"><rect x="132" y="132" width="60" height="48" rx="5" fill="#7A5F3E" opacity="0.12"/><rect x="208" y="132" width="60" height="48" rx="5" fill="#7A5F3E" opacity="0.2"/><rect x="284" y="132" width="60" height="48" rx="5" fill="#7A5F3E" opacity="0.28"/><rect x="132" y="194" width="60" height="48" rx="5" fill="#7A5F3E" opacity="0.2"/><rect x="208" y="194" width="60" height="48" rx="5" fill="#7A5F3E" opacity="0.28"/><rect x="284" y="194" width="60" height="48" rx="5" fill="#7A5F3E" opacity="0.12"/><rect x="132" y="256" width="60" height="48" rx="5" fill="#7A5F3E" opacity="0.28"/><rect x="208" y="256" width="60" height="48" rx="5" fill="#7A5F3E" opacity="0.12"/><rect x="284" y="256" width="60" height="48" rx="5" fill="#7A5F3E" opacity="0.2"/></g>
+  <text x="24" y="614" font-family="ui-monospace, monospace" font-size="10" letter-spacing="1.6"
+        fill="#3A342C" opacity=".62">APPROVED STILL · PAYING-DOWN</text>
+</svg>

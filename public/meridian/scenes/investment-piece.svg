@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" width="480" height="640" role="img" aria-label="investment-piece">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#EFEAE4"/><stop offset="1" stop-color="#EFEAE4" stop-opacity=".55"/>
+  </linearGradient></defs>
+  <rect width="480" height="640" fill="url(#g)"/>
+  <g transform="translate(0,142)"><path d="M120 300 Q120 130 240 130 Q360 130 360 300 Z" fill="#7A5F3E" opacity=".16"/>
+              <path d="M170 300 Q170 185 240 185 Q310 185 310 300 Z" fill="#7A5F3E" opacity=".28"/></g>
+  <text x="24" y="614" font-family="ui-monospace, monospace" font-size="10" letter-spacing="1.6"
+        fill="#3A342C" opacity=".62">APPROVED STILL · INVESTMENT-PIECE</text>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" width="480" height="640" role="img" aria-label="hard-to-buy-for">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#EFE3D2"/><stop offset="1" stop-color="#EFE3D2" stop-opacity=".55"/>
+  </linearGradient></defs>
+  <rect width="480" height="640" fill="url(#g)"/>
+  <g transform="translate(0,142)"><circle cx="168" cy="168" r="40" fill="#8B5E3C" opacity=".2"/><circle cx="268" cy="142" r="30" fill="#8B5E3C" opacity=".2"/><circle cx="316" cy="232" r="46" fill="#8B5E3C" opacity=".2"/><circle cx="176" cy="258" r="28" fill="#8B5E3C" opacity=".2"/><circle cx="244" cy="214" r="34" fill="#8B5E3C" opacity=".2"/></g>
+  <text x="24" y="614" font-family="ui-monospace, monospace" font-size="10" letter-spacing="1.6"
+        fill="#3A342C" opacity=".62">APPROVED STILL · HARD-TO-BUY-FOR</text>
+</svg>

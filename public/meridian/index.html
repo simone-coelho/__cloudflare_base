@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en" data-vertical="retail">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/meridian/meridian.css">
+</head>
+<body>
+<div class="stage">
+
+  <!-- ═══ LEFT — the rest of the world ═══════════════════════════════════════ -->
+  <aside class="world">
+    <div class="world-head">
+      <div class="t">The rest of the world</div>
+      <div class="v" id="world-status">Four surfaces. None of them your website.</div>
+    </div>
+    <!-- Two fixed regions, not one scroller. The ledger below used to fall off
+         the bottom of the column the moment two things had happened, which is
+         precisely when it starts being worth looking at. -->
+    <div class="world-split">
+      <div class="wsec wsec-surfaces">
+        <h5>Surfaces <span class="hint">click one</span></h5>
+        <div id="surfaces"></div>
+      </div>
+      <div class="wsec wsec-ledger">
+        <h5>What happened <span class="hint" id="ep-count"></span></h5>
+        <div id="episodes"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ CENTRE — the page ══════════════════════════════════════════════════ -->
+  <main class="page" id="page">
+    <div class="page-inner">
+
+      <div class="brand">
+        <h1>CALDER <span class="biz" id="biz">&amp; Co.</span></h1>
+        <nav id="nav"></nav>
+      </div>
+
+      <section class="takeover" id="takeover" hidden>
+        <div class="tk-art" id="tk-art"></div>
+        <div class="tk-copy">
+          <div class="tk-chip">SIMULATED · partner social-listening layer, not Optimizely</div>
+          <div class="tk-eyebrow" id="tk-eyebrow"></div>
+          <h2 id="tk-head"></h2>
+          <p id="tk-sub"></p>
+          <button class="cta" id="tk-cta"></button>
+          <div class="tk-foot" id="tk-foot"></div>
+        </div>
+      </section>
+
+      <section class="hero zone" id="hero" data-label="PERSONALIZED · HERO">
+        <div class="hero-copy">
+          <div class="kicker" id="hero-kicker">Welcome</div>
+          <h2 id="hero-title">Made to be kept</h2>
+          <p id="hero-body">Considered pieces, honestly priced, chosen for how you actually live.</p>
+          <button class="cta" id="hero-cta">See the collection</button>
+        </div>
+        <div class="hero-art" id="hero-art"></div>
+      </section>
+
+      <section class="offer" id="offer" hidden>
+        <div class="offer-main">
+          <div class="offer-kick" id="offer-kick"></div>
+          <div class="offer-title" id="offer-title"></div>
+          <div class="offer-sub" id="offer-sub"></div>
+        </div>
+        <div class="offer-clock" id="offer-clock"></div>
+      </section>
+
+      <div class="row-head">
+        <h3 id="row-title">Selected for you</h3>
+        <span id="row-note">the same order every shopper sees</span>
+      </div>
+      <section class="sortzone zone" id="sortzone" data-label="PERSONALIZED · RANKING">
+        <div class="row" id="row"></div>
+      </section>
+
+      <section class="zone" id="block_a" data-label="PERSONALIZED · CONTENT"></section>
+
+    </div>
+  </main>
+
+  <!-- ═══ RIGHT — what we know ═══════════════════════════════════════════════ -->
+  <aside class="engine">
+    <div class="eng-head">
+      <div class="t">Edge decision engine <span class="lat" id="lat"></span></div>
+      <div class="v" id="eng-status">Cold start — nothing observed yet</div>
+    </div>
+    <div class="eng-scroll">
+      <!-- THE INSTRUMENT FIRST. It is the thing the room is asked to watch, so it
+           can never sit below the thing the presenter presses. Audiences live
+           here too — a chip appearing IS a bar crossing, and separating them
+           made the room look in two places for one event. -->
+      <div class="esec instrument">
+        <h5>Live affinity <span class="cfg" id="cfgv"></span></h5>
+        <div id="bars"></div>
+        <div class="chips" id="chips"><span class="none">no audiences yet</span></div>
+      </div>
+
+      <div class="esec accent">
+        <h5>Why</h5>
+        <div class="sentence" id="sentence">Nothing has happened yet.</div>
+      </div>
+
+      <div class="esec">
+        <h5>What happened next</h5>
+        <div class="conseq" id="conseq"></div>
+      </div>
+
+      <div class="esec">
+        <h5>Cold start — before any behaviour</h5>
+        <div class="cold" id="cold"></div>
+      </div>
+
+      <div class="esec">
+        <h5>The glass box</h5>
+        <details class="glass" id="glass"><summary>Why this hero, exactly</summary><div id="glass-body"></div></details>
+      </div>
+
+    </div>
+
+    <div class="eng-controls">
+        <h5>Presenter controls</h5>
+        <div class="cgroup"><span class="clabel">Vertical</span>
+          <div class="controls">
+            <button id="btn-retail" class="on">Calder<small>&amp; Co.</small></button>
+            <button id="btn-financial">Calder<small>Financial</small></button>
+          </div>
+        </div>
+        <div class="cgroup"><span class="clabel">Ask</span>
+          <div class="controls">
+            <button id="btn-ask">Ask in words<small>natural language</small></button>
+            <button id="btn-conc">Style concierge<small>builds a look</small></button>
+            <button id="btn-opal">Ask Opal<small>propose an audience</small></button>
+            <button id="btn-moment">Signal detected<small>the moment</small></button>
+          </div>
+        </div>
+        <div class="cgroup"><span class="clabel">Merchandiser</span>
+          <div class="controls">
+            <button id="btn-pin">Pin the hero<small>merchandiser wins</small></button>
+            <button id="btn-soldout">Sell out the top<small>make a rule refuse</small></button>
+          </div>
+        </div>
+        <div class="cgroup"><span class="clabel">Experiments</span>
+          <div class="controls">
+            <button id="btn-ab">Create A/B<small>real rule, real project</small></button>
+            <button id="btn-mab">Create MAB<small>bandit rule</small></button>
+            <button id="btn-cmab">Create CMAB<small>contextual bandit</small></button>
+            <button id="btn-radar">Revenue Radar<small>the average lied</small></button>
+          </div>
+        </div>
+        <div class="cgroup"><span class="clabel">Session</span>
+          <div class="controls">
+            <button id="btn-receipts">Show the receipts<small>warehouse rows</small></button>
+            <button id="btn-return">Come back later<small>same visitor</small></button>
+            <button id="btn-reset">New visitor<small>clears everything</small></button>
+          </div>
+        </div>
+    </div>
+  </aside>
+</div>
+<!-- The director. Audience-safe by default: the room sees the beat and what to
+     watch, never the presenter's script. ?prompter=1 reveals the SAY line for
+     rehearsal or a confidence monitor. -->
+<div class="director" id="director" hidden>
+  <div class="dir-left">
+    <div class="dir-where"><span id="dir-act"></span><span id="dir-count"></span></div>
+    <div class="dir-title" id="dir-title"></div>
+    <div class="dir-mark" id="dir-mark" hidden></div>
+  </div>
+  <div class="dir-mid">
+    <div class="dir-label">Watch</div>
+    <div class="dir-watch" id="dir-watch"></div>
+    <div class="dir-do" id="dir-do"></div>
+    <div class="dir-caution" id="dir-caution" hidden></div>
+    <div class="dir-say" id="dir-say" hidden></div>
+  </div>
+  <div class="dir-right">
+    <div class="dir-clock"><span id="dir-beat-time">0:00</span><small id="dir-planned"></small></div>
+    <div class="dir-total" id="dir-total"></div>
+    <div class="dir-transport">
+      <button id="dir-prev" title="Previous beat (←)">&#8592;</button>
+      <button id="dir-play" title="Start / pause the clock (space)">Start</button>
+      <button id="dir-next" title="Next beat (→)">&#8594;</button>
+      <button id="dir-stop" title="Stop and reset the clock">Stop</button>
+    </div>
+  </div>
+</div>
+
+<div class="moment" id="conc">
+  <div class="moment-box">
+    <form class="ask-form" id="conc-form" autocomplete="off">
+      <input id="conc-q" placeholder="Tell the concierge what the occasion is…" aria-label="Ask the concierge">
+      <button type="submit">Style it</button>
+      <button type="button" id="conc-reset">Start over</button>
+      <button type="button" id="conc-close">Close</button>
+    </form>
+    <div class="conc-thread" id="conc-thread"></div>
+  </div>
+</div>
+
+<div class="moment" id="radar">
+  <div class="moment-box">
+    <div class="ask-form" style="justify-content:space-between">
+      <strong style="font:500 20px/1 inherit">Revenue Radar <span id="rad-sub" style="color:var(--muted);font-size:14px"></span></strong>
+      <button type="button" id="rad-close">Close</button>
+    </div>
+    <div class="rad-cohorts" id="rad-cohorts"></div>
+    <div class="rad-grid">
+      <div class="rad-funnel" id="rad-funnel"></div>
+      <div class="rad-find" id="rad-find"></div>
+    </div>
+  </div>
+</div>
+
+<div class="moment" id="receipts">
+  <div class="moment-box">
+    <div class="ask-form" style="justify-content:space-between">
+      <strong style="font:500 20px/1 inherit">Decision receipts <span id="rec-count" style="color:var(--muted);font-size:14px"></span></strong>
+      <button type="button" id="rec-close">Close</button>
+    </div>
+    <div class="rec-wrap"><table class="rec" id="rec-table"></table></div>
+  </div>
+</div>
+
+<div class="moment" id="opal">
+  <div class="moment-box">
+    <form class="ask-form" id="opal-form" autocomplete="off">
+      <input id="oq" placeholder="Describe an audience in plain English…" aria-label="Ask Opal">
+      <button type="submit">Propose</button>
+      <button type="button" id="opal-close">Close</button>
+    </form>
+    <div class="opal-body">
+      <div class="opal-vocab" id="opal-vocab"></div>
+      <div id="opal-out"></div>
+    </div>
+  </div>
+</div>
+
+<div class="moment" id="ask">
+  <div class="moment-box">
+    <form class="ask-form" id="ask-form" autocomplete="off">
+      <input id="q" placeholder="Ask for what you need…" aria-label="Ask">
+      <button type="submit">Ask</button>
+      <button type="button" id="ask-close">Close</button>
+    </form>
+    <div class="ask-answer" id="ask-answer" hidden>
+      <div class="ask-art" id="ask-art"></div>
+      <div class="ask-body">
+        <div class="ask-kick" id="ask-kick"></div>
+        <h3 id="ask-title"></h3>
+        <p id="ask-sub"></p>
+        <div class="ask-prov" id="ask-prov"></div>
+        <div class="row" id="ask-row"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/meridian/meridian.js"></script>
+</body>
+</html>

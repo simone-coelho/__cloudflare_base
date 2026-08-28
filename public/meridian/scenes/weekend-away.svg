@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" width="480" height="640" role="img" aria-label="weekend-away">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#E7EBE4"/><stop offset="1" stop-color="#E7EBE4" stop-opacity=".55"/>
+  </linearGradient></defs>
+  <rect width="480" height="640" fill="url(#g)"/>
+  <g transform="translate(0,142)"><rect x="0" y="236" width="480" height="120" fill="#5C7350" opacity=".18"/>
+              <path d="M0 236 L150 168 L268 236 Z" fill="#5C7350" opacity=".3"/>
+              <path d="M212 236 L330 152 L446 236 Z" fill="#5C7350" opacity=".22"/></g>
+  <text x="24" y="614" font-family="ui-monospace, monospace" font-size="10" letter-spacing="1.6"
+        fill="#3A342C" opacity=".62">APPROVED STILL · WEEKEND-AWAY</text>
+</svg>

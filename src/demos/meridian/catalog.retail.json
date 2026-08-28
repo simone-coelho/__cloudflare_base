@@ -1,0 +1,715 @@
+[
+  {
+    "id": "MRD-R001",
+    "vertical": "retail",
+    "name": "Ashby Leather Crossbody",
+    "category": "Bags",
+    "subcategory": "leather",
+    "value_usd": 248,
+    "world": "heritage",
+    "needs": [
+      "everyday",
+      "work"
+    ],
+    "available": true,
+    "swatch": "coral",
+    "hex": "#E8503A",
+    "blurb": "Ashby Leather Crossbody \u2014 leather in the heritage line.",
+    "image": "/meridian/img/MRD-R001.jpg"
+  },
+  {
+    "id": "MRD-R002",
+    "vertical": "retail",
+    "name": "Wren Saddle Bag",
+    "category": "Bags",
+    "subcategory": "leather",
+    "value_usd": 195,
+    "world": "heritage",
+    "needs": [
+      "everyday",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "amber",
+    "hex": "#E8A317",
+    "blurb": "Wren Saddle Bag \u2014 leather in the heritage line.",
+    "image": "/meridian/img/MRD-R002.jpg"
+  },
+  {
+    "id": "MRD-R003",
+    "vertical": "retail",
+    "name": "Linden Structured Tote",
+    "category": "Bags",
+    "subcategory": "leather",
+    "value_usd": 320,
+    "world": "modern",
+    "needs": [
+      "work",
+      "everyday"
+    ],
+    "available": true,
+    "swatch": "olive",
+    "hex": "#7CA82F",
+    "blurb": "Linden Structured Tote \u2014 leather in the modern line.",
+    "image": "/meridian/img/MRD-R003.jpg"
+  },
+  {
+    "id": "MRD-R004",
+    "vertical": "retail",
+    "name": "Onyx Evening Clutch",
+    "category": "Bags",
+    "subcategory": "leather",
+    "value_usd": 195,
+    "world": "statement",
+    "needs": [
+      "evening",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "teal",
+    "hex": "#12968C",
+    "blurb": "Onyx Evening Clutch \u2014 leather in the statement line.",
+    "image": "/meridian/img/MRD-R004.jpg"
+  },
+  {
+    "id": "MRD-R005",
+    "vertical": "retail",
+    "name": "Bay Packable Tote",
+    "category": "Bags",
+    "subcategory": "canvas",
+    "value_usd": 88,
+    "world": "minimal",
+    "needs": [
+      "travel",
+      "everyday"
+    ],
+    "available": true,
+    "swatch": "indigo",
+    "hex": "#4257C4",
+    "blurb": "Bay Packable Tote \u2014 canvas in the minimal line.",
+    "image": "/meridian/img/MRD-R005.jpg"
+  },
+  {
+    "id": "MRD-R006",
+    "vertical": "retail",
+    "name": "Holloway Weekender",
+    "category": "Bags",
+    "subcategory": "canvas",
+    "value_usd": 385,
+    "world": "heritage",
+    "needs": [
+      "travel"
+    ],
+    "available": true,
+    "swatch": "plum",
+    "hex": "#9B45A0",
+    "blurb": "Holloway Weekender \u2014 canvas in the heritage line.",
+    "image": "/meridian/img/MRD-R006.jpg"
+  },
+  {
+    "id": "MRD-R007",
+    "vertical": "retail",
+    "name": "Drover Wool Coat",
+    "category": "Outerwear",
+    "subcategory": "wool",
+    "value_usd": 420,
+    "world": "heritage",
+    "needs": [
+      "work",
+      "evening"
+    ],
+    "available": true,
+    "swatch": "rose",
+    "hex": "#DB4079",
+    "blurb": "Drover Wool Coat \u2014 wool in the heritage line.",
+    "image": "/meridian/img/MRD-R007.jpg"
+  },
+  {
+    "id": "MRD-R008",
+    "vertical": "retail",
+    "name": "Waxed Field Jacket",
+    "category": "Outerwear",
+    "subcategory": "canvas",
+    "value_usd": 298,
+    "world": "heritage",
+    "needs": [
+      "everyday",
+      "travel"
+    ],
+    "available": true,
+    "swatch": "slate",
+    "hex": "#4E7AA8",
+    "blurb": "Waxed Field Jacket \u2014 canvas in the heritage line.",
+    "image": "/meridian/img/MRD-R008.jpg"
+  },
+  {
+    "id": "MRD-R009",
+    "vertical": "retail",
+    "name": "Marchetti Trench",
+    "category": "Outerwear",
+    "subcategory": "technical",
+    "value_usd": 545,
+    "world": "modern",
+    "needs": [
+      "work",
+      "evening"
+    ],
+    "available": true,
+    "swatch": "ember",
+    "hex": "#C8452B",
+    "blurb": "Marchetti Trench \u2014 technical in the modern line.",
+    "image": "/meridian/img/MRD-R009.jpg"
+  },
+  {
+    "id": "MRD-R010",
+    "vertical": "retail",
+    "name": "Shorewell Rain Shell",
+    "category": "Outerwear",
+    "subcategory": "technical",
+    "value_usd": 186,
+    "world": "minimal",
+    "needs": [
+      "travel",
+      "everyday"
+    ],
+    "available": true,
+    "swatch": "ochre",
+    "hex": "#C08A12",
+    "blurb": "Shorewell Rain Shell \u2014 technical in the minimal line.",
+    "image": "/meridian/img/MRD-R010.jpg"
+  },
+  {
+    "id": "MRD-R011",
+    "vertical": "retail",
+    "name": "Quilted Liner Vest",
+    "category": "Outerwear",
+    "subcategory": "technical",
+    "value_usd": 165,
+    "world": "minimal",
+    "needs": [
+      "everyday"
+    ],
+    "available": true,
+    "swatch": "moss",
+    "hex": "#6E9430",
+    "blurb": "Quilted Liner Vest \u2014 technical in the minimal line.",
+    "image": "/meridian/img/MRD-R011.jpg"
+  },
+  {
+    "id": "MRD-R012",
+    "vertical": "retail",
+    "name": "Cable Fisherman Sweater",
+    "category": "Knitwear",
+    "subcategory": "wool",
+    "value_usd": 165,
+    "world": "heritage",
+    "needs": [
+      "everyday",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "pine",
+    "hex": "#12786E",
+    "blurb": "Cable Fisherman Sweater \u2014 wool in the heritage line.",
+    "image": "/meridian/img/MRD-R012.jpg"
+  },
+  {
+    "id": "MRD-R013",
+    "vertical": "retail",
+    "name": "Merino Crew",
+    "category": "Knitwear",
+    "subcategory": "wool",
+    "value_usd": 128,
+    "world": "minimal",
+    "needs": [
+      "everyday",
+      "work"
+    ],
+    "available": true,
+    "swatch": "navy",
+    "hex": "#2F52A8",
+    "blurb": "Merino Crew \u2014 wool in the minimal line.",
+    "image": "/meridian/img/MRD-R013.jpg"
+  },
+  {
+    "id": "MRD-R014",
+    "vertical": "retail",
+    "name": "Lambswool Vest",
+    "category": "Knitwear",
+    "subcategory": "wool",
+    "value_usd": 95,
+    "world": "minimal",
+    "needs": [
+      "work"
+    ],
+    "available": true,
+    "swatch": "mulberry",
+    "hex": "#7E3A80",
+    "blurb": "Lambswool Vest \u2014 wool in the minimal line.",
+    "image": "/meridian/img/MRD-R014.jpg"
+  },
+  {
+    "id": "MRD-R015",
+    "vertical": "retail",
+    "name": "Cashmere Turtleneck",
+    "category": "Knitwear",
+    "subcategory": "cashmere",
+    "value_usd": 285,
+    "world": "modern",
+    "needs": [
+      "work",
+      "evening"
+    ],
+    "available": true,
+    "swatch": "garnet",
+    "hex": "#B8355F",
+    "blurb": "Cashmere Turtleneck \u2014 cashmere in the modern line.",
+    "image": "/meridian/img/MRD-R015.jpg"
+  },
+  {
+    "id": "MRD-R016",
+    "vertical": "retail",
+    "name": "Alpaca Wrap Cardigan",
+    "category": "Knitwear",
+    "subcategory": "cashmere",
+    "value_usd": 240,
+    "world": "modern",
+    "needs": [
+      "everyday",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "steel",
+    "hex": "#3F6389",
+    "blurb": "Alpaca Wrap Cardigan \u2014 cashmere in the modern line.",
+    "image": "/meridian/img/MRD-R016.jpg"
+  },
+  {
+    "id": "MRD-R017",
+    "vertical": "retail",
+    "name": "Ridgeline Chelsea Boot",
+    "category": "Footwear",
+    "subcategory": "leather",
+    "value_usd": 320,
+    "world": "heritage",
+    "needs": [
+      "everyday",
+      "work"
+    ],
+    "available": true,
+    "swatch": "coral",
+    "hex": "#E8503A",
+    "blurb": "Ridgeline Chelsea Boot \u2014 leather in the heritage line.",
+    "image": "/meridian/img/MRD-R017.jpg"
+  },
+  {
+    "id": "MRD-R018",
+    "vertical": "retail",
+    "name": "Suede Derby",
+    "category": "Footwear",
+    "subcategory": "leather",
+    "value_usd": 240,
+    "world": "heritage",
+    "needs": [
+      "work"
+    ],
+    "available": true,
+    "swatch": "amber",
+    "hex": "#E8A317",
+    "blurb": "Suede Derby \u2014 leather in the heritage line.",
+    "image": "/meridian/img/MRD-R018.jpg"
+  },
+  {
+    "id": "MRD-R019",
+    "vertical": "retail",
+    "name": "Calfskin Loafer",
+    "category": "Footwear",
+    "subcategory": "leather",
+    "value_usd": 275,
+    "world": "modern",
+    "needs": [
+      "work",
+      "evening"
+    ],
+    "available": true,
+    "swatch": "olive",
+    "hex": "#7CA82F",
+    "blurb": "Calfskin Loafer \u2014 leather in the modern line.",
+    "image": "/meridian/img/MRD-R019.jpg"
+  },
+  {
+    "id": "MRD-R020",
+    "vertical": "retail",
+    "name": "Minimal Court Heel",
+    "category": "Footwear",
+    "subcategory": "leather",
+    "value_usd": 295,
+    "world": "statement",
+    "needs": [
+      "evening"
+    ],
+    "available": true,
+    "swatch": "teal",
+    "hex": "#12968C",
+    "blurb": "Minimal Court Heel \u2014 leather in the statement line.",
+    "image": "/meridian/img/MRD-R020.jpg"
+  },
+  {
+    "id": "MRD-R021",
+    "vertical": "retail",
+    "name": "Canvas Court Sneaker",
+    "category": "Footwear",
+    "subcategory": "canvas",
+    "value_usd": 110,
+    "world": "minimal",
+    "needs": [
+      "everyday",
+      "travel"
+    ],
+    "available": true,
+    "swatch": "indigo",
+    "hex": "#4257C4",
+    "blurb": "Canvas Court Sneaker \u2014 canvas in the minimal line.",
+    "image": "/meridian/img/MRD-R021.jpg"
+  },
+  {
+    "id": "MRD-R022",
+    "vertical": "retail",
+    "name": "Pave Drop Earrings",
+    "category": "Jewellery",
+    "subcategory": "metal",
+    "value_usd": 395,
+    "world": "statement",
+    "needs": [
+      "evening",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "plum",
+    "hex": "#9B45A0",
+    "blurb": "Pave Drop Earrings \u2014 metal in the statement line.",
+    "image": "/meridian/img/MRD-R022.jpg"
+  },
+  {
+    "id": "MRD-R023",
+    "vertical": "retail",
+    "name": "Faceted Onyx Cufflinks",
+    "category": "Jewellery",
+    "subcategory": "metal",
+    "value_usd": 145,
+    "world": "statement",
+    "needs": [
+      "gift",
+      "evening"
+    ],
+    "available": true,
+    "swatch": "rose",
+    "hex": "#DB4079",
+    "blurb": "Faceted Onyx Cufflinks \u2014 metal in the statement line.",
+    "image": "/meridian/img/MRD-R023.jpg"
+  },
+  {
+    "id": "MRD-R024",
+    "vertical": "retail",
+    "name": "Fine Curb Chain",
+    "category": "Jewellery",
+    "subcategory": "metal",
+    "value_usd": 320,
+    "world": "modern",
+    "needs": [
+      "everyday",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "slate",
+    "hex": "#4E7AA8",
+    "blurb": "Fine Curb Chain \u2014 metal in the modern line.",
+    "image": "/meridian/img/MRD-R024.jpg"
+  },
+  {
+    "id": "MRD-R025",
+    "vertical": "retail",
+    "name": "Signet Ring",
+    "category": "Jewellery",
+    "subcategory": "metal",
+    "value_usd": 210,
+    "world": "heritage",
+    "needs": [
+      "everyday",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "ember",
+    "hex": "#C8452B",
+    "blurb": "Signet Ring \u2014 metal in the heritage line.",
+    "image": "/meridian/img/MRD-R025.jpg"
+  },
+  {
+    "id": "MRD-R026",
+    "vertical": "retail",
+    "name": "Slim Bangle",
+    "category": "Jewellery",
+    "subcategory": "metal",
+    "value_usd": 165,
+    "world": "minimal",
+    "needs": [
+      "everyday",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "ochre",
+    "hex": "#C08A12",
+    "blurb": "Slim Bangle \u2014 metal in the minimal line.",
+    "image": "/meridian/img/MRD-R026.jpg"
+  },
+  {
+    "id": "MRD-R027",
+    "vertical": "retail",
+    "name": "Smoked Vetiver",
+    "category": "Fragrance",
+    "subcategory": "glass",
+    "value_usd": 175,
+    "world": "statement",
+    "needs": [
+      "evening",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "moss",
+    "hex": "#6E9430",
+    "blurb": "Smoked Vetiver \u2014 glass in the statement line.",
+    "image": "/meridian/img/MRD-R027.jpg"
+  },
+  {
+    "id": "MRD-R028",
+    "vertical": "retail",
+    "name": "Amber Absolute",
+    "category": "Fragrance",
+    "subcategory": "glass",
+    "value_usd": 215,
+    "world": "statement",
+    "needs": [
+      "evening",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "pine",
+    "hex": "#12786E",
+    "blurb": "Amber Absolute \u2014 glass in the statement line.",
+    "image": "/meridian/img/MRD-R028.jpg"
+  },
+  {
+    "id": "MRD-R029",
+    "vertical": "retail",
+    "name": "Fig and Neroli",
+    "category": "Fragrance",
+    "subcategory": "glass",
+    "value_usd": 130,
+    "world": "minimal",
+    "needs": [
+      "everyday",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "navy",
+    "hex": "#2F52A8",
+    "blurb": "Fig and Neroli \u2014 glass in the minimal line.",
+    "image": "/meridian/img/MRD-R029.jpg"
+  },
+  {
+    "id": "MRD-R030",
+    "vertical": "retail",
+    "name": "Bergamot and Cedar",
+    "category": "Fragrance",
+    "subcategory": "glass",
+    "value_usd": 145,
+    "world": "modern",
+    "needs": [
+      "gift",
+      "everyday"
+    ],
+    "available": true,
+    "swatch": "mulberry",
+    "hex": "#7E3A80",
+    "blurb": "Bergamot and Cedar \u2014 glass in the modern line.",
+    "image": "/meridian/img/MRD-R030.jpg"
+  },
+  {
+    "id": "MRD-R031",
+    "vertical": "retail",
+    "name": "Acetate Aviator",
+    "category": "Eyewear",
+    "subcategory": "acetate",
+    "value_usd": 215,
+    "world": "heritage",
+    "needs": [
+      "travel",
+      "everyday"
+    ],
+    "available": true,
+    "swatch": "garnet",
+    "hex": "#B8355F",
+    "blurb": "Acetate Aviator \u2014 acetate in the heritage line.",
+    "image": "/meridian/img/MRD-R031.jpg"
+  },
+  {
+    "id": "MRD-R032",
+    "vertical": "retail",
+    "name": "Oversized Shield",
+    "category": "Eyewear",
+    "subcategory": "acetate",
+    "value_usd": 265,
+    "world": "statement",
+    "needs": [
+      "travel",
+      "evening"
+    ],
+    "available": true,
+    "swatch": "steel",
+    "hex": "#3F6389",
+    "blurb": "Oversized Shield \u2014 acetate in the statement line.",
+    "image": "/meridian/img/MRD-R032.jpg"
+  },
+  {
+    "id": "MRD-R033",
+    "vertical": "retail",
+    "name": "Tortoise Reader",
+    "category": "Eyewear",
+    "subcategory": "acetate",
+    "value_usd": 120,
+    "world": "modern",
+    "needs": [
+      "work"
+    ],
+    "available": true,
+    "swatch": "coral",
+    "hex": "#E8503A",
+    "blurb": "Tortoise Reader \u2014 acetate in the modern line.",
+    "image": "/meridian/img/MRD-R033.jpg"
+  },
+  {
+    "id": "MRD-R034",
+    "vertical": "retail",
+    "name": "Round Wire Frame",
+    "category": "Eyewear",
+    "subcategory": "metal",
+    "value_usd": 185,
+    "world": "minimal",
+    "needs": [
+      "everyday"
+    ],
+    "available": true,
+    "swatch": "amber",
+    "hex": "#E8A317",
+    "blurb": "Round Wire Frame \u2014 metal in the minimal line.",
+    "image": "/meridian/img/MRD-R034.jpg"
+  },
+  {
+    "id": "MRD-R035",
+    "vertical": "retail",
+    "name": "Wool Check Muffler",
+    "category": "Scarves",
+    "subcategory": "wool",
+    "value_usd": 95,
+    "world": "heritage",
+    "needs": [
+      "everyday",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "olive",
+    "hex": "#7CA82F",
+    "blurb": "Wool Check Muffler \u2014 wool in the heritage line.",
+    "image": "/meridian/img/MRD-R035.jpg"
+  },
+  {
+    "id": "MRD-R036",
+    "vertical": "retail",
+    "name": "Lambswool Scarf",
+    "category": "Scarves",
+    "subcategory": "wool",
+    "value_usd": 58,
+    "world": "minimal",
+    "needs": [
+      "everyday",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "teal",
+    "hex": "#12968C",
+    "blurb": "Lambswool Scarf \u2014 wool in the minimal line.",
+    "image": "/meridian/img/MRD-R036.jpg"
+  },
+  {
+    "id": "MRD-R037",
+    "vertical": "retail",
+    "name": "Silk Twill Square",
+    "category": "Scarves",
+    "subcategory": "silk",
+    "value_usd": 165,
+    "world": "statement",
+    "needs": [
+      "evening",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "indigo",
+    "hex": "#4257C4",
+    "blurb": "Silk Twill Square \u2014 silk in the statement line.",
+    "image": "/meridian/img/MRD-R037.jpg"
+  },
+  {
+    "id": "MRD-R038",
+    "vertical": "retail",
+    "name": "Silk Twill Oblong",
+    "category": "Scarves",
+    "subcategory": "silk",
+    "value_usd": 195,
+    "world": "modern",
+    "needs": [
+      "evening",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "plum",
+    "hex": "#9B45A0",
+    "blurb": "Silk Twill Oblong \u2014 silk in the modern line.",
+    "image": "/meridian/img/MRD-R038.jpg"
+  },
+  {
+    "id": "MRD-R039",
+    "vertical": "retail",
+    "name": "Silk Bandana",
+    "category": "Scarves",
+    "subcategory": "silk",
+    "value_usd": 85,
+    "world": "statement",
+    "needs": [
+      "everyday",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "rose",
+    "hex": "#DB4079",
+    "blurb": "Silk Bandana \u2014 silk in the statement line.",
+    "image": "/meridian/img/MRD-R039.jpg"
+  },
+  {
+    "id": "MRD-R040",
+    "vertical": "retail",
+    "name": "Cashmere Wrap",
+    "category": "Scarves",
+    "subcategory": "cashmere",
+    "value_usd": 245,
+    "world": "modern",
+    "needs": [
+      "travel",
+      "gift"
+    ],
+    "available": true,
+    "swatch": "slate",
+    "hex": "#4E7AA8",
+    "blurb": "Cashmere Wrap \u2014 cashmere in the modern line.",
+    "image": "/meridian/img/MRD-R040.jpg"
+  }
+]

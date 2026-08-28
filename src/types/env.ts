@@ -1,6 +1,8 @@
 export interface Env {
   ASSETS: Fetcher;   // static-assets binding (public/) for server-side reads — see wrangler.toml [assets]
   BROWSER?: Fetcher; // Browser Rendering (headless Chromium) for the /__shot verification route
+  /** Shared secret for /__shot. UNSET DISABLES THE ROUTE ENTIRELY — see src/routes/shot.ts. */
+  SHOT_TOKEN?: string;
   CACHE: KVNamespace;
   SESSIONS: KVNamespace;
   STORAGE: R2Bucket;
@@ -13,6 +15,8 @@ export interface Env {
   // WebSocket + affinity state (wrangler migration v4). Keyed on the STABLE
   // visitor id; used only when REFLEX_HOST = 'do'.
   SHOPPER_REFLEX: DurableObjectNamespace;
+  /** Meridian (Opticon) — its own reflex object, never the shared one. */
+  MERIDIAN_REFLEX: DurableObjectNamespace;
   // Opal chat agent (SQLite-backed DO, wrangler migration v3) — reached via
   // routeAgentRequest(/agents/*), not app routes; declared here for Env completeness.
   OpalAgent: DurableObjectNamespace;

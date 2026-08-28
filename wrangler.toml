@@ -68,6 +68,14 @@ class_name = "OpalAgent"
 name = "SHOPPER_REFLEX"
 class_name = "ShopperReflex"
 
+# Meridian (Opticon surface) owns its own reflex object rather than sharing
+# ShopperReflex. REFLEX_HOST is a single global var, so reaching the DO host
+# through it would move Coach onto a path that has never run in production.
+# Meridian always uses this object; nothing is toggled and nobody else is moved.
+[[durable_objects.bindings]]
+name = "MERIDIAN_REFLEX"
+class_name = "MeridianReflex"
+
 [[migrations]]
 tag = "v1"
 new_classes = ["StateManager", "RateLimiter"]
@@ -86,6 +94,12 @@ new_sqlite_classes = ["OpalAgent"]
 [[migrations]]
 tag = "v4"
 new_sqlite_classes = ["ShopperReflex"]
+
+# MeridianReflex is SQLite-backed for the same reasons: affinity state, a
+# hibernating socket, and closed-form alarms all live in ctx.storage.
+[[migrations]]
+tag = "v5"
+new_sqlite_classes = ["MeridianReflex"]
 
 # Analytics Engine
 [[analytics_engine_datasets]]

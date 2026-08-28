@@ -1,0 +1,211 @@
+[
+  {
+    "id": "MRD-B001",
+    "vertical": "retail",
+    "title": "How a Field Jacket Earns Its Wax",
+    "kicker": "Made at Calder",
+    "contentType": "video",
+    "category": "Outerwear",
+    "world": "heritage",
+    "needs": [
+      "everyday"
+    ],
+    "slots": [
+      "block_a",
+      "block_b"
+    ],
+    "body": "Made at Calder: How a Field Jacket Earns Its Wax."
+  },
+  {
+    "id": "MRD-B002",
+    "vertical": "retail",
+    "title": "Five Ways to Wear One Scarf",
+    "kicker": "The Edit",
+    "contentType": "editorial",
+    "category": "Scarves",
+    "world": "statement",
+    "needs": [
+      "gift",
+      "evening"
+    ],
+    "slots": [
+      "block_a",
+      "block_b"
+    ],
+    "body": "The Edit: Five Ways to Wear One Scarf."
+  },
+  {
+    "id": "MRD-B003",
+    "vertical": "retail",
+    "title": "Sizing a Signet, Properly",
+    "kicker": "Guide",
+    "contentType": "guide",
+    "category": "Jewellery",
+    "world": "heritage",
+    "needs": [
+      "gift"
+    ],
+    "slots": [
+      "block_a",
+      "block_b"
+    ],
+    "body": "Guide: Sizing a Signet, Properly."
+  },
+  {
+    "id": "MRD-B004",
+    "vertical": "retail",
+    "title": "The Weekender, Packed Three Ways",
+    "kicker": "Travel Notes",
+    "contentType": "editorial",
+    "category": "Bags",
+    "world": "modern",
+    "needs": [
+      "travel"
+    ],
+    "slots": [
+      "block_a",
+      "block_b"
+    ],
+    "body": "Travel Notes: The Weekender, Packed Three Ways."
+  },
+  {
+    "id": "MRD-B005",
+    "vertical": "retail",
+    "title": "Cashmere, and How to Keep It",
+    "kicker": "Care",
+    "contentType": "guide",
+    "category": "Knitwear",
+    "world": "modern",
+    "needs": [
+      "everyday"
+    ],
+    "slots": [
+      "block_a",
+      "block_b"
+    ],
+    "body": "Care: Cashmere, and How to Keep It."
+  },
+  {
+    "id": "MRD-B006",
+    "vertical": "retail",
+    "title": "This Season in Outerwear",
+    "kicker": "New Arrivals",
+    "contentType": "on-model",
+    "category": "Outerwear",
+    "world": "modern",
+    "needs": [
+      "work",
+      "evening"
+    ],
+    "slots": [
+      "block_a",
+      "block_b",
+      "hero"
+    ],
+    "body": "New Arrivals: This Season in Outerwear."
+  },
+  {
+    "id": "MRD-B007",
+    "vertical": "financial",
+    "title": "What Your Rate Actually Costs",
+    "kicker": "Rate Explainer",
+    "contentType": "explainer",
+    "category": "Mortgage",
+    "world": "building",
+    "needs": [
+      "borrow"
+    ],
+    "slots": [
+      "block_a",
+      "block_b"
+    ],
+    "body": "Rate Explainer: What Your Rate Actually Costs."
+  },
+  {
+    "id": "MRD-B008",
+    "vertical": "financial",
+    "title": "Refinance Break-Even Calculator",
+    "kicker": "Run the Numbers",
+    "contentType": "calculator",
+    "category": "Mortgage",
+    "world": "established",
+    "needs": [
+      "refinance"
+    ],
+    "slots": [
+      "block_a",
+      "block_b",
+      "hero"
+    ],
+    "body": "Run the Numbers: Refinance Break-Even Calculator."
+  },
+  {
+    "id": "MRD-B009",
+    "vertical": "financial",
+    "title": "Today\u2019s Savings Rates",
+    "kicker": "Rates",
+    "contentType": "rate-table",
+    "category": "Savings",
+    "world": "building",
+    "needs": [
+      "save"
+    ],
+    "slots": [
+      "block_a",
+      "block_b"
+    ],
+    "body": "Rates: Today\u2019s Savings Rates."
+  },
+  {
+    "id": "MRD-B010",
+    "vertical": "financial",
+    "title": "Your First Card, Explained",
+    "kicker": "Getting Started",
+    "contentType": "guide",
+    "category": "Card",
+    "world": "starting-out",
+    "needs": [
+      "borrow",
+      "protect"
+    ],
+    "slots": [
+      "block_a",
+      "block_b"
+    ],
+    "body": "Getting Started: Your First Card, Explained."
+  },
+  {
+    "id": "MRD-B011",
+    "vertical": "financial",
+    "title": "Retirement in Four Decisions",
+    "kicker": "Planning",
+    "contentType": "explainer",
+    "category": "Investing",
+    "world": "planning",
+    "needs": [
+      "invest"
+    ],
+    "slots": [
+      "block_a",
+      "block_b"
+    ],
+    "body": "Planning: Retirement in Four Decisions."
+  },
+  {
+    "id": "MRD-B012",
+    "vertical": "financial",
+    "title": "Buying Your First Car",
+    "kicker": "Guide",
+    "contentType": "guide",
+    "category": "Auto",
+    "world": "starting-out",
+    "needs": [
+      "borrow"
+    ],
+    "slots": [
+      "block_a",
+      "block_b"
+    ],
+    "body": "Guide: Buying Your First Car."
+  }
+]
