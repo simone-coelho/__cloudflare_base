@@ -201,8 +201,11 @@ const broadKey = () => S.registry.dimensions.find((d) => d.shape === 'broad')?.k
 /** The priors an arrival applies: the census band, then the cohort's lead lines and family. */
 function coldTouches() {
   const t = [];
-  if (S.coldPrior) t.push({ dim: S.coldPrior.dim, value: S.coldPrior.value });
   const c = S.cohort;
+  // The band: your receipts when they clear the gate (purchase intent), the
+  // census-derived band otherwise (affluence, the enrichment). Curation only.
+  const bandFromReceipts = cohortUsable(c) && !c.synthesized && c.modalBand;
+  if (S.coldPrior) t.push({ dim: S.coldPrior.dim, value: bandFromReceipts || S.coldPrior.value });
   if (cohortUsable(c)) {
     for (const l of c.topLines.slice(0, 2)) t.push({ dim: narrowKey(), value: l.line });
     if (c.topFamilies?.[0]?.category) t.push({ dim: broadKey(), value: c.topFamilies[0].category });
@@ -211,17 +214,18 @@ function coldTouches() {
 }
 /** What shoppers near her carry: the lead colourway of each leading line, in cohort order, five at most. */
 function coldPicksFor(c) {
+  // Two pieces per leading line (distinct families first, then colourways), so
+  // the lead line still shows on the shelf after the hero takes its first piece.
   const picks = [];
   for (const l of c.topLines) {
-    const seen = new Set();
-    for (const it of S.items.filter((i) => i.line === l.line)) {
-      const fam = it.family || it.id;
-      if (seen.has(fam)) continue; seen.add(fam);
-      picks.push(it.id); if (seen.size >= 2) break;
-    }
-    if (picks.length >= 5) break;
+    const inLine = S.items.filter((i) => i.line === l.line);
+    const seen = new Set(); const chosen = [];
+    for (const it of inLine) { const fam = it.family || it.id; if (!seen.has(fam)) { seen.add(fam); chosen.push(it.id); } if (chosen.length >= 2) break; }
+    for (const it of inLine) { if (chosen.length >= 2) break; if (!chosen.includes(it.id)) chosen.push(it.id); }
+    picks.push(...chosen);
+    if (picks.length >= 6) break;
   }
-  return picks.slice(0, 5);
+  return picks.slice(0, 6);
 }
 function cohortHero(c) {
   const top = c.topLines[0].line, second = c.topLines[1]?.line;
@@ -893,8 +897,8 @@ function forecastSequence(acts) {
     if (a.kind === 'arrive') {
       const c = S.cohort;
       did.push(`Arrives from ${place(c)} — nothing known but where she is (${c?.honesty?.geo === 'query-override' ? 'forced location' : 'real edge geo'})`);
-      if (c?.census) did.push(`Census ${c.census.source || 'ACS'}: median household income ${money(c.census.medianHhIncome)} → ${S.coldPrior ? `${S.coldPrior.value} band` : 'a price band'} (public, free)`);
-      if (cohortUsable(c)) did.push(`Your receipts: ${c.synthesized ? 'a representative cohort at' : `${c.sampleSize} shoppers in`} ${c.grainLabel} — ${c.topLines.slice(0, 3).map((l) => `${l.line} ${Math.round(l.share * 100)}%`).join(', ')}`);
+      if (c?.census) did.push(`${c.census.source || 'Census ACS'}: median household income ${money(c.census.medianHhIncome)}${c.census.medianHomeValue ? ` · median home ${money(c.census.medianHomeValue)}` : ''} (public, free)${cohortUsable(c) && !c.synthesized ? '' : ` → ${S.coldPrior ? `${S.coldPrior.value} band` : 'a price band'}`}`);
+      if (cohortUsable(c)) did.push(`Your receipts: ${c.synthesized ? 'a representative cohort at' : `${c.sampleSize} shoppers in`} ${c.grainLabel} — ${c.topLines.slice(0, 3).map((l) => `${l.line} ${Math.round(l.share * 100)}%`).join(', ')}${c.synthesized ? '' : ` · they buy in the ${c.modalBand} band → the page opens there`}`);
       const touches = coldTouches();
       if (touches.length) step('prior', touches);
       continue;
@@ -1442,7 +1446,7 @@ function recompose(first, opts = {}) {
     // NAME THE LEADER, and say why in its own terms. "A different section" was
     // the fallback when the leader held a template position — it named nothing.
     const first = S.layout.sections.slice().sort((a, b) => a.rank - b.rank).find((x) => x.section !== 'takeover');
-    const leadSec = top || first;
+    const leadSec = first;                          // whoever is at the top IS the leader — template or not
     const lead = SECTION_NAME[leadSec?.section] || leadSec?.section || 'A different section';
     const why = leadSec?.explain?.movedBecause
       || (leadSec?.strategy === 'locked' ? 'it is pinned by the merchandiser'
@@ -2203,9 +2207,14 @@ $('btn-replay').onclick = () => showWhatChanged();
 // capture time is in the frame — before and after can be held side by side
 // three minutes later, which is the reason the tool exists.
 $('btn-capture').onclick = async () => {
+  const b = $('btn-capture');
+  if (b.classList.contains('busy')) return;        // one capture at a time (compare.js joins a pending one anyway)
+  b.classList.add('busy'); b.classList.remove('on');
+  b.innerHTML = 'Capture baseline<small>capturing — one moment</small>';
   const r = await captureBaseline($('page'));
-  $('btn-capture').classList.toggle('on', !!r.ok);
-  $('btn-capture').innerHTML = r.ok ? 'Baseline captured<small>compare when ready</small>' : 'Capture baseline<small>freeze the page now</small>';
+  b.classList.remove('busy');
+  b.classList.toggle('on', !!r.ok);
+  b.innerHTML = r.ok ? 'Baseline captured<small>compare when ready</small>' : 'Capture baseline<small>freeze the page now</small>';
   if (r.ok) consequence('Compare', 'Baseline captured', 'Compare will show this frame against whatever the page looks like then.');
 };
 $('btn-compare').onclick = () => openCompare($('page'));

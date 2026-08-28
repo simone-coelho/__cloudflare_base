@@ -17,6 +17,7 @@ import type { Env } from '@/types/env';
 import { itemsFor, blocksFor, catalogStats } from './catalog';
 import { configFor, SHAPE_OF_KEY, SHAPE_ORDER } from './reflexConfig';
 import { coldStart } from './coldstart';
+import { computeGeoCohort, getGeoCohortSource, type GeoInput } from './geoCohort';
 import { funnel, defectCohortFor, defectDrilldownFor } from './funnel';
 import { concierge } from './concierge';
 import { search } from './search';
@@ -119,6 +120,31 @@ meridian.get('/coldstart', async (c) => {
     : cf;
   const out = await coldStart(geo as any, c.env.DB, vertical);
   return c.json({ ...out, overridden: Boolean(override) });
+});
+
+/**
+ * What shoppers from here actually bought.
+ *
+ * The other half of the cold start: the visitor's real geography, our OWN
+ * first-party purchase history for it (representative rows today, the
+ * customer's warehouse later — MRD_GEO_COHORT_SOURCE), and REAL public census.
+ * The grain is gated on our shopper count and always shown; the payload is
+ * curation only — which lines lead — never a price or a gate. See geoCohort.ts.
+ *
+ * Any of ?zip / ?region / ?city / ?country makes the request a SELF-CONTAINED,
+ * labelled override (honesty.geo 'query-override'); the edge geo is not mixed in,
+ * so ?region=CA cannot be undone by the venue's ZIP. Without them it is the live
+ * cold start from request.cf ('real-connection-property'). Never throws.
+ */
+meridian.get('/cohort', async (c) => {
+  const vertical = verticalOf(c.req.query('vertical'));
+  const cf = ((c.req.raw as any).cf ?? {}) as Record<string, string | undefined>;
+  const q = c.req.query();
+  const hasOverride = q.zip != null || q.region != null || q.city != null || q.country != null;
+  const geo: GeoInput = hasOverride
+    ? { zip: q.zip ?? null, region: q.region ?? null, city: q.city ?? null, country: q.country ?? null, source: 'query' }
+    : { zip: cf.postalCode ?? null, region: cf.regionCode ?? cf.region ?? null, city: cf.city ?? null, country: cf.country ?? null, source: 'edge' };
+  return c.json(await computeGeoCohort(geo, getGeoCohortSource(c.env), vertical));
 });
 
 /** Live socket. Frames arrive here when an alarm fires with nobody touching anything. */

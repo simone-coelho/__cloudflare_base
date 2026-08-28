@@ -16,10 +16,17 @@
 //
 // What it is, honestly: a PIXEL tool, not a state tool. html2canvas paints what
 // the DOM looks like at that instant, so any "this just changed" marker on the
-// page at capture time — a .card.moved outline, a .zone pulse, a moved-card
+// page at capture time — a .card.changed outline, a .zone pulse, a moved-card
 // delta chip — is part of the frame, exactly as the room saw it. There is no
 // "clean" capture: take the baseline BEFORE triggering the change if a clean
 // Before is wanted.
+//
+// What a frame IS: the whole page (rootEl's content, top to bottom, at the
+// page's own width), never the viewport — a rearrangement moves things below
+// the fold, and that is exactly what has to be in the comparison. Both frames
+// are taken from the top, so they register at the top whatever the page's
+// scroll offset was when either button was pressed; the live page is never
+// scrolled by this module.
 //
 // Exports: captureBaseline(rootEl), hasBaseline(), openCompare(rootEl),
 //          clearBaseline(), closeCompare()
@@ -33,7 +40,26 @@ const ENVELOPE = { vw: 0.86, maxW: 1180, vh: 0.72, maxH: 760 };
 const SEAM_STEP = 2;      // ← / → nudge, in % of the stage width
 const SEAM_DEFAULT = 50;  // the seam opens at the middle
 
-let baseline = null;   // { url, at, scrollTop, w, h } — the Before frame
+/** How long a capture will wait for the page to come to rest before it clones
+    the DOM. Everything the page does to itself is shorter: the hero fades out
+    for 300ms before its content is replaced, a section FLIP holds its inverted
+    transform for two frames before it is released, a card FLIP the same. */
+const SETTLE_MAX_MS = 2000;
+/** Elements the page FLIPs with an inline transform (layout.js paintLayout,
+    meridian.js flipRow). While the inline transform is set they are sitting at
+    their OLD position; once released (transform '') the transition carries them
+    and the clone — transitions off — sees them at their final place. */
+const FLIP_TARGETS = '[data-section],[data-follows],.card';
+/** Two frames whose downsampled pixels differ in fewer than this fraction of
+    samples are the same page. Anti-aliasing noise between two renders of an
+    identical DOM is zero (same rasteriser, same input); a single changed word
+    is well above this. */
+const SAME_FRAME_MAX = 0.0005;
+const SAMPLE_STEP = 8;    // the signature is the frame at 1/8 scale
+
+let baseline = null;   // { url, at, scrollTop, w, h, sig, settled, clipped } — the Before frame
+let pending = null;    // the captureBaseline() in flight, if any — a second press joins it
+let gen = 0;           // bumped by clearBaseline(): a capture that started before it is discarded
 let h2c = null;        // html2canvas, once loaded
 let ui = null;         // overlay element refs, once injected
 const view = { seam: SEAM_DEFAULT, open: false, disabled: false, lastFocus: null, frameW: 0, frameH: 0, note: '' };
@@ -62,57 +88,153 @@ async function html2canvasLib() {
   return (h2c = g.html2canvas);
 }
 
-/** The scroll position is pinned WITH the shot. Two captures taken at different
-    offsets do not register: the frames would compare two different regions of
-    the page and the seam would show a shift, not a change. openCompare()
-    scrolls the root back to the baseline's offset before taking the Now frame.
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
 
-    html2canvas 1.4.1 restores every scrolled element's offset inside its clone
-    (DocumentCloner.scrolledElements), so the visible window is captured as-is;
-    width/height = clientWidth/clientHeight crop the scrollbar gutter. v1 also
-    passed y:scrollTop / scrollY:-scrollTop — with the clone already scrolled that
-    double-compensates and shifts the frame up by scrollTop at any non-zero
-    offset (it was a no-op at 0, which is where it was rehearsed), so it is gone. */
+/** Is anything inside rootEl mid-flight? A .swapping element is fading out and
+    its content has NOT been replaced yet (meridian.js swap(): the render runs
+    at 300ms) — a clone taken now shows either the old content or, with the
+    fade frozen, nothing at all. A FLIP target with an inline transform is
+    sitting at its old position. */
+function inMotion(rootEl) {
+  if (rootEl.querySelector('.swapping')) return true;
+  for (const el of rootEl.querySelectorAll(FLIP_TARGETS)) if (el.style.transform) return true;
+  return false;
+}
+
+/** Wait — bounded — for the page to come to rest, then one more frame so the
+    last class change has painted. Resolves true when it settled, false when it
+    gave up (the clone still freezes what is there at its final state). */
+async function settled(rootEl) {
+  const t0 = performance.now();
+  await nextFrame();
+  while (inMotion(rootEl)) {
+    if (performance.now() - t0 > SETTLE_MAX_MS) return false;
+    await nextFrame();
+  }
+  await nextFrame();
+  return true;
+}
+
+/** The clone is frozen at its FINAL, settled state:
+      - html2canvas RESTARTS every CSS animation inside its clone, so anything
+        that animates in from opacity 0 would be captured at 0 (the hero came
+        out blank in the Now frame after an email). Animations and transitions
+        are off, so every element sits at the end of its motion.
+      - html2canvas paints EVERY box-shadow as a solid fill over the element,
+        blurred or flat, spread or not (both were tried; both flooded the card).
+        Shadows are off. The hero's step-coloured drop shadow is re-expressed as
+        a band of the same colour along the bottom of the hero — a background
+        gradient, so the hero keeps its exact height and the frame its exact
+        length (a border did neither: it made the clone 12px taller than the
+        page, which the canvas then clipped off the bottom). A highlighted card
+        keeps its coloured 2px edge (the page's own rule); the 3px ring around
+        it was a shadow.
+      - A .swapping element that is still on the page when the wait gave up is
+        shown rather than hidden.
+    Pseudo-elements cannot be added here: html2canvas resolves ::before/::after
+    from the ORIGINAL document's computed styles before onclone runs. */
+const FREEZE_CSS =
+  '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}'
+  + '.swapping{opacity:1!important}'
+  + '#hero.landed{background:linear-gradient(to top,var(--hl) 0,var(--hl) 12px,#fff 12px)!important}'
+  + '#row .card.changed{border-color:var(--hl)!important}';
+
+/** A cheap signature of a frame: the canvas at 1/SAMPLE_STEP scale. Two frames
+    of the same page compare equal on it; any visible change does not. */
+function signature(canvas) {
+  const sw = Math.max(1, Math.ceil(canvas.width / SAMPLE_STEP));
+  const sh = Math.max(1, Math.ceil(canvas.height / SAMPLE_STEP));
+  const c = document.createElement('canvas');
+  c.width = sw; c.height = sh;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(canvas, 0, 0, sw, sh);
+  return { w: sw, h: sh, data: g.getImageData(0, 0, sw, sh).data };
+}
+
+/** The fraction of signature samples that differ (any channel by more than 16).
+    Frames of different sizes are different pages. */
+function differing(a, b) {
+  if (!a || !b) return 1;
+  if (a.w !== b.w || a.h !== b.h) return 1;
+  const A = a.data, B = b.data;
+  let n = 0;
+  for (let i = 0; i < A.length; i += 4) {
+    if (Math.abs(A[i] - B[i]) > 16 || Math.abs(A[i + 1] - B[i + 1]) > 16 || Math.abs(A[i + 2] - B[i + 2]) > 16) n += 1;
+  }
+  return n / (A.length / 4);
+}
+
+/** Take the WHOLE page: rootEl's content from the top, at rootEl's width, as
+    tall as its content — NOT its viewport, and NOT its bottom clearance padding
+    (the director bar's --dir-h, which changes as the bar re-flows and would make
+    two frames of the same page different heights).
+
+    Root causes this guards against, each measured before it was fixed:
+      1. The clone must lay out EXACTLY like the page. html2canvas builds its
+         clone inside an iframe sized windowWidth × windowHeight; v1 passed
+         windowHeight = the page's full scrollHeight, so the clone's viewport was
+         1351px tall where the real one was 800, meridian.css's
+         @media (max-height:860px) / (max-height:820px) compact rules stopped
+         matching inside the clone, and every section laid out taller (hero
+         176 → 314px, row 475 → 676px, page 1202 → 1579px). The canvas, sized to
+         the REAL scrollHeight, then cut the bottom 230px off — block_a mid-card
+         in Before, the moved-down hero partly or wholly gone in Now — and what
+         did fit was a layout the room never saw. The iframe is now the real
+         window's size; only the clone's root is expanded to the content height.
+      2. The page must be at rest. Compare pressed within 300ms of the OK on
+         the band found the hero .swapping — opacity 0 on the page, frozen at 0
+         in the clone — and the Now frame had a blank white box where the change
+         was. capture() waits (bounded) for the swap and any FLIP to finish.
+      3. The frame must be the page as it is now, not as it was cloned: the
+         DOM is cloned synchronously at the html2canvas call, so everything
+         after the wait is one snapshot.
+    If the clone still comes out taller than the page (a rule this module does
+    not know about), the frame is retaken at the clone's height rather than
+    clipped: a frame is whole or it is not a frame. */
 async function capture(rootEl) {
   const lib = await html2canvasLib();
   if (document.fonts && document.fonts.ready) await document.fonts.ready.catch(() => {});
+  const rested = await settled(rootEl);
   const scrollTop = rootEl.scrollTop;
-  // THE WHOLE PAGE. A viewport-only frame missed everything that moved below
-  // the fold — which is exactly what a rearrangement does. The clone's root is
-  // expanded to its full content height so html2canvas paints all of it.
-  const w = rootEl.clientWidth, h = rootEl.scrollHeight;
+  const cs = getComputedStyle(rootEl);
+  const padBottom = parseFloat(cs.paddingBottom) || 0;
+  const w = rootEl.clientWidth;
+  let h = Math.max(1, Math.ceil(rootEl.scrollHeight - padBottom));
   const rootId = rootEl.id;
-  const canvas = await lib(rootEl, {
-    useCORS: true, logging: false,
-    backgroundColor: getComputedStyle(rootEl).backgroundColor,
-    scale: Math.min(2, window.devicePixelRatio || 1),
-    width: w, height: h, windowHeight: h, scrollY: 0,
-    // html2canvas RESTARTS every CSS animation inside its clone, so anything
-    // that animates in from opacity 0 is captured at 0 — the hero came out
-    // blank in the Now frame after an email. Freeze the clone at its final,
-    // settled state instead.
-    onclone: (doc) => {
-      const st = doc.createElement('style');
-      // Box-shadows too: html2canvas paints a large blurred shadow as a solid
-      // fill over the element's interior (the hero came out as a red block).
-      // Borders still paint, so highlighted cards keep their coloured edge.
-      // html2canvas paints EVERY box-shadow as a solid fill over the element —
-      // blurred or flat, spread or not (both were tried; both flooded the card).
-      // Borders paint correctly, so the hero's drop shadow and the picks' rings
-      // are re-expressed as borders in the clone and stay visible in the frame.
-      st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important;box-shadow:none!important}'
-        + '#hero.landed{border-bottom:14px solid var(--hl)!important}'
-        + '#row .card.changed{border:3px solid var(--hl)!important}';
-      doc.head.appendChild(st);
-      const r = rootId ? doc.getElementById(rootId) : null;
-      if (r) { r.style.height = `${h}px`; r.style.maxHeight = 'none'; r.style.overflow = 'visible'; r.scrollTop = 0; }
-    },
-  });
-  return { url: canvas.toDataURL('image/png'), at: Date.now(), scrollTop, w, h };
+  const render = async (height) => {
+    let cloneH = 0;
+    const canvas = await lib(rootEl, {
+      useCORS: true, logging: false,
+      backgroundColor: cs.backgroundColor,
+      scale: Math.min(2, window.devicePixelRatio || 1),
+      width: w, height, scrollX: 0, scrollY: 0,
+      windowWidth: window.innerWidth, windowHeight: window.innerHeight,
+      onclone: (doc) => {
+        const st = doc.createElement('style');
+        st.textContent = FREEZE_CSS;
+        doc.head.appendChild(st);
+        const r = rootId ? doc.getElementById(rootId) : null;
+        if (!r) return;
+        r.style.height = `${height}px`; r.style.maxHeight = 'none'; r.style.overflow = 'visible';
+        r.style.paddingBottom = '0'; r.scrollTop = 0;
+        // A FLIP caught inside its two-frame inversion window: the clone shows
+        // the element where it is going, not where it was.
+        for (const el of r.querySelectorAll(FLIP_TARGETS)) if (el.style.transform) el.style.transform = '';
+        cloneH = r.scrollHeight;
+      },
+    });
+    return { canvas, cloneH };
+  };
+  let { canvas, cloneH } = await render(h);
+  let clipped = false;
+  if (cloneH > h + 2) {
+    // The clone laid out taller than the page after all: retake it whole.
+    h = cloneH;
+    ({ canvas, cloneH } = await render(h));
+    clipped = cloneH > h + 2;
+  }
+  return { url: canvas.toDataURL('image/png'), at: Date.now(), scrollTop, w, h, sig: signature(canvas), settled: rested, clipped };
 }
-
-const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
-async function settle() { await nextFrame(); await nextFrame(); }
 
 function assertRoot(el, fn) {
   if (!el || typeof el !== 'object' || typeof el.scrollTop !== 'number') {
@@ -215,7 +337,7 @@ function setSeam(pct) {
   ui.stage.setAttribute('aria-valuetext', `Before ${Math.round(pct)}%, now ${Math.round(100 - pct)}%`);
 }
 
-const HINT = 'Drag the seam · Before to its left, Now to its right · ← → nudge · Home / End to the edges';
+const HINT = 'Drag the seam · Before to its left, Now to its right · scroll for the rest of the page · ← → nudge · Home / End to the edges';
 
 function fit() {
   if (!ui) return;
@@ -319,45 +441,65 @@ function showFailure(title, detail) {
 
 // ── API ─────────────────────────────────────────────────────────────────────
 
-/** Capture rootEl as the Before frame, pinned to its current scrollTop.
+/** Capture rootEl — the whole page, from the top — as the Before frame.
     Resolves { at, ok, scrollTop } — or { at, ok:false, error } after opening the
-    overlay on the failure message. Never rejects for a capture failure. */
+    overlay on the failure message. Never rejects for a capture failure.
+    One capture at a time: a second press while the first is still rendering
+    joins it rather than starting another. A capture that started before
+    clearBaseline() is discarded when it lands. */
 export async function captureBaseline(rootEl) {
   assertRoot(rootEl, 'captureBaseline');
-  try {
-    baseline = await capture(rootEl);
-    return { at: baseline.at, ok: true, scrollTop: baseline.scrollTop };
-  } catch (err) {
-    baseline = null;
-    showFailure('Nothing was captured', `Compare could not take a baseline: ${reason(err)}`);
-    return { at: Date.now(), ok: false, error: reason(err) };
-  }
+  if (pending) return pending;
+  const myGen = gen;
+  pending = (async () => {
+    try {
+      const frame = await capture(rootEl);
+      if (myGen !== gen) return { at: frame.at, ok: false, error: 'cleared while capturing' };
+      baseline = frame;
+      return { at: frame.at, ok: true, scrollTop: frame.scrollTop };
+    } catch (err) {
+      if (myGen === gen) {
+        baseline = null;
+        showFailure('Nothing was captured', `Compare could not take a baseline: ${reason(err)}`);
+      }
+      return { at: Date.now(), ok: false, error: reason(err) };
+    } finally {
+      pending = null;
+    }
+  })();
+  return pending;
 }
 
 export function hasBaseline() { return baseline !== null; }
 
-/** Re-capture rootEl at the baseline's scrollTop and open the overlay, Before vs
-    Now behind the seam (at 50%). Without a baseline it captures one first and
-    says so (the page against itself). Resolves { before, now, beforeAt, nowAt,
-    scrollTop } with the two data URLs — or { …, now:null, error } after opening
-    the overlay on the failure message. */
+/** Re-capture rootEl (the whole page, from the top) and open the overlay,
+    Before vs Now behind the seam (at 50%). A Capture still in flight is waited
+    for — it is the Before. Without a baseline it captures one first and says
+    so (the page against itself); with a baseline the page has not moved from,
+    it says that too. Resolves { before, now, beforeAt, nowAt, scrollTop } with
+    the two data URLs — or { …, now:null, error } after opening the overlay on
+    the failure message. */
 export async function openCompare(rootEl) {
   assertRoot(rootEl, 'openCompare');
   let note = '';
   try {
+    if (pending) await pending;
     if (!baseline) {
       baseline = await capture(rootEl);
       note = 'No baseline had been captured, so this is the page against itself. Capture, change something, then compare.';
     }
-    // Register the two frames: same offset, and let layout settle before the shot.
-    rootEl.scrollTop = baseline.scrollTop;
-    await settle();
     const now = await capture(rootEl);
-    if (!note && now.scrollTop !== baseline.scrollTop) {
-      note = `The page could not return to the baseline offset (${baseline.scrollTop}px, now ${now.scrollTop}px); the frames may not register.`;
-    }
     if (!note && now.w !== baseline.w) {
       note = 'The window was resized since the baseline; the frames may not register.';
+    }
+    if (!note && differing(baseline.sig, now.sig) < SAME_FRAME_MAX) {
+      note = `Nothing on the page has changed since the baseline (${fmtDelta(now.at - baseline.at)}) — this is the page against itself.`;
+    }
+    if (!note && !now.settled) {
+      note = 'The page was still moving when the Now frame was taken; compare again once it has settled.';
+    }
+    if (!note && (baseline.clipped || now.clipped)) {
+      note = 'A frame laid out taller than the page and may be cut off at the bottom.';
     }
     showFrames(baseline, now, note);
     return { before: baseline.url, now: now.url, beforeAt: baseline.at, nowAt: now.at, scrollTop: baseline.scrollTop };
@@ -370,8 +512,10 @@ export async function openCompare(rootEl) {
   }
 }
 
-/** Drop the Before frame (and close the overlay if it is up). */
+/** Drop the Before frame (and close the overlay if it is up). A capture still
+    in flight lands on the floor, not on the next visitor. */
 export function clearBaseline() {
+  gen += 1;
   baseline = null;
   if (ui) { ui.before.style.backgroundImage = ''; ui.after.style.backgroundImage = ''; }
   closeCompare();

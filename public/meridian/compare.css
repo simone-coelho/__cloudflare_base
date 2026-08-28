@@ -123,3 +123,13 @@
 /* ── keyboard focus, visible on every control ───────────────────────────── */
 .cmp-btn:focus-visible{outline:2px solid var(--cmp-blue);outline-offset:2px}
 .cmp-stage:focus-visible{outline:2px solid var(--cmp-blue);outline-offset:-2px}
+
+/* ── the Capture button while a capture is rendering ────────────────────── */
+/* meridian.js puts .busy on #btn-capture from the press until captureBaseline()
+   resolves (html2canvas takes a second or more on a retina screen, and the
+   capture waits for the page to come to rest first). The room sees the button
+   working rather than a press that did nothing. */
+#btn-capture.busy{cursor:progress;opacity:.72;pointer-events:none}
+#btn-capture.busy small{animation:cmp-busy 1s ease-in-out infinite}
+@keyframes cmp-busy{0%,100%{opacity:1}50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){#btn-capture.busy small{animation:none}}

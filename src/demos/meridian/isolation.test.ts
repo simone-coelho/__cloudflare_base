@@ -68,7 +68,9 @@ describe('isolation charter', () => {
     // `mrd_geo_census` would be duplication for its own sake — but it must
     // never write outside its own namespace, because that is how one demo
     // corrupts another's state mid-rehearsal.
-    const SHARED_READONLY = new Set(['geo_census']);
+    // geo_xref is the ZIP → metro → region crosswalk the cohort ladder walks;
+    // like geo_census it is published reference data, read-only to us.
+    const SHARED_READONLY = new Set(['geo_census', 'geo_xref']);
 
     const sqlText: string[] = [];
     for (const { src } of sources) {
