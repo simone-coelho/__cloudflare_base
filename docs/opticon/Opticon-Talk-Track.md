@@ -290,9 +290,9 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **0:45** · C11 · C19 · LIVE
 
-**You do —** Open the audience list, then toggle the hero pin.
+**You do —** Open the audience list, then pin the hero — and RELEASE the pin before moving on.
 
-**They watch —** Audiences in the catalogue’s own words. Hero locks; explain reads "pinned · ranking skipped".
+**They watch —** Audiences in the catalogue’s own words. Hero locks; explain reads "pinned · ranking skipped". The button becomes "Release the pin".
 
 **You say —** Nobody wrote these audiences. They are minted from your catalogue, in your merchandising language. And declared precedence — gates, then pins, then ranking. Your merchandiser outranks the machine, and the machine says so on the record.
 
@@ -308,6 +308,8 @@ Print this. The director bar on screen shows the room the beat and what to watch
 **You do —** Open the explain on an excluded item.
 
 **They watch —** Highest score. Refused. The rule named.
+
+> ⚠️ **RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.**
 
 **You say —** That is the engine declining a click it would have won. It scored highest, a rule said no, and it kept the score so you can see what it gave up. Showing you the refusal is worth more than showing you the win.
 
@@ -353,9 +355,11 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You do —** Switch the business.
 
-**They watch —** The left panel does not change. Seven bars stay in place and re-label. Cold start recomputes from median home value at 80% LTV.
+**They watch —** Seven bars stay in exactly their places and re-label. The four surfaces keep their KINDS — email, paid social, SMS, partner form — and re-vocabularise. Cold start recomputes from median home value at 80% LTV. The centre becomes unrecognisable.
 
-**You say —** Same person. Same four surfaces. Same trail. I changed what we sell. Seven bars did not move — they were relabelled. Category became product family, taste became life stage, journey stage became application stage. You already know this customer. You just do not know him in this vocabulary yet.
+> ⚠️ **The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.**
+
+**You say —** I changed what we sell. Watch what did not change: seven bars, in the same seven places, relabelled. Category became product family, taste became life stage, journey stage became application stage. Same four kinds of surface on the left, speaking a different language. The centre you would not recognise — a bank does not merchandise, it makes offers and asks you to apply, so it renders as rates and cards and eligibility. One engine. Your front end paints it. You already know this customer, you just do not know him in this vocabulary yet.
 
 *Why 1:35:* The act’s payoff. It needs the silence after it more than it needs the words in it.
 
@@ -584,4 +588,6 @@ If you are running short, these are the ones that do not get compressed.
 
 ## Every caution
 
+- **Beat 20, The refusal:** RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.
 - **Beat 22, She came back:** DO NOT say "ODP is the memory". ODP is deliberately not connected on this surface. If asked: connect ODP and this becomes durable across devices and shareable with the rest of your stack — that is a credential, not a code change.
+- **Beat 23, I changed what we sell:** The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.

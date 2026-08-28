@@ -117,6 +117,9 @@ export const MERIDIAN_WEIGHTS: Readonly<Record<string, number>> = {
       in the SAME vector as observed behaviour and decays on the SAME clock — a
       preference declared once stops driving the page unless behaviour agrees. */
   declared: 3.2,
+  /** Choosing a department is a broader statement than opening one product —
+      it is the visitor telling you which aisle they are in. */
+  nav_click: 2.0,
   view: 1.0,
   scroll_depth: 0.5,
   rail_click: 1.5,
@@ -246,6 +249,7 @@ export type StageStep = 'browse' | 'consider' | 'decide';
 
 export const STAGE_OF_ACTION: Readonly<Record<string, StageStep>> = {
   view: 'browse', row_click: 'browse', rail_click: 'browse', block_read: 'browse',
+  nav_click: 'browse',
   scroll_depth: 'browse', arrival: 'browse',
   search: 'consider', save: 'consider',
   intent_start: 'decide', convert: 'decide',

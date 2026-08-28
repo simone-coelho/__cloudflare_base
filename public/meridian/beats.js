@@ -164,12 +164,13 @@ export const BEATS = [
 
   { n: 19, act: 2, cap: 'C11 · C19', title: 'Your merchandiser outranks it', secs: 45,
     why: 'Two governance points that answer the same objection; taking them together keeps the pace up.',
-    do: 'Open the audience list, then toggle the hero pin.',
-    watch: 'Audiences in the catalogue’s own words. Hero locks; explain reads "pinned · ranking skipped".',
+    do: 'Open the audience list, then pin the hero — and RELEASE the pin before moving on.',
+    watch: 'Audiences in the catalogue’s own words. Hero locks; explain reads "pinned · ranking skipped". The button becomes "Release the pin".',
     say: 'Nobody wrote these audiences. They are minted from your catalogue, in your merchandising language. And declared precedence — gates, then pins, then ranking. Your merchandiser outranks the machine, and the machine says so on the record.',
     real: 'LIVE' },
 
   { n: 20, act: 2, cap: 'C20', title: 'The refusal', secs: 60, mark: 'SLOW DOWN',
+    caution: 'RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.',
     why: 'The most persuasive thing the engine does. It is also the least expected, so it needs setup and silence.',
     do: 'Open the explain on an excluded item.',
     watch: 'Highest score. Refused. The rule named.',
@@ -193,11 +194,12 @@ export const BEATS = [
     real: 'edge memory LIVE · ODP wired-dormant' },
 
   { n: 23, act: 2, cap: 'C34', title: 'I changed what we sell', secs: 95, mark: 'THE STRONGEST LINE',
+    caution: 'The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.',
     why: 'The act’s payoff. It needs the silence after it more than it needs the words in it.',
     arm: { vertical: 'financial' },
     do: 'Switch the business.',
-    watch: 'The left panel does not change. Seven bars stay in place and re-label. Cold start recomputes from median home value at 80% LTV.',
-    say: 'Same person. Same four surfaces. Same trail. I changed what we sell. Seven bars did not move — they were relabelled. Category became product family, taste became life stage, journey stage became application stage. You already know this customer. You just do not know him in this vocabulary yet.',
+    watch: 'Seven bars stay in exactly their places and re-label. The four surfaces keep their KINDS — email, paid social, SMS, partner form — and re-vocabularise. Cold start recomputes from median home value at 80% LTV. The centre becomes unrecognisable.',
+    say: 'I changed what we sell. Watch what did not change: seven bars, in the same seven places, relabelled. Category became product family, taste became life stage, journey stage became application stage. Same four kinds of surface on the left, speaking a different language. The centre you would not recognise — a bank does not merchandise, it makes offers and asks you to apply, so it renders as rates and cards and eligibility. One engine. Your front end paints it. You already know this customer, you just do not know him in this vocabulary yet.',
     real: 'LIVE' },
 
   // ── ACT 3 · the operator · 480s ────────────────────────────────────────────

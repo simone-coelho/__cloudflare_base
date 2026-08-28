@@ -70,8 +70,18 @@ async function load(vertical) {
   S.published = [];
   document.documentElement.dataset.vertical = vertical;
   $('biz').textContent = vertical === 'retail' ? '& Co.' : 'Financial';
-  $('nav').innerHTML = [...new Set(r.items.map((i) => i.category))]
-    .map((c, i) => (i === 0 ? `<b>${c}</b>` : `<span>${c}</span>`)).join('');
+  // THE NAV IS A CONTROL, NOT DECORATION. It had no handler at all, so the one
+  // natural way to browse away from a campaign — click a different department —
+  // did nothing. That is the hinge beat of the whole session.
+  const cats = [...new Set(r.items.map((i) => i.category))];
+  $('nav').innerHTML = cats
+    .map((c, i) => `<button class="navc${i === 0 ? ' on' : ''}" data-cat="${c}">${c}</button>`).join('');
+  $('nav').querySelectorAll('.navc').forEach((el) => {
+    el.onclick = () => {
+      $('nav').querySelectorAll('.navc').forEach((x) => x.classList.toggle('on', x === el));
+      navTo(el.dataset.cat);
+    };
+  });
   $('row-title').textContent = vertical === 'retail' ? 'Selected for you' : 'Suited to you';
   $('cfgv').textContent = r.registry.version;
   renderSurfaces(); renderBars(); renderChips([], []); $('episodes').innerHTML = '';
@@ -167,6 +177,11 @@ function fireSurface(s) {
   document.querySelector(`.surface[data-id="${s.id}"]`)?.style.setProperty('opacity', '.45');
 
   S.heroOverride = { ...s.hero, from: s.id };
+  // The hero repaints when the DECISION changes. A surface changes the override
+  // copy, not the underlying item — so without this the presenter fires the SMS,
+  // then the quiz, and the hero keeps showing whatever the ad said. Caught in a
+  // sequential walk; firing one surface in isolation never revealed it.
+  S.heroDirty = true;
   S.sinceArrival = 0;
   // A stated preference is not an arrival. It weighs more, and it says nothing
   // about journey stage, so it gets its own verb rather than being flattened.
@@ -268,6 +283,20 @@ function checkHandoff(snap) {
 }
 
 // ── Signals from the page ───────────────────────────────────────────────────
+/** Browsing a department: a category touch with no single item behind it. */
+function navTo(category) {
+  const touches = [{ dim: S.vertical === 'retail' ? 'category' : 'productFamily', value: category }];
+  const stage = stageTouchFor('nav_click', S.vertical);
+  const res = apply(S.reflex, { action: 'nav_click', touches: stage ? [...touches, stage] : touches },
+                    Date.now(), S.config);
+  S.reflex = res.state; absorb(res.changes);
+  S.behaved = true; S.sinceArrival += 1;
+  recompose();
+  post('/action', { vertical: S.vertical, events: [{ action: 'nav_click', touches }] });
+  consequence('Department', `Browsing ${category}`,
+    'A department is a broader statement than one product — it says which aisle she is in.');
+}
+
 function signal(action, record) {
   S.sinceArrival += 1;
   const stage = stageTouchFor(action, S.vertical);
@@ -615,11 +644,32 @@ function renderBars() {
       </div></div>`).join('');
 }
 
+/**
+ * Journey stage is ORDINAL, so the instrument must show the furthest stage she
+ * has reached and still holds — not the highest-scoring one. Browsing
+ * out-accumulates deciding easily (an arrival plus two department clicks beats
+ * one add-to-bag), so the panel read "journeyStage · browsing" while the page
+ * beside it read "Complete the look". Both were true by their own rule and the
+ * room sees a contradiction, which is worse than either being wrong.
+ */
+const STAGE_ORDER = ['browsing', 'considering', 'deciding', 'exploring', 'comparing', 'applying'];
+
 function paintBars(dims) {
   for (const spec of S.registry.dimensions) {
     const per = dims?.[spec.key] || {};
     let top = null, a = 0;
     for (const [v, x] of Object.entries(per)) if (x > a) { a = x; top = v; }
+
+    if (SHAPE_OF_KEY[spec.key] === 'stage') {
+      let furthest = null, fa = 0;
+      for (const [v, x] of Object.entries(per)) {
+        if (x < spec.thetaOut) continue;                       // no longer held
+        if (furthest === null || STAGE_ORDER.indexOf(v) > STAGE_ORDER.indexOf(furthest)) {
+          furthest = v; fa = x;
+        }
+      }
+      if (furthest) { top = furthest; a = fa; }
+    }
     const bar = document.querySelector(`.bar[data-dim="${spec.key}"]`);
     if (!bar) continue;
     bar.querySelector('.fill').style.width = `${Math.min(100, a * 100)}%`;
@@ -896,6 +946,16 @@ $('conc-form').onsubmit = (e) => {
 
 S.pins = {};
 
+/** A control names what it is AND what it currently is. The label never changed,
+ *  so a presenter mid-session could not tell whether the hero was pinned. */
+function paintPinButton() {
+  const on = !!S.pins.hero;
+  $('btn-pin').innerHTML = on
+    ? 'Release the pin<small>ranking resumes</small>'
+    : 'Pin the hero<small>merchandiser wins</small>';
+  $('btn-pin').classList.toggle('on', on);
+}
+
 $('btn-pin').onclick = () => {
   if (S.pins.hero) {
     delete S.pins.hero;
@@ -911,6 +971,7 @@ $('btn-pin').onclick = () => {
     S.sayLockUntil = Date.now() + 6000;
   }
   S.heroDirty = true; recompose();
+  paintPinButton();
 };
 
 $('btn-soldout').onclick = () => {
@@ -1434,6 +1495,7 @@ $('btn-reset').onclick = async () => {
 };
 
 if (new URLSearchParams(location.search).has('debug')) window.__S = S;
+paintPinButton();
 // One click to start, and it survives the reload that beat 22 performs.
 if (new URLSearchParams(location.search).has('director')
     || sessionStorage.getItem('mrd_dir') !== null) queueMicrotask(openDirector);  // rehearsal introspection only

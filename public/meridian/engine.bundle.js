@@ -264,6 +264,9 @@ var MERIDIAN_WEIGHTS = {
       in the SAME vector as observed behaviour and decays on the SAME clock — a
       preference declared once stops driving the page unless behaviour agrees. */
   declared: 3.2,
+  /** Choosing a department is a broader statement than opening one product —
+      it is the visitor telling you which aisle they are in. */
+  nav_click: 2,
   view: 1,
   scroll_depth: 0.5,
   rail_click: 1.5,
@@ -359,6 +362,7 @@ var STAGE_OF_ACTION = {
   row_click: "browse",
   rail_click: "browse",
   block_read: "browse",
+  nav_click: "browse",
   scroll_depth: "browse",
   arrival: "browse",
   search: "consider",

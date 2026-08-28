@@ -596,3 +596,11 @@ body.has-director .page{padding-bottom:250px}
    text that was perfectly readable. Give the scroller room to run its last
    section fully clear of the pinned controls instead. */
 .eng-scroll{position:relative;padding-bottom:34px}
+
+/* The department nav — a real control, so it has to look and behave like one. */
+.brand nav .navc{
+  font:400 14px/1 inherit;color:var(--muted);background:none;border:0;cursor:pointer;
+  padding:6px 2px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;
+}
+.brand nav .navc:hover{color:var(--ink)}
+.brand nav .navc.on{color:var(--ink);font-weight:500;border-bottom-color:var(--accent)}
