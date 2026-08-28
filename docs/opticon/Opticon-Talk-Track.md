@@ -482,17 +482,17 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 32. Bandits, and what I will not show you
+### 32. Bandits — real rules, honest readouts
 
-**1:25** · C26 · C27 · LIVE rules
+**1:25** · C26 · C27 · rules REAL · readouts REPRESENTATIVE
 
-**You do —** Dispatch MAB, then CMAB.
+**You do —** Create the MAB, then the CMAB. Point at the badge, the ids, and the word REPRESENTATIVE.
 
-**They watch —** Both rules in Optimizely, with their attributes. CMAB traffic bandit-allocated, no manual split.
+**They watch —** Two cards: multi_armed_bandit and contextual_multi_armed_bandit rules in the real project, with flag and rule ids and an Open-it-now link. The allocation and the per-context winners are labelled representative.
 
-**You say —** Both real, both in your project. What I will not do is show you a reallocation chart or a per-context winner, because those need traffic and this room will not generate any in forty-five minutes. Anyone showing you that curve on a stage is showing you a picture.
+**You say —** Both real, both in your project — open it. What I will not do is pretend this room is traffic: the allocation you see is representative and it says so. The rule is the product; the traffic is yours.
 
-*Why 1:25:* The refusal to fake a lift chart is a credibility beat. It earns the time it takes.
+*Why 1:25:* The card shows Opal doing it and says on every line what is real and what is representative. That honesty is the credibility beat.
 
 ---
 
@@ -505,27 +505,27 @@ Print this. The director bar on screen shows the room the beat and what to watch
 **1:50** · C28 · compute LIVE · traffic SIMULATED
 > ### ⏸ THE BIGGEST WOW — SLOW RIGHT DOWN
 
-**You do —** Open Revenue Radar. Filter to premium. Then add mobile.
+**You do —** Open Revenue Radar on everyone. Then filter to Gen-Z.
 
-**They watch —** Blended payment step looks like an ordinary week. Premium drops. Premium and mobile collapses — inside a tenth of traffic.
+**They watch —** Blended: the payment step looks like an ordinary week. Gen-Z: it collapses ~44% at the payment step, flagged, with the recoverable amount computed term by term.
 
-**You say —** That is the number in your weekly report, and it looks like an ordinary week. Filter to premium and there is a real gap. Now add mobile — and it roughly doubles, inside under ten percent of sessions. That is precisely the condition under which an average lies: a severe failure in a small slice moves the blend by a few points. The average lied. The cohort told the truth.
+**You say —** Across all customers this checkout looked fine — that is the number in your weekly report. Segment to Gen-Z and it collapses forty-four percent at the payment step. About seven and a half thousand dollars walking out the door, computed from the rows, not typed in.
 
-*Why 1:50:* Two filters and an arithmetic reveal. The dilution between them is the part that convinces, and it cannot be rushed.
+*Why 1:50:* One filter and an arithmetic reveal. The blended number has to be seen looking ordinary first, or the collapse reads as staged.
 
 ---
 
-### 34. Launch the fix
+### 34. Launch the fix — and prove it in the room
 
-**1:20** · C29 · audience/flag LIVE · lift REPRESENTATIVE
+**1:20** · C29 · audience/flag LIVE · recovery REPRESENTATIVE · in-session fix LIVE
 
-**You do —** Launch the fix.
+**You do —** Launch the fix. Watch the funnel recover. Then open the checkout.
 
-**They watch —** The working, then a real flag with a real audience id targeted at the diagnosed cohort.
+**They watch —** A real audience id and a real experiment targeted at the diagnosed cohort · the payment bar climbs (green) with the fix applied · the checkout’s payment step now shows Pay in 4 with social proof.
 
-**You say —** Sessions lost to the gap, times what an order is worth. Every term on screen. And the fix is a real experiment, targeted at a real audience built from the cohort we just diagnosed. The diagnosis is computed from simulated traffic and the lift figure is representative — you will compute yours from your own rows. The audience and the experiment are real objects in your project.
+**You say —** It found the leak, built the fix, launched a real experiment targeted at a real audience — and proved the recovery, in the room. And here is that shopper’s payment step, right now: installments and social proof, served by that experiment. Not a report you read next quarter.
 
-*Why 1:20:* The recoverable arithmetic is shown term by term, then a real object is created. Both need to be seen.
+*Why 1:20:* The recoverable arithmetic is shown term by term, a real object is created, the funnel recovers, and the payment step changes for that shopper. All four need to be seen.
 
 ---
 

@@ -2198,8 +2198,8 @@ $('rec-close').onclick = () => $('receipts').classList.remove('open');
 $('btn-radar').onclick = async () => {
   $('radar').classList.add('open');
   // Always open on the blended view. The lie has to be seen before it is caught.
-  RAD.baseline = null;
-  await radar([]);
+  RAD.baseline = null; RAD.recovered = null;
+  await radar('all');
 };
 $('rad-close').onclick = () => $('radar').classList.remove('open');
 $('btn-replay').onclick = () => showWhatChanged();
@@ -2681,89 +2681,148 @@ const escapeHtml = (t) => String(t).replace(/[&<>"]/g, (c) =>
 // the line it was hiding behind. Only the failing step is allowed the alarm
 // colour, because if everything is highlighted nothing is.
 
-let RAD = { cohort: [], data: null, baseline: null };
+let RAD = { cohort: 'all', data: null, baseline: null, launched: null, recovered: null };
 
-const cohortParam = (c) => c.map((k) => `${k.dim}:${k.value}`).join(',');
+const cohortParam = (c) => (Array.isArray(c) ? c.map((k) => `${k.dim}:${k.value}`).join(',') : String(c || 'all'));
 const usd = (n) => '$' + Math.round(n).toLocaleString('en-US');
 const share = (n) => `${(n * 100).toFixed(1)}%`;
+const isAll = (c) => !c || c === 'all' || (Array.isArray(c) && c.length === 0);
 
-async function radar(cohort) {
+async function radar(cohort, opts = {}) {
   RAD.cohort = cohort;
   const q = new URLSearchParams({ vertical: S.vertical });
-  if (cohort.length) q.set('cohort', cohortParam(cohort));
+  if (!isAll(cohort)) q.set('cohort', cohortParam(cohort));
+  if (opts.remedy) q.set('remedy', '1');
   const d = await fetch(`${API}/funnel?${q}`, { credentials: 'omit' })
     .then((r) => r.json()).catch(() => null);
-  if (!d?.ok) { $('rad-funnel').innerHTML = '<div class="rad-math">The funnel service could not be reached.</div>'; return; }
-  if (!cohort.length) RAD.baseline = d;
-  RAD.data = d;
-  renderRadar();
+  if (!d?.ok) { $('rad-funnel').innerHTML = '<div class="rad-math">The funnel service could not be reached.</div>'; return null; }
+  if (isAll(cohort) && !opts.remedy) RAD.baseline = d;
+  if (!opts.remedy) { RAD.data = d; renderRadar(); }
+  return d;
 }
 
 function renderRadar() {
   const d = RAD.data; const base = RAD.baseline;
-  $('rad-sub').textContent = `${d.cohortLabel} · ${d.sessions.toLocaleString('en-US')} sessions`
-    + (d.cohort.length ? ` · ${share(d.shareOfTraffic)} of traffic` : '');
+  const cohortKey = cohortParam(d.cohort ?? RAD.cohort);
+  $('rad-sub').textContent = `· ${d.cohortLabel} · ${d.sessions.toLocaleString('en-US')} sessions`
+    + (!isAll(d.cohort) ? ` · ${share(d.shareOfTraffic)} of traffic` : '');
 
-  // Cohort chips. The two the presenter actually uses lead; the rest are there
-  // so the room can see we can filter to something we never rehearsed.
-  const sug = d.suggested;
-  const chips = [{ label: 'Everyone', keys: [] },
-                 { label: sug.first.map((k) => k.value).join(' + '), keys: sug.first },
-                 { label: sug.drilldown.map((k) => k.value).join(' + '), keys: sug.drilldown }];
-  // Drop anything the lead chips already cover, so the same cohort is never
-  // offered twice under two different names.
-  const covered = new Set(chips.map((c) => cohortParam(c.keys)));
-  const extra = d.available.filter((a) => a.dim !== 'region')
-    .map((a) => ({ label: a.label, keys: [{ dim: a.dim, value: a.value }] }))
-    .filter((c) => !covered.has(cohortParam(c.keys)));
-  $('rad-cohorts').innerHTML = chips.map((c, i) =>
-      `<button class="rad-c lead${cohortParam(c.keys) === cohortParam(d.cohort) ? ' on' : ''}" data-k='${JSON.stringify(c.keys)}'>${c.label}</button>`).join('')
-    + extra.map((c) =>
-      `<button class="rad-c${cohortParam(c.keys) === cohortParam(d.cohort) ? ' on' : ''}" data-k='${JSON.stringify(c.keys)}'>${c.label}</button>`).join('');
-  $('rad-cohorts').querySelectorAll('.rad-c').forEach((b) => {
-    b.onclick = () => radar(JSON.parse(b.dataset.k));
-  });
+  // THE PILLS. Generations lead (that is the story: the average hides a cohort);
+  // the dimension chips stay so the room can filter to something never rehearsed.
+  const gens = (d.cohortOptions || []).map((o) => ({ label: o.label, key: o.key, gen: true }));
+  const legacy = [];
+  if (!gens.length && d.suggested) {
+    legacy.push({ label: 'Everyone', key: [] }, { label: d.suggested.first.map((k) => k.value).join(' + '), key: d.suggested.first },
+                { label: d.suggested.drilldown.map((k) => k.value).join(' + '), key: d.suggested.drilldown });
+  }
+  const covered = new Set([...gens, ...legacy].map((c) => cohortParam(c.key)));
+  const extra = (d.available || []).filter((a) => a.dim !== 'region')
+    .map((a) => ({ label: a.label, key: [{ dim: a.dim, value: a.value }] }))
+    .filter((c) => !covered.has(cohortParam(c.key)));
+  const pill = (c) => `<button class="rad-c${c.gen ? ' gen lead' : ''}${cohortParam(c.key) === cohortKey ? ' on' : ''}" id="rad-c-${String(cohortParam(c.key) || 'all').replace(/[^a-z0-9_]/gi, '_')}" data-k='${JSON.stringify(c.key)}'>${escapeHtml(c.label)}</button>`;
+  $('rad-cohorts').innerHTML = [...gens, ...legacy, ...extra].map(pill).join('');
+  $('rad-cohorts').querySelectorAll('.rad-c').forEach((b) => { b.onclick = () => radar(JSON.parse(b.dataset.k)); });
 
+  const rec = RAD.recovered && cohortParam(RAD.recovered.cohort) === cohortKey ? RAD.recovered : null;
   $('rad-funnel').innerHTML = d.steps.map((st, i) => {
-    const bad = d.worst && st.key === d.worst.key;
+    const bad = d.worst && st.key === d.worst.key && (st.severity ? st.severity === 'high' : true);
+    const mid = st.severity === 'mid';
     const ghost = base && base.steps[i] ? base.steps[i].rate : null;
-    return `<div class="rad-step${bad ? ' bad' : ''}">
-      <div class="lab"><span>${st.label}</span><b>${share(st.rate)}</b></div>
-      <div class="rad-track"><div class="rad-fill" style="width:${(st.rate * 100).toFixed(1)}%"></div></div>
-      ${ghost != null && d.cohort.length
-        ? `<div class="rad-ghost" style="width:${(ghost * 100).toFixed(1)}%"></div>` : ''}
+    const rate = rec ? rec.steps[i].rate : st.rate;
+    const drop = i === 0 ? null : (rec ? rec.steps[i].dropPct : st.dropPct);
+    return `<div class="rad-step${bad && !rec ? ' bad' : ''}${mid ? ' mid' : ''}${rec && bad ? ' rad-recovered' : ''}">
+      <div class="lab"><span>${escapeHtml(st.label)}${drop != null ? `<span class="drop">▼ ${Number(drop).toFixed(1)}%</span>` : ''}</span><b>${share(rate)}</b></div>
+      <div class="rad-track"><div class="rad-fill" style="width:${(rate * 100).toFixed(1)}%"></div></div>
+      ${ghost != null && !isAll(d.cohort) ? `<div class="rad-ghost" style="width:${(ghost * 100).toFixed(1)}%"></div>` : ''}
     </div>`;
-  }).join('') + (d.cohort.length
-    ? '<div class="rad-math">The thin line under each bar is everyone. Simulated traffic; every rate above computed from those rows on this request.</div>'
-    : '<div class="rad-math">All visitors. This is the number that goes in the weekly report.</div>');
+  }).join('') + (!isAll(d.cohort)
+    ? `<div class="rad-math">The thin line under each bar is everyone. Simulated traffic; every rate above is computed from those rows on this request.${rec ? ' <b>Green: the same rows with the fix applied.</b>' : ''}</div>`
+    : '<div class="rad-math">All visitors. This is the number that goes in the weekly report — and it looks like an ordinary week.</div>');
 
   if (!d.worst || !d.recoverable) {
-    $('rad-find').innerHTML = d.cohort.length
+    $('rad-find').innerHTML = !isAll(d.cohort)
       ? '<h6>No material gap</h6><div class="rad-remedy">This cohort tracks the average. That is a real answer too — and it is the one an average is usually telling the truth about.</div>'
-      : '<h6>The average</h6><div class="rad-remedy">Nothing here looks wrong, which is the problem. Filter to a cohort.</div>';
+      : '<h6>The average</h6><div class="rad-remedy">Nothing here looks wrong, which is the problem. Filter to a cohort — start with Gen-Z.</div>';
     return;
   }
 
-  const w = d.worst; const r = d.recoverable;
+  const w = d.worst; const r = d.recoverable; const m = r.math;
   $('rad-find').innerHTML = `
     <h6>Where it breaks</h6>
-    <div class="rad-gap">${(w.gapPoints * 100).toFixed(1)} points</div>
-    <div class="rad-remedy"><b>${w.label}</b> — ${share(w.cohortRate)} for this cohort against ${share(w.baselineRate)} for everyone.</div>
+    <div class="rad-gap">${w.dropPct != null ? `${Number(w.dropPct).toFixed(1)}% drop` : `${(w.gapPoints * 100).toFixed(1)} points`}</div>
+    <div class="rad-remedy"><b>${escapeHtml(w.label)}</b> — ${share(w.cohortRate)} for this cohort against ${share(w.baselineRate)} for everyone${w.skew ? ` · <b>${escapeHtml(w.skew)}</b>` : ''}.</div>
     <h6>Recoverable</h6>
-    <div class="rad-money">${usd(r.amountUsd)}</div>
-    <div class="rad-math">${r.lostSessions.toLocaleString('en-US')} sessions lost to the gap
-      × ${usd(r.aov)} average order
-      = ${usd(r.amountUsd)}</div>
+    <div class="rad-money" id="rad-money">${usd(r.amountUsd)}</div>
+    <div class="rad-math">${m
+      ? `${Number(m.excessLostSessions).toLocaleString('en-US')} sessions lost beyond the expected drop × ${usd(m.aov)} average order × ${m.fraction} recoverable = <b>${usd(r.amountUsd)}</b>`
+      : `${r.lostSessions.toLocaleString('en-US')} sessions lost to the gap × ${usd(r.aov)} average order = ${usd(r.amountUsd)}`}</div>
     <h6>The remedy</h6>
-    <div class="rad-remedy">${r.remedy}</div>
+    <div class="rad-remedy">${escapeHtml(r.remedy)}${r.audienceNoun ? ` → <b>${escapeHtml(r.audienceNoun)}</b>` : ''}</div>
+    <div id="rad-recover"></div>
     <button class="rad-launch" id="rad-launch">Launch the fix</button>
     <div class="rad-out" id="rad-out"></div>
     <div class="cold-tags" style="margin-top:14px">
       <span class="tg no">traffic simulated</span>
       <span class="tg ok">compute live</span>
+      <span class="tg ok">audience + experiment real</span>
       <span class="tg dv">lift representative</span>
     </div>`;
   $('rad-launch').onclick = (e) => launchFix(e.currentTarget);
+  if (RAD.launched && cohortParam(RAD.launched.cohort) === cohortKey) paintLaunched(RAD.launched.r);
+}
+
+/** PROVE THE FIX: the same rows, the remedy applied to the diagnosed cohort — the funnel recovers on screen. */
+async function proveFix() {
+  const before = RAD.data; if (!before?.recoverable) return;
+  const after = await radar(before.cohort ?? RAD.cohort, { remedy: true });
+  if (!after?.ok) return;
+  RAD.recovered = { cohort: before.cohort ?? RAD.cohort, steps: after.steps, amountUsd: after.recoverable?.amountUsd ?? 0, recovered: after.recovered };
+  renderRadar();
+  const b = after.recovered?.before || { dropPct: before.worst?.dropPct, amountUsd: before.recoverable.amountUsd };
+  const a = after.recovered?.after || { dropPct: after.worst?.dropPct ?? 0, amountUsd: after.recoverable?.amountUsd ?? 0 };
+  $('rad-recover').innerHTML = `<div class="rad-delta"><div>Before<b>${Number(b.dropPct ?? 0).toFixed(1)}% drop · ${usd(b.amountUsd ?? 0)} leaking</b></div><div class="arr">→</div><div>With the fix<b>${Number(a.dropPct ?? 0).toFixed(1)}% drop · ${usd(a.amountUsd ?? 0)} leaking</b></div></div>
+    <div class="rad-math">${escapeHtml(after.note || 'The same arithmetic over the same simulated rows, with the remedy applied to the diagnosed cohort.')}</div>
+    <button class="rad-prove" id="rad-prove">Prove it in-session → open checkout</button>`;
+  $('rad-prove').onclick = () => { $('radar').classList.remove('open'); openCheckout(); };
+  consequence('Revenue Radar', 'The funnel recovers with the fix applied',
+    `${Number(b.dropPct ?? 0).toFixed(1)}% → ${Number(a.dropPct ?? 0).toFixed(1)}% at ${before.worst.label}; ${usd(b.amountUsd ?? 0)} → ${usd(a.amountUsd ?? 0)}. Same rows, remedy applied — representative recovery, real experiment.`);
+}
+
+// ── THE PROOF IN THE ROOM: the checkout sheet ─────────────────────────────
+// Before the fix: a card form. After the fix is live for her cohort: the
+// remedy at the payment step, in-session — the Coach beat, ported.
+function openCheckout() {
+  document.querySelectorAll('.moment.open').forEach((m) => m.classList.remove('open'));
+  const it = (S.anchorId && byId(S.anchorId)) || (pick(S.decisions, 'hero')?.itemId && byId(pick(S.decisions, 'hero').itemId)) || S.items[0];
+  const total = S.vertical === 'retail' ? (it?.value_usd ?? 298) : null;
+  const fix = S.fixLive;
+  $('co-steps').innerHTML = (S.vertical === 'retail' ? ['Bag', 'Shipping', 'Payment'] : ['Application', 'Details', 'Identity check'])
+    .map((n, i) => `<span class="${i === 2 ? 'on' : ''}">${i + 1} · ${n}</span>`).join('');
+  $('co-sub').textContent = fix ? `The ${S.vertical === 'retail' ? 'payment' : 'identity'} step for ${fix.audienceNoun || 'the diagnosed cohort'} — the fix is live for her, in-session.` : `The ${S.vertical === 'retail' ? 'payment' : 'identity'} step, as this shopper sees it right now — before any fix.`;
+  const lines = S.vertical === 'retail'
+    ? `<div class="co-line"><span>${escapeHtml(it?.name || 'Your piece')}</span><b>${money(total)}</b></div><div class="co-line"><span>Shipping</span><b>Free</b></div><div class="co-line"><span>Total</span><b>${money(total)}</b></div>`
+    : `<div class="co-line"><span>${escapeHtml(it?.name || 'Your application')}</span><b>in progress</b></div>`;
+  const control = S.vertical === 'retail'
+    ? `<div class="co-pay"><h4>Payment</h4><div class="co-field">Card number</div><div class="co-fields"><div class="co-field">MM / YY</div><div class="co-field">CVC</div></div><div class="co-field">Name on card</div><a class="co-btn">Pay ${money(total)}</a></div>`
+    : `<div class="co-pay"><h4>Identity check</h4><div class="co-field">Upload a photo ID</div><div class="co-field">Take a selfie</div><a class="co-btn">Run the check now</a></div>`;
+  const remedy = S.vertical === 'retail'
+    ? `<div class="co-bnpl"><span class="chip">New · for you</span><h4>Pay in 4 — interest-free</h4><div class="terms">4 payments of <b>${money(Math.round((total || 0) / 4))}</b> · 0% APR · nothing extra</div><div class="proof">★★★★★ 4,200 Gen-Z shoppers chose installments this month</div><div class="alt">○ Pay ${money(total)} in full</div><a class="co-btn">Pay in 4 — place order</a></div>`
+    : `<div class="co-bnpl"><span class="chip">New · for you</span><h4>Save your place — finish by link</h4><div class="terms">We text you a link; the identity check runs when you are ready, on any device.</div><div class="proof">★★★★★ Most applicants finish within the hour</div><a class="co-btn">Send me the link</a></div>`;
+  $('co-body').innerHTML = lines + (fix ? remedy : control)
+    + `<div class="co-foot">${fix ? `Served by the experiment <b>${escapeHtml(fix.flagKey || '')}</b> to <b>${escapeHtml(fix.audienceNoun || 'the cohort')}</b> — real flag, real audience; this session is in the treatment.` : 'The control. Launch the fix in Revenue Radar, then open this again.'}</div>`;
+  $('checkout').classList.add('open');
+  consequence('Checkout', fix ? 'The fix is live for that shopper, in-session' : 'The control payment step', fix ? `${fix.remedy} — served by ${fix.flagKey}.` : 'A plain card form. Nothing has been fixed yet.');
+}
+$('co-close').onclick = () => $('checkout').classList.remove('open');
+$('btn-checkout').onclick = () => openCheckout();
+
+function paintLaunched(r) {
+  const out = $('rad-out'); if (!out || !r) return;
+  const targeted = r.audience
+    ? `Targeted at <b>${escapeHtml(r.audience.name)}</b> — real Optimizely audience <code>${r.audience.id}</code>, ${r.audience.created ? 'created just now' : 'already there and reused'}.`
+    : '<span class="refuse">No audience was attached — this rule runs on everyone.</span>';
+  out.innerHTML = `⚡ <b>Experiment live</b> — <b>${escapeHtml(r.flagKey)}</b> · ${r.variations.join(' vs ')} · ${escapeHtml(r.environment)} · ${r.ms}ms<br>${targeted}<br>`
+    + `<span style="color:var(--p-dim)">The diagnosis is computed from simulated traffic. The audience and the experiment are real objects in a real project.</span>`;
 }
 
 /**
@@ -2774,9 +2833,10 @@ function renderRadar() {
 async function launchFix(btn) {
   const d = RAD.data;
   btn.disabled = true; btn.textContent = 'creating…';
+  const cohortKeys = Array.isArray(d.cohort) ? d.cohort : (d.cohortKeys || (isAll(d.cohort) ? [] : [{ dim: 'cohort', value: String(d.cohort) }]));
   const r = await fetch(`${API}/experiment/dispatch`, {
     method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ vertical: S.vertical, source: 'radar', flavour: 'ab', cohort: d.cohort }),
+    body: JSON.stringify({ vertical: S.vertical, source: 'radar', flavour: 'ab', cohort: cohortKeys }),
   }).then((x) => x.json()).catch(() => null);
   btn.disabled = false; btn.textContent = 'Launch the fix';
 
@@ -2789,11 +2849,13 @@ async function launchFix(btn) {
     ? `Targeted at <b>${r.audience.name}</b> — real Optimizely audience <code>${r.audience.id}</code>, `
       + `${r.audience.created ? 'created just now' : 'already there and reused'}.`
     : '<span class="refuse">No audience was attached — this rule runs on everyone.</span>';
-  out.innerHTML = `<b>${r.flagKey}</b> · ${r.variations.join(' vs ')} · ${r.environment} · ${r.ms}ms<br>`
-    + `${targeted} ${r.created ? 'Experiment created in Optimizely just now.' : 'Experiment already live — reused, not recreated.'}<br>`
-    + '<span style="color:var(--p-dim)">The diagnosis is computed from simulated traffic. The audience and the experiment are real objects in a real project.</span>';
+  RAD.launched = { cohort: d.cohort ?? RAD.cohort, r };
+  S.fixLive = { flagKey: r.flagKey, remedy: d.recoverable?.remedy, audienceNoun: d.recoverable?.audienceNoun || d.cohortLabel };
+  paintLaunched(r);
   consequence('Revenue Radar', 'Fix launched as a real experiment',
     `${r.flagKey} targeted at ${d.cohortLabel}. Diagnosis representative, experiment live.`);
+  // PROVE IT: the funnel recovers, then the payment step changes in-session.
+  await proveFix();
 }
 
 // ── THE EXPERIMENT CARD: Opal doing it, on the page ──────────────────────────
@@ -2959,6 +3021,7 @@ function hideStrips() {
   STRIP_UNTIL = 0; OSTRIP_UNTIL = 0;
   $('strip').hidden = true; $('ostrip').hidden = true;
   XP.open = false; XP.arms = []; $('xcard').hidden = true;
+  S.fixLive = null; RAD.launched = null; RAD.recovered = null;
 }
 $('btn-reset').onclick = async () => {
   hideStrips();                                    // the last session's banners are not this session's

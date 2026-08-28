@@ -251,6 +251,7 @@
           <div class="controls">
             <button id="btn-dyvs">DY vs us<small>neighbourhood vs shopper</small></button>
             <button id="btn-receipts">Show the receipts<small>warehouse rows</small></button>
+            <button id="btn-checkout">Checkout<small>the payment step, live</small></button>
             <button id="btn-skip">Let two minutes pass<small>decay, on your say-so</small></button>
             <button id="btn-return">Come back later<small>same visitor</small></button>
             <button id="btn-reset">New visitor<small>clears everything</small></button>
@@ -320,16 +321,37 @@
 </div>
 
 <div class="moment" id="radar">
-  <div class="moment-box">
-    <div class="ask-form" style="justify-content:space-between">
-      <strong style="font:500 20px/1 inherit">Revenue Radar <span id="rad-sub" style="color:var(--muted);font-size:14px"></span></strong>
+  <div class="moment-box rad-box">
+    <div class="mo-head">
+      <div>
+        <h3>Revenue Radar <span id="rad-sub"></span></h3>
+        <p>Where checkout revenue leaks — diagnosed live at the edge. The traffic is simulated; every rate on this screen is computed from those rows on this request.</p>
+      </div>
       <button type="button" id="rad-close">Close</button>
     </div>
-    <div class="rad-cohorts" id="rad-cohorts"></div>
-    <div class="rad-grid">
-      <div class="rad-funnel" id="rad-funnel"></div>
-      <div class="rad-find" id="rad-find"></div>
+    <div class="rad-body">
+      <div class="rad-cohorts" id="rad-cohorts"></div>
+      <div class="rad-grid">
+        <div class="rad-funnel" id="rad-funnel"></div>
+        <div class="rad-find" id="rad-find"></div>
+      </div>
     </div>
+  </div>
+</div>
+
+<!-- THE PROOF IN THE ROOM: the payment step as this shopper sees it right now.
+     Before the fix, a card form. After the fix is launched for her cohort, the remedy. -->
+<div class="moment" id="checkout">
+  <div class="moment-box co-box">
+    <div class="mo-head">
+      <div>
+        <h3>Checkout</h3>
+        <p id="co-sub">The payment step, as this shopper sees it right now.</p>
+      </div>
+      <button type="button" id="co-close">Close</button>
+    </div>
+    <div class="co-steps" id="co-steps"></div>
+    <div class="co-body" id="co-body"></div>
   </div>
 </div>
 
