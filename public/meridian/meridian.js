@@ -85,7 +85,7 @@ async function load(vertical) {
   $('row-title').textContent = vertical === 'retail' ? 'Selected for you' : 'Suited to you';
   $('cfgv').textContent = r.registry.version;
   renderSurfaces(); renderBars(); renderChips([], []); $('episodes').innerHTML = '';
-  renderDial();
+  renderDial(); renderBrowseBeats();
 
   // Ask the edge what it still holds BEFORE seeding, because cold start only
   // describes a visitor who has done nothing. Seeding over a live profile would
@@ -553,11 +553,33 @@ const cardOf = (category, n) => () => {
 };
 const dept = (name) => () => document.querySelector(`.navc[data-cat="${name}"]`);
 
-$('bz-coats').onclick = (e) => browse(e.currentTarget,
-  [dept('Outerwear'), cardOf('Outerwear', 0), cardOf('Outerwear', 1), cardOf('Outerwear', 2)]);
-$('bz-bags').onclick = (e) => browse(e.currentTarget,
-  [dept('Bags'), cardOf('Bags', 0), cardOf('Bags', 1)]);
-$('bz-decide').onclick = (e) => browse(e.currentTarget, ['#hero-cta']);
+// The beats are per vertical: a bank visitor browses mortgages, not coats.
+const BROWSE_BEATS = {
+  retail: {
+    a: { label: 'Three coats', sub: 'Outerwear · 3 clicks', dept: 'Outerwear', n: 3 },
+    b: { label: 'Wanders to bags', sub: 'Bags · 2 clicks', dept: 'Bags', n: 2 },
+    c: { label: 'Adds to bag', sub: 'the hero item' },
+  },
+  financial: {
+    a: { label: 'Three mortgages', sub: 'Mortgage · 3 clicks', dept: 'Mortgage', n: 3 },
+    b: { label: 'Wanders to cards', sub: 'Card · 2 clicks', dept: 'Card', n: 2 },
+    c: { label: 'Starts an application', sub: 'the hero offer' },
+  },
+};
+function renderBrowseBeats() {
+  const b = BROWSE_BEATS[S.vertical];
+  $('bz-coats').innerHTML = `${b.a.label}<small>${b.a.sub}</small>`;
+  $('bz-bags').innerHTML = `${b.b.label}<small>${b.b.sub}</small>`;
+  $('bz-decide').innerHTML = `${b.c.label}<small>${b.c.sub}</small>`;
+}
+const beatTargets = (k) => {
+  const b = BROWSE_BEATS[S.vertical][k];
+  if (!b.dept) return ['#hero-cta'];
+  return [dept(b.dept), ...Array.from({ length: b.n }, (_, i) => cardOf(b.dept, i))];
+};
+$('bz-coats').onclick = (e) => browse(e.currentTarget, beatTargets('a'));
+$('bz-bags').onclick = (e) => browse(e.currentTarget, beatTargets('b'));
+$('bz-decide').onclick = (e) => browse(e.currentTarget, beatTargets('c'));
 
 // ── The tuning dial ─────────────────────────────────────────────────────────
 // SLOT_STRATEGIES is the live table the composer reads on every recompose, so

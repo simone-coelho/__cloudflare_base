@@ -201,7 +201,7 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 - [ ] P2-16 `block_b` is scored by the composer but has no element on the page — render it or drop it
 - [ ] P2-17 The Drover→Linden story written as a beat (three Drover, one Linden, the line audience persists, the page follows)
 - [ ] P2-18 Walk end to end again with real mouse input; redeploy
-- [ ] P2-19 Recency-leads rule written into the Tapestry Solution & Algorithm doc as an addition — **Simone reviews before it is sent**
+- [ ] P2-19 Recency-leads addendum — **DRAFT READY** at `docs/Tapestry-Recency-Leads-Addendum.md` (what the documented algorithm does, the weakness, the addition, where it must not apply, the two tuning rows, and the honesty line for the room). Stays open until Simone reviews; nothing goes to the customer before that.
 
 ---
 
