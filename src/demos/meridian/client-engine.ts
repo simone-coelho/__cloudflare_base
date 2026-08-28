@@ -13,6 +13,8 @@ export { compose, SLOT_STRATEGIES, type AffinityView, type ComposeInput } from '
 // Section order (D4): where each region sits, per visitor, with its receipt.
 export { composeLayout, SECTIONS, OFFER_COPY, type LayoutInput, type LayoutResult } from './layout';
 export type { SectionDecision, SectionSpec, SectionStrategy, OfferCopy } from './types';
+export { leadValue, leadSentence } from './lead';
+export { LEAD_BY } from './reflexConfig';
 export { SHAPE_OF_KEY, SHAPE_ORDER, configFor, DEMO_TAUS, PROD_TAUS,
          stageTouchFor, decidingValueFor, stageKeyFor, STAGE_LABELS, expiryOf } from './reflexConfig';
 export {

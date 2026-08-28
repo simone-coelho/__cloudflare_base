@@ -74,7 +74,7 @@ Retail and financial declare **the same six dimension shapes** in different voca
 | Shape | Meridian & Co. | Meridian Financial |
 |---|---|---|
 | broad | `category` | `productFamily` |
-| narrow | `subcategory` | `subFamily` |
+| narrow | `line` | `subFamily` |
 | value band | `priceBand` | `amountBand` |
 | durable taste | `styleWorld` | `lifeStage` |
 | multi-valued need | `occasion` | `intent` |

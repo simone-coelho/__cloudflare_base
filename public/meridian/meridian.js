@@ -14,6 +14,7 @@ import {
   compose, composeLayout, SHAPE_OF_KEY, SHAPE_ORDER, SLOT_STRATEGIES, configFor, packshot,
   apply, tick, snapshot, emptyState, extractTouches,
   stageTouchFor, decidingValueFor, stageKeyFor, expiryOf, audienceKey,
+  leadValue, leadSentence, LEAD_BY,
 } from '/meridian/engine.bundle.js';
 
 const API = '/meridian/api';
@@ -573,12 +574,25 @@ function renderBrowseBeats() {
   $('bz-coats').innerHTML = `${b.a.label}<small>${b.a.sub}</small>`;
   $('bz-bags').innerHTML = `${b.b.label}<small>${b.b.sub}</small>`;
   $('bz-decide').innerHTML = `${b.c.label}<small>${b.c.sub}</small>`;
+  $('bz-story').hidden = S.vertical !== 'retail';
 }
 const beatTargets = (k) => {
   const b = BROWSE_BEATS[S.vertical][k];
   if (!b.dept) return ['#hero-cta'];
   return [dept(b.dept), ...Array.from({ length: b.n }, (_, i) => cardOf(b.dept, i))];
 };
+/** Nth card of a product LINE currently on the row. */
+const cardOfLine = (line, n) => () => {
+  const cards = [...$('row').querySelectorAll('.card')];
+  const inLine = cards.filter((c) => byId(c.dataset.id)?.line === line);
+  return inLine[n] || inLine[0] || cards[n] || cards[0];
+};
+// The Drover → Linden story (D2): three pieces from one line, then one from
+// another. Membership of the first stays; the page follows the second on the
+// single click.
+$('bz-story').onclick = (e) => browse(e.currentTarget,
+  [dept('Knitwear'), cardOfLine('Fenwick', 0), cardOfLine('Fenwick', 1), cardOfLine('Fenwick', 2),
+   dept('Bags'), cardOfLine('Linden', 0)]);
 $('bz-coats').onclick = (e) => browse(e.currentTarget, beatTargets('a'));
 $('bz-bags').onclick = (e) => browse(e.currentTarget, beatTargets('b'));
 $('bz-decide').onclick = (e) => browse(e.currentTarget, beatTargets('c'));
@@ -655,7 +669,7 @@ function absorb(changes) {
 function recompose(first) {
   const snap = snapshot(S.reflex, Date.now(), S.config);
   checkHandoff(snap);
-  const next = compose({ affinity: snap, items: S.items, blocks: S.blocks,
+  const next = compose({ affinity: snap, state: S.reflex, items: S.items, blocks: S.blocks,
                          config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
                          anchorId: S.anchorId, decidingValue: decidingValueFor(S.vertical) });
   const prev = S.decisions; S.decisions = next;
@@ -723,7 +737,10 @@ function renderGlass(d) {
     + (S.layout.sections.find((x) => x.strategy === 'stage' || x.strategy === 'affinity')
       ? `<b>moved because</b> ${S.layout.sections.filter((x) => x.strategy === 'stage' || x.strategy === 'affinity').sort((a, b) => a.rank - b.rank)[0].explain.movedBecause}<br>` : '')
     : '';
-  $('glass-body').innerHTML = lay +
+  const rowTop = S.decisions.find((x) => x.slot === 'row');
+  const leadLine = rowTop?.explain?.drivers?.some((x) => x.lead)
+    ? `<b>line lead</b> ${leadSentence(rowTop.explain.drivers)}<br>` : '';
+  $('glass-body').innerHTML = lay + leadLine +
     `<b>chosen</b> ${it ? it.name : '—'}<br>` +
     `<b>strategy</b> ${d.strategy}${d.strategy === 'pin' ? '<span class="pin">pinned · ranking skipped</span>' : ''}<br>` +
     `<b>candidates</b> ${e.candidates ?? 0} eligible<br>` +
@@ -754,7 +771,11 @@ function paint(prev, next, first, rowMoved = false) {
   if (first || heroChanged) swap($('hero'), () => paintHero(pick(next, 'hero')), first);
   if (first || rowChanged || rowMoved) paintRow(next.filter((d) => d.slot === 'row'), prevRow, first, rowMoved);
   if (first || pick(prev, 'block_a')?.blockId !== pick(next, 'block_a')?.blockId) {
-    swap($('block_a'), () => paintBlock(pick(next, 'block_a')), first);
+    swap($('block_a'), () => paintBlock(pick(next, 'block_a'), 'block_a'), first);
+  }
+  // The composer always scored a second block; the page never rendered it.
+  if (first || pick(prev, 'block_b')?.blockId !== pick(next, 'block_b')?.blockId) {
+    swap($('block_b'), () => paintBlock(pick(next, 'block_b'), 'block_b'), first);
   }
 }
 
@@ -1018,11 +1039,11 @@ function paintRow(ds, prevIds, first, rowMoved = false) {
   $('btn-replay').disabled = !ROW.lastMovers.length;
 }
 
-function paintBlock(d) {
+function paintBlock(d, slot = 'block_a') {
   const b = d?.blockId && byId(d.blockId);
-  $('block_a').innerHTML = b ? `<div class="block" data-id="${b.id}">
+  $(slot).innerHTML = b ? `<div class="block" data-id="${b.id}">
     <span class="type">${b.contentType}</span><h4>${b.title}</h4><p>${b.kicker}</p></div>` : '';
-  const el = $('block_a').querySelector('.block');
+  const el = $(slot).querySelector('.block');
   if (el) el.onclick = () => signal('block_read', b);
 }
 
@@ -1058,6 +1079,13 @@ function paintBars(dims) {
     let top = null, a = 0;
     for (const [v, x] of Object.entries(per)) if (x > a) { a = x; top = v; }
 
+    // D2: a recency-led dimension leads on its last touch, and the bar must
+    // agree with the page — otherwise the panel says Drover while the row
+    // leads with Linden, which is the contradiction this rule exists to remove.
+    if (LEAD_BY[spec.key] === 'recency') {
+      const lv = leadValue(S.reflex, spec.key);
+      if (lv && per[lv] != null) { top = lv; a = per[lv]; }
+    }
     if (SHAPE_OF_KEY[spec.key] === 'stage') {
       let furthest = null, fa = 0;
       for (const [v, x] of Object.entries(per)) {
@@ -1098,7 +1126,7 @@ function renderChips(entered, exited) {
 }
 
 const SURFACE_NAME = { hero: 'The hero', row: 'The product row', block_a: 'The story' };
-const SECTION_NAME = { hero: 'The hero', offer: 'The offer', row: 'The product row', block_a: 'The story', takeover: 'The takeover' };
+const SECTION_NAME = { hero: 'The hero', offer: 'The offer', row: 'The product row', block_a: 'The story', block_b: 'The second story', takeover: 'The takeover' };
 
 /**
  * The staircase, narrated. Each dimension carries its own decay constant, so a
@@ -1198,7 +1226,7 @@ $('ask-form').onsubmit = async (e) => {
   post('/action', { vertical: S.vertical, events: [{ action: 'search', touches: a.touches }] });
 
   const snap = snapshot(S.reflex, Date.now(), S.config);
-  const ds = compose({ affinity: snap, items: S.items, blocks: S.blocks, config: S.config,
+  const ds = compose({ affinity: snap, state: S.reflex, items: S.items, blocks: S.blocks, config: S.config,
                        shapeOfKey: SHAPE_OF_KEY, rowSize: 4 });
   const picks = ds.filter((d) => d.slot === 'row').map((d) => byId(d.itemId)).filter(Boolean);
   const hues = distinctHues(picks);

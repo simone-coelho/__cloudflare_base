@@ -283,7 +283,10 @@ meridian.get('/wire-check', (c) => {
   const financial = configFor('financial');
   const parallel =
     retail.dimensions.length === financial.dimensions.length &&
-    retail.dimensions.every((d, i) => d.source === financial.dimensions[i].source);
+    // Parallel means the same SHAPES in the same order — not the same source
+    // fields. Retail's narrow shape reads `line`, financial's reads `subcategory`;
+    // that is the vocabulary difference the flip exists to show, not a fault.
+    retail.dimensions.every((d, i) => SHAPE_OF_KEY[d.key] === SHAPE_OF_KEY[financial.dimensions[i].key]);
   return c.json({
     ok: stats.duplicateIds === 0 && parallel && stats.retail > 0 && stats.financial > 0,
     catalog: stats,

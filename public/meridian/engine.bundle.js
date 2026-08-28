@@ -234,6 +234,21 @@ function leadWeights(state, spec, trailing = trailingFor(spec.key)) {
     mark: (value) => value === lead ? { lead: "recency" } : { lead: "trailing", trailing, ledBy: lead }
   };
 }
+function leadSentence(drivers) {
+  const byDim = /* @__PURE__ */ new Map();
+  for (const d of drivers) {
+    if (!d.lead) continue;
+    const row = byDim.get(d.dim) ?? { trailing: [] };
+    if (d.lead === "recency") row.lead = d.value;
+    else {
+      row.lead ??= d.ledBy;
+      row.trailing.push(d.value);
+      row.factor = d.trailing;
+    }
+    byDim.set(d.dim, row);
+  }
+  return [...byDim].map(([dim2, r]) => `${dim2} \xB7 ${r.lead} led by recency` + (r.trailing.length ? `; ${r.trailing.join(", ")} trailing \xD7${r.factor}` : "")).join(" \xB7 ");
+}
 
 // src/demos/meridian/composer.ts
 var SLOT_STRATEGIES = {
@@ -358,7 +373,7 @@ function compose(input) {
     }
     const { scored, gated, refused } = rank(items, slot, usedItems);
     const top = scored[0];
-    if (top) usedItems.add(top.r.id);
+    if (top && slot === "hero") usedItems.add(top.r.id);
     decisions.push({
       slot,
       order: order++,
@@ -457,6 +472,9 @@ var SECTIONS = [
   { id: "row", kind: "merch", answers: { narrow: 0.5, need: 0.5 }, lead: "need" },
   // Content: what KIND of asset earns attention decides whether it leads.
   { id: "block_a", kind: "content", answers: { content: 0.7, broad: 0.3 }, lead: "content" }
+  // block_b is not in the grammar: it rides with block_a (data-follows) so the
+  // two stories stay together. Making it its own section would let two content
+  // blocks leapfrog each other, which reads as churn rather than a decision.
 ];
 var OFFER_COPY = {
   retail: {
@@ -880,6 +898,7 @@ function esc(s) {
 }
 export {
   DEMO_TAUS,
+  LEAD_BY,
   OFFER_COPY,
   PROD_TAUS,
   SECTIONS,
@@ -898,6 +917,8 @@ export {
   emptyState,
   expiryOf,
   extractTouches,
+  leadSentence,
+  leadValue,
   packshot,
   silhouetteFor,
   snapshot,

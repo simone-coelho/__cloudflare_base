@@ -55,6 +55,8 @@ export interface MeridianItem {
   name: string;
   category: MeridianCategory;
   subcategory: string;
+  /** Product line — the family a piece belongs to (Calder's Tabby). Retail only; the narrow dimension. */
+  line?: string;
   value_usd: number;
   world: DurableWorld;
   needs: MeridianNeed[];
@@ -117,7 +119,11 @@ export interface MeridianDecision {
 /** The glass box. If it is on screen, this says why. */
 export interface MeridianExplain {
   /** Dimension → the visitor's affinity a(t) at decision time. */
-  drivers: Array<{ dim: string; value: string; a: number; weight: number }>;
+  drivers: Array<{
+    dim: string; value: string; a: number; weight: number;
+    /** D2 — present only on a recency-led dimension: which value led, and what trailed it. */
+    lead?: 'recency' | 'trailing'; trailing?: number; ledBy?: string;
+  }>;
   candidates: number;
   gatesFailed: string[];
   rank: number;

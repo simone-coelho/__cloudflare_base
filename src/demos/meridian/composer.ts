@@ -232,7 +232,11 @@ export function compose(input: ComposeInput): MeridianDecision[] {
     }
     const { scored, gated, refused } = rank(items, slot, usedItems);
     const top = scored[0];
-    if (top) usedItems.add(top.r.id);
+    // Only a slot the page RENDERS may consume an item. The rail is decided for
+    // the receipt but has no element, and letting it reserve an item starved the
+    // row of a piece nobody could see — the Drover jacket vanished from the shelf
+    // mid-story. The hero consumes; the rail does not.
+    if (top && slot === 'hero') usedItems.add(top.r.id);
     decisions.push({
       slot, order: order++, itemId: top?.r.id,
       strategy: strategyFor(top),

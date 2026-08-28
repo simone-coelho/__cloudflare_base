@@ -66,6 +66,9 @@ export const SECTIONS: readonly SectionSpec[] = [
   { id: 'row',     kind: 'merch',   answers: { narrow: 0.5, need: 0.5 },    lead: 'need' },
   // Content: what KIND of asset earns attention decides whether it leads.
   { id: 'block_a', kind: 'content', answers: { content: 0.7, broad: 0.3 },  lead: 'content' },
+  // block_b is not in the grammar: it rides with block_a (data-follows) so the
+  // two stories stay together. Making it its own section would let two content
+  // blocks leapfrog each other, which reads as churn rather than a decision.
 ];
 
 /** The offer section's words. The page paints what it is handed; it does not invent copy. */
