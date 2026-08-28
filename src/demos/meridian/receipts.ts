@@ -16,7 +16,7 @@
 // slow a decision down.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MeridianDecision, Vertical } from './types';
+import type { MeridianDecision, SectionDecision, Vertical } from './types';
 
 /** Column order MUST match migrations/0007_meridian_decisions.sql exactly. */
 export const MRD_DECISION_COLUMNS = [
@@ -30,6 +30,21 @@ export interface CaptureInput {
   visitorId: string;
   vertical: Vertical;
   decisions: MeridianDecision[];
+  arrivalSurface?: string | null;
+  demoRunId?: string | null;
+  now: number;
+  /**
+   * Section-order decisions (composeLayout), written in the same batch as rows
+   * whose slot_id is 'layout:<section>' and whose rank_position is the rank.
+   */
+  sections?: SectionDecision[];
+}
+
+/** The section-order receipt on its own: same rows, same table, no slot decisions. */
+export interface CaptureLayoutInput {
+  visitorId: string;
+  vertical: Vertical;
+  sections: SectionDecision[];
   arrivalSurface?: string | null;
   demoRunId?: string | null;
   now: number;
@@ -51,14 +66,50 @@ function rowFor(d: MeridianDecision, i: CaptureInput): unknown[] {
   ];
 }
 
+/**
+ * A section's place on the page, in the SAME shape as a slot decision, so the
+ * export the room takes away has one schema: slot_id 'layout:<section>',
+ * rank_position = the rank, chosen_item = the section, drivers/score/confidence/
+ * θ_out straight from the receipt. A locked section records 'locked' as the
+ * gate that outranked the engine, the way a pin does.
+ */
+function layoutRowFor(s: SectionDecision, i: CaptureLayoutInput, candidates: number): unknown[] {
+  const e = s.explain;
+  const drivers: Record<string, number> = {};
+  for (const x of e.drivers ?? []) drivers[`${x.dim}.${x.value}`] = x.a;
+  return [
+    `${i.visitorId}:${i.now}:layout:${s.section}:${s.rank}`,
+    i.now, i.visitorId, i.vertical, `layout:${s.section}`, s.rank,
+    s.section, s.strategy, candidates,
+    JSON.stringify(s.strategy === 'locked' ? ['locked'] : []), JSON.stringify([]),
+    JSON.stringify(drivers), Math.round(s.score * 1e4) / 1e4,
+    e.confidence ?? null, e.thetaOut ?? null, e.configVersion ?? 'unknown',
+    i.arrivalSurface ?? null, i.demoRunId ?? null,
+  ];
+}
+
+/** The layout rows, pure — one per section, each MRD_DECISION_COLUMNS wide. */
+export function rowsForLayout(input: CaptureLayoutInput): unknown[][] {
+  return input.sections.map((s) => layoutRowFor(s, input, input.sections.length));
+}
+
 export async function capture(db: D1Database, input: CaptureInput): Promise<number> {
-  if (!input.decisions.length) return 0;
+  const rows = [
+    ...input.decisions.map((d) => rowFor(d, input)),
+    ...(input.sections?.length ? rowsForLayout({ ...input, sections: input.sections }) : []),
+  ];
+  if (!rows.length) return 0;
   const cols = MRD_DECISION_COLUMNS.join(', ');
   const marks = MRD_DECISION_COLUMNS.map(() => '?').join(', ');
   const sql = `INSERT OR REPLACE INTO mrd_decisions (${cols}) VALUES (${marks})`;
-  const stmts = input.decisions.map((d) => db.prepare(sql).bind(...(rowFor(d, input) as never[])));
+  const stmts = rows.map((row) => db.prepare(sql).bind(...(row as never[])));
   await db.batch(stmts);
   return stmts.length;
+}
+
+/** Section-order receipts alone. Off the response path, like capture. */
+export function captureLayout(db: D1Database, input: CaptureLayoutInput): Promise<number> {
+  return capture(db, { ...input, decisions: [] });
 }
 
 export async function exportRows(db: D1Database, visitorId: string | null, limit: number) {

@@ -393,6 +393,237 @@ function expiryOf(state, dim2, value, config) {
   return entry.t + tauMs * Math.log(entry.s / floor);
 }
 
+// src/demos/meridian/layout.ts
+var SECTIONS = [
+  // The hero leans on the slow axes so it does not flap.
+  { id: "hero", kind: "hero", answers: { broad: 0.5, durable: 0.5 }, lead: "broad" },
+  // The store-card offer answers the band and the verb. Its lead is the verb:
+  // the rank is earned by intent and ends with it, exactly as the offer does.
+  { id: "offer", kind: "offer", answers: { band: 0.5, stage: 0.5 }, lead: "stage" },
+  // The ranked row. Led by need rather than narrow for the composer's reason:
+  // a row about "things for a project" outlives one about cordless sanders.
+  { id: "row", kind: "merch", answers: { narrow: 0.5, need: 0.5 }, lead: "need" },
+  // Content: what KIND of asset earns attention decides whether it leads.
+  { id: "block_a", kind: "content", answers: { content: 0.7, broad: 0.3 }, lead: "content" }
+];
+var OFFER_COPY = {
+  retail: {
+    kicker: "Calder Card",
+    title: "10% off today's order when you're approved",
+    body: "An instant decision, no annual fee, and the discount lands on the bag you are holding.",
+    cta: "Apply in 60 seconds"
+  },
+  financial: {
+    kicker: "Your adviser",
+    title: "A named adviser on this application",
+    body: "Someone who has read what you have been comparing, on the line before you submit.",
+    cta: "Meet your adviser"
+  }
+};
+var DECIDING_VALUES = Object.values(STAGE_LABELS).map((l) => l.decide);
+var EPS = 1e-6;
+var round2 = (n) => Math.round(n * 1e4) / 1e4;
+var fmt = (n) => n.toFixed(2);
+function leadOf(spec) {
+  return spec.lead ?? Object.entries(spec.answers).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+}
+function strategyOf(spec) {
+  const lead = leadOf(spec);
+  const out = {};
+  if (lead in spec.answers) out[lead] = spec.answers[lead];
+  for (const [shape, omega] of Object.entries(spec.answers)) if (shape !== lead) out[shape] = omega;
+  return out;
+}
+function argmax(perValue) {
+  let best;
+  let bestA = 0;
+  for (const [value, a] of Object.entries(perValue)) if (a > bestA) {
+    best = value;
+    bestA = a;
+  }
+  return best;
+}
+function syntheticRecord(spec, input, decidingValues) {
+  const rec = {};
+  for (const d of input.config.dimensions) {
+    const shape = input.shapeOfKey[d.key];
+    if (!shape || !(spec.answers[shape] ?? 0)) continue;
+    const perValue = input.affinity.dims[d.key];
+    if (!perValue) continue;
+    const value = shape === "stage" ? decidingValues.find((v) => (perValue[v] ?? 0) > 0) : argmax(perValue);
+    if (value == null) continue;
+    if (d.derive === "band" && d.cuts && d.labels) {
+      const i = d.labels.indexOf(value);
+      if (i < 0) continue;
+      rec[d.source] = i === 0 ? (d.cuts[0] ?? 0) - 1 : d.cuts[i - 1];
+    } else {
+      rec[d.source] = d.multi ? [value] : value;
+    }
+  }
+  return rec;
+}
+function scoreSection(spec, templateRank, locked, input, composeInput, decidingValues, stagePriority) {
+  const lead = leadOf(spec);
+  const s = scoreOne(syntheticRecord(spec, input, decidingValues), composeInput, strategyOf(spec));
+  const leadSpec = input.config.dimensions.find((d) => input.shapeOfKey[d.key] === lead);
+  const leadDriver = leadSpec ? s.drivers.find((d) => d.dim === leadSpec.key) : void 0;
+  const confidence = leadDriver?.a ?? 0;
+  const thetaOut = leadSpec?.thetaOut ?? input.config.thetaOut;
+  const stage = (spec.answers.stage ?? 0) > 0 && stagePriority && s.score > 0;
+  const eligible = s.score > 0 && (confidence >= thetaOut || stage);
+  return {
+    spec,
+    templateRank,
+    locked,
+    score: s.score,
+    drivers: s.drivers,
+    lead: { shape: lead, dim: leadSpec?.key, value: leadDriver?.value },
+    confidence,
+    thetaOut,
+    eligible,
+    stage
+  };
+}
+function composeLayout(input) {
+  const { config } = input;
+  const coldStart = Object.keys(input.affinity.dims).length === 0;
+  const lockedIds = new Set(input.locked ?? []);
+  const isSection = (id) => SECTIONS.some((s) => s.id === id);
+  const external = [...lockedIds].filter((id) => !isSection(id));
+  const offset = external.length;
+  const prevRaw = input.prevOrder ?? [];
+  const prevGrammar = prevRaw.filter(isSection);
+  const prevRankOf = (id) => {
+    const i = prevRaw.indexOf(id);
+    return i < 0 ? void 0 : i;
+  };
+  const prevGrammarRank = (id) => {
+    const i = prevGrammar.indexOf(id);
+    return i < 0 ? void 0 : i;
+  };
+  const stageSpec = config.dimensions.find((d) => input.shapeOfKey[d.key] === "stage");
+  const decidingValues = input.decidingValue ? [input.decidingValue] : DECIDING_VALUES;
+  const stageVals = stageSpec ? input.affinity.dims[stageSpec.key] ?? {} : {};
+  const decidingA = Math.max(0, ...decidingValues.map((v) => stageVals[v] ?? 0));
+  const stagePriority = decidingA >= (stageSpec?.thetaOut ?? config.thetaOut);
+  const composeInput = {
+    affinity: input.affinity,
+    config,
+    shapeOfKey: input.shapeOfKey,
+    items: [],
+    blocks: []
+  };
+  const scored = SECTIONS.map((spec, i) => scoreSection(
+    spec,
+    i,
+    !!spec.locked || lockedIds.has(spec.id),
+    input,
+    composeInput,
+    decidingValues,
+    stagePriority
+  ));
+  const wasAbove = (b, a) => {
+    const pb = prevGrammarRank(b.spec.id);
+    const pa = prevGrammarRank(a.spec.id);
+    return pb != null && pa != null && pb < pa;
+  };
+  const beats = (b, a) => {
+    if (coldStart || !b.eligible) return null;
+    if (a.stage && !b.stage) return null;
+    if (b.stage && !a.stage) return "stage";
+    if (b.score > a.score + EPS) return "score";
+    if (wasAbove(b, a)) return "hold";
+    return null;
+  };
+  const placed = [];
+  const climbs = /* @__PURE__ */ new Map();
+  for (const s of scored) {
+    if (s.locked) continue;
+    let pos = placed.length;
+    const climbed = [];
+    while (pos > 0) {
+      const over = placed[pos - 1];
+      const why = beats(s, over);
+      if (!why) break;
+      climbed.unshift({ over, why });
+      pos -= 1;
+    }
+    placed.splice(pos, 0, s);
+    climbs.set(s.spec.id, climbed);
+  }
+  const final = [];
+  let m = 0;
+  for (const s of scored) final.push(s.locked ? s : placed[m++]);
+  const sections = external.map((id, i) => ({
+    section: id,
+    rank: i,
+    prevRank: prevRankOf(id),
+    templateRank: i,
+    score: 0,
+    strategy: "locked",
+    explain: {
+      drivers: [],
+      lead: null,
+      confidence: 0,
+      thetaOut: config.thetaOut,
+      movedBecause: `locked at rank ${i}`,
+      configVersion: config.version
+    }
+  }));
+  const name = (x) => `${x.spec.id} (${fmt(x.score)})`;
+  const leadText = (x) => !x.lead.dim ? `${x.lead.shape} \u2014` : x.lead.value ? `${x.lead.dim}\xB7${x.lead.value} ${fmt(x.confidence)}` : `${x.lead.dim} 0`;
+  final.forEach((s, i) => {
+    const rank = offset + i;
+    const templateRank = offset + s.templateRank;
+    const climbed = climbs.get(s.spec.id) ?? [];
+    const shapes = Object.keys(s.spec.answers).join("+");
+    const pushedBy = final.slice(0, i).filter((x) => x.templateRank > s.templateRank);
+    const prevG = prevGrammarRank(s.spec.id);
+    const fell = !coldStart && prevG != null && prevG < s.templateRank && i >= s.templateRank;
+    const strategy = s.locked ? "locked" : coldStart ? "template" : s.stage ? "stage" : rank < templateRank && s.eligible ? "affinity" : "template";
+    let movedBecause;
+    if (strategy === "locked") {
+      movedBecause = `locked at template rank ${templateRank}`;
+    } else if (coldStart) {
+      movedBecause = "cold start; template order";
+    } else if (strategy === "stage") {
+      movedBecause = `${leadText(s)} \u2265 \u03B8out ${s.thetaOut}; ` + (climbed.length ? `intent outranks ${climbed.map((c) => name(c.over)).join(", ")} on ${shapes}` : "intent priority; already at template rank");
+    } else if (strategy === "affinity") {
+      const won = climbed.filter((c) => c.why === "score").map((c) => name(c.over));
+      const held = climbed.filter((c) => c.why === "hold").map((c) => name(c.over));
+      const parts = [`${leadText(s)} \u2265 \u03B8out ${s.thetaOut}`];
+      if (won.length) parts.push(`outscored ${won.join(", ")} on ${shapes}`);
+      if (held.length) parts.push(`holding above ${held.join(", ")} until ${s.lead.dim} decays under \u03B8out`);
+      movedBecause = parts.join("; ");
+    } else if (fell) {
+      movedBecause = `${leadText(s)} < \u03B8out ${s.thetaOut}; returned to template rank ${templateRank}` + (rank > templateRank ? `, pushed to ${rank} by ${pushedBy.map(name).join(", ")}` : "");
+    } else if (rank > templateRank) {
+      movedBecause = `template order; pushed to rank ${rank} by ${pushedBy.map(name).join(", ")}`;
+    } else if (s.eligible) {
+      movedBecause = `${leadText(s)} \u2265 \u03B8out ${s.thetaOut}; outscored nothing above it; template order`;
+    } else {
+      movedBecause = `${leadText(s)} < \u03B8out ${s.thetaOut}; template order`;
+    }
+    sections.push({
+      section: s.spec.id,
+      rank,
+      prevRank: prevRankOf(s.spec.id),
+      templateRank,
+      score: round2(s.score),
+      strategy,
+      explain: {
+        drivers: s.drivers,
+        lead: s.lead,
+        confidence: round2(s.confidence),
+        thetaOut: s.thetaOut,
+        movedBecause,
+        configVersion: config.version
+      }
+    });
+  });
+  return { order: sections.map((s) => s.section), sections };
+}
+
 // src/reflex/core.ts
 function slugValue(v) {
   return v.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
@@ -597,7 +828,9 @@ function esc(s) {
 }
 export {
   DEMO_TAUS,
+  OFFER_COPY,
   PROD_TAUS,
+  SECTIONS,
   SHAPE_OF_KEY,
   SHAPE_ORDER,
   SLOT_STRATEGIES,
@@ -606,6 +839,7 @@ export {
   apply,
   audienceKey,
   compose,
+  composeLayout,
   configFor,
   decidingValueFor,
   effectiveScore,

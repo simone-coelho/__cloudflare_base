@@ -96,7 +96,7 @@ function bandLabel(v: number, cuts: number[], labels: string[]): string {
   return labels[i] ?? labels[labels.length - 1];
 }
 
-function scoreOne(
+export function scoreOne(
   record: Record<string, unknown>,
   input: ComposeInput,
   strategy: Record<string, number>,

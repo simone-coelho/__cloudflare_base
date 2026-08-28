@@ -133,3 +133,68 @@ export interface MeridianExplain {
   /** Set when the value shown is representative rather than measured. */
   representative?: boolean;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION ORDER — decision D4 (doc 15 §6.2 step 2d, §6.3 grammar).
+//
+// The slots above decide WHAT fills each region of the page. These decide WHERE
+// each region sits. Same receipt discipline: if a section moved, this says why,
+// in the same driver / confidence / θ_out vocabulary as a slot decision.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Why a section sits where it does.
+ *   'template'  — the grammar's own order (cold start, no claim, or displaced)
+ *   'affinity'  — climbed on score, and its lead is still ≥ θ_out
+ *   'stage'     — intent priority: the visitor is deciding, so this outranks all
+ *   'locked'    — fixed in the grammar; never passed, never moved
+ */
+export type SectionStrategy = 'template' | 'affinity' | 'stage' | 'locked';
+
+/** One region of the page, declared against dimension SHAPES so it serves both verticals. */
+export interface SectionSpec {
+  id: string;
+  /** shape → ω: which visitor axes this section answers, and how hard. */
+  answers: Record<string, number>;
+  /**
+   * The shape whose confidence decides whether the section may sit above its
+   * template rank. Defaults to the highest-ω shape (first on ties).
+   */
+  lead?: string;
+  /** Fixed in the grammar: holds its template rank unconditionally. */
+  locked?: boolean;
+  kind?: 'hero' | 'offer' | 'merch' | 'content';
+}
+
+export interface SectionExplain {
+  /** The per-shape contributions, straight from scoreOne. */
+  drivers: MeridianExplain['drivers'];
+  /** The named axis the rank is judged on. Null only for an external locked id. */
+  lead: { shape: string; dim?: string; value?: string } | null;
+  /** The lead's affinity a(t), and the exit threshold it is measured against. */
+  confidence: number;
+  thetaOut: number;
+  /** One sentence the room can read: "journeyStage·deciding 0.68 ≥ θout 0.45; intent outranks hero (0.31) on band+stage". */
+  movedBecause: string;
+  configVersion: string;
+}
+
+/** One section's place on the page, with its receipt. */
+export interface SectionDecision {
+  section: string;
+  rank: number;
+  /** Where it sat in `prevOrder`, when the caller supplied one. */
+  prevRank?: number;
+  templateRank: number;
+  score: number;
+  strategy: SectionStrategy;
+  explain: SectionExplain;
+}
+
+/** The store-card offer section's words, per vertical. Data, so the page paints what it is handed. */
+export interface OfferCopy {
+  kicker: string;
+  title: string;
+  body: string;
+  cta: string;
+}
