@@ -1095,16 +1095,17 @@ function paint(prev, next, first, rowMoved = false, tick = false) {
 
 /** Fade out, replace, fade in, then a one-second glow. Never a blackout. */
 function swap(el, render, instant) {
-  if (instant) { render(); return; }
+  if (instant) { el.classList.remove('landed'); render(); return; }   // a fresh visitor starts without it
   el.classList.add('swapping');
   setTimeout(() => {
     render();
     el.classList.remove('swapping');
     // The hero LANDS (rise, pop, shimmer, red shadow underneath); the blocks
     // get the quieter glow. Both are one-shot, and only a real change gets here.
+    // The hero keeps its red drop shadow until it changes again; the blocks
+    // get the quieter one-second glow.
     const fx = el.id === 'hero' ? 'landed' : 'pulse';
     el.classList.remove(fx); void el.offsetWidth; el.classList.add(fx);
-    if (fx === 'landed') { clearTimeout(el._fx); el._fx = setTimeout(() => el.classList.remove('landed'), 4000); }
   }, 300);
 }
 
