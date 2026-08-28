@@ -68,7 +68,7 @@ async function load(vertical) {
     config: configFor(vertical), reflex: emptyState(configFor(vertical)),
     audiences: new Set(), decisions: [], prevRank: new Map(),
     heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, withdrawn: new Set(),
-    behaved: false, anchorId: null, claimedAt: {},
+    behaved: false, anchorId: null, claimedAt: {}, audiencePriority: [],
   });
   S.published = [];
   document.documentElement.dataset.vertical = vertical;
@@ -484,6 +484,54 @@ function onFrame(f) {
   recompose();
 }
 
+// ── Audience priority — the merchandiser's order ────────────────────────────
+// Two audiences match; the one the merchandiser ranks higher wins the hero.
+// S.audiencePriority is the ordered list compose() receives; reordering it
+// re-decides the slot on the spot, and the hero's receipt says which audience
+// won and which it beat. (The composer ignores the option until the promotion
+// build lands; the control is wired to the agreed contract.)
+function renderPriority() {
+  const el = $('prio-list'); if (!el) return;
+  const entered = [...S.audiences].filter((a) => !isStageAudience(a));
+  // Keep the merchandiser's order; append newly entered audiences at the bottom.
+  S.audiencePriority = [...(S.audiencePriority || []).filter((a) => entered.includes(a)),
+                        ...entered.filter((a) => !(S.audiencePriority || []).includes(a))];
+  if (!S.audiencePriority.length) { el.innerHTML = '<div class="prio-none">No audiences yet — priority applies once she is in two.</div>'; return; }
+  const won = pick(S.decisions, 'hero')?.explain?.wonBy;
+  el.innerHTML = S.audiencePriority.map((a, i) => `
+    <div class="prio-row${won?.audience === a ? ' winner' : ''}" data-a="${a}">
+      <div class="n">${i + 1}</div>
+      <div class="a">${prettyAudience(a)}</div>
+      ${won ? (won.audience === a ? '<span class="tag">won the hero</span>'
+             : (won.over?.includes(a) ? '<span class="tag lost">matched · outranked</span>' : '<span></span>')) : '<span></span>'}
+      <span>
+        <button data-up="${i}" ${i === 0 ? 'disabled' : ''} title="Raise priority">↑</button>
+        <button data-dn="${i}" ${i === S.audiencePriority.length - 1 ? 'disabled' : ''} title="Lower priority">↓</button>
+      </span>
+    </div>`).join('');
+  el.querySelectorAll('button[data-up]').forEach((b) => { b.onclick = () => movePriority(+b.dataset.up, -1); });
+  el.querySelectorAll('button[data-dn]').forEach((b) => { b.onclick = () => movePriority(+b.dataset.dn, +1); });
+}
+
+function movePriority(i, dir) {
+  const p = S.audiencePriority; const j = i + dir;
+  if (j < 0 || j >= p.length) return;
+  [p[i], p[j]] = [p[j], p[i]];
+  S.heroOverride = null; S.heroDirty = true;      // the merchandiser outranks the campaign copy
+  recompose();
+  const won = pick(S.decisions, 'hero')?.explain?.wonBy;
+  if (won) {
+    $('sentence').textContent = `Hero won by #${won.priority} ${prettyAudience(won.audience)}`
+      + (won.over?.length ? ` — over ${won.over.map(prettyAudience).join(', ')} (matched, outranked).` : '.');
+    S.sayLockUntil = Date.now() + 6000;
+    consequence('Priority', `${prettyAudience(won.audience)} now wins the hero`,
+      'The merchandiser reordered the audiences; the slot re-decided on the spot. Rules over model, on the record.');
+  } else {
+    consequence('Priority', 'Order changed', 'The winner will show here once the promotion build lands — the control is wired to the agreed contract.');
+  }
+  renderPriority();
+}
+
 // ── Predict, then prove ─────────────────────────────────────────────────────
 // Before the decisive click, tell the room what it will cause — from a copy of
 // her real state run through the real engine — then let it happen. Nothing
@@ -828,6 +876,7 @@ function recompose(first, opts = {}) {
   checkHandoff(snap);
   let next = compose({ affinity: snap, state: S.reflex, items: S.items, blocks: S.blocks,
                        config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
+                       audiencePriority: S.audiencePriority,
                        anchorId: S.anchorId, decidingValue: decidingValueFor(S.vertical) });
   if (opts.tick) next = holdSteady(S.decisions, next);
   const prev = S.decisions; S.decisions = next;
@@ -853,6 +902,7 @@ function recompose(first, opts = {}) {
   for (const k of publishedMemberships(snap)) if (!S.audiences.has(k)) {
     S.audiences.add(k); renderChips([k], []);
   }
+  renderPriority();
   const coldTag = $('cold-behaviour');
   if (coldTag) coldTag.textContent = S.behaved ? 'superseded by behaviour' : 'behaviour none';
   checkOffer(); offerTick();

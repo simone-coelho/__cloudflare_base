@@ -200,8 +200,8 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 Simone's third review. The pattern he named: I rebuilt capabilities the Coach demo already had, and each rebuild changed how they worked. The ten below were agreed item by item before any building. **Standing rule:** state stays isolated; Coach's stateless services are reused; every capability matches Coach's behaviour first and differs only where Simone asks.
 
 - [ ] P3-1 **Personalization reads as a block** — promotion requires membership; promoted items form a contiguous top block, everything else keeps the standard order *(agent B)*
-- [ ] P3-2 **Predict, then prove** — a band before the decisive click: what she did (rule, weight, score), what we watch for, what will change; close → it happens → compare *(after research)*
-- [ ] P3-3 **Audience priority** as a merchandiser control — two audiences match, the higher priority wins the slot, drag to flip *(agent B + client)*
+- [x] P3-2 **Predict, then prove — DONE and VERIFIED.** Before the decisive click the band lists what she has done (verb + the dimension it moved), the act being watched for with the engine's arithmetic one click ahead (0.00 → 0.59, θ_in, *enters*), and what will change — computed on a copy of her real state through the real composer. Presenter closes it, the visible visitor clicks, the chips confirm. Wired into beats 13 and 17 and the last click of every browse beat. Pattern per the research: DY Predictive-Targeting cards + Adobe matched/unmatched trace.
+- [~] P3-3 **Audience priority** — client control DONE (numbered list under the chips, ↑/↓ reorder, hero re-decides, trail records it; the *won the hero / matched · outranked* tags render from `wonBy`); waits on the composer build for the effect *(agent B in flight)*.
 - [x] P3-4 **Three signals enter an audience, never one** — Coach's weights (view 1.0, arrival 1.0, declared 2.0); journey stage never shown as a chip *(weights: agent A; chips: done)*
 - [x] P3-5 **Restart restarts everything** — new visitor, ledger, surfaces, baseline, beat one, clock zero
 - [ ] P3-6 **Search** — Coach's intent parser with a hard category filter; scene plates pre-generated with the real product composited, reviewed before they ship *(agent C)*
@@ -209,7 +209,7 @@ Simone's third review. The pattern he named: I rebuilt capabilities the Coach de
 - [ ] P3-8 **Catalogue** — 12 families × 3 colourways + 4 fragrances, colour as the eighth dimension (financial: card tier), packshots per colourway, reviewed *(agent A)*
 - [x] P3-9 **The rule** — charter amended: state isolated, stateless services shared, match Coach first
 - [ ] P3-10 **Reflex moments** — Coach's six stories + the hold on add-to-bag, countdown-to-exit honesty, cooldowns, queue, dock *(agent E)*; **add-to-bag on every card — done**
-- [ ] P3-11 Research: how Dynamic Yield and others show impact *(agent, internet)* — feeds P3-2 and P3-3
+- [x] P3-11 **Research — DONE**, saved to `docs/opticon/Research-Personalization-Demos.md` (DY, Adobe, Bloomreach, Salesforce, Optimizely, Insider, Algolia, Coveo; every claim cited). The eight recurring patterns and the recommendations feed P3-2/P3-3; headline: ordered priority + "highest wins, none → nothing" is the industry rule, and Algolia's simulator is the reference for side-by-side with position deltas.
 
 ### Tasks
 - [x] P2-1 **Row reconciled, never rebuilt — DONE.** Cards persist across paints; DOM is reordered and only the rank chip and change badge update. Verified: every card that stayed is the same node, its photograph not reloaded. The flicker was `innerHTML` destroying ten cards per re-rank and each new `<img>` fading in from opacity 0.

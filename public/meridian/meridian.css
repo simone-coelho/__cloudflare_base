@@ -887,3 +887,24 @@ body.has-director .world,body.has-director .engine{padding-bottom:var(--dir-h, 2
 #pd-go{font:600 15px/1 var(--sans);padding:12px 20px;border-radius:6px;border:0;background:var(--ink);color:#fff;cursor:pointer;white-space:nowrap}
 #pd-go:hover{background:#000}
 @media (max-width:1400px){.pd-grid{grid-template-columns:1fr 1fr 1fr;gap:14px}.pd-act{font-size:20px}}
+
+/* ── Audience priority — the merchandiser's order ──────────────────────────
+   Two audiences match; the higher one wins the slot. Reorder with the arrows
+   (drag is finicky under projection) and the hero re-decides on the spot. */
+.prio{margin-top:12px;padding-top:10px;border-top:1px solid var(--p-line)}
+.prio h6{font:600 11px/1 ui-monospace,monospace;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--p-text);margin:0 0 8px;display:flex;justify-content:space-between;gap:8px}
+.prio h6 .cfg{font:400 10px/1.4 ui-monospace,monospace;letter-spacing:0;text-transform:none;color:var(--p-dim);text-align:right}
+.prio-row{display:grid;grid-template-columns:26px 1fr auto auto;gap:7px;align-items:center;
+  background:#fff;border:1px solid var(--p-line);border-radius:5px;padding:6px 8px;margin-bottom:5px}
+.prio-row .n{font:700 12px/22px ui-monospace,monospace;text-align:center;background:var(--p-text);color:#fff;border-radius:4px;height:22px}
+.prio-row.winner{border-color:var(--changed);box-shadow:0 0 0 2px var(--changed)}
+.prio-row.winner .n{background:var(--changed);color:var(--changed-ink)}
+.prio-row .a{font:500 12px/1.3 ui-monospace,monospace;color:var(--p-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prio-row .tag{font:600 9px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:#0B2E1B;background:#DCF3E6;border-radius:3px;padding:4px 5px}
+.prio-row .tag.lost{color:var(--p-dim);background:#E3E9F1}
+.prio-row button{font:700 12px/1 ui-monospace,monospace;width:24px;height:24px;border-radius:4px;cursor:pointer;
+  background:#fff;border:1px solid var(--p-line);color:var(--p-text)}
+.prio-row button:hover{border-color:var(--p-blue);color:var(--p-blue)}
+.prio-row button:disabled{opacity:.3;cursor:default}
+.prio-none{font:400 12px/1.5 ui-monospace,monospace;color:var(--p-dim)}
