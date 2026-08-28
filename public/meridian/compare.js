@@ -1,10 +1,14 @@
-// compare.js — Before / Now compare (decision D8): capture the page now, compare
-// it with the page later. Restored from the v1 build as a standalone ES module.
+// compare.js — Before / Now compare (decision D8; mechanic per decision 7 = the
+// Coach demo's split-slider, ported from public/storefront.html/.js): capture the
+// page now, compare it with the page later behind a draggable seam. The Now frame
+// sits underneath (#cmp-after); the Before frame sits on top (#cmp-before),
+// clipped to the left of the seam; a divider with a ↔ handle rides the seam and
+// the seam follows the pointer anywhere on the stage.
 //
 // Contract
 //   - No imports from meridian.js. No DOM or window access at import time: the
-//     overlay (ids cmp-back, cmp-stage, cmp-before, cmp-after, cmp-mode,
-//     cmp-slider, cmp-close) is injected into <body> on first use.
+//     overlay (ids cmp-back, cmp-stage, cmp-before, cmp-after, cmp-divider,
+//     cmp-close) is injected into <body> on first use.
 //   - html2canvas is served at /html2canvas.min.js (public/html2canvas.min.js,
 //     1.4.1) and loaded lazily. If it cannot load, the overlay says so — the
 //     stage is never blank and no call here rejects for that reason.
@@ -26,12 +30,13 @@ const LIB_URL = '/html2canvas.min.js';
     inside it at its own aspect ratio, so the seam is always over pixels and the
     tags always sit on the frame rather than on a mat. */
 const ENVELOPE = { vw: 0.86, maxW: 1180, vh: 0.72, maxH: 760 };
-const STEP = 0.05;   // keyboard nudge, as a fraction of the stage width
+const SEAM_STEP = 2;      // ← / → nudge, in % of the stage width
+const SEAM_DEFAULT = 50;  // the seam opens at the middle
 
 let baseline = null;   // { url, at, scrollTop, w, h } — the Before frame
 let h2c = null;        // html2canvas, once loaded
 let ui = null;         // overlay element refs, once injected
-const view = { mode: 'fade', p: 1, open: false, lastFocus: null, frameW: 0, frameH: 0, note: '' };
+const view = { seam: SEAM_DEFAULT, open: false, disabled: false, lastFocus: null, frameW: 0, frameH: 0, note: '' };
 
 // ── html2canvas ─────────────────────────────────────────────────────────────
 
@@ -59,7 +64,7 @@ async function html2canvasLib() {
 
 /** The scroll position is pinned WITH the shot. Two captures taken at different
     offsets do not register: the frames would compare two different regions of
-    the page and the slider would show a shift, not a change. openCompare()
+    the page and the seam would show a shift, not a change. openCompare()
     scrolls the root back to the baseline's offset before taking the Now frame.
 
     html2canvas 1.4.1 restores every scrolled element's offset inside its clone
@@ -102,24 +107,27 @@ function fmtDelta(ms) {
 }
 
 // ── Overlay ─────────────────────────────────────────────────────────────────
+// One stage, Coach-style (storefront.html #cmp-stage): the Now frame underneath,
+// the Before frame on top clipped by --cmp-seam, the divider + ↔ handle at the
+// seam, and the tags pinned to their side of the stage.
 
 const MARKUP = `
 <div class="cmp-box">
   <div class="cmp-bar">
     <h2 class="cmp-title" id="cmp-title">Before and now</h2>
-    <button type="button" class="cmp-btn cmp-mode" id="cmp-mode" title="Switch to Wipe (M)">Mode · Crossfade</button>
     <button type="button" class="cmp-btn" id="cmp-close">Close <kbd>Esc</kbd></button>
   </div>
-  <div class="cmp-stage fade" id="cmp-stage" style="--seam:100%;--now:0">
-    <div class="cmp-frame cmp-before" id="cmp-before" role="img" aria-label="Before"><span class="cmp-tag" id="cmp-tag-before">Before</span></div>
-    <div class="cmp-frame cmp-after" id="cmp-after" role="img" aria-label="Now"><span class="cmp-tag" id="cmp-tag-now">Now</span></div>
-    <div class="cmp-seam" id="cmp-seam" aria-hidden="true"><span class="cmp-grip">‹ ›</span></div>
+  <div class="cmp-stage" id="cmp-stage" style="--cmp-seam:50%" tabindex="0" role="slider"
+       aria-label="Before / Now seam" aria-orientation="horizontal"
+       aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+    <div class="cmp-frame cmp-after" id="cmp-after"></div>
+    <div class="cmp-frame cmp-before" id="cmp-before"></div>
+    <div class="cmp-divider" id="cmp-divider" aria-hidden="true"><span class="cmp-handle">↔</span></div>
+    <span class="cmp-tag cmp-tag-before" id="cmp-tag-before">Before</span>
+    <span class="cmp-tag cmp-tag-now" id="cmp-tag-now">Now</span>
     <div class="cmp-msg" id="cmp-msg" hidden></div>
   </div>
-  <div class="cmp-foot">
-    <input type="range" class="cmp-slider" id="cmp-slider" min="0" max="1000" step="1" value="1000" aria-label="Blend between now and before">
-    <div class="cmp-hint" id="cmp-hint" aria-live="polite"></div>
-  </div>
+  <div class="cmp-hint" id="cmp-hint" aria-live="polite"></div>
 </div>`;
 
 function ensureOverlay() {
@@ -135,8 +143,7 @@ function ensureOverlay() {
   const $ = (id) => document.getElementById(id);
   ui = {
     back, stage: $('cmp-stage'), before: $('cmp-before'), after: $('cmp-after'),
-    mode: $('cmp-mode'), slider: $('cmp-slider'), close: $('cmp-close'),
-    seam: $('cmp-seam'), msg: $('cmp-msg'), hint: $('cmp-hint'),
+    divider: $('cmp-divider'), close: $('cmp-close'), msg: $('cmp-msg'), hint: $('cmp-hint'),
     tagBefore: $('cmp-tag-before'), tagNow: $('cmp-tag-now'),
   };
   wire();
@@ -145,22 +152,25 @@ function ensureOverlay() {
 
 function wire() {
   const u = ui;
-  u.mode.addEventListener('click', () => setMode(view.mode === 'fade' ? 'wipe' : 'fade'));
   u.close.addEventListener('click', closeCompare);
-  u.slider.addEventListener('input', () => setP(Number(u.slider.value) / 1000));
 
-  // The whole stage is a drag surface (as in v1); pointer capture keeps a drag
-  // alive past the frame's edge instead of dropping it — or, worse, closing.
+  // The whole stage is a drag surface — the Coach mechanic: on pointerdown the
+  // seam jumps to the pointer's x as a % of the stage width and follows it while
+  // dragging. Pointer capture keeps a drag alive past the frame's edge instead
+  // of dropping it — or, worse, closing.
   let dragging = false;
-  const pAt = (e) => { const r = u.stage.getBoundingClientRect(); return r.width ? (e.clientX - r.left) / r.width : 0; };
+  const seamAt = (e) => {
+    const r = u.stage.getBoundingClientRect();
+    return r.width ? ((e.clientX - r.left) / r.width) * 100 : SEAM_DEFAULT;
+  };
   u.stage.addEventListener('pointerdown', (e) => {
-    if (u.slider.disabled) return;
+    if (view.disabled) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     dragging = true;
     if (u.stage.setPointerCapture) { try { u.stage.setPointerCapture(e.pointerId); } catch {} }
-    setP(pAt(e)); e.preventDefault();
+    setSeam(seamAt(e)); e.preventDefault();
   });
-  u.stage.addEventListener('pointermove', (e) => { if (dragging) setP(pAt(e)); });
+  u.stage.addEventListener('pointermove', (e) => { if (dragging) setSeam(seamAt(e)); });
   const end = () => { dragging = false; };
   u.stage.addEventListener('pointerup', end);
   u.stage.addEventListener('pointercancel', end);
@@ -170,32 +180,18 @@ function wire() {
   u.back.addEventListener('keydown', onDialogKey);
 }
 
-/** p is the slider position, 0..1: 0 = all Now, 1 = all Before. In Wipe it is
-    the seam (Before to its left, Now to its right); in Crossfade it is the blend. */
-function setP(p) {
-  p = Math.max(0, Math.min(1, Number.isFinite(p) ? p : 1));
-  view.p = p;
-  ui.stage.style.setProperty('--seam', `${(p * 100).toFixed(3)}%`);
-  ui.stage.style.setProperty('--now', (1 - p).toFixed(4));
-  ui.slider.value = String(Math.round(p * 1000));
-  ui.slider.setAttribute('aria-valuetext', `${Math.round((1 - p) * 100)}% now, ${Math.round(p * 100)}% before`);
+/** The seam position, in % of the stage width, clamped 0–100: Before to its
+    left, Now to its right. Drives the clip on #cmp-before
+    (inset(0 calc(100% - seam) 0 0)) and the divider's left edge. */
+function setSeam(pct) {
+  pct = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : SEAM_DEFAULT));
+  view.seam = pct;
+  ui.stage.style.setProperty('--cmp-seam', `${pct.toFixed(3)}%`);
+  ui.stage.setAttribute('aria-valuenow', String(Math.round(pct)));
+  ui.stage.setAttribute('aria-valuetext', `Before ${Math.round(pct)}%, now ${Math.round(100 - pct)}%`);
 }
 
-const HINT = {
-  fade: 'Drag to dissolve · Now at the left, Before at the right',
-  wipe: 'Drag the seam · Before to its left, Now to its right',
-};
-
-/** The toggle names what it is and what it currently is: "Mode · Crossfade". */
-function setMode(mode) {
-  view.mode = mode === 'wipe' ? 'wipe' : 'fade';
-  const fade = view.mode === 'fade';
-  ui.stage.classList.toggle('fade', fade);
-  ui.stage.classList.toggle('wipe', !fade);
-  ui.mode.textContent = `Mode · ${fade ? 'Crossfade' : 'Wipe'}`;
-  ui.mode.title = `Switch to ${fade ? 'Wipe' : 'Crossfade'} (M)`;
-  ui.hint.textContent = view.note || HINT[view.mode];
-}
+const HINT = 'Drag the seam · Before to its left, Now to its right · ← → nudge · Home / End to the edges';
 
 function fit() {
   if (!ui) return;
@@ -210,14 +206,14 @@ function fit() {
   ui.stage.style.height = `${Math.round(h)}px`;
 }
 
-const isTextField = (el) => !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'range'));
-
 function onDialogKey(e) {
   if (!view.open) return;
   const u = ui;
   e.stopPropagation();
   if (e.key === 'Tab') {
-    const f = [u.mode, u.close, u.slider].filter((el) => !el.disabled);
+    // DOM order: Close (in the bar), then the stage. Native Tab walks the middle;
+    // the trap only catches the ends so focus cycles inside the dialog.
+    const f = view.disabled ? [u.close] : [u.close, u.stage];
     const i = f.indexOf(document.activeElement);
     let next = null;
     if (i === -1) next = f[0];
@@ -226,13 +222,13 @@ function onDialogKey(e) {
     if (next) { e.preventDefault(); next.focus({ preventScroll: true }); }
     return;
   }
-  if (u.slider.disabled) return;
-  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.target !== u.slider) {
+  if (view.disabled) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
     e.preventDefault();
-    setP(view.p + (e.key === 'ArrowLeft' ? -STEP : STEP));
-  } else if ((e.key === 'm' || e.key === 'M') && !isTextField(e.target)) {
+    setSeam(view.seam + (e.key === 'ArrowLeft' ? -SEAM_STEP : SEAM_STEP));
+  } else if (e.key === 'Home' || e.key === 'End') {
     e.preventDefault();
-    setMode(view.mode === 'fade' ? 'wipe' : 'fade');
+    setSeam(e.key === 'Home' ? 0 : 100);
   }
 }
 
@@ -259,16 +255,18 @@ function showFrames(before, now, note) {
   const u = ensureOverlay();
   view.note = note || '';
   view.frameW = now.w; view.frameH = now.h;
+  view.disabled = false;
   u.msg.hidden = true;
-  u.before.hidden = false; u.after.hidden = false; u.seam.hidden = false;
+  u.before.hidden = false; u.after.hidden = false; u.divider.hidden = false;
+  u.tagBefore.hidden = false; u.tagNow.hidden = false;
   u.before.style.backgroundImage = `url("${before.url}")`;
   u.after.style.backgroundImage = `url("${now.url}")`;
-  u.tagBefore.innerHTML = `Before<span>${fmtTime(before.at)}</span>`;
-  u.tagNow.innerHTML = `Now<span>${fmtTime(now.at)} · ${fmtDelta(now.at - before.at)}</span>`;
-  u.slider.disabled = false; u.mode.disabled = false;
-  setMode('fade');
-  setP(1);   // open on Before; the presenter drags left (or the seam) to reveal Now
-  open(u.slider);
+  u.tagBefore.innerHTML = `Before<span>· ${fmtTime(before.at)}</span>`;
+  u.tagNow.innerHTML = `Now<span>· ${fmtTime(now.at)} · ${fmtDelta(now.at - before.at)}</span>`;
+  u.stage.tabIndex = 0;
+  u.hint.textContent = view.note || HINT;
+  setSeam(SEAM_DEFAULT);   // the seam opens at the middle — Before left, Now right
+  open(u.stage);
 }
 
 /** Never a blank stage: when html2canvas is missing or a render fails, the
@@ -277,11 +275,13 @@ function showFailure(title, detail) {
   const u = ensureOverlay();
   view.note = '';
   view.frameW = 0; view.frameH = 0;
-  u.before.hidden = true; u.after.hidden = true; u.seam.hidden = true;
+  view.disabled = true;
+  u.before.hidden = true; u.after.hidden = true; u.divider.hidden = true;
+  u.tagBefore.hidden = true; u.tagNow.hidden = true;
   u.before.style.backgroundImage = ''; u.after.style.backgroundImage = '';
   u.msg.innerHTML = `<b>${esc(title)}</b>${esc(detail)}`;
   u.msg.hidden = false;
-  u.slider.disabled = true; u.mode.disabled = true;
+  u.stage.tabIndex = -1;
   u.hint.textContent = 'Nothing to drag — see the message above.';
   open(u.close);
 }
@@ -306,8 +306,8 @@ export async function captureBaseline(rootEl) {
 export function hasBaseline() { return baseline !== null; }
 
 /** Re-capture rootEl at the baseline's scrollTop and open the overlay, Before vs
-    Now, Crossfade by default. Without a baseline it captures one first and says
-    so (the page against itself). Resolves { before, now, beforeAt, nowAt,
+    Now behind the seam (at 50%). Without a baseline it captures one first and
+    says so (the page against itself). Resolves { before, now, beforeAt, nowAt,
     scrollTop } with the two data URLs — or { …, now:null, error } after opening
     the overlay on the failure message. */
 export async function openCompare(rootEl) {
