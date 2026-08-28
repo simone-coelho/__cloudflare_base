@@ -1,0 +1,103 @@
+/* Meridian — Reflex Moments (Decision 10). The strip above the hero and the
+   docked offer pill. Ported from the Coach .rmx band, re-lit for a WHITE page:
+   kinds are colour-coded, and nothing here uses color-mix().
+
+     hold / whiteglove         green   border #14C46A · ink #0B2E1B
+     curated / shift / occasion blue   #0E5FBF
+     revert / ending           amber   #9A5410 on #FBEFDF
+
+   Faces: Playfair Display (title) · Inter (body) · IBM Plex Mono (clock, eyebrow, badge).
+   The page loads Inter and Playfair; Plex Mono is pulled here so the module
+   stands alone. Fallback stacks everywhere. */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+.mmt-host{
+  --mmt-serif:var(--serif,'Playfair Display',ui-serif,Georgia,serif);
+  --mmt-sans:var(--sans,'Inter',ui-sans-serif,-apple-system,'Segoe UI',system-ui,sans-serif);
+  --mmt-mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  --mmt-ease:var(--ease,cubic-bezier(.33,0,.2,1));
+  display:flex;flex-direction:column;gap:8px;margin:14px 0 0;max-width:100%;min-width:0;
+}
+.mmt-host[hidden]{display:none}
+.mmt-dock-row:empty,.mmt-card-row:empty{display:none}
+
+/* ── The card ─────────────────────────────────────────────────────────────── */
+.mmt{
+  /* the default hue is the offer green; the other kinds override the tokens */
+  --mmt-line:#14C46A; --mmt-ink:#0B2E1B; --mmt-bg:#DCF3E6; --mmt-bar:#B9E8CC;
+  --mmt-badge-bg:#14C46A; --mmt-badge-ink:#0B2E1B; --mmt-cta-bg:#0B2E1B; --mmt-cta-ink:#FFFFFF;
+  border:2px solid var(--mmt-line);background:var(--mmt-bg);color:var(--mmt-ink);
+  border-radius:7px;overflow:hidden;
+  animation:mmtIn .4s cubic-bezier(.2,.7,.3,1);
+}
+.mmt[data-kind="curated"],.mmt[data-kind="shift"],.mmt[data-kind="occasion"]{
+  --mmt-line:#0E5FBF; --mmt-ink:#0E2F5C; --mmt-bg:#E8F0FB; --mmt-bar:#C4D8F3;
+  --mmt-badge-bg:#0E5FBF; --mmt-badge-ink:#FFFFFF; --mmt-cta-bg:#0E5FBF;
+}
+.mmt[data-kind="revert"],.mmt[data-kind="ending"]{
+  --mmt-line:#9A5410; --mmt-ink:#9A5410; --mmt-bg:#FBEFDF; --mmt-bar:#EBD3B3;
+  --mmt-badge-bg:#9A5410; --mmt-badge-ink:#FFF8EE; --mmt-cta-bg:#9A5410;
+}
+.mmt-strip{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;padding:12px 14px 12px 14px}
+.mmt-badge{
+  font:600 10px/1 var(--mmt-mono);letter-spacing:.13em;text-transform:uppercase;white-space:nowrap;
+  padding:6px 8px;border-radius:4px;background:var(--mmt-badge-bg);color:var(--mmt-badge-ink);flex-shrink:0;
+}
+.mmt-text{flex:1 1 320px;min-width:0}
+.mmt-eyebrow{
+  font:500 10.5px/1 var(--mmt-mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--mmt-ink);opacity:.8;margin-bottom:5px;
+}
+.mmt-title{font:400 19px/1.2 var(--mmt-serif);color:var(--mmt-ink);letter-spacing:-.005em}
+.mmt-body{font:400 14px/1.45 var(--mmt-sans);color:var(--mmt-ink);opacity:.9;margin-top:3px}
+.mmt-count{
+  font:600 22px/1 var(--mmt-mono);font-variant-numeric:tabular-nums;letter-spacing:.02em;
+  color:var(--mmt-ink);flex-shrink:0;
+}
+.mmt-cta{
+  flex-shrink:0;border:0;border-radius:4px;padding:10px 16px;cursor:pointer;
+  background:var(--mmt-cta-bg);color:var(--mmt-cta-ink);
+  font:600 12px/1 var(--mmt-sans);letter-spacing:.06em;text-transform:uppercase;
+}
+.mmt-cta:hover{filter:brightness(1.12)}
+.mmt-cta:focus-visible,.mmt-x:focus-visible,.mmt-dock-label:focus-visible{outline:2px solid var(--mmt-line,#0E5FBF);outline-offset:2px}
+.mmt-x{
+  flex-shrink:0;background:none;border:0;padding:0 2px;cursor:pointer;line-height:1;
+  font:400 20px/1 var(--mmt-sans);color:var(--mmt-ink);opacity:.55;
+}
+.mmt-x:hover{opacity:1}
+.mmt-bar{height:3px;background:var(--mmt-bar)}
+.mmt-bar>span{display:block;height:100%;width:100%;background:var(--mmt-line);transition:width 1s linear}
+
+/* ── The docked offer pill — compact, still ticking, still claimable ──────── */
+.mmt-dock-row{display:flex;justify-content:flex-end;min-width:0}
+.mmt-dock{
+  --mmt-line:#14C46A; --mmt-ink:#0B2E1B; --mmt-bg:#DCF3E6;
+  display:inline-flex;align-items:center;gap:10px;max-width:min(520px,100%);min-width:0;
+  border:1.5px solid var(--mmt-line);background:var(--mmt-bg);color:var(--mmt-ink);
+  border-radius:20px;padding:6px 8px 6px 13px;
+  animation:mmtIn .35s cubic-bezier(.2,.7,.3,1);
+}
+.mmt-dock[data-state="ending"]{--mmt-line:#9A5410; --mmt-ink:#9A5410; --mmt-bg:#FBEFDF}
+.mmt-dock-label{
+  background:none;border:0;padding:0;cursor:pointer;min-width:0;text-align:left;
+  font:500 12.5px/1.25 var(--mmt-sans);color:var(--mmt-ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mmt-dock-label:hover{text-decoration:underline;text-underline-offset:2px}
+.mmt-dock[data-state="ending"] .mmt-dock-label{white-space:normal;cursor:default;text-decoration:none}
+.mmt-dock-count{font:600 13.5px/1 var(--mmt-mono);font-variant-numeric:tabular-nums;flex-shrink:0;color:var(--mmt-ink)}
+.mmt-dock .mmt-x{font-size:18px}
+
+/* ── Paused: the presenter is talking; the strip holds still ─────────────── */
+.mmt-host[data-paused="1"] .mmt-bar>span{transition:none}
+
+@keyframes mmtIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .mmt,.mmt-dock{animation:none}
+  .mmt-bar>span{transition:none}
+}
+@media (max-width:900px){
+  .mmt-title{font-size:17px}
+  .mmt-count{font-size:19px}
+}
