@@ -307,6 +307,7 @@ function navTo(category) {
 
 // ── Tabs ────────────────────────────────────────────────────────────────────
 function showTab(name) {
+  if (name === 'why') return;                      // the Why is always visible now
   document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
   document.querySelectorAll('.tabpane').forEach((p) => { p.hidden = p.dataset.tab !== name; });
   const t = document.querySelector(`.tab[data-tab="${name}"]`); if (t) t.classList.remove('unread');
@@ -659,12 +660,48 @@ function absorb(changes) {
 }
 
 // ── Composition ─────────────────────────────────────────────────────────────
-function recompose(first) {
+/**
+ * FROZEN BETWEEN ACTIONS.
+ *
+ * Measured: one click, then forty seconds of nobody touching anything — the row
+ * re-ranked itself seven times and at one point every card was green. The
+ * 1-second decay tick recomposed the whole page, fast dimensions decayed faster
+ * than slow ones, relative scores drifted, and cards swapped places on their
+ * own. Every one of those was a change no button caused.
+ *
+ * On a tick the page may only do what a retreat is: a claim ending (affinity →
+ * fading/fallback), an audience lapsing, the offer expiring, a section falling
+ * back to its template rank. Item ORDER and the hero/story ITEMS are held until
+ * the visitor acts again. The bars keep draining — that is the instrument's job.
+ */
+function holdSteady(prev, next) {
+  if (!prev.length) return next;
+  const pickP = (slot) => prev.find((d) => d.slot === slot);
+  const out = [];
+  for (const slot of ['hero', 'rail', 'block_a', 'block_b']) {
+    const p = pickP(slot); const n = next.find((d) => d.slot === slot);
+    if (!n) continue;
+    if (!p) { out.push(n); continue; }
+    const retreat = (p.strategy === 'affinity' || p.strategy === 'completion') && (n.strategy === 'fading' || n.strategy === 'fallback');
+    // Keep the item; take the new strategy (so "stopped claiming" still lands).
+    out.push(retreat ? n : { ...n, itemId: p.itemId ?? n.itemId, blockId: p.blockId ?? n.blockId });
+  }
+  const prevRow = prev.filter((d) => d.slot === 'row');
+  const nextRow = next.filter((d) => d.slot === 'row');
+  const byId2 = new Map(nextRow.map((d) => [d.itemId, d]));
+  const held = prevRow.filter((d) => byId2.has(d.itemId)).map((d) => byId2.get(d.itemId));
+  const fresh = nextRow.filter((d) => !prevRow.some((p) => p.itemId === d.itemId));
+  out.push(...held, ...fresh);
+  return out;
+}
+
+function recompose(first, opts = {}) {
   const snap = snapshot(S.reflex, Date.now(), S.config);
   checkHandoff(snap);
-  const next = compose({ affinity: snap, state: S.reflex, items: S.items, blocks: S.blocks,
-                         config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
-                         anchorId: S.anchorId, decidingValue: decidingValueFor(S.vertical) });
+  let next = compose({ affinity: snap, state: S.reflex, items: S.items, blocks: S.blocks,
+                       config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
+                       anchorId: S.anchorId, decidingValue: decidingValueFor(S.vertical) });
+  if (opts.tick) next = holdSteady(S.decisions, next);
   const prev = S.decisions; S.decisions = next;
 
   // WHICH BOX COMES FIRST. The same snapshot ranks the SECTIONS: the offer
@@ -682,7 +719,7 @@ function recompose(first) {
 
   announceRetreat(prev, next);
   paintBars(snap.dims);
-  paint(prev, next, first, rowMoved);
+  paint(prev, next, first, rowMoved, !!opts.tick);
 
   // Published audiences join the chip row alongside the generated ones.
   for (const k of publishedMemberships(snap)) if (!S.audiences.has(k)) {
@@ -691,6 +728,8 @@ function recompose(first) {
   const coldTag = $('cold-behaviour');
   if (coldTag) coldTag.textContent = S.behaved ? 'superseded by behaviour' : 'behaviour none';
   checkOffer(); offerTick();
+  const stratOf = (lay) => lay ? lay.sections.map((x) => x.section + ':' + x.strategy).join('|') : '';
+  if (opts.tick && prevLayout && stratOf(prevLayout) === stratOf(S.layout)) S.layout = { ...S.layout, order: prevLayout.order };
   const movedSections = first ? [] : paintLayout(S.layout.order, { duration: 700 });
   if (movedSections.length) {
     const top = S.layout.sections.filter((x) => x.strategy !== 'locked' && x.strategy !== 'template')
@@ -754,7 +793,7 @@ function renderGlass(d) {
   }
 }
 
-function paint(prev, next, first, rowMoved = false) {
+function paint(prev, next, first, rowMoved = false, tick = false) {
   const heroChanged = pick(prev, 'hero')?.itemId !== pick(next, 'hero')?.itemId || S.heroDirty;
   S.heroDirty = false;
   const nextRow = next.filter((d) => d.slot === 'row').map((d) => d.itemId);
@@ -762,7 +801,7 @@ function paint(prev, next, first, rowMoved = false) {
   const rowChanged = JSON.stringify(prevRow) !== JSON.stringify(nextRow);
 
   if (first || heroChanged) swap($('hero'), () => paintHero(pick(next, 'hero')), first);
-  if (first || rowChanged || rowMoved) paintRow(next.filter((d) => d.slot === 'row'), prevRow, first, rowMoved);
+  if (first || rowChanged || rowMoved) paintRow(next.filter((d) => d.slot === 'row'), prevRow, first, rowMoved, tick);
   if (first || pick(prev, 'block_a')?.blockId !== pick(next, 'block_a')?.blockId) {
     swap($('block_a'), () => paintBlock(pick(next, 'block_a'), 'block_a'), first);
   }
@@ -978,6 +1017,7 @@ function highlightMovers(movers, holdMs) {
     const el = ROW.nodes.get(id); if (!el) continue;
     el.classList.add('changed');
     const d = el.querySelector('.delta');
+    d.classList.remove('quiet');
     d.hidden = false;
     d.innerHTML = `<b>${now}</b><small>${was == null ? 'new in' : `was ${was}`}</small>`;
   }
@@ -986,7 +1026,7 @@ function highlightMovers(movers, holdMs) {
   }, holdMs);
 }
 
-function paintRow(ds, prevIds, first, rowMoved = false) {
+function paintRow(ds, prevIds, first, rowMoved = false, tick = false) {
   const row = $('row');
   if (first) { ROW.nodes.clear(); row.innerHTML = ''; ROW.lastMovers = []; }
   // A parent section translating in the same frame would add its delta to
@@ -1008,11 +1048,13 @@ function paintRow(ds, prevIds, first, rowMoved = false) {
     if (row.children[i] !== el) row.insertBefore(el, row.children[i] || null);
     el.querySelector('.rank').textContent = i + 1;
     const was = rankBefore.get(it.id);
-    // A product that ENTERED the row is as much a change as one that moved —
-    // three arrivals with no mark was the first thing visible in the screenshot.
-    if (!first && was && was !== i + 1) movers.push({ id: it.id, was, now: i + 1 });
-    else if (!first && !was && prevIds.length) movers.push({ id: it.id, was: null, now: i + 1 });
-    else { el.querySelector('.delta').hidden = true; }
+    const d = el.querySelector('.delta');
+    if (tick || first) { d.hidden = true; }
+    else if (was && was > i + 1) movers.push({ id: it.id, was, now: i + 1, up: true });     // climbed
+    else if (!was && prevIds.length) movers.push({ id: it.id, was: null, now: i + 1, up: true }); // entered
+    else if (was && was < i + 1) {                                                              // slipped
+      d.hidden = false; d.classList.add('quiet'); d.innerHTML = `<small>was ${was}</small>`;
+    } else { d.hidden = true; }
   });
 
   flipRow(geometryBefore);
@@ -1107,7 +1149,7 @@ setInterval(() => {
   const res = tick(S.reflex, Date.now(), S.config);
   S.reflex = res.state;
   if (res.changes.entered.length || res.changes.exited.length) absorb(res.changes);
-  recompose();
+  recompose(false, { tick: true });
 }, 1000);
 
 function renderChips(entered, exited) {
@@ -1508,7 +1550,7 @@ const FLAVOUR_NAME = { ab: 'A/B', mab: 'Multi-armed bandit', cmab: 'Contextual b
 // Audience-safe by default — the room sees the beat and what to watch, never the
 // script. ?prompter=1 reveals the SAY line for rehearsal or a confidence monitor.
 
-const DIR = { i: 0, running: false, beatStart: 0, totalStart: 0, elapsedBefore: 0 };
+const DIR = { i: 0, running: false, beatStart: 0, totalStart: 0, elapsedBefore: 0, auto: false, autoTimer: null };
 
 /** The ONLY things the director is allowed to do to the demo. */
 const ARM_ACTIONS = {
@@ -1571,42 +1613,87 @@ function dirTick() {
   $('dir-total').textContent = `${mmss(totalMs)} of ${mmss(budget)} total`;
 }
 
+/**
+ * A beat's `perform` list is resolved here and played through the visible
+ * visitor. The presenter pressed Next — that is the click; what the room then
+ * watches is the visitor doing what the beat says, with the cursor. Nothing
+ * fires unless Next was pressed, and nothing here fakes a change: every entry
+ * is a real click on a real control.
+ */
+function resolveTarget(t) {
+  if (typeof t === 'string') return document.querySelector(t);
+  if (t.tab) { showTab(t.tab); return null; }
+  if (t.surface != null) return document.querySelectorAll('#surfaces .surface')[t.surface] || null;
+  if (t.dept) return dept(t.dept)();
+  if (t.card) return cardOf(t.card.cat, t.card.n)();
+  if (t.line) return cardOfLine(t.line.name, t.line.n)();
+  if (t.sel) return document.querySelector(t.sel);
+  return null;
+}
+
+async function performBeat(beat) {
+  if (!beat.perform?.length || BZ.busy) return;
+  const targets = beat.perform.map((t) => () => resolveTarget(t));
+  $('dir-next').disabled = true;
+  try { await browse($('dir-next'), targets); }
+  finally { $('dir-next').disabled = false; }
+}
+
 async function goBeat(i) {
+  if (BZ.busy) return;                             // a beat is still being performed
   DIR.i = Math.max(0, Math.min(BEATS.length - 1, i));
   sessionStorage.setItem('mrd_dir', String(DIR.i));
   await armBeat(BEATS[DIR.i]);
   renderBeat();
+  if (!DIR.running) dirPlay(true);                 // the clock starts on the first Next
+  await performBeat(BEATS[DIR.i]);
+  if (DIR.auto) scheduleAuto();
+}
+
+// Auto: advance on its own, with a gap the presenter can talk in — Coach's
+// 6.2s. Pause is simply Auto off; the beat in flight always completes.
+function scheduleAuto() {
+  clearTimeout(DIR.autoTimer);
+  if (DIR.i >= BEATS.length - 1) { setAuto(false); return; }
+  DIR.autoTimer = setTimeout(() => { if (DIR.auto) goBeat(DIR.i + 1); }, 6200);
+}
+function setAuto(on) {
+  DIR.auto = on; clearTimeout(DIR.autoTimer);
+  $('dir-play').classList.toggle('on', on);
+  $('dir-play').textContent = on ? 'Pause' : 'Auto';
+  if (on) scheduleAuto();
 }
 
 function dirPlay(on) {
   if (on && !DIR.running) { DIR.totalStart = Date.now(); DIR.beatStart = Date.now(); }
   if (!on && DIR.running) { DIR.elapsedBefore += Date.now() - DIR.totalStart; }
   DIR.running = on;
-  $('dir-play').textContent = on ? 'Pause' : (DIR.elapsedBefore ? 'Resume' : 'Start');
 }
 
 function openDirector() {
   document.body.classList.add('has-director');
   $('director').hidden = false;
+  // The page stays clear of the bar by the bar's REAL height.
+  const fit = () => document.documentElement.style.setProperty('--dir-h', `${$('director').offsetHeight + 8}px`);
+  fit(); new ResizeObserver(fit).observe($('director'));
   const saved = Number(sessionStorage.getItem('mrd_dir') ?? 0);
   DIR.i = Number.isFinite(saved) ? saved : 0;
   renderBeat();
 }
 
 $('dir-next').onclick = () => goBeat(DIR.i + 1);
-$('dir-prev').onclick = () => goBeat(DIR.i - 1);
-$('dir-play').onclick = () => dirPlay(!DIR.running);
+$('dir-prev').onclick = () => { setAuto(false); goBeat(DIR.i - 1); };
+$('dir-play').onclick = () => setAuto(!DIR.auto);
 $('dir-stop').onclick = () => {
-  dirPlay(false); DIR.elapsedBefore = 0; DIR.i = 0;
+  setAuto(false); dirPlay(false); DIR.elapsedBefore = 0; DIR.i = 0;
   sessionStorage.removeItem('mrd_dir'); renderBeat();
-  $('dir-play').textContent = 'Start';
 };
 addEventListener('keydown', (e) => {
   if ($('director').hidden) { if (e.key === 'd' && e.target === document.body) openDirector(); return; }
   if (e.target instanceof HTMLInputElement) return;
   if (e.key === 'ArrowRight') { e.preventDefault(); goBeat(DIR.i + 1); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); goBeat(DIR.i - 1); }
-  if (e.key === ' ') { e.preventDefault(); dirPlay(!DIR.running); }
+  if (e.key === ' ') { e.preventDefault(); setAuto(!DIR.auto); }
   if (e.key === 'Escape') { $('director').hidden = true; document.body.classList.remove('has-director'); }
 });
 setInterval(dirTick, 500);
@@ -1931,7 +2018,7 @@ $('btn-reset').onclick = async () => {
 if (new URLSearchParams(location.search).has('debug')) window.__S = S;
 paintPinButton();
 // One click to start, and it survives the reload that beat 22 performs.
-if (new URLSearchParams(location.search).has('director')
-    || sessionStorage.getItem('mrd_dir') !== null) queueMicrotask(openDirector);  // rehearsal introspection only
+// The director is on by default: it holds the transport AND the palette now.
+if (!new URLSearchParams(location.search).has('nodirector')) queueMicrotask(openDirector);  // rehearsal introspection only
 await load('retail');
 connect();

@@ -4,14 +4,17 @@
 // director; docs/opticon/Opticon-Run-Of-Show.md is its prose twin and the two
 // must not drift.
 //
-// THE DIRECTOR NEVER PERFORMS THE DEMO. It advances the narrative and it may do
-// STAGE MANAGEMENT — reset to a clean visitor, switch the catalogue, set a
+// THE DIRECTOR PERFORMS ONLY WHAT THE PRESENTER PRESSED FOR. It advances the
+// narrative, may do STAGE MANAGEMENT — reset to a clean visitor, switch the catalogue, set a
 // region — but it never clicks a product, never fires a signal, and never fakes
 // a change. Every visible personalization comes from the presenter actually
 // doing something, because an audience can tell the difference and the whole
 // argument rests on them believing what they just watched.
 //
-//   arm   — stage management run BEFORE the beat. Whitelisted in the director.
+//   arm     — stage management run BEFORE the beat. Whitelisted in the director.
+//   perform — what the VISIBLE VISITOR does when the presenter presses Next: real
+//             clicks on real controls, played through the cursor. The press is
+//             the presenter's; the performance is watched. Nothing fires on its own.
 //   do    — what the PRESENTER does. Never automated.
 //   watch — what the room should be looking at. Safe to project.
 //   say   — the presenter's line. NOT projected by default (see ?prompter=1).
@@ -56,6 +59,7 @@ export const BEATS = [
 
   // ── ACT 1 · the arrival · 360s ─────────────────────────────────────────────
   { n: 4, act: 1, cap: 'C1', title: 'She opened an email', secs: 75,
+    perform: [{ surface: 0 }],
     why: 'First time the room sees a page answer something that happened off-site. It needs room to land.',
     arm: { reset: true },
     do: 'Open the email in the inbox on the left.',
@@ -64,6 +68,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 5, act: 1, cap: 'C3', title: 'She clicked the ad', secs: 55,
+    perform: [{ surface: 1 }],
     why: 'A repeat of the same mechanism with a different surface. Faster, because the room already has the idea.',
     do: 'Click the ad.',
     watch: 'UTM lands, the episode names the campaign, the hero picks up its promise.',
@@ -71,6 +76,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 6, act: 1, cap: 'C2 · C4', title: 'Text, then a form on someone else’s site', secs: 70,
+    perform: [{ surface: 2 }, { surface: 3 }],
     why: 'Two surfaces in one beat, and it introduces the declared-versus-observed distinction used again in Act 3.',
     do: 'Sign up by text, then submit the style quiz.',
     watch: 'Identity resolves. Declared interest joins observed behaviour — and the engine keeps them apart.',
@@ -85,6 +91,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 8, act: 1, cap: 'C6 · C7', title: 'And the ones who arrive with none of that', secs: 100,
+    perform: [{ tab: 'cold' }],
     why: 'Dense: geography, census, the derivation, and four honesty labels. The longest beat in the act by design.',
     do: 'Nothing. Point at the cold-start panel.',
     watch: 'Region off the connection · published census · the derivation sentence · geo real / census real / prior derived / behaviour none.',
@@ -93,6 +100,7 @@ export const BEATS = [
 
   // ── ACT 2 · the handoff and the session · 900s ─────────────────────────────
   { n: 9, act: 2, cap: 'C35', title: 'The handoff', secs: 110, mark: 'STOP',
+    perform: [{ dept: 'Bags' }, { card: { cat: 'Bags', n: 0 } }, { card: { cat: 'Bags', n: 1 } }],
     why: 'The hinge of the whole session. Marked STOP in the script; rushing this loses the argument.',
     do: 'Press "Wanders to bags". Watch her leave the campaign: the department, then two bags, with the cursor.',
     watch: 'Bars shift off the arrival category. The hero stops being about the campaign. The episode closes itself.',
@@ -107,6 +115,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 11, act: 2, cap: 'C14', title: 'The control', secs: 45, mark: 'DO NOT SKIP',
+    perform: [{ tab: 'affinity' }],
     why: 'Every comparison for the next ten minutes is against this. Skipping it costs all of them.',
     do: 'Show the sort row untouched.',
     watch: 'Standard order. "The same order every shopper sees."',
@@ -114,6 +123,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 12, act: 2, cap: 'C8', title: 'Different memories, different speeds', secs: 50,
+    perform: [{ dept: 'Outerwear' }, { card: { cat: 'Outerwear', n: 0 } }, { card: { cat: 'Outerwear', n: 1 } }],
     why: 'Sets up the staircase in beat 21. Without it, the retreats later look arbitrary.',
     do: 'Press "Three coats". Watch the cursor click the first two — say the line over the third.',
     watch: 'Bars move at different rates. Taste is slow; this session is fast.',
@@ -121,6 +131,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 13, act: 2, cap: 'C9', title: 'It waited until it was sure', secs: 55, mark: 'SLOW DOWN',
+    perform: [{ card: { cat: 'Outerwear', n: 2 } }],
     why: 'The hysteresis idea is the least intuitive thing in the session and the most defensible.',
     do: 'Let the third click land. Point at the strip that appears above the hero.',
     watch: 'A bar crosses θin, turns green, a chip appears — and a green strip above the hero says she entered the audience and why.',
@@ -142,6 +153,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 16, act: 2, cap: 'C17', title: 'Which box comes first', secs: 50,
+    perform: [{ tab: 'trail' }],
     why: 'The content beat is the one that separates this from a recommender. Worth a real pause.',
     do: 'Point at the page. Nothing to press — it moved on the third coat.',
     watch: 'The SECTIONS re-order. The product row has climbed above the hero — she is browsing coats, so the products lead and the campaign hero dropped to second. 700ms, slow enough to read as structural. The trail says "Which box comes first · The hero 1 → 2" and why.',
@@ -149,6 +161,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 17, act: 2, cap: 'C13 · C18', title: 'The page gains a section', secs: 55,
+    perform: [{ sel: '#hero-cta' }],
     why: 'Two capabilities land together and the causal link needs saying out loud.',
     do: 'Press "Adds to bag". The cursor does it; the row restructures.',
     watch: 'The row becomes "Complete the look" — nothing from the same category. A dimension read from the verb, not the item.',
@@ -163,6 +176,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 19, act: 2, cap: 'C11 · C19', title: 'Your merchandiser outranks it', secs: 45,
+    perform: [{ tab: 'affinity' }, { sel: '#btn-pin' }],
     why: 'Two governance points that answer the same objection; taking them together keeps the pace up.',
     do: 'Open the audience list, then pin the hero — and RELEASE the pin before moving on.',
     watch: 'Audiences in the catalogue’s own words. Hero locks; explain reads "pinned · ranking skipped". The button becomes "Release the pin".',
@@ -170,6 +184,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 20, act: 2, cap: 'C20', title: 'The refusal', secs: 60, mark: 'SLOW DOWN',
+    perform: [{ sel: '#btn-pin' }, { sel: '#btn-soldout' }, { tab: 'glass' }],
     caution: 'RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.',
     why: 'The most persuasive thing the engine does. It is also the least expected, so it needs setup and silence.',
     do: 'Open the explain on an excluded item.',
@@ -204,6 +219,7 @@ export const BEATS = [
 
   // ── ACT 3 · the operator · 480s ────────────────────────────────────────────
   { n: 24, act: 3, cap: 'C21', title: 'Opal proposes', secs: 70,
+    perform: [{ sel: '#btn-opal' }],
     why: 'The room needs to read the generated rule, not just watch it appear.',
     arm: { vertical: 'retail' },
     do: 'Ask Opal in plain English.',
@@ -219,6 +235,7 @@ export const BEATS = [
     real: 'GATED — enabled' },
 
   { n: 26, act: 3, cap: 'C22', title: 'It cannot invent a scene', secs: 75,
+    perform: [{ sel: '#btn-ask' }],
     why: 'The anti-hallucination argument, made structurally rather than promised.',
     do: 'Type a request in words.',
     watch: 'A curated scene, our copy, engine-ranked products, and the provenance line.',
@@ -226,6 +243,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 27, act: 3, cap: 'C23', title: 'A stylist that cannot oversell', secs: 75,
+    perform: [{ sel: '#btn-conc' }],
     why: 'The second turn is the point. Budget enough for both turns and the refusal.',
     do: 'Ask for a look. Then correct it. Then ask for something we do not sell.',
     watch: 'Real catalogue pieces. The refinement repeats nothing. The refusal names what is missing.',
@@ -240,6 +258,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 29, act: 3, cap: 'C25', title: 'A real experiment, thirty seconds ago', secs: 80,
+    perform: [{ sel: '#btn-ab' }],
     why: 'Includes opening the Optimizely console. Allow for the tab switch and the page load.',
     do: 'Dispatch. Then open Optimizely and show it.',
     watch: 'Real flag, real rule, 50/50.',
@@ -247,6 +266,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 30, act: 3, cap: 'C26 · C27', title: 'Bandits, and what I will not show you', secs: 85,
+    perform: [{ sel: '#btn-mab' }, { sel: '#btn-cmab' }],
     why: 'The refusal to fake a lift chart is a credibility beat. It earns the time it takes.',
     do: 'Dispatch MAB, then CMAB.',
     watch: 'Both rules in Optimizely, with their attributes. CMAB traffic bandit-allocated, no manual split.',
@@ -255,6 +275,7 @@ export const BEATS = [
 
   // ── ACT 4 · the business · 240s ────────────────────────────────────────────
   { n: 31, act: 4, cap: 'C28', title: 'The average lied', secs: 110, mark: 'THE BIGGEST WOW — SLOW RIGHT DOWN',
+    perform: [{ sel: '#btn-radar' }],
     why: 'Two filters and an arithmetic reveal. The dilution between them is the part that convinces, and it cannot be rushed.',
     do: 'Open Revenue Radar. Filter to premium. Then add mobile.',
     watch: 'Blended payment step looks like an ordinary week. Premium drops. Premium and mobile collapses — inside a tenth of traffic.',
@@ -269,6 +290,7 @@ export const BEATS = [
     real: 'audience/flag LIVE · lift REPRESENTATIVE' },
 
   { n: 33, act: 4, cap: 'C30', title: 'We hand you the rows', secs: 50,
+    perform: [{ sel: '#btn-receipts' }],
     why: 'The closing credibility move of the act. Plain, short, and unhedged.',
     do: 'Export.',
     watch: 'Warehouse rows: gates, scores, rank, tie-break hash, config version.',
@@ -284,6 +306,7 @@ export const BEATS = [
     real: 'SIMULATED, labelled' },
 
   { n: 35, act: 5, cap: 'C31', title: 'Opal writes the moment', secs: 45,
+    perform: [{ sel: '#btn-moment' }],
     why: 'The elapsed counter is the point. Talk across it rather than watching it.',
     do: 'Trigger the moment.',
     watch: 'Elapsed counter running while Opal writes the creative.',

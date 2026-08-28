@@ -104,24 +104,24 @@
            can never sit below the thing the presenter presses. Audiences live
            here too — a chip appearing IS a bar crossing, and separating them
            made the room look in two places for one event. -->
-      <div class="esec instrument">
-        <h5>Live affinity <span class="cfg" id="cfgv"></span></h5>
-        <div id="bars"></div>
-        <div class="chips" id="chips"><span class="none">no audiences yet</span></div>
+      <!-- THE WHY IS ALWAYS VISIBLE. It is the one line the room reads, so it
+           sits under the header and never moves. Everything else is a tab that
+           owns the whole panel — at a laptop viewport the old layout put the
+           tabs below the fold with no way to scroll to them. -->
+      <div class="why-strip">
+        <div class="why-k">Why</div>
+        <div class="sentence" id="sentence">Nothing has happened yet.</div>
       </div>
-
-      <!-- Everything below the instrument is a TAB, not a stack. A presenter must
-           never scroll the panel mid-demo; they switch. The instrument itself
-           stays pinned above, always visible. -->
       <div class="tabbar" role="tablist">
-        <button class="tab on" data-tab="why" role="tab">Why</button>
+        <button class="tab on" data-tab="affinity" role="tab">Live affinity</button>
         <button class="tab" data-tab="trail" role="tab">The trail</button>
         <button class="tab" data-tab="cold" role="tab">Cold start</button>
         <button class="tab" data-tab="glass" role="tab">Glass box</button>
       </div>
-      <div class="esec accent tabpane" data-tab="why">
-        <h5>Why</h5>
-        <div class="sentence" id="sentence">Nothing has happened yet.</div>
+      <div class="esec instrument tabpane" data-tab="affinity">
+        <h5>Live affinity <span class="cfg" id="cfgv"></span></h5>
+        <div id="bars"></div>
+        <div class="chips" id="chips"><span class="none">no audiences yet</span></div>
       </div>
       <div class="esec tabpane" data-tab="trail" hidden>
         <h5>The trail <span class="cfg">what she did → what it moved</span></h5>
@@ -142,8 +142,41 @@
       </div>
     </div>
 
-    <div class="eng-controls">
-        <h5>Presenter controls</h5>
+  </aside>
+</div>
+<!-- The director. Audience-safe by default: the room sees the beat and what to
+     watch, never the presenter's script. ?prompter=1 reveals the SAY line for
+     rehearsal or a confidence monitor. -->
+<!-- The simulated visitor. Points at what it clicks; never at chrome. -->
+<div id="demo-cursor" aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="none"><path d="M3 2l6.5 18 2.7-7.3L19.5 10 3 2z" fill="#FFFFFF" stroke="#1C1A17" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</div>
+
+<div class="director" id="director">
+  <div class="dir-top">
+    <div class="dir-transport">
+      <button id="dir-prev" title="Previous beat (←)">&#8592;</button>
+      <button id="dir-next" title="Next beat — performs it (→)">Next &#9654;</button>
+      <button id="dir-play" title="Auto-advance through the beats (space)">Auto</button>
+      <button id="dir-stop" title="Restart from the top">&#8635;</button>
+    </div>
+    <div class="dir-left">
+      <div class="dir-where"><span id="dir-act"></span><span id="dir-count"></span></div>
+      <div class="dir-title" id="dir-title"></div>
+      <div class="dir-mark" id="dir-mark" hidden></div>
+    </div>
+    <div class="dir-mid">
+      <div class="dir-watch" id="dir-watch"></div>
+      <div class="dir-do" id="dir-do"></div>
+      <div class="dir-caution" id="dir-caution" hidden></div>
+      <div class="dir-say" id="dir-say" hidden></div>
+    </div>
+    <div class="dir-right">
+      <div class="dir-clock"><span id="dir-beat-time">0:00</span><small id="dir-planned"></small></div>
+      <div class="dir-total" id="dir-total"></div>
+    </div>
+  </div>
+  <div class="dir-palette">
         <div class="cgroup"><span class="clabel">Vertical</span>
           <div class="controls">
             <button id="btn-retail" class="on">Calder<small>&amp; Co.</small></button>
@@ -194,39 +227,6 @@
             <button id="btn-reset">New visitor<small>clears everything</small></button>
           </div>
         </div>
-    </div>
-  </aside>
-</div>
-<!-- The director. Audience-safe by default: the room sees the beat and what to
-     watch, never the presenter's script. ?prompter=1 reveals the SAY line for
-     rehearsal or a confidence monitor. -->
-<!-- The simulated visitor. Points at what it clicks; never at chrome. -->
-<div id="demo-cursor" aria-hidden="true">
-  <svg viewBox="0 0 24 24" fill="none"><path d="M3 2l6.5 18 2.7-7.3L19.5 10 3 2z" fill="#FFFFFF" stroke="#1C1A17" stroke-width="1.4" stroke-linejoin="round"/></svg>
-</div>
-
-<div class="director" id="director" hidden>
-  <div class="dir-left">
-    <div class="dir-where"><span id="dir-act"></span><span id="dir-count"></span></div>
-    <div class="dir-title" id="dir-title"></div>
-    <div class="dir-mark" id="dir-mark" hidden></div>
-  </div>
-  <div class="dir-mid">
-    <div class="dir-label">Watch</div>
-    <div class="dir-watch" id="dir-watch"></div>
-    <div class="dir-do" id="dir-do"></div>
-    <div class="dir-caution" id="dir-caution" hidden></div>
-    <div class="dir-say" id="dir-say" hidden></div>
-  </div>
-  <div class="dir-right">
-    <div class="dir-clock"><span id="dir-beat-time">0:00</span><small id="dir-planned"></small></div>
-    <div class="dir-total" id="dir-total"></div>
-    <div class="dir-transport">
-      <button id="dir-prev" title="Previous beat (←)">&#8592;</button>
-      <button id="dir-play" title="Start / pause the clock (space)">Start</button>
-      <button id="dir-next" title="Next beat (→)">&#8594;</button>
-      <button id="dir-stop" title="Stop and reset the clock">Stop</button>
-    </div>
   </div>
 </div>
 
