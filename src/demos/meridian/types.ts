@@ -149,6 +149,10 @@ export interface MeridianExplain {
    * score is kept precisely so we can say "it would have won" out loud.
    */
   refused?: Array<{ id: string; score: number; gate: string }>;
+  /** The best candidate that did NOT win this slot, so the receipt can say what was beaten. Absent when there was no second candidate. */
+  runnerUp?: { id: string; score: number };
+  /** The winning score, present exactly when `runnerUp` is — so "beat X 0.244 to 0.191" is printable without re-deriving it from truncated drivers. */
+  score?: number;
   /**
    * Promoted row items only: the entered audience key(s) this item matched —
    * the membership that EARNED the promotion ('category_bags_affinity').

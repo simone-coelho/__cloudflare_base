@@ -271,6 +271,27 @@ export function compose(input: ComposeInput): MeridianDecision[] {
     confidence, thetaOut, configVersion: config.version,
   });
 
+  /**
+   * WHAT THE WINNER BEAT. A ranked list fills each position with the best
+   * candidate still unplaced, so the runner-up for position `at` is the entry
+   * one below it: the best eligible loser, never above the winner's score, so
+   * "beat" is a claim the arithmetic actually supports. Only gate survivors are
+   * ever passed in — a refused item is carried by `refused` with its score and
+   * is never a runner-up.
+   *
+   * Absent, never fabricated, wherever no scored contest chose the slot: cold
+   * start, a zero-scoring fallback, a merchandiser pin, an audiencePriority
+   * override, the cohort's first line, and the standard shelf.
+   */
+  const runnerUpOf = (
+    ranked: readonly { r: { id: string }; score: number }[], at: number,
+  ): { runnerUp: MeridianExplain['runnerUp']; score?: number } | undefined => {
+    const winner = ranked[at];
+    const next = ranked[at + 1];
+    if (coldStart || !winner || winner.score <= 0 || !next) return undefined;
+    return { runnerUp: { id: next.r.id, score: round(next.score) }, score: round(winner.score) };
+  };
+
   /** Ranking and claiming are different rights. This decides the second one. */
   const strategyFor = (s?: { score: number; confidence: number; thetaOut: number }) => {
     if (coldStart) return 'cold-start' as const;
@@ -319,12 +340,17 @@ export function compose(input: ComposeInput): MeridianDecision[] {
     // row of a piece nobody could see — the Drover jacket vanished from the shelf
     // mid-story. The hero consumes; the rail does not.
     if (top && slot === 'hero') usedItems.add(top.r.id);
+    // Only where the arithmetic chose. An audiencePriority hero comes from one
+    // audience on the merchandiser's authority rather than from the field on
+    // score, so it beat no field — wonBy is that slot's receipt, and the only one.
+    const runnerUp = wonBy ? undefined : runnerUpOf(scored, 0);
     decisions.push({
       slot, order: order++, itemId: top?.r.id,
       strategy: strategyFor(top),
       explain: {
         ...explainOf(top?.drivers ?? [], scored.length, gated, 0, top?.confidence, top?.thetaOut),
         refused: refused.slice(0, 3),
+        ...(runnerUp ? { runnerUp: runnerUp.runnerUp, score: runnerUp.score } : {}),
         ...(wonBy ? { wonBy } : {}),
       },
     });
@@ -374,7 +400,10 @@ export function compose(input: ComposeInput): MeridianDecision[] {
       // explicitly and shows up in the receipt as its own driver rather than
       // hiding inside the affinity term. Coherence RANKS the promoted block;
       // it does not promote — only membership does.
-      const promoted = withMatch
+      //
+      // The contest is kept whole and sliced after, so the member that missed
+      // the last place is there to be named as the last card's runner-up.
+      const ranked = withMatch
         .filter((s) => s.matched.length > 0)
         .map((s) => {
           const it = s.r as unknown as MeridianItem;
@@ -393,8 +422,8 @@ export function compose(input: ComposeInput): MeridianDecision[] {
           }
           return { ...s, drivers, score: s.score + bonus };
         })
-        .sort((a, b) => b.score - a.score || standardOrder(a.r, b.r))
-        .slice(0, ROW_BLOCK);                       // the first line, same rule
+        .sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
+      const promoted = ranked.slice(0, ROW_BLOCK);  // the first line, same rule
       const inBlock = new Set(promoted.map((s) => s.r.id));
       const standard = withMatch
         .filter((s) => !inBlock.has(s.r.id))
@@ -403,6 +432,10 @@ export function compose(input: ComposeInput): MeridianDecision[] {
       [...promoted, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
         const isPromoted = inBlock.has(s.r.id);
+        // Only the block was ranked — the shelf under it holds the catalogue's
+        // own order, so nothing down there beat anything. Row position i is the
+        // block's own index i, which is what the runner-up is measured against.
+        const runnerUp = isPromoted ? runnerUpOf(ranked, i) : undefined;
         decisions.push({
           slot: 'row', order: order++, itemId: s.r.id,
           strategy: isPromoted ? 'completion' : 'standard',
@@ -410,6 +443,7 @@ export function compose(input: ComposeInput): MeridianDecision[] {
           explain: {
             ...explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
             ...(isPromoted ? { matched: s.matched } : {}),
+            ...(runnerUp ? { runnerUp: runnerUp.runnerUp, score: runnerUp.score } : {}),
           },
         });
       });
@@ -440,10 +474,10 @@ export function compose(input: ComposeInput): MeridianDecision[] {
       // particular. The row now reads: [the top ROW_BLOCK members by score] then
       // [everything else in the catalogue's own order]. What is selected for
       // her is at the top, contiguous, and nowhere else.
-      const block = withMatch
+      const ranked = withMatch
         .filter((s) => s.matched.length > 0)
-        .sort((a, b) => b.score - a.score || standardOrder(a.r, b.r))
-        .slice(0, ROW_BLOCK);
+        .sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
+      const block = ranked.slice(0, ROW_BLOCK);
       const inBlock = new Set(block.map((s) => s.r.id));
       const standard = withMatch
         .filter((s) => !inBlock.has(s.r.id))
@@ -452,12 +486,15 @@ export function compose(input: ComposeInput): MeridianDecision[] {
       [...block, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
         const isPromoted = inBlock.has(s.r.id);
+        // Same rule as completion: the block ranked, the shelf did not.
+        const runnerUp = isPromoted ? runnerUpOf(ranked, i) : undefined;
         decisions.push({
           slot: 'row', order: order++, itemId: s.r.id,
           strategy: isPromoted ? 'affinity' : 'standard',
           explain: {
             ...explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
             ...(isPromoted ? { matched: s.matched } : {}),
+            ...(runnerUp ? { runnerUp: runnerUp.runnerUp, score: runnerUp.score } : {}),
           },
         });
       });
@@ -471,10 +508,14 @@ export function compose(input: ComposeInput): MeridianDecision[] {
     const { scored, gated } = rank(pool, slot, usedBlocks);
     const top = scored[0];
     if (top) usedBlocks.add(top.r.id);
+    const runnerUp = runnerUpOf(scored, 0);
     decisions.push({
       slot, order: order++, blockId: top?.r.id,
       strategy: strategyFor(top),
-      explain: explainOf(top?.drivers ?? [], scored.length, gated, 0, top?.confidence, top?.thetaOut),
+      explain: {
+        ...explainOf(top?.drivers ?? [], scored.length, gated, 0, top?.confidence, top?.thetaOut),
+        ...(runnerUp ? { runnerUp: runnerUp.runnerUp, score: runnerUp.score } : {}),
+      },
     });
   }
 

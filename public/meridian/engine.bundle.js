@@ -547,6 +547,12 @@ function compose(input) {
     thetaOut,
     configVersion: config.version
   });
+  const runnerUpOf = (ranked, at) => {
+    const winner = ranked[at];
+    const next = ranked[at + 1];
+    if (coldStart || !winner || winner.score <= 0 || !next) return void 0;
+    return { runnerUp: { id: next.r.id, score: round(next.score) }, score: round(winner.score) };
+  };
   const strategyFor = (s) => {
     if (coldStart) return "cold-start";
     if (!s || s.score <= 0) return "fallback";
@@ -586,6 +592,7 @@ function compose(input) {
       }
     }
     if (top && slot === "hero") usedItems.add(top.r.id);
+    const runnerUp = wonBy ? void 0 : runnerUpOf(scored, 0);
     decisions.push({
       slot,
       order: order++,
@@ -594,6 +601,7 @@ function compose(input) {
       explain: {
         ...explainOf(top?.drivers ?? [], scored.length, gated, 0, top?.confidence, top?.thetaOut),
         refused: refused.slice(0, 3),
+        ...runnerUp ? { runnerUp: runnerUp.runnerUp, score: runnerUp.score } : {},
         ...wonBy ? { wonBy } : {}
       }
     });
@@ -614,7 +622,7 @@ function compose(input) {
         usedItems
       );
       const withMatch = scored.map((s) => ({ ...s, matched: matchedOf(s.r) }));
-      const promoted = withMatch.filter((s) => s.matched.length > 0).map((s) => {
+      const ranked = withMatch.filter((s) => s.matched.length > 0).map((s) => {
         const it = s.r;
         const drivers = [...s.drivers];
         let bonus = 0;
@@ -633,12 +641,14 @@ function compose(input) {
           drivers.push({ dim: "completes", value: `same occasion \xB7 ${shared[0]}`, a: 1, weight: 0.3 });
         }
         return { ...s, drivers, score: s.score + bonus };
-      }).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r)).slice(0, ROW_BLOCK);
+      }).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
+      const promoted = ranked.slice(0, ROW_BLOCK);
       const inBlock = new Set(promoted.map((s) => s.r.id));
       const standard = withMatch.filter((s) => !inBlock.has(s.r.id)).sort((a, b) => standardOrder(a.r, b.r));
       [...promoted, ...standard].slice(0, rowSize).forEach((s, i) => {
         usedItems.add(s.r.id);
         const isPromoted = inBlock.has(s.r.id);
+        const runnerUp = isPromoted ? runnerUpOf(ranked, i) : void 0;
         decisions.push({
           slot: "row",
           order: order++,
@@ -647,7 +657,8 @@ function compose(input) {
           ...isPromoted ? { anchorId: anchor.id } : {},
           explain: {
             ...explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
-            ...isPromoted ? { matched: s.matched } : {}
+            ...isPromoted ? { matched: s.matched } : {},
+            ...runnerUp ? { runnerUp: runnerUp.runnerUp, score: runnerUp.score } : {}
           }
         });
       });
@@ -672,12 +683,14 @@ function compose(input) {
           });
         });
       } else {
-        const block = withMatch.filter((s) => s.matched.length > 0).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r)).slice(0, ROW_BLOCK);
+        const ranked = withMatch.filter((s) => s.matched.length > 0).sort((a, b) => b.score - a.score || standardOrder(a.r, b.r));
+        const block = ranked.slice(0, ROW_BLOCK);
         const inBlock = new Set(block.map((s) => s.r.id));
         const standard = withMatch.filter((s) => !inBlock.has(s.r.id)).sort((a, b) => standardOrder(a.r, b.r));
         [...block, ...standard].slice(0, rowSize).forEach((s, i) => {
           usedItems.add(s.r.id);
           const isPromoted = inBlock.has(s.r.id);
+          const runnerUp = isPromoted ? runnerUpOf(ranked, i) : void 0;
           decisions.push({
             slot: "row",
             order: order++,
@@ -685,7 +698,8 @@ function compose(input) {
             strategy: isPromoted ? "affinity" : "standard",
             explain: {
               ...explainOf(s.drivers, scored.length, i === 0 ? gated : [], i, s.confidence, s.thetaOut),
-              ...isPromoted ? { matched: s.matched } : {}
+              ...isPromoted ? { matched: s.matched } : {},
+              ...runnerUp ? { runnerUp: runnerUp.runnerUp, score: runnerUp.score } : {}
             }
           });
         });
@@ -697,12 +711,16 @@ function compose(input) {
     const { scored, gated } = rank(pool, slot, usedBlocks);
     const top = scored[0];
     if (top) usedBlocks.add(top.r.id);
+    const runnerUp = runnerUpOf(scored, 0);
     decisions.push({
       slot,
       order: order++,
       blockId: top?.r.id,
       strategy: strategyFor(top),
-      explain: explainOf(top?.drivers ?? [], scored.length, gated, 0, top?.confidence, top?.thetaOut)
+      explain: {
+        ...explainOf(top?.drivers ?? [], scored.length, gated, 0, top?.confidence, top?.thetaOut),
+        ...runnerUp ? { runnerUp: runnerUp.runnerUp, score: runnerUp.score } : {}
+      }
     });
   }
   return decisions;

@@ -330,3 +330,127 @@ describe('cold start — the cohort opens the first line', () => {
   });
 });
 
+// ── The runner-up: what the winner beat ──────────────────────────────────────
+// "Rank 1 of 12" is a fact about a list. "Beat the Drover, 0.245 to 0.175" is a
+// fact about a contest, and may only be said where a contest decided the slot —
+// so the pin, the priority override, the cohort line and the standard shelf say
+// nothing, and a refused item is never what was beaten. Equal scores still
+// count: the tie-break is deterministic, and the loser is still the loser.
+
+describe('the runner-up — what the winner beat', () => {
+  const bags = affinity({ category: { Bags: 0.7 } }, ['category_bags_affinity']);
+
+  it('names the second-best eligible candidate, rounded like every other score in the receipt', () => {
+    // Bags 0.7 through the hero's broad ω 0.35: S02, S04 and S08 all score
+    // 0.245 and tie into id order, so S02 takes the hero and S04 is the best of
+    // what is left standing. The rail then ranks without S02 — the hero
+    // consumed it — at the rail's own broad ω 0.25.
+    const ds = composeWith({ affinity: bags, pins: undefined });
+    const hero = heroOf(ds);
+    expect(hero.itemId).toBe('S02');
+    expect(hero.explain.runnerUp).toEqual({ id: 'S04', score: 0.245 });
+
+    const rail = ds.find((d) => d.slot === 'rail')!;
+    expect(rail.itemId).toBe('S04');
+    expect(rail.explain.runnerUp).toEqual({ id: 'S08', score: 0.175 });
+
+    // Purely additive: the rest of the receipt reads exactly as it did.
+    expect(hero.explain.rank).toBe(0);
+    expect(hero.explain.candidates).toBe(ITEMS.length);
+  });
+
+  it('gives each promoted card the card that took the next place, and the last one nothing', () => {
+    // A ranked list fills every position with the best candidate still
+    // unplaced, so that is what each position beat. Three bags are members and
+    // there is no fourth, so the last card of the block beat nobody.
+    const row = rowOf(composeWith({ affinity: bags }));
+    expect(idsOf(row).slice(0, 3)).toEqual(BAGS);
+    expect(row[0].explain.runnerUp).toEqual({ id: 'S04', score: 0.175 });
+    expect(row[1].explain.runnerUp).toEqual({ id: 'S08', score: 0.175 });
+    expect(row[2].explain.runnerUp).toBeUndefined();
+
+    // The shelf under the block holds the catalogue's order — nothing down
+    // there won a contest, so nothing down there claims one.
+    for (const d of row.slice(3)) {
+      expect(d.strategy).toBe('standard');
+      expect(d.explain.runnerUp).toBeUndefined();
+    }
+  });
+
+  it('carries the coherence bonus into the completion block, since that is what ranked it', () => {
+    // Anchor S03 (Apparel, premium, modern, everyday). S04 shares the anchor's
+    // world and occasion (+0.75 on 0.175), S02 and S08 only the occasion, so
+    // the block's own arithmetic — bonus included, exactly as the drivers show
+    // it — is what each card beat.
+    const row = rowOf(composeWith({
+      affinity: affinity(
+        { category: { Bags: 0.7 }, journeyStage: { deciding: 0.68 } },
+        ['category_bags_affinity', 'journeystage_deciding_affinity'],
+      ),
+      anchorId: 'S03',
+      decidingValue: 'deciding',
+    }));
+    expect(idsOf(row).slice(0, 3)).toEqual(['S04', 'S02', 'S08']);
+    expect(row[0].explain.runnerUp).toEqual({ id: 'S02', score: 0.475 });
+    expect(row[1].explain.runnerUp).toEqual({ id: 'S08', score: 0.475 });
+    expect(row[2].explain.runnerUp).toBeUndefined();
+    for (const d of row.slice(3)) expect(d.explain.runnerUp).toBeUndefined();
+  });
+
+  it('is absent where nothing was ranked — the pin, the cold start, the cohort line', () => {
+    // The merchandiser's pin: no pool, no scores, nothing beaten.
+    const pinned = heroOf(composeWith({ affinity: bags }));
+    expect(pinned.strategy).toBe('pin');
+    expect(pinned.explain.runnerUp).toBeUndefined();
+
+    // Cold start: every candidate scores zero and the winner is only the first
+    // id. A tie at nothing is not a contest.
+    const cold = heroOf(composeWith({ affinity: affinity({}, []), pins: undefined }));
+    expect(cold.strategy).toBe('cold-start');
+    expect(cold.explain.runnerUp).toBeUndefined();
+
+    // The cohort's first line is the neighbourhood's order, not a ranking.
+    const picks = ITEMS.slice(3, 6).map((i) => i.id);
+    const cohortRow = rowOf(composeWith({ affinity: affinity({}, []), coldPicks: picks }));
+    expect(cohortRow.some((d) => d.strategy === 'cohort')).toBe(true);
+    for (const d of cohortRow) expect(d.explain.runnerUp).toBeUndefined();
+  });
+
+  it('stays absent when audience priority chose the hero — wonBy is that receipt', () => {
+    // The hero carries no narrow weight, so the Drover hero scores nothing at
+    // all: it was reached for on the merchandiser's list, over two premium
+    // items that outscored it. Nobody here lost to an item, and the receipt
+    // must not say otherwise.
+    const hero = heroOf(composeWith({
+      affinity: affinity(
+        { line: { Drover: 0.7 }, priceBand: { premium: 0.65 } },
+        ['line_drover_affinity', 'priceband_premium_affinity'],
+      ),
+      pins: undefined,
+      audiencePriority: ['line_drover_affinity', 'priceband_premium_affinity'],
+    }));
+    expect(byId(ITEMS, hero.itemId)?.line).toBe('Drover');
+    expect(hero.explain.wonBy?.audience).toBe('line_drover_affinity');
+    expect(hero.explain.runnerUp).toBeUndefined();
+  });
+
+  it('never names a refused item — the runner-up is the best ELIGIBLE loser', () => {
+    // E01 is a premium bag: it outscores every eligible candidate, 0.335 to
+    // 0.245, and it is embargoed. It belongs in `refused`, with the score it
+    // would have won on, and nowhere else.
+    const catalogue = [...ITEMS, item('E01', 'Bags', { value_usd: 400, embargoed: true })];
+    const hero = heroOf(composeWith(
+      {
+        affinity: affinity(
+          { category: { Bags: 0.7 }, priceBand: { premium: 0.6 } },
+          ['category_bags_affinity'],
+        ),
+        pins: undefined,
+      },
+      catalogue,
+    ));
+    expect(hero.explain.refused?.find((r) => r.id === 'E01')?.score).toBe(0.335);
+    expect(hero.itemId).toBe('S02');
+    expect(hero.explain.runnerUp).toEqual({ id: 'S04', score: 0.245 });
+  });
+});

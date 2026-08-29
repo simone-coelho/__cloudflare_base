@@ -342,6 +342,189 @@ function merchPinTarget() {
   return { visible, arrayPos };
 }
 
+/**
+ * THE DECISIONS BAND. Every decision this press makes, in the SAME four columns
+ * every time: what changed, the number that decided it, what that number beat
+ * or cleared, and BY WHOSE AUTHORITY. The last column is the honest one — not
+ * everything on the page is the engine's choice, and a demo that says which
+ * parts are not is the one a room believes about the parts that are.
+ */
+// The modifier classes are NAMESPACED: `engine`, `pin` and `rule` are all live
+// classes elsewhere on this page, and `body.has-director .engine` was quietly
+// giving the chip 118px of padding meant for the instrument panel.
+const AUTHORITY = {
+  engine:   ['engine', 'au-engine'],
+  stage:    ['engine · intent priority', 'au-engine'],
+  pin:      ['tenant config · pinned', 'au-pin'],
+  merch:    ['merchandiser pin', 'au-pin'],
+  campaign: ['campaign claim', 'au-campaign'],
+  rule:     ['rule refusal', 'au-rule'],
+  cohort:   ['neighbourhood cohort', 'au-cohort'],
+  tenant:   ['tenant strategy default', 'au-pin'],
+};
+const num = (n) => (typeof n === 'number' ? n.toFixed(3) : '—');
+/** What the winner did to the runner-up — beat it, or tied and won the tie-break. */
+function beatLine(name, won, lost) {
+  if (typeof won !== 'number' || typeof lost !== 'number') return `next best: ${name}`;
+  return won > lost
+    ? `beat ${name} — ${num(won)} to ${num(lost)}`
+    : `tied ${name} at ${num(won)} — the catalogue's order broke the tie`;
+}
+function decisionRows(f) {
+  const rows = [];
+  const push = (what, why, against, auth) => rows.push({ what, why, against, auth });
+  const nm = (id) => SECTION_NAME[id] || id;
+  const drv = (d) => (d?.explain?.drivers || []).slice(0, 2)
+    .map((x) => `${x.dim}·${x.value} ${x.a.toFixed(3)} × ${x.weight}`).join('  +  ');
+
+  // 1 — the hero, and under whose authority it was chosen
+  const heroD = (f.nextDecisions || []).find((d) => d.slot === 'hero');
+  if (f.heroChanges || f.overrideNext) {
+    if (f.overrideNext?.from === 'cohort') {
+      const c = S.cohort;
+      push(`The hero → ${f.heroNextTitle}`,
+           c ? `${c.topLines?.[0]?.line} ${Math.round((c.topLines?.[0]?.share || 0) * 100)}% of ${c.sampleSize} shoppers in ${c.grainLabel}` : 'the neighbourhood cohort',
+           'nothing observed about her yet — the cohort opens the page', 'cohort');
+    } else if (f.overrideNext) {
+      push(`The hero → ${f.heroNextTitle}`, `the ${f.overrideNext.from} surface supplied it`,
+           'holds until the claim stops leading or decays under θout', 'campaign');
+    } else if (heroD) {
+      const ru = heroD.explain?.runnerUp;
+      push(`The hero → ${f.heroNextTitle}`, drv(heroD) || 'the slot default',
+           ru ? beatLine(byId(ru.id)?.name || ru.id, heroD.explain?.score, ru.score)
+              : `rank ${heroD.explain?.rank ?? 1} of ${heroD.explain?.candidates ?? 0} candidates`,
+           heroD.strategy === 'pin' ? 'merch' : heroD.strategy === 'cohort' ? 'cohort' : 'engine');
+    }
+  }
+  if (f.dialTurn) push(`The ${SHAPE_LABEL[f.dialTurn.shape] || f.dialTurn.shape} weight → ${f.dialTurn.to.toFixed(2)}`,
+    `configuration, from ${f.dialTurn.from.toFixed(2)}`, 'applied hot — the next decision reads it', 'merch');
+  // 2 — a refusal is a decision, and it has its own authority
+  const refused = heroD?.explain?.refused?.[0];
+  if (refused) push(`Refused → ${byId(refused.id)?.name || refused.id}`, `scored ${num(refused.score)}`,
+                    `declined by rule: ${refused.gate}`, 'rule');
+  // 3 — the first line
+  if (f.picksNext?.length && JSON.stringify(f.picksNow) !== JSON.stringify(f.picksNext)) {
+    const p = (f.nextDecisions || []).find((d) => d.slot === 'row' && (d.strategy === 'affinity' || d.strategy === 'completion' || d.strategy === 'cohort'));
+    const pru = p?.explain?.runnerUp;
+    push(f.completion ? 'The row → Complete the look' : 'Picked for her, first line',
+         p ? drv(p) : 'her live affinity',
+         pru ? beatLine(byId(pru.id)?.name || pru.id, p.explain?.score, pru.score) : `${f.picksNext.length} promoted, the rest in the standard order`,
+         p?.strategy === 'cohort' ? 'cohort' : 'engine');
+  }
+  // 4 — the sections that moved, each with the number that moved it
+  const nowOrder = (S.layout?.order || []).filter((x) => x !== 'takeover');
+  const nextOrder = (f.orderNext || []).filter((x) => x !== 'takeover');
+  for (const sec of (f.nextLayout?.sections || [])) {
+    const to = nextOrder.indexOf(sec.section), from = nowOrder.indexOf(sec.section);
+    if (to < 0 || from < 0 || to === from) continue;
+    const e = sec.explain || {};
+    const lead = e.lead?.dim ? `${e.lead.dim}·${e.lead.value ?? '—'} ${num(e.confidence)}` : `${e.lead?.shape ?? '—'}`;
+    const beat = /outscored ([^;]+)/.exec(e.movedBecause || '');
+    push(`${nm(sec.section)} → position ${to + 1}`, `${lead} ≥ θout ${e.thetaOut ?? '—'} · section score ${num(sec.score)}`,
+         beat ? beat[1] : (to < from ? `up from ${from + 1}` : `pushed down from ${from + 1}`),
+         sec.strategy === 'stage' ? 'stage' : 'engine');
+  }
+  // 5 — and what did NOT move, because someone bought that position
+  for (const sec of (f.nextLayout?.sections || [])) {
+    if (sec.strategy !== 'pinned' && sec.strategy !== 'locked') continue;
+    if (nextOrder.indexOf(sec.section) !== nowOrder.indexOf(sec.section)) continue;
+    push(`${nm(sec.section)} → stays at ${nextOrder.indexOf(sec.section) + 1}`, 'ranking never ran for it',
+         'tenant config — the engine ranked everything else around it', 'pin');
+  }
+  // 6 — content is decided the same way, so it is explained the same way
+  // Content, one row per SLOT — five carousel slides are one decision to the
+  // room, not five. And when nothing has been observed yet, the honest row is
+  // that there was no signal to rank on, said once.
+  const cNow = new Set(S.contentDecisions.map((d) => `${d.slot}:${d.contentId}`));
+  const cChanged = (f.contentNext || []).filter((d) => !cNow.has(`${d.slot}:${d.contentId}`));
+  if (cChanged.length) {
+    if (cChanged.every((d) => d.strategy === 'default')) {
+      push('The content slots → the tenant defaults', 'no signal to rank on yet',
+           `${cChanged.length} pieces in the catalogue's own order`, 'tenant');
+    } else {
+      const bySlot = new Map();
+      for (const d of cChanged) if (!bySlot.has(d.slot)) bySlot.set(d.slot, { d, n: 0 });
+      for (const d of cChanged) bySlot.get(d.slot).n += 1;
+      for (const [slot, { d, n }] of bySlot) {
+        const p = S.content.find((x) => x.id === d.contentId);
+        const t = d.explain?.drivers?.[0];
+        push(`${nm(slot)} → ${n > 1 ? `${n} pieces re-ranked, led by ` : ''}${p?.title || d.customerContentId}`,
+             t ? `${t.dim}·${t.value} ${t.a.toFixed(2)} × ${t.weight}` : 'the slot default',
+             d.strategy === 'tenant-pinned' ? 'ranking never ran' : `score ${d.score}`,
+             d.strategy === 'tenant-pinned' ? 'tenant' : 'engine');
+      }
+    }
+  }
+  // 7 — audiences are decisions too: a threshold crossed is a membership
+  for (const a of (f.entered || []).filter((x) => !isStageAudience(x))) {
+    const m = (f.moves || []).find((x) => `${x.dim}_${x.value}`.toLowerCase().replace(/\s+/g, '_') === a.replace(/_affinity$/, ''));
+    push(`Enters ${prettyAudience(a)}`, m ? `${m.dim}·${m.value} ${num(m.to)}` : 'her live affinity',
+         m ? `crossed θin ${m.thetaIn}` : 'crossed its entry threshold', 'engine');
+  }
+  for (const a of (f.exited || []).filter((x) => !isStageAudience(x))) {
+    push(`Leaves ${prettyAudience(a)}`, 'decayed', 'fell under its exit threshold', 'engine');
+  }
+  return rows;
+}
+
+const DEC_MAX = 7;                 // the card must never push OK off the screen
+function decisionsHtml(rows) {
+  if (!rows.length) return '';
+  const shown = rows.slice(0, DEC_MAX), rest = rows.length - shown.length;
+  return `<tr><th>What</th><th>Why — the number</th><th>Against</th><th>Authority</th></tr>`
+    + shown.map((r) => {
+      const [label, cls] = AUTHORITY[r.auth] || AUTHORITY.engine;
+      return `<tr><td class="w">${r.what}</td><td class="n">${escapeHtml(r.why)}</td>`
+        + `<td class="g">${escapeHtml(r.against)}</td><td><span class="au ${cls}">${label}</span></td></tr>`;
+    }).join('')
+    + (rest > 0 ? `<tr><td colspan="4" class="g">and ${rest} more — every one of them in the trail</td></tr>` : '');
+}
+
+/**
+ * WHAT ACTUALLY MOVED, said in one sentence. The old line named whoever sat at
+ * rank 1 and called it "now leads" — with the banner pinned at #1 that was the
+ * banner every time, which had not moved, and whose reason (the pin) explained
+ * nothing about the rearrangement the room had just watched. A section that
+ * held its place is never the subject of a sentence about change.
+ */
+function rearrangeSentence(moved, { plain = false } = {}) {
+  const nm = (id) => SECTION_NAME[id] || id;
+  const b = (t) => (plain ? t : `<b>${t}</b>`);
+  const climbed = moved.filter((m) => m.to < m.from).sort((a, b2) => a.to - b2.to);
+  const fell = moved.filter((m) => m.to > m.from).sort((a, b2) => b2.to - a.to);
+  const sec = (id) => S.layout?.sections?.find((x) => x.section === id);
+  const pinned = (S.layout?.sections || []).filter((x) => x.strategy === 'pinned' || x.strategy === 'locked')
+    .filter((x) => !moved.some((m) => m.section === x.section));
+  if (!climbed.length) return plain ? 'The page re-ordered its sections.' : 'The page re-ordered its sections.';
+  const lead = climbed[0];
+  const why = sec(lead.section)?.explain?.movedBecause || 'ranked on the same vector as the products';
+  const parts = [`${b(nm(lead.section))} moved up to position ${b(String(lead.to + 1))} — ${why}`];
+  if (fell.length) parts.push(`${b(nm(fell[0].section))} moved below it`);
+  if (pinned.length) parts.push(`${b(nm(pinned[0].section))} stays where the merchandiser pinned it — ranking never runs for it`);
+  return `${parts.join('. ')}.`;
+}
+
+/**
+ * THE HONESTY LEDGER. "Simulated" alone, beside a TikTok logo, lets a room
+ * conclude the whole moment is a mock-up — one ambiguous word undoing four real
+ * things. So the claim is itemised: what is simulated (one thing, the
+ * detection), what is real, and what is representative, in that order.
+ */
+function showLedger(phase, m, fx, secs) {
+  const li = (t, sub) => `<li>${t}${sub ? `<small>${sub}</small>` : ''}</li>`;
+  $('led-sim').innerHTML = li('the detection', 'no social listening — your vendor or your team hands us the signal in production');
+  $('led-real').innerHTML = phase === 'reading'
+    ? li('the copy', 'being written now by the model') + li('the artwork', 'approved before today — composed, never generated')
+      + li('the flag and rule', 'about to be created in your Optimizely project') + li('the 28:00 window', 'enforced on the demo clock')
+    : li('the copy', `written now by the model in ${m?.ms ?? '—'}ms`)
+      + li('the artwork', 'approved before today — composed, never generated')
+      + li('the flag and rule', fx?.ok ? `${fx.flagKey} — open it in Optimizely` : 'not shipped (writes are off)')
+      + li('the 28:00 window', `loop closed in ${secs ?? '—'}s of 28:00`);
+  $('led-rep').innerHTML = li('the traffic allocation', 'nobody in this room is buying — the rule is real, the split is illustrative');
+  $('ledger').hidden = false;
+}
+const hideLedger = () => { $('ledger').hidden = true; };
+
 /** Is this section on the page right now? The one fact the map and the forecast share. */
 const onPage = (id) => {
   const el = document.querySelector(`#page [data-section="${id}"]`);
@@ -384,6 +567,15 @@ function showDestBadges(orderNext) {
   });
 }
 function clearDestBadges() { document.querySelectorAll('.destbadge').forEach((b) => b.remove()); }
+
+/** Turn a weight on stage: the same path a hand takes, so the receipt is identical. */
+function turnDial(shape, to) {
+  const el = $(`dial-${shape}`);
+  if (!el) return;
+  showTab('affinity');
+  el.value = String(to);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
 
 /** The content act's stage mode: the shelf narrows to one line and the hero
  *  yields a little height, so the content areas are ON the stage rather than
@@ -1221,6 +1413,11 @@ function predictThenProve(action, record, touchesOverride, label) {
   if (f.blockChanges) will.push(`The story becomes <b>${escapeHtml(f.blockNext || '—')}</b>.`);
   if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
   $('pd-will').innerHTML = will.map((w) => `<li>${w}</li>`).join('');
+  // EVERY decision, every beat — not only the beats that rearrange. This is the
+  // answer to "why did that happen", and it must be there when it is asked.
+  $('pd-decisions').innerHTML = decisionsHtml(rows);
+  $('pd-why-map').innerHTML = map;
+  $('pd-why').hidden = !rows.length && !map;
   return openBandRaw();
 }
 
@@ -1248,6 +1445,7 @@ function actOf(t) {
   if (t.sel === '#hero-cta') return { kind: 'cta' };
   if (t.sel === '#btn-skip') return { kind: 'skip' };
   if (t.stage === 'content') return { kind: 'contentstage' };
+  if (t.dial) return { kind: 'dial', shape: t.dial.shape, to: t.dial.to };
   // The merchandiser's pin rearranges the page, so it is an act and it gets
   // declared. It was performing unannounced — the one act in the deck that
   // moved the page without the band saying so first.
@@ -1266,6 +1464,7 @@ function forecastSequence(acts) {
   const entered = [], exited = [], did = [], weights = [];
   const poolOf = () => (dept ? S.items.filter((i) => i.category === dept) : S.items);
   let pin = null;                       // set if this sequence moves the merchandiser's pin
+  let dialTurn = null;                  // set if this sequence turns a weight
   const arriving = acts.some((a) => a.kind === 'arrive');
   const handsOff = acts.some((a) => a.kind !== 'arrive' && a.kind !== 'skip');
   const simPicks = handsOff ? undefined : (arriving && cohortUsable(S.cohort) ? coldPicksFor(S.cohort) : (S.coldPicks || undefined));
@@ -1296,8 +1495,9 @@ function forecastSequence(acts) {
       if (used.has(a.s.id)) continue; used.add(a.s.id);
       override = { ...a.s.hero, from: a.s.id };
       const action = a.s.act ?? 'arrival';
-      did.push(`${action === 'declared' ? 'Tells us, on a' : 'Arrives from'} ${KIND_LABEL[a.s.kind].toLowerCase()} — ${a.s.subject}`
-        + ` (${a.s.touches.map((t) => `${t.dim}=${t.value}`).join(', ')})`);
+      // The dimensions it touches are the arithmetic table's left column, one
+      // line below. Printing them here too spent the space the explanation needs.
+      did.push(`${action === 'declared' ? 'Tells us, on a' : 'Arrives from'} ${KIND_LABEL[a.s.kind].toLowerCase()} — ${a.s.subject}`);
       step(action, a.s.touches);
     } else if (a.kind === 'nav') {
       dept = a.category;
@@ -1322,6 +1522,9 @@ function forecastSequence(acts) {
       anchor = item.id;
       did.push(`Adds to bag ${item.name} — the hero`);
       step('intent_start', extractTouches(item, cfg));
+    } else if (a.kind === 'dial') {
+      dialTurn = { shape: a.shape, from: SLOT_STRATEGIES.hero[a.shape] ?? 0, to: a.to };
+      did.push(`The merchandiser turns the ${SHAPE_LABEL[a.shape] || a.shape} weight from ${dialTurn.from.toFixed(2)} to ${a.to.toFixed(2)} — configuration, applied hot`);
     } else if (a.kind === 'pinmerch') {
       pin = merchPinTarget();
       did.push(pin.visible === 1
@@ -1337,7 +1540,15 @@ function forecastSequence(acts) {
     }
   }
   const after = snapshot(reflex, clock, cfg);
+  // THE FORECAST MUST SEE THE TURNED KNOB. The composer reads the live strategy
+  // table, so the turn is applied for the length of this calculation and put
+  // back immediately — the page itself does not move until OK.
+  if (dialTurn) SLOT_STRATEGIES.hero[dialTurn.shape] = dialTurn.to;
   const next = composeSim(after);
+  // Content is decided by the same arithmetic, so it is forecast — and
+  // therefore explained — the same way.
+  const contentNext = S.content.length
+    ? composeContent(S.content, after, contentSlots()) : [];
   // THE FORECAST COMPOSES THE SAME PAGE THE PAGE COMPOSES. Without the content
   // sections the predicted order held four blocks against the seven on screen,
   // so the map looked like three blocks were being deleted and every band
@@ -1379,6 +1590,8 @@ function forecastSequence(acts) {
   if (!onPage('offer') && entered.includes(audienceKey(stageDim, decidingV))) appears.push('offer');
   if (onPage('offer') && OFFER.live && OFFER.expiresAt <= clock) goes.push('offer');
 
+  if (dialTurn) SLOT_STRATEGIES.hero[dialTurn.shape] = dialTurn.from;   // nothing changes before the press
+
   const heroNowTitle = $('hero-title').textContent;
   const heroD = next.find((d) => d.slot === 'hero');
   const heroNextTitle = override ? override.title : ((heroD?.itemId && byId(heroD.itemId)?.name) || heroNowTitle);
@@ -1389,7 +1602,7 @@ function forecastSequence(acts) {
   return { did, weights, moves, entered: [...new Set(entered)], exited: [...new Set(exited)],
            heroChanges: heroNextTitle !== heroNowTitle, heroNextTitle, picksNow, picksNext,
            rearranged: orderNow.length > 0 && JSON.stringify(orderNow) !== JSON.stringify(orderNext), lead, orderNext: lay.order,
-           appears, goes, pin,
+           appears, goes, pin, dialTurn, nextDecisions: next, nextLayout: lay, overrideNext: override, contentNext,
            dept, deptChanged: dept !== S.dept,
            completion: next.some((d) => d.strategy === 'completion') && !S.decisions.some((d) => d.strategy === 'completion') };
 }
@@ -1437,12 +1650,19 @@ async function sequenceBand(acts) {
     will.push(willItem('<b>Picked for her</b>, first line', f.picksNext.slice(0, 5).map(escapeHtml)));
   }
   if (f.rearranged) {
-    const why = String(f.lead?.explain?.movedBecause || '');
-    const subs = why.split(/;\s*/).flatMap((part) => part.split(/,\s*(?=[a-z])/)).map((x) => x.trim()).filter(Boolean).map(escapeHtml);
-    will.push(willItem(`The page <b>rearranges</b> — ${pill(SECTION_NAME[f.lead?.section] || f.lead?.section || 'a different section')} now leads`, subs)
-      + schematicHtml((S.layout?.order || []), f.orderNext || [], f.appears, f.goes));
+    // WHAT MOVED is the subject — never the section that held its place. The
+    // reasons live in the decisions band below, one row per section.
+    const moved = (f.orderNext || []).filter((x) => x !== 'takeover')
+      .map((id, to) => ({ section: id, to, from: (S.layout?.order || []).filter((x) => x !== 'takeover').indexOf(id) }))
+      .filter((m) => m.from >= 0 && m.from !== m.to);
+    const climbed = moved.filter((m) => m.to < m.from).sort((a, b) => a.to - b.to)[0];
+    will.push(willItem(climbed
+      ? `The page <b>rearranges</b> — ${pill(SECTION_NAME[climbed.section] || climbed.section)} moves up to position ${climbed.to + 1}`
+      : 'The page <b>rearranges</b>'));
     showDestBadges(f.orderNext || []);
   }
+  if (f.dialTurn) will.push(willItem(`The <b>${SHAPE_LABEL[f.dialTurn.shape] || f.dialTurn.shape}</b> weight becomes ${pill(f.dialTurn.to.toFixed(2))}`,
+    ['the next decision uses it — no rebuild, no redeploy', 'the receipt stamps the config version as tuned']));
   if (f.pin) will.push(willItem(f.pin.visible === 1
     ? 'The merch banner <b>returns to the top</b> — the pin is released'
     : `The merch banner <b>pins at #${f.pin.visible}</b> — tenant config`,
@@ -1451,9 +1671,11 @@ async function sequenceBand(acts) {
   if (acts.some((a) => a.kind === 'contentstage')) will.push(willItem('The shelf narrows to <b>one line</b> — the content areas take the stage', ['a presentation choice, declared like everything else — her profile does not move']));
   if (acts.some((a) => a.kind === 'arrive')) will.push(willItem('Nothing about <b>her</b> yet — behaviour none', ['the neighbourhood priors sit in her profile and decay like everything else', 'her first engagement hands the page from the cohort to her']));
   if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
+  const rows = decisionRows(f);
+  const map = f.rearranged ? schematicHtml((S.layout?.order || []), f.orderNext || [], f.appears, f.goes) : '';
   await openPredictBand({
     mode: f.did.length === 1 ? 'before her next act' : `before her next ${f.did.length} acts`,
-    act: f.did.join('\n'), actHtml, math, will,
+    act: f.did.join('\n'), actHtml, math, will, rows, map,
     note: 'Computed on a copy of her real profile — the same engine, the same weights. Nothing has happened yet; press OK and she does it.',
     button: 'OK — let her do it',
   });
@@ -1469,7 +1691,7 @@ async function gateThen(acts, fn) {
 }
 
 /** The shared band plumbing: fill arbitrary columns, await the consent press. */
-function openPredictBand({ mode, act, actHtml, math, will, note, button }) {
+function openPredictBand({ mode, act, actHtml, math, will, note, button, rows = [], map = '' }) {
   $('pd-mode').textContent = mode;
   $('pd-done').innerHTML = DONE.length
     ? DONE.map((d) => `<li><b>${d.verb}</b> ${escapeHtml(d.subject)}${d.move ? `<div><span class="pd-v">${escapeHtml(d.move)}</span></div>` : ''}</li>`).join('')
@@ -1477,6 +1699,11 @@ function openPredictBand({ mode, act, actHtml, math, will, note, button }) {
   if (actHtml) $('pd-act').innerHTML = actHtml; else $('pd-act').textContent = act;
   $('pd-math').innerHTML = math;
   $('pd-will').innerHTML = will.map((w) => `<li>${w}</li>`).join('');
+  // EVERY decision, every beat — not only the beats that rearrange. This is the
+  // answer to "why did that happen", and it must be there when it is asked.
+  $('pd-decisions').innerHTML = decisionsHtml(rows);
+  $('pd-why-map').innerHTML = map;
+  $('pd-why').hidden = !rows.length && !map;
   if (note) $('pd-note').textContent = note;
   $('pd-go').textContent = button || 'Close — let her do it';
   return openBandRaw();
@@ -1495,6 +1722,8 @@ function openPdReview() {
   $('pd-mode').textContent = 'what we said would happen — it already has';
   $('pd-done').innerHTML = LASTPD.done; $('pd-act').innerHTML = LASTPD.act;
   $('pd-math').innerHTML = LASTPD.math; $('pd-will').innerHTML = LASTPD.will;
+  $('pd-decisions').innerHTML = LASTPD.rows || ''; $('pd-why-map').innerHTML = LASTPD.map || '';
+  $('pd-why').hidden = !LASTPD.hadWhy;
   $('pd-note').textContent = 'The declaration from the last step, exactly as it was shown. Nothing runs from here.';
   $('pd-go').textContent = 'Close';
   $('predict').classList.add('review');
@@ -1510,7 +1739,8 @@ $('pd-go').onclick = async () => {
   if (PD.review) { PD.review = false; $('predict').hidden = true; $('predict').classList.remove('review'); return; }
   if (captureInFlight()) { const t = $('pd-go').textContent; $('pd-go').textContent = 'capturing the baseline — one moment…'; await captureIdle(); $('pd-go').textContent = t; }
   // Keep the declaration so the presenter can bring it back mid-discussion.
-  LASTPD = { done: $('pd-done').innerHTML, act: $('pd-act').innerHTML, math: $('pd-math').innerHTML, will: $('pd-will').innerHTML };
+  LASTPD = { done: $('pd-done').innerHTML, act: $('pd-act').innerHTML, math: $('pd-math').innerHTML, will: $('pd-will').innerHTML,
+             rows: $('pd-decisions').innerHTML, map: $('pd-why-map').innerHTML, hadWhy: !$('pd-why').hidden };
   clearDestBadges();
   $('predict').hidden = true; PD.open = false; if (window.MOMENTS) window.MOMENTS.resume(); PD.resolve?.(); PD.resolve = null;
   showPdPill();
@@ -1903,24 +2133,14 @@ function recompose(first, opts = {}) {
       movedSections.map((m) => `${SECTION_NAME[m.section] || m.section} ${m.from} → ${m.to}`).join(' · '),
       top?.explain?.movedBecause || 'The sections re-ordered on the same vector that ranks the products.');
     S.sayLockUntil = Date.now() + 5000;
-    $('sentence').textContent = top
-      ? `${SECTION_NAME[top.section] || top.section} leads the page — ${top.explain.movedBecause}`
-      : 'The page re-ordered its sections.';
+    $('sentence').textContent = rearrangeSentence(movedSections, { plain: true });
     // A rearrangement is a different kind of change from a product changing, and
     // it gets its own explanation on the page — and whatever moved DOWN, out of
     // view, is scrolled into view once the sections have finished moving.
     const down = movedSections.filter((m) => m.to > m.from).sort((a, b) => b.to - a.to)[0];
     // NAME THE LEADER, and say why in its own terms. "A different section" was
     // the fallback when the leader held a template position — it named nothing.
-    const first = S.layout.sections.slice().sort((a, b) => a.rank - b.rank).find((x) => x.section !== 'takeover');
-    const leadSec = first;                          // whoever is at the top IS the leader — template or not
-    const lead = SECTION_NAME[leadSec?.section] || leadSec?.section || 'A different section';
-    const why = leadSec?.explain?.movedBecause
-      || (leadSec?.strategy === 'locked' ? 'it is pinned by the merchandiser'
-        : leadSec?.strategy === 'template' ? 'nothing outranks it, so it holds the template position'
-        : 'ranked on the same vector as the products');
-    orderStrip(`<b>${lead}</b> now leads the page — ${why}`
-      + (down ? `. <b>${SECTION_NAME[down.section] || down.section}</b> moved below it.` : '.'), 14000);
+    orderStrip(rearrangeSentence(movedSections), 14000);
     // THE SCROLL IS THE PRESENTER'S. The strip explains the rearrangement; the
     // ride down to the moved section is performed by hand — the page never
     // scrolls itself here (his call, after trying it both ways).
@@ -1959,7 +2179,7 @@ function renderGlass(d) {
     `<b>chosen</b> ${it ? it.name : '—'}<br>` +
     `<b>strategy</b> ${d.strategy}${d.strategy === 'pin' ? '<span class="pin">pinned · ranking skipped</span>' : ''}<br>` +
     `<b>candidates</b> ${e.candidates ?? 0} eligible<br>` +
-    `<b>rank</b> ${e.rank ?? 0}<br>` +
+    `<b>rank</b> ${e.rank ?? 0}${e.runnerUp ? ` — ${beatLine(byId(e.runnerUp.id)?.name || e.runnerUp.id, e.score, e.runnerUp.score)}` : ''}<br>` +
     `<b>confidence</b> ${e.confidence?.toFixed(3) ?? '—'} vs θout ${e.thetaOut ?? '—'}<br>` +
     `<b>drivers</b><br>${drivers}<br>` +
     `<b>config</b> ${e.configVersion ?? '—'}` + refused;
@@ -2604,7 +2824,8 @@ $('btn-moment').onclick = async () => {
   btn.disabled = true; btn.textContent = 'reading the signal…';
 
   consequence('Signal', 'Partner feed reports a spike',
-    'This detection layer is SIMULATED and labelled on screen — we do not ship social listening. Everything after this line is ours.');
+    'ONE thing here is simulated: the DETECTION. We do not sell social listening — in production this arrives from your listening vendor or your own team. Everything after it is real.');
+  showLedger('reading');
 
   const m = await fetch(`${API}/moment/write`, {
     method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
@@ -2633,6 +2854,7 @@ $('btn-moment').onclick = async () => {
     `composed onto an approved still, not generated · ` +
     (fx?.ok ? `live as flag <b>${fx.flagKey}</b>` : 'flag not shipped') +
     `<br>Loop closed in <b>${secs}s</b>. The artwork was signed off before this demo; only the words are new.`;
+  showLedger('shipped', m, fx, secs);
   $('takeover').hidden = false;
   $('hero').style.display = 'none';
 
@@ -2979,6 +3201,7 @@ function resolveTarget(t) {
   if (t.wait) return { wait: t.wait };
   if (t.arrive) return { run: arrive };
   if (t.stage === 'content') return { run: engageContentStage };
+  if (t.dial) return { el: $(`dial-${t.dial.shape}`), run: () => turnDial(t.dial.shape, t.dial.to) };
   if (t.predict) { const inner = resolveTarget(t.predict); return inner ? { predict: true, el: inner } : null; }
   if (t.tab) { showTab(t.tab); return null; }
   if (t.surface != null) return document.querySelectorAll('#surfaces .surface')[t.surface] || null;
@@ -3050,6 +3273,25 @@ function openDirector() {
 $('dir-next').onclick = () => goBeat(DIR.i + 1);
 $('dir-prev').onclick = () => { setAuto(false); goBeat(DIR.i - 1); };
 $('dir-play').onclick = () => { if (DIR.auto && BZ.busy) BZ.abort = true; setAuto(!DIR.auto); };
+// ── The bar's own controls ──────────────────────────────────────────────────
+// Compare is pressed mid-sentence, so it lives where his hand already is. These
+// are the SAME presses as the drawer's — click() so compare.js's capture-phase
+// listener sees a real press and the press remains the capture.
+$('dir-capture').onclick = () => $('btn-capture').click();
+$('dir-compare').onclick = () => $('btn-compare').click();
+$('dir-doit').onclick = () => { if (!$('predict').hidden) $('pd-go').click(); };
+TIPS['dir-capture'] = ['Freezes a full-page picture of the page at the instant of the press — the Before for Compare. Every performed beat captures one automatically.', 'a strip confirms "Before captured"'];
+TIPS['dir-compare'] = ['Opens Before and Now side by side with a draggable seam. Says so plainly when nothing on the page changed.', 'the same press as the one in the palette'];
+TIPS['dir-doit'] = ['Performs the act the card just declared — the same press as "OK — let her do it", where your hand already is.', 'appears only while a declaration is open'];
+
+/** The bar mirrors the state of the two Compare controls it repeats. */
+function syncBarControls() {
+  $('dir-capture').classList.toggle('on', $('btn-capture').classList.contains('on'));
+  $('dir-compare').classList.toggle('armed', $('btn-capture').classList.contains('on'));
+  const open = !$('predict').hidden && !PD.review;
+  $('dir-doit').hidden = !open;
+}
+
 // ── The palette drawer ──────────────────────────────────────────────────────
 // The room never needs the buttons; the presenter summons them. Hover the
 // handle (a beat of rest first, so a passing cursor never pops it), pin it for
@@ -3096,7 +3338,7 @@ addEventListener('keydown', (e) => {
   if (e.key === ' ') { e.preventDefault(); setAuto(!DIR.auto); }
   if (e.key === 'Escape') { const m = document.querySelector('.moment.open'); if (m) { m.classList.remove('open'); return; } if (palIsOpen()) { closePalette(true); return; } if (BZ.busy) BZ.abort = true; }
 });
-setInterval(dirTick, 500);
+setInterval(() => { dirTick(); syncBarControls(); }, 500);
 
 // ── The reflex moment ───────────────────────────────────────────────────────
 // A white-glove offer earned by intent, running to an instant the ENGINE
@@ -3619,6 +3861,7 @@ $('btn-financial').onclick = () => setVertical('financial');
 $('btn-return').onclick = () => location.reload();   // same id, same object, same profile
 /** A new demo starts clean: both strips gone, their clocks zeroed. */
 function hideStrips() {
+  hideLedger();
   STRIP_UNTIL = 0; OSTRIP_UNTIL = 0;
   $('strip').hidden = true; $('ostrip').hidden = true;
   XP.open = false; XP.arms = []; $('xcard').hidden = true;

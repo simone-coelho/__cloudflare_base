@@ -204,6 +204,10 @@
       <button id="dir-next">Next &#9654;</button>
       <button id="dir-play">Auto</button>
       <button id="dir-stop">&#8635;</button>
+      <button id="dir-doit" hidden>Do it</button>
+      <span class="dir-sep"></span>
+      <button id="dir-capture" class="cmp">Capture</button>
+      <button id="dir-compare" class="cmp">Compare</button>
     </div>
     <div class="dir-left">
       <div class="dir-where"><span id="dir-act"></span><span id="dir-count"></span></div>
@@ -282,6 +286,15 @@
   </div>
 </div>
 
+<!-- THE HONESTY LEDGER. "Simulated" said once, in the open, against everything
+     that is real — because a bare SIMULATED beside a TikTok logo lets a room
+     conclude the whole moment is a mock-up. One column per class of claim. -->
+<div class="ledger" id="ledger" hidden>
+  <div class="led-col sim"><h6>Simulated · 1</h6><ul id="led-sim"></ul></div>
+  <div class="led-col real"><h6>Real · 4</h6><ul id="led-real"></ul></div>
+  <div class="led-col rep"><h6>Representative · 1</h6><ul id="led-rep"></ul></div>
+</div>
+
 <!-- Predict, then prove. Before the decisive click the band says what she has
      done, what we are watching for, and what will change if she does it — computed
      on a copy of her real state. The presenter closes it; the click performs; the
@@ -331,6 +344,17 @@
         <h6 class="pd-h">What will change if she does it</h6>
         <ul id="pd-will" class="pd-body"></ul>
       </section>
+    </div>
+    <!-- THE DECISIONS BAND — every decision this press makes, one row each, in
+         the same four columns every time: what changed, the number that decided
+         it, what it beat or cleared, and by whose authority. The map rides
+         beside it and appears only when the ORDER changes. -->
+    <div class="pd-why" id="pd-why" hidden>
+      <div class="pd-why-t">
+        <div class="pd-calc-k">Why — every decision this press makes</div>
+        <table class="pd-dt" id="pd-decisions"></table>
+      </div>
+      <div class="pd-why-m" id="pd-why-map"></div>
     </div>
     <div class="pd-foot">
       <span id="pd-note">Computed on a copy of her real profile — the same engine, the same numbers. Nothing here is a guess.</span>
