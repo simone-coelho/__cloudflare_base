@@ -20,7 +20,7 @@
 //   say   — the presenter's line. NOT projected by default (see ?prompter=1).
 //   secs  — planned duration, and `why` is the reason it is that long.
 //
-// Durations sum to each act's budget in the run of show: 4/6/15/8/4/3 minutes
+// Durations sum to each act's budget in the run of show: 4/6/20/8/4/3 minutes
 // plus 5 for questions. They are a pacing intention, not a timer that fires —
 // nothing in the director interrupts a presenter mid-sentence.
 
@@ -140,7 +140,7 @@ export const BEATS = [
 
   { n: 14, act: 2, cap: 'C8', title: 'Different memories, different speeds', secs: 50,
     perform: [{ dept: 'Outerwear' }, { card: { cat: 'Outerwear', n: 0 } }, { card: { cat: 'Outerwear', n: 1 } }],
-    why: 'Sets up the staircase in beat 21. Without it, the retreats later look arbitrary.',
+    why: 'Sets up the staircase in beat 27. Without it, the retreats later look arbitrary.',
     do: 'Press Next — the department, then two coats. The third coat is beat 15’s prediction; do not press the palette button here or it will consume it.',
     watch: 'Bars move at different rates. Taste is slow; this session is fast.',
     say: 'Eight things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both. And the line she is in follows her last click, not her running total — step from Drover to Linden and Linden leads at once, while Drover trails until it decays out on its own.',
@@ -217,7 +217,7 @@ export const BEATS = [
     real: 'pin + rank-around LIVE · movement slowed for the room, labelled' },
 
   { n: 24, act: 2, cap: 'C33', title: 'An offer that cannot be extended', secs: 45,
-    why: 'The anti-urgency-theatre argument. One beat, because the payoff is at expiry in beat 21.',
+    why: 'The anti-urgency-theatre argument. One beat, because the payoff is at expiry in beat 27.',
     do: 'Point at the offer band.',
     watch: 'A white-glove offer with a countdown — and it climbed to the TOP of the page the moment she decided. Service, not a discount.',
     say: 'That clock is not a marketing timer. It runs to the instant the engine calculates her intent crosses back under its threshold — so it cannot be extended, and when it ends it will tell you the number that ended it.',

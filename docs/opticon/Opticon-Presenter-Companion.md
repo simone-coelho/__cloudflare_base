@@ -1,8 +1,8 @@
-# Opticon Presenter Companion — the 39 beats, studied
+# Opticon Presenter Companion — the 43 beats, studied
 
-**For Simone. Study material, not a stage script.** The director bar on screen shows the room *BEAT n OF 39* and what to watch; it never shows these words. This document is what you absorb the night before, so that on the day the story comes out of you, not off a page. It is built beat for beat from `public/meridian/beats.js` (the single source of the run of show), the engine code itself, and Dynamic Yield's own published material — every claim in here traces to one of those.
+**For Simone. Study material, not a stage script.** The director bar on screen shows the room *BEAT n OF 43* and what to watch; it never shows these words. This document is what you absorb the night before, so that on the day the story comes out of you, not off a page. It is built beat for beat from `public/meridian/beats.js` (the single source of the run of show), the engine code itself, and Dynamic Yield's own published material — every claim in here traces to one of those.
 
-**The scene.** Forty-five minutes, about thirty customers, retail and financial services — marketers. People who think in audiences, experiments, statistics and revenue, not in code. The room sees **Calder & Co.** (and, for one glorious act-two close, **Calder Financial**). Meridian is the internal codename; it appears nowhere on screen. You advance with **Next**. On beats that perform, Next opens the declaration band — what she does, the weights, the arithmetic, what will change — you read it with the room, and **OK — let her do it** lets the visible cursor act. Nothing on that page ever changes without a press. Time passes only when you say so.
+**The scene.** Fifty minutes, about thirty customers, retail and financial services — marketers. People who think in audiences, experiments, statistics and revenue, not in code. The room sees **Calder & Co.** (and, for one glorious act-two close, **Calder Financial**). Meridian is the internal codename; it appears nowhere on screen. You advance with **Next**. On beats that perform, Next opens the declaration band — what she does, the weights, the arithmetic, what will change — you read it with the room, and **OK — let her do it** lets the visible cursor act. Nothing on that page ever changes without a press. Time passes only when you say so.
 
 **The competitor discipline.** Nothing on screen ever names Dynamic Yield or any other vendor — the anti-DY card was deliberately renamed *"How the cold start works — the area, then your own sales"*, and that renaming was a decision, not an accident. The DY material in this document exists for your mouth, and almost all of it for your *answers*: when someone asks, you are ready. One exception to know about: the scripted line at beat 4 does name Dynamic Yield once, out loud. That is the script's choice and it is defensible — but decide before you walk on whether you say the name there or hold it for Q&A. The screen will never contradict you either way.
 
@@ -12,7 +12,7 @@
 
 ## 1 · The spine — five sentences that are the whole session
 
-Memorise these. Every one of the 39 beats is one of these five sentences wearing different clothes. If you lose your place, any of them gets you home.
+Memorise these. Every one of the 43 beats is one of these five sentences wearing different clothes. If you lose your place, any of them gets you home.
 
 1. **Most of your traffic is a stranger.** The majority of visitors are unidentified and most have never been seen before — every personalization system in the room reaches the identified minority, and this session spends forty-five minutes on the majority.
 
@@ -24,7 +24,7 @@ Memorise these. Every one of the 39 beats is one of these five sentences wearing
 
 5. **Time and decay are honest.** Every signal fades on its own clock; audiences are *left*, not just entered, by the same arithmetic running backwards; and an offer's countdown runs to a computed instant that cannot be extended — when it ends, it names the number that ended it.
 
-How the acts hang on them: Act 0 and Act 1 are sentences 1 and 2. Act 2 is sentences 3 and 5 — the engine, glass and honest. Act 3 and Act 4 are sentences 3 and 4 — the operator in control of real objects. Act 5 is sentence 4 closing the loop, and beat 39 is the honesty of sentence 5 applied to the whole session.
+How the acts hang on them: Act 0 and Act 1 are sentences 1 and 2. Act 2 is sentences 3 and 5 — the engine, glass and honest. Act 3 and Act 4 are sentences 3 and 4 — the operator in control of real objects. Act 5 is sentence 4 closing the loop, and beat 43 is the honesty of sentence 5 applied to the whole session.
 
 ---
 
@@ -50,7 +50,7 @@ Dynamic Yield — now branded **"Dynamic Yield by Mastercard"**, positioned as a
 
 2. **Glass box against black box — and who holds the dials.** Their published math stops where their ML begins: campaigns *"agnostic to how the profile is calculated"*, logic *"subject to change"*, strategy *"automatically determined"* — and even the classic weights are tuned by *their* staff, through a Customer Success Manager. Here the whole mechanism is arithmetic on screen: the weights, the decay clocks, the thresholds, the score every item earned, the refusals with the score they gave up — and the dials are yours, live, versioned. Every decision this engine has ever made can be explained to your CFO, and re-tuned by your merchandiser, without a support ticket.
 
-3. **Audiences that leave.** Everyone's audiences are entered in real time now — theirs included. Ours are also *left*: by the same arithmetic decaying below a threshold, per dimension, with hysteresis so nobody flaps, and with the exit number printed as it happens. Their audience reports update once a day; our beat 23 shows a shopper leaving three audiences, live, each naming the number that released her. Ask any other demo to show you the leaving.
+3. **Audiences that leave.** Everyone's audiences are entered in real time now — theirs included. Ours are also *left*: by the same arithmetic decaying below a threshold, per dimension, with hysteresis so nobody flaps, and with the exit number printed as it happens. Their audience reports update once a day; our beat 27 shows a shopper leaving three audiences, live, each naming the number that released her. Ask any other demo to show you the leaving.
 
 4. **Real experiments, and the rows.** Their optimization lives inside their platform's own reporting, graded by their own uplift figures. Here every experiment is a real flag and rule in *your* Optimizely project — open the console mid-demo — and every decision exports as warehouse rows so *you* compute the lift. We never present our own uplift number as the proof; their public sites lead with "30%+ average revenue and conversion uplift". That difference in posture is the product.
 
@@ -64,9 +64,9 @@ If the asker is technical, the one-line version: "A counter is a running total. 
 
 ---
 
-## 3 · Beat by beat — all 39
+## 3 · Beat by beat — all 43
 
-Format, every beat: what Next performs · what the room sees · the story in your voice · the simple math where there is math · the questions that will come, answered. The planned seconds are a pacing intention, not a timer — nothing interrupts you mid-sentence. The eight marked beats (STOP, SLOW DOWN, etc.) are the ones that never get compressed if you run short.
+Format, every beat: what Next performs · what the room sees · the story in your voice · the simple math where there is math · the questions that will come, answered. The planned seconds are a pacing intention, not a timer — nothing interrupts you mid-sentence. The ten marked beats (STOP, SLOW DOWN, etc.) are the ones that never get compressed if you run short.
 
 ## Act 0 · The frame — 4:00 · slides, no product on screen
 
@@ -103,7 +103,7 @@ Three sentences the whole session rests on. The room holds these for forty minut
 **Tell it like this:** Before you see a single product, the rule of the house: your rules decide what *can* show. The engine decides what *does* show, in the space your rules leave — and it shows its receipts for every choice. Later in this session you will watch it decline a click it would have won, because a merchandising rule said no, and you will watch a pin beat the algorithm with the machine saying so on the record. Nothing in the next forty minutes asks you to trust a black box.
 
 **If they ask:**
-- *"So can my team override it?"* — Yes, with declared precedence: gates first, pins second, ranking last. You will see the pin at beat 21 and the refusal at beat 22 — hold the question until then and I will show you rather than tell you.
+- *"So can my team override it?"* — Yes, with declared precedence: gates first, pins second, ranking last. You will see a pin land mid-page at beat 23, the hero pinned at beat 25, and the refusal at beat 26 — hold the question until then and I will show you rather than tell you.
 
 ## Act 1 · The Arrival — 6:00 · the ecosystem
 
@@ -195,9 +195,9 @@ The rest of the world is on the left; the store in the centre; the instrument on
 - *"How is this different from Dynamic Yield's Element?"* — Concede it plainly: they built a real cold-start product, and third-party spend data genuinely earns its keep for net-new prospecting — we are complementary there, not opposed. The difference is the kind of data and who owns it: theirs is an aggregated card-network average, licensed, identical for every merchant who pays; ours is your customers' purchases of your products, free census on top, and it compounds because every sale you make sharpens it. They know what a metro spends on a category. You know what your shoppers there carry, at which price band.
 - *"What if I open a store somewhere I have no history?"* — Then the ladder tells the truth: it rolls up to the level where you do have history, labels the grain, and the census still gives you the local band. The moment real behaviour arrives, it outweighs all of it — geography is the opening hypothesis, never the verdict.
 
-## Act 2 · The Handoff & The Session — 15:00 · the engine, and the flip
+## Act 2 · The Handoff & The Session — 20:00 · the engine, the content lane, and the flip
 
-The heart of the session. The campaign hands off to behaviour, the engine shows its arithmetic, the merchandiser outranks it, time runs backwards, she comes back — and then you change what the company sells. Sentences 3 and 5 of the spine, over and over.
+The heart of the session. The campaign hands off to behaviour, the engine shows its arithmetic, then turns the same arithmetic on the content (beats 20–23, about five minutes: the second catalogue → the map → the complement → the pin), the merchandiser outranks it, time runs backwards, she comes back — and then you change what the company sells. Sentences 3 and 5 of the spine, over and over.
 
 ### Beat 11 · The handoff (Act 2 · 1:50 planned · ⏸ STOP)
 
@@ -281,7 +281,7 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **Tell it like this:** The hero just changed its reason. Until now it said "because of where you are" — because that was all it honestly had. Now it says "because of what you have looked at". It only claims her when it can support the claim. Small thing; it is the whole philosophy in one caption.
 
 **If they ask:**
-- *"What if the evidence is thin again tomorrow?"* — Then the caption retreats with it — you will watch that happen at beat 23. The reason on the hero is always the strongest thing the engine can currently defend.
+- *"What if the evidence is thin again tomorrow?"* — Then the caption retreats with it — you will watch that happen at beat 27. The reason on the hero is always the strongest thing the engine can currently defend.
 
 ### Beat 18 · Which box comes first (Act 2 · 0:50 planned)
 
@@ -307,7 +307,56 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **If they ask:**
 - *"Why exclude the category she just chose?"* — Because the honest read of "deciding" is that the choice is made. Showing her six more coats now is second-guessing her; completing the look is serving her.
 
-### Beat 20 · An offer that cannot be extended (Act 2 · 0:45 planned)
+### Beat 20 · Content is a catalogue too (Act 2 · 1:15 planned · ⏸ THE TAPESTRY THESIS)
+
+**You press:** Next presses "Show the receipts". Before the modal lands, point at the three chipped slots that have been sitting on the page all along — the merch strip, the content hero, the content carousel — so the room realises the content lane has been running the whole time.
+
+**The room sees:** Three content slots already on the page: the merch strip *"The Calder Winter Sale"* — badged tenant config · non-personalizable · CMP-1007 — the content hero, and the content carousel, every one carrying a colour chip and a why line. Then the receipts modal: *"THE CONTENT PUSH"* — the literal payload, `{contentId, customerContentId, type, slot, order, score, explain}`. One push per page.
+
+**Tell it like this:** Everything you have watched this engine do to products, it is doing to content — the same arithmetic, pointed at a second catalogue. These are your pieces, with your CMS ids, scored by the same affinities you have been watching move all session, and delivered as decisions *by ID*: we push the id, the slot, the score and the why, and your front end paints. That payload on the screen is the entire integration. And notice the merch strip — it has not moved all session, because your config says it is non-personalizable, and the engine ranks around it.
+
+**If they ask:**
+- *"We're headless — will this fight our front end?"* — The opposite, and the payload is the proof: `customerContentId` is your own CMS id, coming back in the decision. A headless front end paints by ID with no markup coupling at all — the engine never touches your templates; it hands you the id, the slot, the score and the why. (For you, not the room: this by-ID contract is, point for point, the contract the Tapestry engagement asked for. The name stays off the stage like every customer name.)
+- *"Is that real content?"* — The label: content catalogue REPRESENTATIVE — these pieces stand in for your CMS today, and in production this is your CMS behind the same slots. The scoring is LIVE, and the payload is REAL — that is the actual push, not an illustration of one.
+
+### Beat 21 · Content follows her, with the map (Act 2 · 1:15 planned)
+
+**You press:** Next. The band opens on the schematic — *your page now → after*, two coloured mini-wireframes of the slots — and ghost badges appear on the page behind it, each saying where its slot will go. Read the map with the room. Then OK, and the cursor clicks a Fenwick — she touches a sweater.
+
+**The room sees:** The plan, drawn before the move: two slot maps in the band, now and after, with ghost badges on the page itself. On OK the click lands, the carousel re-ranks to knitwear content, and the content hero becomes *"The Heritage Wardrobe"*.
+
+**Tell it like this:** Before anything moves, the engine tells you the plan: this block here, that block there — and why: the scores, against the thresholds. Then it does exactly that, in front of you. Content recommendations with the same receipts as the products have. Nobody wrote a rule for any of it. She touched a sweater.
+
+**If they ask:**
+- *"Is that preview a mock-up?"* — No — the label is scoring LIVE, and the schematic is computed from the same forecast that then executes. The map and the move are one calculation, drawn before it runs — it cannot show you one plan and quietly do another.
+
+### Beat 22 · The complement — content completing a product (Act 2 · 1:15 planned)
+
+**You press:** Next. The band declares the add-to-bag — the hero's own Add to bag — read it, OK, and the cursor commits her to the sweater.
+
+**The room sees:** The journey stage flips to deciding. The content hero becomes *"What to Wear With a Fisherman Sweater"* — a guide, not a lookbook — and its why line names its driver: *"completes · the Fenwick in her bag 1.00 × 0.5"*.
+
+**Tell it like this:** She committed — and watch the content change jobs. A minute ago its job was inspiring her. Now its job is helping her finish: what to wear it with, how to care for it. Same engine, reading the stage of her journey, choosing content the way it chooses complements. And read that why line — the completion bonus is scored and shown, never smuggled in. That is content personalization as we mean it: not content that matches her taste, content that answers what she is *doing*.
+
+**The simple math:** The completion driver is arithmetic like every other driver: the piece in her bag at full strength, 1.00, times the 0.5 completes weight — and the product is printed on the guide's why line, next to the decision it made.
+
+**If they ask:**
+- *"How does it know she is deciding?"* — The same eighth dimension you watched at beat 19 — entered on the decisive act, read off the verb, left by decay like everything else. The label here: scoring LIVE, journey stage LIVE.
+
+### Beat 23 · Pin it anywhere (Act 2 · 1:15 planned · ⏸ THE CONTRACT LINE)
+
+**You press:** Next presses "Pin the banner at #3" (Merchandiser group). Say the label out loud as it appears — slowed for the room — and then let the movement play; it is choreographed to be watched.
+
+**The room sees:** The label first: *"SLOWED FOR THE ROOM — in production this is one frame."* Then the merch strip travels to visible position 3 one section at a time — about 420 milliseconds a step, slow enough to watch it think — while everything else re-ranks around it. The sticky strip: *"The merch banner is pinned at #3 — tenant config. The engine re-ranked everything else around it. Nothing is ever permanently pinned; any slot can be pinned at any position."* Every panel — the strip, the Why, the trail — says #3.
+
+**Tell it like this:** Your merchandiser wanted the banner third. The contract says the banner is theirs — so it goes third, and the engine ranks everything else around it. Hold on to both halves of that sentence: nothing here is ever *permanently* pinned, and anything can be pinned at *any* position. And about the motion you just watched — in production this re-ranking is one frame. We slowed it so you could watch it think, and the screen said so before it moved.
+
+**The subtlety (for you, not the room):** "#3" means the third position the room can *see* — the engine maps the pin past any hidden sections, so the banner lands third on the visible page, never third in some internal list the room cannot check.
+
+**If they ask:**
+- *"Is the slow motion hiding anything?"* — The label answers it: pin + rank-around LIVE; only the movement is slowed, for the room, and it says so on screen while it happens. Same discipline as everything else in this session — the label first, then the impressive part.
+
+### Beat 24 · An offer that cannot be extended (Act 2 · 0:45 planned)
 
 **You press:** Nothing — point at the offer band, which climbed to the top of the page the moment she decided.
 
@@ -320,9 +369,9 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **If they ask:**
 - *"Can marketing extend it?"* — No — and that is the feature. The moment you can extend it, it is theatre, and shoppers have learned to smell theatre. This offer is a true statement about her intent, with an expiry the engine will honour against itself.
 
-### Beat 21 · Your merchandiser outranks it (Act 2 · 0:45 planned)
+### Beat 25 · Your merchandiser outranks it (Act 2 · 0:45 planned)
 
-**You press:** Next opens the audience list on the instrument, then pins the hero. **Release the pin before moving on** — beat 22's first press releases it for you, but if you wander off-script by hand, release it yourself: a pinned hero skips ranking and would leave beat 22 with nothing to show.
+**You press:** Next opens the audience list on the instrument, then pins the hero. **Release the pin before moving on** — beat 26's first press releases it for you, but if you wander off-script by hand, release it yourself: a pinned hero skips ranking and would leave beat 26 with nothing to show.
 
 **The room sees:** The audiences, named in the catalogue's own merchandising words. The hero locks with a *PINNED BY THE MERCHANDISER* badge; its explain reads *"pinned · ranking skipped"*.
 
@@ -331,7 +380,7 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **If they ask:**
 - *"Does a pin fight the personalization?"* — No — precedence is declared, so there is nothing to fight. The pin wins, the receipt records that ranking was skipped, and the moment you release it, ranking resumes. Authority with an audit trail.
 
-### Beat 22 · The refusal (Act 2 · 1:00 planned · ⏸ SLOW DOWN)
+### Beat 26 · The refusal (Act 2 · 1:00 planned · ⏸ SLOW DOWN)
 
 **You press:** Next — it releases the pin, marks the hero's item sold out, and opens the Glass box. Then open the explain on the excluded item, and give the room a second of silence.
 
@@ -342,7 +391,7 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **If they ask:**
 - *"Would it really surrender its best click in production?"* — Yes — that is what "gates outrank ranking" means, mechanically. The alternative is an engine that quietly bends your rules whenever the math disagrees with them, and nobody in this room wants to operate that.
 
-### Beat 23 · Watch her leave (Act 2 · 1:55 planned · ⏸ THE BEAT NOBODY ELSE HAS)
+### Beat 27 · Watch her leave (Act 2 · 1:55 planned · ⏸ THE BEAT NOBODY ELSE HAS)
 
 **You press:** Next presses "Let two minutes pass". The band first shows exactly what those two minutes will take — which scores fall where, which audiences lapse, whether the offer dies — OK, and the retreats begin. For the rest, press the palette button ("Let two minutes pass", in the Session group) once more yourself, and talk over both.
 
@@ -356,7 +405,7 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 - *"Why does this matter commercially?"* — Because stale audiences are where personalization goes to die: she bought the coat three weeks ago and your homepage is still shouting coats. Audiences that expire by arithmetic are self-cleaning — no suppression rules, no quarterly audience hygiene project.
 - *"Is the decay running in production at this speed?"* — No — this is the demo clock, minutes instead of days, and both tunings are published. Same math, same code path; only the rate differs, and the rate is your dial.
 
-### Beat 24 · She came back (Act 2 · 0:50 planned)
+### Beat 28 · She came back (Act 2 · 0:50 planned)
 
 **You press:** Next — the director performs the return: same visitor, new session.
 
@@ -370,7 +419,7 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 - *"Where exactly does the profile live?"* — In a per-visitor object at the edge — her state, her scores, her audiences. Per visitor, isolated, expiring on the same honest clocks you just watched. The label on this beat is: edge memory LIVE · ODP wired-dormant.
 - *"What about across devices?"* — That is identity, and it is where ODP joins: wire it in and this same profile becomes durable and shareable across your stack. We kept it disconnected today so that what you just saw could not be mistaken for a CDP lookup — this was the edge, alone.
 
-### Beat 25 · I changed what we sell (Act 2 · 1:35 planned · ⏸ THE STRONGEST LINE)
+### Beat 29 · I changed what we sell (Act 2 · 1:35 planned · ⏸ THE STRONGEST LINE)
 
 **You press:** Next — the director switches the business to Calder Financial. Then let the silence do the work; this beat needs the quiet after it more than the words in it.
 
@@ -388,9 +437,9 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 ## Act 3 · The Operator — 8:00 · Opal and experimentation
 
-The room stops being shoppers and becomes operators. The theme is bounded AI: the model proposes inside structures it cannot escape, a person publishes, and every experiment is a real object in the real project. Acts 3–5 run in retail — beat 26 flips the store back.
+The room stops being shoppers and becomes operators. The theme is bounded AI: the model proposes inside structures it cannot escape, a person publishes, and every experiment is a real object in the real project. Acts 3–5 run in retail — beat 30 flips the store back.
 
-### Beat 26 · Opal proposes (Act 3 · 1:10 planned)
+### Beat 30 · Opal proposes (Act 3 · 1:10 planned)
 
 **You press:** Next — the director first flips the store back to Calder & Co. (say one word about it: "back to retail for the rest"), then opens Ask Opal. Ask for an audience in plain English — the suggestion chips are there so a beat never starts with typing.
 
@@ -402,7 +451,7 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 - *"Which model, and where does it run?"* — A live model call — the label on this beat is LIVE, US-only: the call is served from US infrastructure. The model's freedom is the sentence; the structure it must answer into is ours.
 - *"What happens if it tries to invent something?"* — The schema rejects it before it reaches the application — structurally, not by hoping the prompt behaves. That is the pattern across everything AI does in this session: bounded by construction, not by promise.
 
-### Beat 27 · A person decides (Act 3 · 0:50 planned)
+### Beat 31 · A person decides (Act 3 · 0:50 planned)
 
 **You press:** Click **Publish** — by hand, deliberately. This one is yours, not the cursor's.
 
@@ -413,7 +462,7 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 **If they ask:**
 - *"Could we allow auto-publish?"* — The separation is the design: propose and publish are two different calls on purpose. Where you draw your own line is policy; the system's default posture is that activation is a human act, on the record.
 
-### Beat 28 · It cannot invent a scene (Act 3 · 1:15 planned)
+### Beat 32 · It cannot invent a scene (Act 3 · 1:15 planned)
 
 **You press:** Next opens AI search — *ask in words*. Type a request, or use a chip.
 
@@ -425,7 +474,7 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 - *"Is that backdrop generated live?"* — No — the scenes were generated once, at design time, and reviewed by a human before they shipped. Nothing visual is created on stage, which is why nothing visual can go wrong on stage.
 - *"What does the model actually decide?"* — The intent: category, occasion, price ceiling — read from the sentence against your live vocabulary. Then it hands over. Reading is the model's job; ranking is the engine's.
 
-### Beat 29 · A stylist that cannot oversell (Act 3 · 1:15 planned)
+### Beat 33 · A stylist that cannot oversell (Act 3 · 1:15 planned)
 
 **You press:** Next opens the style concierge. Ask for a look. Then correct it. Then ask for something Calder does not sell. Budget for all three turns — the second is the point.
 
@@ -436,7 +485,7 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 **If they ask:**
 - *"How do you stop it hallucinating products?"* — Structurally: the id list it answers from is built from the live catalogue at that moment, minus what it has shown. A fake SKU is not discouraged — it is unrepresentable. That is the difference between prompt engineering and engineering.
 
-### Beat 30 · The product is real, the scene is styling (Act 3 · 0:45 planned)
+### Beat 34 · The product is real, the scene is styling (Act 3 · 0:45 planned)
 
 **You press:** Nothing — point at the editorial hero. Unhurried and plain.
 
@@ -447,7 +496,7 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 **If they ask:**
 - *"Why not generate imagery live? Everyone else does."* — Because your brand team approved every pixel that can appear, and that guarantee is worth more than the party trick. Live generation puts an unreviewed image on a brand surface; we chose the version of this that survives your brand review.
 
-### Beat 31 · A real experiment, thirty seconds ago (Act 3 · 1:20 planned)
+### Beat 35 · A real experiment, thirty seconds ago (Act 3 · 1:20 planned)
 
 **You press:** Next dispatches the A/B. Then open the Optimizely console in the other tab and show it sitting there. Allow for the tab switch and the load — the beat's length budgets for it.
 
@@ -458,13 +507,13 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 **If they ask:**
 - *"Is that a demo org?"* — It is a real Optimizely project with writes enabled, and the card badges its own status honestly — live and created now, or writes off, or refused — never dressed up. On your rollout it is your project and your credentials.
 
-### Beat 32 · Bandits — real rules, honest readouts (Act 3 · 1:25 planned)
+### Beat 36 · Bandits — real rules, honest readouts (Act 3 · 1:25 planned)
 
 **You press:** Next creates the MAB, waits, then the CMAB. Point at three things: the badge, the flag and rule ids, and the word REPRESENTATIVE.
 
 **The room sees:** Two cards: a `multi_armed_bandit` rule and a `contextual_multi_armed_bandit` rule in the real project, each with its ids and an *Open it now* link. The allocation figures and per-context winners labelled representative.
 
-**Tell it like this:** Two bandits — a multi-armed bandit that hunts the winning variant, and a contextual one that finds a *different* winner per kind of visitor. Both rules are real, both are in your project right now — open them. And here is what I will not do: I will not pretend this room is traffic. A bandit's allocation curve comes from thousands of real sessions, and you have thirty people and forty-five minutes — so the movement you see on this card is representative, and it says so on the line where it is shown. The rule is the product. The traffic is yours.
+**Tell it like this:** Two bandits — a multi-armed bandit that hunts the winning variant, and a contextual one that finds a *different* winner per kind of visitor. Both rules are real, both are in your project right now — open them. And here is what I will not do: I will not pretend this room is traffic. A bandit's allocation curve comes from thousands of real sessions, and you have thirty people and fifty minutes — so the movement you see on this card is representative, and it says so on the line where it is shown. The rule is the product. The traffic is yours.
 
 **The simple math:** A bandit shifts traffic toward whichever variant is winning, continuously, instead of waiting for the test to end. The contextual one learns a winner per context — device, channel, band — instead of one winner for everyone.
 
@@ -476,7 +525,7 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 
 From shopper to P&L. One filter, one collapse, one fix proved in the room, and then the rows handed over. This is the act for every head of ecommerce present.
 
-### Beat 33 · The average lied (Act 4 · 1:50 planned · ⏸ THE BIGGEST WOW — SLOW RIGHT DOWN)
+### Beat 37 · The average lied (Act 4 · 1:50 planned · ⏸ THE BIGGEST WOW — SLOW RIGHT DOWN)
 
 **You press:** Next opens Revenue Radar on everyone. Let the room see the funnel looking *ordinary* — that pause is the beat. Then the Gen-Z filter.
 
@@ -490,7 +539,7 @@ From shopper to P&L. One filter, one collapse, one fix proved in the room, and t
 - *"Did you hardcode the 44%?"* — No — and this is the honesty split for the whole act: the traffic is simulated, the compute is live. The sessions carry attributes; one step carries a failure model; every rate you see is aggregated from the rows on each request. Pick a cohort we never rehearsed and the arithmetic runs the same. What I will never claim is that these are your production numbers — the label says compute LIVE, traffic SIMULATED.
 - *"Our BI could find this."* — It could, with an analyst, a query, and a ticket queue. The point is not the finding — it is what happens on the next press: the finding becomes a targeted, running experiment without leaving the screen.
 
-### Beat 34 · Launch the fix — and prove it in the room (Act 4 · 1:20 planned)
+### Beat 38 · Launch the fix — and prove it in the room (Act 4 · 1:20 planned)
 
 **You press:** Next launches the fix, the funnel recovers on screen, then the checkout opens. Four things land; give each its second.
 
@@ -502,7 +551,7 @@ From shopper to P&L. One filter, one collapse, one fix proved in the room, and t
 - *"Is the recovery real?"* — The label, proudly: audience and flag LIVE, in-session fix LIVE — the checkout you just saw was served by the real flag. The recovery curve is REPRESENTATIVE, because recovering revenue requires shoppers, and it is the same rows re-run with the defect lifted — the same arithmetic, not a second dataset drawn to look better.
 - *"Who approved that going live?"* — On stage, I did — the launch is a press. In your shop it is your workflow: the fix arrives as an experiment in your project, subject to whatever approval your team already runs there.
 
-### Beat 35 · We hand you the rows (Act 4 · 0:50 planned)
+### Beat 39 · We hand you the rows (Act 4 · 0:50 planned)
 
 **You press:** Next exports the receipts.
 
@@ -517,7 +566,7 @@ From shopper to P&L. One filter, one collapse, one fix proved in the room, and t
 
 The closing arc: a trend signal becomes live, optimizing creative inside its own window. The honesty label leads, because it must.
 
-### Beat 36 · A signal we did not generate (Act 5 · 0:35 planned)
+### Beat 40 · A signal we did not generate (Act 5 · 0:35 planned)
 
 **You press:** Nothing — point at the detection chip.
 
@@ -528,7 +577,7 @@ The closing arc: a trend signal becomes live, optimizing creative inside its own
 **If they ask:**
 - *"So what fires this in real life?"* — Any signal source you already pay for — social listening, trend detection, even your own analytics anomaly alerts. The contract is a webhook; the loop from signal to shipped experience is what you are about to watch, and that part is real.
 
-### Beat 37 · Opal writes the moment (Act 5 · 0:45 planned)
+### Beat 41 · Opal writes the moment (Act 5 · 0:45 planned)
 
 **You press:** Next triggers the moment. Talk *across* the elapsed counter — it takes about eight seconds, and the room should be watching the clock, not you.
 
@@ -539,7 +588,7 @@ The closing arc: a trend signal becomes live, optimizing creative inside its own
 **If they ask:**
 - *"The image too?"* — The copy is written live; the scene is an approved still, never generated on stage — same discipline as the concierge. New words, pre-approved canvas, and the page says so.
 
-### Beat 38 · It ships as a real bandit — and the loop closes (Act 5 · 0:50 planned)
+### Beat 42 · It ships as a real bandit — and the loop closes (Act 5 · 0:50 planned)
 
 **You press:** Next — six minutes pass in three consented steps, and the bandit moves one round per step. Read the card as the traffic shifts.
 
@@ -550,9 +599,9 @@ The closing arc: a trend signal becomes live, optimizing creative inside its own
 **If they ask:**
 - *"What's real on this card?"* — The label, line by line: rule REAL, copy REAL, allocation REPRESENTATIVE, signal SIMULATED. Four claims, four labels, all on screen while they happen. That split is the demo's whole character in one card.
 
-### Beat 39 · What I did not show you (Act 5 · 0:50 planned)
+### Beat 43 · What I did not show you (Act 5 · 0:50 planned)
 
-**You press:** Nothing. Deliver it straight, and do not rush it to save time — this beat is what makes the other thirty-eight credible.
+**You press:** Nothing. Deliver it straight, and do not rush it to save time — this beat is what makes the other forty-two credible.
 
 **The room sees:** You.
 
@@ -589,7 +638,7 @@ The bright lines, verbatim: we **curate, never price** — never a price, a disc
 Yes — with declared precedence, not a support ticket: gates decide what can show, pins outrank ranking, ranking runs in the space left. You watched the pin ("pinned · ranking skipped", on the record) and the refusal — the engine declining its own highest-scoring item because a rule said no, keeping the score to show what it gave up. The audiences are minted in your catalogue's own language, the audience priority list is yours to reorder, and the tuning dials are on the panel. The machine proposes and ranks; your people outrank; the record shows both.
 
 **7. "What happens when she comes back tomorrow?"**
-On this demo — beat 24 — she comes back and the profile is there: held per visitor at the edge, no login, no cookie sync, nothing downloaded. On the production clocks, the same decay runs in days and weeks instead of minutes — so tomorrow her taste is intact, her "which aisle" has honestly faded, and anything below threshold has released her. That asymmetry is the design: the perishable parts perish, the durable parts endure. Cross-device and cross-channel durability is the ODP connection — wired, dormant today, a credential away.
+On this demo — beat 28 — she comes back and the profile is there: held per visitor at the edge, no login, no cookie sync, nothing downloaded. On the production clocks, the same decay runs in days and weeks instead of minutes — so tomorrow her taste is intact, her "which aisle" has honestly faded, and anything below threshold has released her. That asymmetry is the design: the perishable parts perish, the durable parts endure. Cross-device and cross-channel durability is the ODP connection — wired, dormant today, a credential away.
 
 **8. "How fast is it really?"**
 Point at the badge, not a slide: the decision time is measured on stage, per event, and that is the only number I will quote. Structurally: the decision runs at the network hop that already served the page — no second trip, no overnight segment build, nothing downloaded to the browser. Anything that syncs onward to other systems is a separate job on a separate clock, and we say which is which. (Never quote a rounder number than the badge shows — the discipline is the credibility.)
@@ -602,4 +651,4 @@ You should not — and I did not show you any as proof. Every figure this sessio
 
 ---
 
-*Built 2026-08-29 from `public/meridian/beats.js` (39 beats, act budgets verified: 4/6/15/8/4/3 + 5 Q&A = 45:00, beat durations sum exactly), the engine sources (`src/reflex/core.ts`, `src/demos/meridian/reflexConfig.ts`, `composer.ts`, `geoCohort.ts`, `funnel.ts`, `experiment.ts`), the Opticon docs (Talk-Track · Controls-Guide · Abstract-Coverage · Task-List), doc 13, the Revenue Radar explainer, and Dynamic Yield/Mastercard pages fetched 2026-08-29 (URLs inline in §2). The `real:` lines in beats.js are the law of this document; if beats.js changes, regenerate the talk track and re-check this companion against it.*
+*Built 2026-08-29 from `public/meridian/beats.js` (43 beats, act budgets verified: 4/6/20/8/4/3 + 5 Q&A = 50:00, beat durations sum exactly), the engine sources (`src/reflex/core.ts`, `src/demos/meridian/reflexConfig.ts`, `composer.ts`, `geoCohort.ts`, `funnel.ts`, `experiment.ts`), the Opticon docs (Talk-Track · Controls-Guide · Abstract-Coverage · Task-List), doc 13, the Revenue Radar explainer, and Dynamic Yield/Mastercard pages fetched 2026-08-29 (URLs inline in §2). The `real:` lines in beats.js are the law of this document; if beats.js changes, regenerate the talk track and re-check this companion against it.*
