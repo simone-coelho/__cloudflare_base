@@ -34,6 +34,13 @@ export interface ContentSlotSpec {
   weights: Readonly<Record<string, number>>;
   /** Non-personalizable: ranking never runs; the pinned piece is tenant config. */
   pinnedPieceId?: string;
+  /**
+   * The completion logic, content-side: when she has committed to a piece, a
+   * slot may PREFER content that completes it (a guide for the thing in her
+   * bag). A preferred piece earns a named bonus that shows in its explain —
+   * scored, not smuggled.
+   */
+  prefer?: { test: (p: ContentPieceLike) => boolean; bonus: number; label: string };
 }
 
 export interface ContentDecision {
@@ -81,6 +88,10 @@ export function composeContent(
           const a = affinity.dims[dim]?.[v] ?? 0; if (a <= 0) continue;
           score += a * w; drivers.push({ dim, value: v, a, weight: w });
         }
+      }
+      if (slot.prefer?.test(p)) {
+        score += slot.prefer.bonus;
+        drivers.push({ dim: 'completes', value: slot.prefer.label, a: 1, weight: slot.prefer.bonus });
       }
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       return { p, score, drivers };

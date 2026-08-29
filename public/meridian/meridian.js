@@ -229,7 +229,13 @@ function contentSlots() {
   const pinnedPiece = S.content.find((p) => p.slotTypes?.includes('merch'));
   return [
     { slot: 'merch', take: 1, weights: {}, pinnedPieceId: pinnedPiece?.id },
-    { slot: 'chero', take: 1, weights: { contentType: 0.35, [narrowKey()]: 0.25, [broadKey()]: 0.2, styleWorld: 0.2 } },
+    { slot: 'chero', take: 1, weights: { contentType: 0.35, [narrowKey()]: 0.25, [broadKey()]: 0.2, styleWorld: 0.2 },
+      // CONTENT CHANGES JOBS when she commits: a guide that completes the piece
+      // in her bag outranks inspiration — the row's completion logic, content-side.
+      ...(S.anchorId && byId(S.anchorId) ? { prefer: {
+        test: (p) => p.type === 'guide' && (p.tags?.[narrowKey()] || []).includes(byId(S.anchorId).line),
+        bonus: 0.5, label: `the ${byId(S.anchorId).line} in her bag`,
+      } } : {}) },
     { slot: 'carousel', take: 5, weights: { [narrowKey()]: 0.3, [broadKey()]: 0.25, occasion: 0.25, contentType: 0.2 } },
   ];
 }
@@ -370,7 +376,7 @@ async function load(vertical) {
     heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, withdrawn: new Set(), dept: null,
     behaved: false, anchorId: null, claimedAt: {}, audiencePriority: [], priorityEngaged: false,
     arrived: false, cohort: null, coldPrior: null, coldPicks: null,
-    content: [], contentDecisions: [], merchPin: 1,
+    contentDecisions: [], merchPin: 1,   // content itself comes from r.content above — never zero it here
   });
   S.published = [];
   document.documentElement.dataset.vertical = vertical;
@@ -605,12 +611,28 @@ $('btn-pinmerch').onclick = () => {
   // PIN AT ANY POSITION — the contract requirement, performed. Nothing is
   // permanently pinned; the tenant chooses the position and the engine ranks
   // around it. The move is choreographed and labelled "slowed for the room".
-  S.merchPin = S.merchPin === 3 ? 1 : 3;
+  // The room counts what it can SEE: map "visible #3" to the order-array
+  // position, skipping sections that are hidden right now (the offer before
+  // she decides). The contract's position is among delivered sections; a
+  // headless head end renders everything delivered, so this mapping is a
+  // stage concern, not a contract change.
+  const want = S.merchPin === 3 ? 1 : 3;
+  if (want > 1 && S.layout) {
+    let seen = 0, arrayPos = want;
+    const order = S.layout.order.filter((id) => id !== 'takeover' && id !== 'merch');
+    for (let i = 0; i < order.length; i += 1) {
+      const el = document.querySelector(`[data-section="${order[i]}"]`);
+      if (el && !el.hidden) seen += 1;
+      if (seen === want - 1) { arrayPos = i + 2; break; }
+    }
+    S.merchPin = arrayPos;
+  } else S.merchPin = want;
+  S.merchPinVisible = want;
   S.choreo = true;
   recompose();
-  orderStrip(`<b>The merch banner</b> is pinned at <b>#${S.merchPin}</b> — tenant config. The engine re-ranked everything else <b>around</b> it. Nothing is ever permanently pinned; any slot can be pinned at any position.`, 16000);
-  consequence('Pin at any position', `Merch banner → #${S.merchPin}`, 'Tenant config: slot → position index; the engine ranks around the pins. The contract requirement, live.');
-  $('btn-pinmerch').innerHTML = S.merchPin === 3 ? 'Unpin the banner<small>back to #1</small>' : 'Pin the banner at #3<small>rank around it</small>';
+  orderStrip(`<b>The merch banner</b> is pinned at <b>#${S.merchPinVisible || S.merchPin}</b> — tenant config. The engine re-ranked everything else <b>around</b> it. Nothing is ever permanently pinned; any slot can be pinned at any position.`, 16000);
+  consequence('Pin at any position', `Merch banner → #${S.merchPinVisible || S.merchPin}`, 'Tenant config: slot → position index; the engine ranks around the pins. The contract requirement, live.');
+  $('btn-pinmerch').innerHTML = (S.merchPinVisible || S.merchPin) === 3 ? 'Unpin the banner<small>back to #1</small>' : 'Pin the banner at #3<small>rank around it</small>';
 };
 TIPS['btn-pinmerch'] = ['Pins the merchandiser banner at position 3 — tenant config is slot → position, and the engine ranks around the pin. Press again to send it back to #1.', 'the sections re-order around the pinned strip, one at a time'];
 
@@ -1723,7 +1745,7 @@ function recompose(first, opts = {}) {
   S.layout = composeLayout({
     affinity: snap, config: S.config, shapeOfKey: SHAPE_OF_KEY,
     prevOrder: prevLayout?.order, locked: $('takeover').hidden ? [] : ['takeover'],
-    ...(S.content.length ? { extraSections: CONTENT_SECTIONS, pinnedAt: { merch: S.merchPin } } : {}),
+    ...(S.content.length ? { extraSections: CONTENT_SECTIONS, pinnedAt: { merch: S.merchPin }, pinnedLabel: { merch: `#${S.merchPinVisible || S.merchPin}` } } : {}),
   });
   const rankOf = (lay, id) => lay?.sections.find((x) => x.section === id)?.rank;
   const rowMoved = !!prevLayout && rankOf(prevLayout, 'row') !== rankOf(S.layout, 'row');

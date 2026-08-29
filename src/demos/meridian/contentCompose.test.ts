@@ -40,4 +40,16 @@ describe('content is a catalogue too', () => {
     const ds = composeContent(PIECES, { dims: { line: { Drover: 0.7 } } }, SLOTS);
     for (const d of ds) { expect(d.customerContentId).toMatch(/^CMP-/); expect(d.explain).toBeTruthy(); }
   });
+
+  it('a slot may prefer completing content, and the bonus is a named driver', () => {
+    const slots: ContentSlotSpec[] = [{ slot: 'chero', take: 1, weights: { line: 0.3 },
+      prefer: { test: (p) => p.type === 'guide', bonus: 0.5, label: 'completes the bag' } }];
+    const pieces = [
+      { ...P('big-lookbook', { line: ['Fenwick'] }, ['chero']), type: 'lookbook' },
+      { ...P('small-guide', { line: ['Fenwick'] }, ['chero']), type: 'guide' },
+    ];
+    const ds = composeContent(pieces, { dims: { line: { Fenwick: 0.9 } } }, slots);
+    expect(ds[0].contentId).toBe('small-guide');
+    expect(ds[0].explain.drivers.some((d) => d.dim === 'completes')).toBe(true);
+  });
 });

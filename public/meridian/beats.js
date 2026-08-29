@@ -201,7 +201,7 @@ export const BEATS = [
     real: 'scoring LIVE · schematic computed from the same forecast' },
 
   { n: 22, act: 2, cap: 'C36', title: 'The complement — content completing a product', secs: 75,
-    perform: [{ predict: { sel: '#bz-decide' } }],
+    perform: [{ sel: '#hero-cta' }],
     why: 'Content that answers what she is DOING, not just what she likes: a styling guide injected because she committed to a piece.',
     do: 'Press Next — she adds the sweater to the bag; watch the content answer the decision.',
     watch: 'Journey stage flips to deciding; the content hero becomes the styling guide that completes the piece; the carousel keeps her lines.',

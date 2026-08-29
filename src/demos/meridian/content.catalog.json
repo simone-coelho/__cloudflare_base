@@ -1,0 +1,774 @@
+[
+  {
+    "systemId": "cnt_4a91e0d2",
+    "customerContentId": "CMP-1001",
+    "vertical": "retail",
+    "type": "editorial",
+    "title": "The Field Jacket, Ten Years On",
+    "subtitle": "Why the Drover wears in, not out.",
+    "tags": {
+      "line": [
+        "Drover"
+      ],
+      "category": [
+        "Outerwear"
+      ],
+      "styleWorld": [
+        "heritage"
+      ],
+      "occasion": [
+        "everyday"
+      ],
+      "contentType": [
+        "editorial"
+      ],
+      "journeyStage": [
+        "browsing"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "story"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1001.jpg"
+  },
+  {
+    "systemId": "cnt_7c25b8f1",
+    "customerContentId": "CMP-1002",
+    "vertical": "retail",
+    "type": "guide",
+    "title": "What to Wear With a Fisherman Sweater",
+    "subtitle": "The boots and the bag that finish the Fenwick.",
+    "tags": {
+      "line": [
+        "Fenwick"
+      ],
+      "category": [
+        "Footwear"
+      ],
+      "styleWorld": [
+        "heritage"
+      ],
+      "occasion": [
+        "everyday"
+      ],
+      "contentType": [
+        "guide"
+      ],
+      "journeyStage": [
+        "considering"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "story",
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1002.jpg"
+  },
+  {
+    "systemId": "cnt_1fd06a3c",
+    "customerContentId": "CMP-1003",
+    "vertical": "retail",
+    "type": "guide",
+    "title": "The Crossbody, Carried Right",
+    "subtitle": "One bag, three days of the week.",
+    "tags": {
+      "line": [
+        "Linden"
+      ],
+      "category": [
+        "Bags"
+      ],
+      "styleWorld": [
+        "heritage"
+      ],
+      "occasion": [
+        "everyday",
+        "work"
+      ],
+      "contentType": [
+        "guide"
+      ],
+      "journeyStage": [
+        "browsing"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1003.jpg"
+  },
+  {
+    "systemId": "cnt_9b3e57a8",
+    "customerContentId": "CMP-1004",
+    "vertical": "retail",
+    "type": "film",
+    "title": "One Scarf, Five Ways",
+    "subtitle": "The Aster square, knotted by hand.",
+    "runtime": "1:48",
+    "tags": {
+      "line": [
+        "Aster"
+      ],
+      "category": [
+        "Scarves"
+      ],
+      "styleWorld": [
+        "statement"
+      ],
+      "occasion": [
+        "evening"
+      ],
+      "contentType": [
+        "video"
+      ],
+      "journeyStage": [
+        "browsing"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1004.jpg"
+  },
+  {
+    "systemId": "cnt_e2c841b7",
+    "customerContentId": "CMP-1005",
+    "vertical": "retail",
+    "type": "lookbook",
+    "title": "Evenings at The Calder",
+    "subtitle": "What the after-dark table asks for.",
+    "tags": {
+      "line": [
+        "Halden",
+        "Aster"
+      ],
+      "category": [
+        "Jewellery",
+        "Scarves"
+      ],
+      "styleWorld": [
+        "statement"
+      ],
+      "occasion": [
+        "evening"
+      ],
+      "contentType": [
+        "on-model"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "carousel",
+      "story"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1005.jpg"
+  },
+  {
+    "systemId": "cnt_5d78f942",
+    "customerContentId": "CMP-1006",
+    "vertical": "retail",
+    "type": "guide",
+    "title": "The Signet, Sized Properly",
+    "subtitle": "Measure once, wear it for decades.",
+    "tags": {
+      "line": [
+        "Halden"
+      ],
+      "category": [
+        "Jewellery"
+      ],
+      "occasion": [
+        "gift"
+      ],
+      "contentType": [
+        "guide"
+      ],
+      "journeyStage": [
+        "considering"
+      ]
+    },
+    "slotTypes": [
+      "story"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1006.jpg"
+  },
+  {
+    "systemId": "cnt_c60a13de",
+    "customerContentId": "CMP-1007",
+    "vertical": "retail",
+    "type": "campaign",
+    "title": "The Calder Winter Sale",
+    "subtitle": "Winter pieces, quietly reduced.",
+    "tags": {
+      "category": [
+        "Outerwear",
+        "Knitwear"
+      ],
+      "styleWorld": [
+        "heritage"
+      ],
+      "occasion": [
+        "everyday"
+      ]
+    },
+    "slotTypes": [
+      "merch"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1007.jpg"
+  },
+  {
+    "systemId": "cnt_38b9d05f",
+    "customerContentId": "CMP-1008",
+    "vertical": "retail",
+    "type": "film",
+    "title": "How a Weekender Is Packed",
+    "subtitle": "Forty-eight hours in one bag.",
+    "runtime": "2:14",
+    "tags": {
+      "line": [
+        "Holloway"
+      ],
+      "category": [
+        "Bags"
+      ],
+      "styleWorld": [
+        "heritage"
+      ],
+      "occasion": [
+        "travel"
+      ],
+      "contentType": [
+        "video"
+      ],
+      "journeyStage": [
+        "browsing"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "story"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1008.jpg"
+  },
+  {
+    "systemId": "cnt_a14c72e9",
+    "customerContentId": "CMP-1009",
+    "vertical": "retail",
+    "type": "editorial",
+    "title": "Rain, Considered",
+    "subtitle": "The Shorewell shell and the case for staying dry.",
+    "tags": {
+      "line": [
+        "Shorewell"
+      ],
+      "category": [
+        "Outerwear"
+      ],
+      "styleWorld": [
+        "minimal"
+      ],
+      "occasion": [
+        "travel",
+        "everyday"
+      ],
+      "contentType": [
+        "editorial"
+      ],
+      "journeyStage": [
+        "browsing"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1009.jpg"
+  },
+  {
+    "systemId": "cnt_f05318cb",
+    "customerContentId": "CMP-1010",
+    "vertical": "retail",
+    "type": "guide",
+    "title": "What to Carry With the Court Sneaker",
+    "subtitle": "The bags that keep a white sneaker honest.",
+    "tags": {
+      "line": [
+        "Ridgeline"
+      ],
+      "category": [
+        "Bags"
+      ],
+      "styleWorld": [
+        "minimal"
+      ],
+      "occasion": [
+        "everyday"
+      ],
+      "contentType": [
+        "guide"
+      ],
+      "journeyStage": [
+        "considering"
+      ]
+    },
+    "slotTypes": [
+      "story",
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1010.jpg"
+  },
+  {
+    "systemId": "cnt_62e7a90d",
+    "customerContentId": "CMP-1011",
+    "vertical": "retail",
+    "type": "lookbook",
+    "title": "The Heritage Wardrobe",
+    "subtitle": "Drover, Fenwick, Ridgeline — the long game.",
+    "tags": {
+      "line": [
+        "Drover",
+        "Fenwick",
+        "Ridgeline"
+      ],
+      "styleWorld": [
+        "heritage"
+      ],
+      "occasion": [
+        "everyday"
+      ],
+      "contentType": [
+        "on-model"
+      ],
+      "journeyStage": [
+        "browsing"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1011.jpg"
+  },
+  {
+    "systemId": "cnt_b8d1c46a",
+    "customerContentId": "CMP-1012",
+    "vertical": "retail",
+    "type": "editorial",
+    "title": "Fragrance After Dark",
+    "subtitle": "Smoked vetiver, and where the evening goes.",
+    "tags": {
+      "line": [
+        "Solstice"
+      ],
+      "category": [
+        "Fragrance"
+      ],
+      "styleWorld": [
+        "statement"
+      ],
+      "occasion": [
+        "evening"
+      ],
+      "contentType": [
+        "editorial"
+      ],
+      "journeyStage": [
+        "browsing"
+      ]
+    },
+    "slotTypes": [
+      "story",
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1012.jpg"
+  },
+  {
+    "systemId": "cnt_07f9e524",
+    "customerContentId": "CMP-1013",
+    "vertical": "retail",
+    "type": "guide",
+    "title": "A Gift That Cannot Miss",
+    "subtitle": "Rings, scent, silk — chosen without guesswork.",
+    "tags": {
+      "line": [
+        "Halden",
+        "Solstice"
+      ],
+      "category": [
+        "Jewellery",
+        "Fragrance"
+      ],
+      "occasion": [
+        "gift"
+      ],
+      "contentType": [
+        "guide"
+      ],
+      "journeyStage": [
+        "considering"
+      ]
+    },
+    "slotTypes": [
+      "story",
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1013.jpg"
+  },
+  {
+    "systemId": "cnt_d43b60f8",
+    "customerContentId": "CMP-1014",
+    "vertical": "retail",
+    "type": "film",
+    "title": "The Making of the Linden Tote",
+    "subtitle": "Eight hours of leather, one bag.",
+    "runtime": "3:02",
+    "tags": {
+      "line": [
+        "Linden"
+      ],
+      "category": [
+        "Bags"
+      ],
+      "priceBand": [
+        "premium"
+      ],
+      "styleWorld": [
+        "modern"
+      ],
+      "contentType": [
+        "video"
+      ],
+      "journeyStage": [
+        "considering"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "story"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1014.jpg"
+  },
+  {
+    "systemId": "cnt_29a5f7b3",
+    "customerContentId": "CMP-1015",
+    "vertical": "retail",
+    "type": "lookbook",
+    "title": "Minimal, In Practice",
+    "subtitle": "A week of work in four quiet pieces.",
+    "tags": {
+      "line": [
+        "Shorewell",
+        "Fenwick",
+        "Ridgeline"
+      ],
+      "styleWorld": [
+        "minimal"
+      ],
+      "occasion": [
+        "work"
+      ],
+      "contentType": [
+        "on-model"
+      ]
+    },
+    "slotTypes": [
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1015.jpg"
+  },
+  {
+    "systemId": "cnt_8e60c1d5",
+    "customerContentId": "CMP-1016",
+    "vertical": "retail",
+    "type": "editorial",
+    "title": "The Aviator, Abroad",
+    "subtitle": "Harlow tortoise, thirty degrees somewhere.",
+    "tags": {
+      "line": [
+        "Harlow"
+      ],
+      "category": [
+        "Eyewear"
+      ],
+      "styleWorld": [
+        "heritage"
+      ],
+      "occasion": [
+        "travel"
+      ],
+      "contentType": [
+        "editorial"
+      ],
+      "journeyStage": [
+        "browsing"
+      ]
+    },
+    "slotTypes": [
+      "carousel",
+      "story"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1016.jpg"
+  },
+  {
+    "systemId": "cnt_53c2e88a",
+    "customerContentId": "CMP-1017",
+    "vertical": "retail",
+    "type": "guide",
+    "title": "Wool, and How to Keep It",
+    "subtitle": "Ten winters from one Fenwick.",
+    "tags": {
+      "line": [
+        "Fenwick"
+      ],
+      "category": [
+        "Knitwear"
+      ],
+      "occasion": [
+        "everyday"
+      ],
+      "contentType": [
+        "guide"
+      ],
+      "journeyStage": [
+        "considering"
+      ]
+    },
+    "slotTypes": [
+      "story"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1017.jpg"
+  },
+  {
+    "systemId": "cnt_e97d0b46",
+    "customerContentId": "CMP-1018",
+    "vertical": "retail",
+    "type": "editorial",
+    "title": "Navy, Quietly",
+    "subtitle": "One colour, carried across the wardrobe.",
+    "tags": {
+      "colour": [
+        "navy"
+      ],
+      "category": [
+        "Knitwear",
+        "Bags"
+      ],
+      "occasion": [
+        "everyday"
+      ],
+      "contentType": [
+        "editorial"
+      ],
+      "journeyStage": [
+        "browsing"
+      ]
+    },
+    "slotTypes": [
+      "carousel",
+      "chero"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": "/meridian/content/CMP-1018.jpg"
+  },
+  {
+    "systemId": "cnt_31f8ba6c",
+    "customerContentId": "CMP-2001",
+    "vertical": "financial",
+    "type": "guide",
+    "title": "Your First Mortgage, Plainly",
+    "subtitle": "Fixed, variable, and what the difference costs.",
+    "tags": {
+      "productFamily": [
+        "Mortgage"
+      ],
+      "subFamily": [
+        "fixed",
+        "variable"
+      ],
+      "intent": [
+        "borrow"
+      ],
+      "lifeStage": [
+        "building"
+      ],
+      "contentType": [
+        "guide"
+      ],
+      "applicationStage": [
+        "exploring"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "story"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": null
+  },
+  {
+    "systemId": "cnt_76ad42e1",
+    "customerContentId": "CMP-2002",
+    "vertical": "financial",
+    "type": "editorial",
+    "title": "What a Rate Really Costs",
+    "subtitle": "The number behind the number, over thirty years.",
+    "tags": {
+      "productFamily": [
+        "Mortgage",
+        "Auto"
+      ],
+      "intent": [
+        "borrow",
+        "refinance"
+      ],
+      "contentType": [
+        "editorial"
+      ],
+      "applicationStage": [
+        "comparing"
+      ]
+    },
+    "slotTypes": [
+      "story",
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": null
+  },
+  {
+    "systemId": "cnt_c5091df7",
+    "customerContentId": "CMP-2003",
+    "vertical": "financial",
+    "type": "guide",
+    "title": "Saving on Autopilot",
+    "subtitle": "Set the transfer once; stop deciding.",
+    "tags": {
+      "productFamily": [
+        "Savings"
+      ],
+      "subFamily": [
+        "deposit"
+      ],
+      "intent": [
+        "save"
+      ],
+      "lifeStage": [
+        "starting-out"
+      ],
+      "contentType": [
+        "guide"
+      ],
+      "applicationStage": [
+        "exploring"
+      ]
+    },
+    "slotTypes": [
+      "carousel",
+      "story"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": null
+  },
+  {
+    "systemId": "cnt_0b64e83a",
+    "customerContentId": "CMP-2004",
+    "vertical": "financial",
+    "type": "editorial",
+    "title": "The Gold Card Question",
+    "subtitle": "When the fee earns its keep — and when it does not.",
+    "tags": {
+      "productFamily": [
+        "Card"
+      ],
+      "subFamily": [
+        "revolving"
+      ],
+      "tier": [
+        "gold"
+      ],
+      "intent": [
+        "borrow"
+      ],
+      "lifeStage": [
+        "established"
+      ],
+      "contentType": [
+        "editorial"
+      ],
+      "applicationStage": [
+        "comparing"
+      ]
+    },
+    "slotTypes": [
+      "chero",
+      "carousel"
+    ],
+    "lifecycle": {
+      "status": "live"
+    },
+    "art": null
+  }
+]

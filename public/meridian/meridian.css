@@ -1206,7 +1206,7 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 .cgroup[data-g] .controls button.on{background:#7FB8FF;border-color:#7FB8FF;color:#08121f}
 
 /* ── CONTENT SLOTS — compact bands; identity by colour + chip, never by size ── */
-.cslot[hidden]{display:none}
+.cslot[hidden]{display:none !important}   /* the slot's own display:flex must never beat hidden */
 .cslot{position:relative;margin:14px 0 0;border-radius:9px;background:#fff;border:1.5px solid var(--line)}
 .cchip{position:absolute;top:-9px;left:12px;z-index:3;font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.12em;padding:5px 8px;border-radius:4px;color:#fff}
 .cwhy{position:absolute;right:10px;bottom:8px;font:500 10.5px/1.3 ui-monospace,monospace;color:var(--muted);max-width:46%;text-align:right}

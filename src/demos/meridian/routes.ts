@@ -24,6 +24,7 @@ import { search } from './search';
 import { propose, vocabularyFor, audienceKeyFor } from './opal';
 import { capture, exportRows, MRD_DECISION_COLUMNS } from './receipts';
 import { signalsFor, writeMoment } from './moment';
+import { contentFor } from './content';
 import { scenesFor } from './scenes';
 import { dispatch, status as fxStatus, type Flavour } from './experiment';
 import type { Vertical } from './types';
@@ -53,6 +54,8 @@ meridian.get('/catalog', (c) => {
     vertical,
     items: itemsFor(vertical),
     blocks: blocksFor(vertical),
+    // CONTENT IS A CATALOGUE TOO: the pieces ride the same payload; `id` adapts the loader's systemId to the ranker.
+    content: contentFor(vertical).map((p) => ({ id: p.systemId, ...p })),
     registry: {
       version: cfg.version,
       // The instrument keeps its rows across a swap: same shapes, same order,

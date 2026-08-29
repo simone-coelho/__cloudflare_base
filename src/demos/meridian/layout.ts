@@ -108,6 +108,8 @@ export interface LayoutInput {
    * (after any external locked ids, e.g. the takeover), ranks recomputed.
    */
   pinnedAt?: Readonly<Record<string, number>>;
+  /** Display label per pinned id (e.g. the VISIBLE position on this page); the explain uses it verbatim. */
+  pinnedLabel?: Readonly<Record<string, string>>;
   /**
    * Sections that hold their rank regardless. Ids outside SECTIONS (the
    * takeover) sit ahead of the grammar, at rank 0 onward, in the order given.
@@ -372,7 +374,7 @@ export function composeLayout(input: LayoutInput): LayoutResult {
       const at = Math.max(0, Math.min(rest.length, offset + (pos - 1)));
       rest.splice(at, 0, {
         ...sec, strategy: 'pinned',
-        explain: { ...sec.explain, movedBecause: `pinned at #${pos} by the merchandiser — tenant config; the engine ranks around it` },
+        explain: { ...sec.explain, movedBecause: `pinned at ${input.pinnedLabel?.[id] ?? `#${pos}`} by the merchandiser — tenant config; the engine ranks around it` },
       });
     }
     rest.forEach((x, i) => { x.rank = i; });

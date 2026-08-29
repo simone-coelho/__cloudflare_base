@@ -950,7 +950,7 @@ function composeLayout(input) {
       rest.splice(at, 0, {
         ...sec,
         strategy: "pinned",
-        explain: { ...sec.explain, movedBecause: `pinned at #${pos} by the merchandiser \u2014 tenant config; the engine ranks around it` }
+        explain: { ...sec.explain, movedBecause: `pinned at ${input.pinnedLabel?.[id] ?? `#${pos}`} by the merchandiser \u2014 tenant config; the engine ranks around it` }
       });
     }
     rest.forEach((x, i) => {
@@ -1047,6 +1047,10 @@ function composeContent(pieces, affinity, slots) {
           score += a * w;
           drivers.push({ dim: dim2, value: v, a, weight: w });
         }
+      }
+      if (slot.prefer?.test(p)) {
+        score += slot.prefer.bonus;
+        drivers.push({ dim: "completes", value: slot.prefer.label, a: 1, weight: slot.prefer.bonus });
       }
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       return { p, score, drivers };
