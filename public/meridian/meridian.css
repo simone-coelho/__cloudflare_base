@@ -812,19 +812,27 @@ body.has-director .page{padding-bottom:250px}
    summons them. It overlays the page above the reading strip, so the viewport
    keeps the height permanently — the strip is the bar's whole footprint. */
 .dir-palette{position:absolute;left:0;right:0;bottom:100%;z-index:-1;
-  border-top:2px solid #7FB8FF;background:#0E131A;padding:10px 96px 12px 20px;
+  border-top:2px solid #7FB8FF;background:#0E131A;padding:10px 20px 12px 20px;
   display:flex;flex-wrap:wrap;gap:6px 18px;align-items:flex-start;
   box-shadow:0 -14px 40px rgba(0,0,0,.45);
   opacity:0;transform:translateY(10px);pointer-events:none;
   transition:opacity .18s ease,transform .18s ease}
 .director.pal-open .dir-palette{opacity:1;transform:none;pointer-events:auto;z-index:1}
-.pal-handle{font:600 10.5px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;
-  margin-top:6px;padding:5px 9px;border-radius:4px;background:#1B2430;border:1px solid #2A3644;
-  color:#8FA0B5;cursor:pointer;float:right}
-.pal-handle:hover,.director.pal-open .pal-handle{border-color:#7FB8FF;color:#CFE2FA}
-.pal-pin{position:absolute;right:10px;top:8px;font:600 9.5px/1 ui-monospace,monospace;letter-spacing:.08em;
-  text-transform:uppercase;padding:5px 8px;border-radius:4px;background:#1B2430;border:1px solid #2A3644;
-  color:#8FA0B5;cursor:pointer}
+/* THE HANDLE IS THE ONLY WAY TO THE BUTTONS, so it is the one thing on the
+   strip that is unmistakably a control: filled, dark ink, its own colour. An
+   outline in the bar's own tone was invisible from a seat. */
+.pal-handle{font:700 11.5px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;
+  margin-top:6px;padding:8px 14px;border-radius:5px;background:#F0A92B;border:1px solid #F0A92B;
+  color:#241500;cursor:pointer;float:right;box-shadow:0 2px 12px -2px rgba(240,169,43,.6)}
+.pal-handle:hover{background:#FFC155;border-color:#FFC155}
+.director.pal-open .pal-handle{background:#7FB8FF;border-color:#7FB8FF;color:#08121f;
+  box-shadow:0 2px 12px -2px rgba(127,184,255,.6)}
+/* In the flow, last — an absolutely positioned pin sat on top of whichever
+   group happened to reach the right edge. */
+.pal-pin{order:99;margin-left:auto;align-self:center;font:600 9.5px/1 ui-monospace,monospace;
+  letter-spacing:.08em;text-transform:uppercase;padding:7px 10px;border-radius:4px;
+  background:#1B2430;border:1px solid #3B4A5C;color:#A9BACD;cursor:pointer}
+.pal-pin:hover{border-color:#7FB8FF;color:#CFE2FA}
 .pal-pin.on{background:#F0A92B;border-color:#F0A92B;color:#241500}
 .dir-palette .cgroup{margin:0;display:flex;align-items:center;gap:8px}
 .dir-palette .clabel{margin:0;color:#8FA0B5;white-space:nowrap}
