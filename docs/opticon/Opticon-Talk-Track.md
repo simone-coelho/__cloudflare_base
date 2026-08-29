@@ -220,7 +220,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **0:50** · C8 · LIVE
 
-**You do —** Press "Three coats". Watch the cursor click the first two — say the line over the third.
+**You do —** Press Next — the department, then two coats. The third coat is beat 15’s prediction; do not press the palette button here or it will consume it.
 
 **They watch —** Bars move at different rates. Taste is slow; this session is fast.
 
@@ -353,9 +353,9 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You do —** Press "Let two minutes pass". The retreats land one after another; talk over them. Press it again for the rest.
 
-**They watch —** Three separate retreats — hero at ~28s on category, row at ~64s on price band, story at ~74s on taste. Each names its dimension and its number. The offer ends and says why. The row returns to discovery.
+**They watch —** Three separate retreats, in order — the aisle first (category), then the price band, then taste — each naming its dimension and its number as it lands. The offer ends and says why. The row returns to discovery.
 
-**You say —** Everyone demonstrates joining an audience. Watch her leave one. I am going to let two minutes pass — nothing is faked, the same decay runs, I just chose the moment. It does not collapse at once: what aisle she is in goes first, because that is the most perishable thing about her. Taste goes last, because taste is the slowest thing about anyone. Nobody wrote an exit rule for any of that. It is the same arithmetic running backwards. … And there is the offer ending, naming the number that ended it.
+**You say —** Now watch it forget — in order. The aisle she wandered through goes first; the price band holds longer; taste holds longest, because we made their clocks different on purpose. Each exit names its number. Nobody wrote a rule to remove her from anything — the same arithmetic that let her in is letting her out.
 
 *Why 1:55:* Two presses of two minutes each and the three retreats have landed, in order, with their numbers. Nothing happens while you wait any more — time passes when you say so.
 

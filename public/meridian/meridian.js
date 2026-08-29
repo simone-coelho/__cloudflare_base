@@ -3241,12 +3241,12 @@ function renderXp() {
   }
   if (XP.flavour === 'cmab') {
     const ctx = [
-      { c: 'Mobile · first visit', w: 1, lift: '+31%', conf: 93 },
-      { c: 'Desktop · returning', w: 0, lift: '+12%', conf: 91 },
-      { c: 'Premium band · heritage', w: 0, lift: '+19%', conf: 90 },
-      { c: 'Gen-Z · mobile · at payment', w: 1, lift: '+27%', conf: 94 },
+      { c: 'First visit · from paid social', w: 1, lift: '+31%', conf: 93 },
+      { c: 'Returning · direct', w: 0, lift: '+12%', conf: 91 },
+      { c: 'Premium band · returning', w: 0, lift: '+19%', conf: 90 },
+      { c: 'First visit · email arrival', w: 1, lift: '+27%', conf: 94 },
     ];
-    el.innerHTML = `<div class="xc-ro-h">Contextual bandit · a winner per context<span>REPRESENTATIVE winners · the contextual_multi_armed_bandit rule is real · attributes: device · persona · journey_stage</span></div>`
+    el.innerHTML = `<div class="xc-ro-h">Contextual bandit · a winner per context<span>REPRESENTATIVE winners · the contextual_multi_armed_bandit rule is real · attributes: visit_number · entry_channel · price_band</span></div>`
       + ctx.map((x) => `<div class="xc-ctx"><span class="c">${x.c}</span><span><b>${escapeHtml(XP.arms[Math.min(x.w, XP.arms.length - 1)])}</b><span class="xc-win">winner</span></span><span class="l">${x.lift} · ${x.conf}% conf.</span></div>`).join('')
       + `<div class="xc-foot" style="padding:8px 0 0;border:0">One experiment, many winners — chosen by context in real time. A CMAB rule may land as a draft that needs review; the badge says which.</div>`;
   }

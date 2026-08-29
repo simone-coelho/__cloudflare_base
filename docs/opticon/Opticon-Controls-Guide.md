@@ -59,7 +59,7 @@ All three create **real objects in the real Optimizely project** (`OPTIMIZELY_WR
 |---|---|---|
 | **Create A/B** | `a/b`, 50/50, real metric | Two arms with illustrative rates, labelled *REPRESENTATIVE figures · the rule is real*, plus **Open it now →** into Optimizely. |
 | **Create MAB** | `multi_armed_bandit` | Traffic allocation moves **one round per "Let two minutes pass"** (50/50 → 40/60 → 27/73 → 20/80) until *"Loop closed — winner promoted automatically"*, with the governance line (a human presses Launch; autonomy is roadmap). |
-| **Create CMAB** | `contextual_multi_armed_bandit` (attributes: device · persona · journey_stage) | A winner per context, labelled representative; a CMAB rule may land as a draft needing review — the badge says which. |
+| **Create CMAB** | `contextual_multi_armed_bandit` (attributes: visit_number · entry_channel · price_band) | A winner per context, labelled representative; a CMAB rule may land as a draft needing review — the badge says which. |
 | **Revenue Radar** | — | The funnel over simulated sessions, computed live on every request: *everyone* looks like an ordinary week; filter **Gen-Z** and the payment→order transition collapses **44.3%**, **$7,627** recoverable, term by term (114 excess sessions × $223 catalogue-mean order × 0.3). **Launch the fix** → a real audience + a real experiment → the funnel **recovers on screen** (24.6% / $201, green) → **Prove it in-session** opens Checkout. |
 
 ## 8 · Session
