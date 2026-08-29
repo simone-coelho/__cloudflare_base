@@ -200,7 +200,7 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 - [x] **The band's middle column reads cleanly** — the acts were 22px serif packed in a small area; now the same clean sans as the other columns, 14.5px, one act per line with breathing room.
 - [x] **Tooltips no longer blend with the bar** — white card, blue edge, dark ink.
 - [x] **The welcome strip retires** — on her first act (the handoff), and after 45 *real* seconds regardless (a demo-time TTL never fired: the demo clock is paused between acts).
-- [x] **Compare opens at what moved** — after a rearrangement the stage opens scrolled to the moved-down section (meridian passes `focusY`; the pixel heuristic is the fallback). Verified: the quiz → Compare shows "You told us: evening" below the row, not the top of the shelf.
+- [x] **Compare opens where the difference begins** (decision with Simone): the star of a rearrangement is the rearrangement, so Compare opens at the TOP like every comparison — Before on the hero, Now on the highlighted picks — and the scroll down to the hero's new home is the presenter's moment (no badge, by his call; the hint line says there is more below). The heuristic still auto-scrolls only when the top is essentially identical and the first real change sits below the fold.
 - [x] **"How the cold start works" fills the viewport** — width min(1500px, 94vw), min-height 84vh, 15.5px columns, spaced lists.
 - [x] **The prediction persists** — after OK the declaration docks to a *Predicted · show the last declaration again* pill above the bar; clicking reopens it read-only ("what we said would happen — it already has"); Close continues; a new step replaces it; Restart clears it.
 

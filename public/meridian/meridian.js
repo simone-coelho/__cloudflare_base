@@ -2449,14 +2449,13 @@ $('btn-compare').onclick = async () => {
   b.innerHTML = 'Compare<small>waiting for the page to settle…</small>';
   await pageSettled();                                   // never a Now frame mid-move
   b.innerHTML = t;
-  // After a rearrangement, open the comparison AT the section that moved down —
-  // the room came to see the hero below the row, not the top of the shelf.
-  let focusY;
-  if (S.lastMovedDown && Date.now() - S.lastMovedDown.at < 180_000) {
-    const el = document.querySelector(`[data-section="${S.lastMovedDown.section}"]`);
-    if (el) { const pr = $('page').getBoundingClientRect(); focusY = el.getBoundingClientRect().top - pr.top + $('page').scrollTop; }
-  }
-  openCompare($('page'), { focusY });
+  // THE STAR OF A REARRANGEMENT IS THE REARRANGEMENT. Compare opens at the top,
+  // like every comparison: Before opens on the hero, Now on the highlighted
+  // picks — the difference is right there. The heuristic inside Compare only
+  // auto-scrolls when the top is essentially identical and the first real
+  // change sits below the fold. The scroll down to the hero's new home is the
+  // presenter's moment, on purpose — the hint line says there is more below.
+  openCompare($('page'));
 };
 $('btn-conc').onclick = () => { openMoment('conc'); $('conc-q').focus(); };
 $('conc-close').onclick = () => $('conc').classList.remove('open');
