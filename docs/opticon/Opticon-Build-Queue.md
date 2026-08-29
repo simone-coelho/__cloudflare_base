@@ -15,6 +15,12 @@ Everything agreed with Simone in the 2026-08-29 review session, in one place, so
 | 9 | **The Predicted pill replays the decisions band** too | The questions come minutes later; he needs an answer he can press | ✅ done |
 | 10 | **A tuning beat** — the dial is real (writes into the live strategy table, hero re-decides, receipt stamps `+tuned`) but NO beat shows it. Declare it, turn one slider on stage, watch the hero re-decide | Tapestry's data scientists asked for self-tunable weights by name; the demo proves it and the script never shows it | ✅ done |
 
+| 11 | **Every rearrangement is choreographed** — the slow, one-section-at-a-time move with the "SLOWED FOR THE ROOM" label was gated behind a flag only the pin beat set; every other reorder happened in one 700ms flash. Now every reorder performs, pace in one constant (`CHOREO`, currently 1200ms per move + 900ms between: ~3.7s for three sections) | "It just happens in a flash. There's no intention." Deliberately slow first — tighten only if the room asks | ✅ done |
+| 12 | **Every section in a move carries its own evidence** — a badge on the section: `was 3 · now 1` for movers, `held 1 · the page moved around it` (or `pinned by the merchandiser`) for the section left at the top. Each badge lands as its own section lands; they persist **until the next press** | The top of the viewport is the primary seat — "untouched" is the wrong impression when the page reorganised around it | ✅ done |
+| 13 | **"Do it" sits immediately right of Next** | So his hand never travels across the bar mid-sentence | ✅ done |
+| 14 | **The decisions band reads in the app's own sans**, 14px rows, tabular figures — not 9.5–12px monospace | "Do not use fancy fonts… fonts that are understood to be clearly simple to read" | ✅ done |
+| 15 | **Card pills wrap** instead of running off the right edge of their column | The cold-start touch list is long by design | ✅ done |
+
 ## Verification standard (his rule, not negotiable)
 
 The acceptance test is the **cold 1440×800 viewport walked from the top**, including the beats that do *not* rearrange — that is where the decisions band has to prove itself. Judge from the screenshots, not from element assertions. Never hand over an unwalked build.

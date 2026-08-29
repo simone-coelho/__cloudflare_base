@@ -1353,6 +1353,18 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
 .slide .tm{padding:0 9px 7px;font:600 9px/1 ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:#8A8578}
 .slide.changedc{outline:3px solid var(--hl);outline-offset:2px}
+/* THE EVIDENCE SITS ON THE SECTION, at the bottom-left so it can never collide
+   with the identity chip at bottom-right or cover the artwork. It lands when
+   its own section lands and stays until the next press. */
+.movebadge{position:absolute;left:12px;bottom:10px;z-index:6;
+  font:600 11.5px/1 var(--sans);letter-spacing:.02em;
+  background:var(--hl);color:var(--hl-ink);padding:6px 10px;border-radius:4px;
+  box-shadow:0 4px 12px -4px rgba(0,0,0,.45);animation:badgein .28s ease-out}
+.movebadge b{font-weight:700}
+.movebadge.held{background:#2B3647;color:#fff}
+.movebadge.down{opacity:.9}
+.cslot .movebadge{bottom:38px}          /* clear of the slot's own meta strip */
+@keyframes badgein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .destbadge{position:absolute;top:8px;right:10px;z-index:6;font:700 10px/1 ui-monospace,monospace;letter-spacing:.08em;background:#0E5FBF;color:#fff;padding:5px 9px;border-radius:4px;box-shadow:0 4px 10px -4px rgba(0,0,0,.4)}
 .destbadge.stay{background:#4E5F7A}
 /* THE DECISIONS BAND — full width under the three columns, so a four-column

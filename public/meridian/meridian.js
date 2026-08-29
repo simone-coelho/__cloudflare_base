@@ -557,6 +557,59 @@ function schematicHtml(orderNow, orderNext, appears = [], goes = []) {
     + `<span class="arrow">→</span>${col('After', afterIds, (id) => (app.has(id) ? 'new' : gone.has(id) ? 'gone' : ''))}</div>`;
 }
 
+/**
+ * THE PACE OF A REARRANGEMENT, in one place. Deliberately slow: the room has to
+ * be able to follow each section as it lands, and the label says out loud that
+ * production does this in one frame.
+ */
+const CHOREO = { duration: 1200, stagger: 900, t: null };
+
+/**
+ * EVERY SECTION IN THE MOVE CARRIES ITS OWN EVIDENCE — on the section, where the
+ * eye is, not only in a strip at the top. A climber says where it came from; one
+ * that dropped says the same; and the section that ends up FIRST says so even
+ * when it never moved, because the top of the viewport is the primary seat and
+ * "untouched" is the wrong impression when the page reorganised around it.
+ * Each badge lands as its own section lands, and they stay until the next press.
+ */
+function markMoves(moves, span) {
+  clearMoveBadges();
+  const byId = new Map(moves.map((m) => [m.section, m]));
+  const order = (S.layout?.order || []).filter((x) => x !== 'takeover');
+  const visible = order.filter((id) => { const el = secEl(id); return el && !el.hidden; });
+  const landing = [...moves].sort((a, b) => a.to - b.to);
+  const place = (id, text, cls, delay) => {
+    const el = secEl(id); if (!el) return;
+    setTimeout(() => {
+      if (!document.body.contains(el)) return;
+      const b = document.createElement('span');
+      b.className = `movebadge${cls ? ` ${cls}` : ''}`;
+      b.innerHTML = text;
+      el.appendChild(b);
+      applyHighlight(el);
+    }, delay);
+  };
+  landing.forEach((m, i) => {
+    const climbed = m.to < m.from;
+    place(m.section, `was ${m.from + 1} · <b>now ${m.to + 1}</b>`, climbed ? 'up' : 'down',
+          CHOREO.duration + i * CHOREO.stagger);
+  });
+  // The seat at the top, whether or not it moved.
+  const firstId = visible[0];
+  if (firstId && !byId.has(firstId)) {
+    const sec = S.layout?.sections?.find((x) => x.section === firstId);
+    const pinned = sec?.strategy === 'pinned' || sec?.strategy === 'locked';
+    place(firstId, pinned ? 'held 1 · <b>pinned by the merchandiser</b>' : 'held 1 · <b>the page moved around it</b>',
+          'held', span + 500);        // after everything has landed, not with the last mover
+  }
+}
+const secEl = (id) => document.querySelector(`#page [data-section="${id}"]`);
+/** They stay until the next press — his call: he wants to talk over them. */
+function clearMoveBadges() {
+  clearTimeout(CHOREO.t);
+  document.querySelectorAll('.movebadge').forEach((b) => b.remove());
+}
+
 /** Ghost destination badges on the page while the band predicts a rearrangement. */
 function showDestBadges(orderNext) {
   clearDestBadges();
@@ -1689,6 +1742,7 @@ async function sequenceBand(acts) {
 /** The presenter's own hand: declare, wait for OK, then do it for real. */
 async function gateThen(acts, fn) {
   if (PD.open) return;
+  clearMoveBadges();
   await sequenceBand(acts);
   await captureIdle();
   GATE.open = true;
@@ -1799,6 +1853,7 @@ const hideCursor = () => $('demo-cursor').classList.remove('show');
 /** One beat: a list of targets, resolved lazily so a re-rank between clicks is honoured. */
 async function browse(btn, targets) {   // targets are perform SPECS
   if (BZ.busy) return;
+  clearMoveBadges();                  // the previous press's evidence retires here
   BZ.busy = true; BZ.abort = false; btn.classList.add('running');   // a fresh run never inherits a stale stop
   document.querySelectorAll('[id^="bz-"]').forEach((b) => { b.disabled = true; });
   try {
@@ -2130,9 +2185,19 @@ function recompose(first, opts = {}) {
   // the previous session's arrangement in the DOM, and the next tick "moved"
   // the sections back — announcing a rearrangement that was only the reset.
   if (first) paintLayout(S.layout.order, { duration: 0 });
-  const choreo = S.choreo; S.choreo = false;
-  if (choreo) { $('choreo-note').hidden = false; setTimeout(() => { $('choreo-note').hidden = true; }, 5200); }
-  const movedSections = first ? [] : paintLayout(S.layout.order, choreo ? { duration: 900, stagger: 420 } : { duration: 700 });
+  // MOVING THE PAGE IS A BEAT, NOT A REPAINT. The choreography used to be
+  // gated behind a flag only the pin beat set, so every other rearrangement —
+  // the email, the form, the handoff — happened in one 700ms flash with no
+  // label. It is the same performance every time now, and the pace lives in
+  // ONE constant: start slow, tighten only if the room asks.
+  S.choreo = false;
+  const movedSections = first ? [] : paintLayout(S.layout.order, { duration: CHOREO.duration, stagger: CHOREO.stagger });
+  if (movedSections.length) {
+    const span = CHOREO.duration + CHOREO.stagger * Math.max(0, movedSections.length - 1);
+    $('choreo-note').hidden = false;
+    clearTimeout(CHOREO.t); CHOREO.t = setTimeout(() => { $('choreo-note').hidden = true; }, span + 1400);
+    markMoves(movedSections, span);
+  }
   if (movedSections.length) {
     capDone(7);
     const top = S.layout.sections.filter((x) => x.strategy !== 'locked' && x.strategy !== 'template')
@@ -3230,6 +3295,7 @@ async function performBeat(beat) {
 }
 
 async function goBeat(i) {
+  clearMoveBadges();                  // the previous move's evidence retires on the press
   if (BZ.busy || DIR.arming) return;               // a beat is still being armed or performed
   DIR.arming = true;                               // Next pressed during a reset/reload/flip is ignored, not stacked
   // Stage management: a modal left open by the previous beat (Ask, the
@@ -3869,7 +3935,7 @@ $('btn-financial').onclick = () => setVertical('financial');
 $('btn-return').onclick = () => location.reload();   // same id, same object, same profile
 /** A new demo starts clean: both strips gone, their clocks zeroed. */
 function hideStrips() {
-  hideLedger();
+  hideLedger(); clearMoveBadges();
   STRIP_UNTIL = 0; OSTRIP_UNTIL = 0;
   $('strip').hidden = true; $('ostrip').hidden = true;
   XP.open = false; XP.arms = []; $('xcard').hidden = true;
