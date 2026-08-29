@@ -562,7 +562,7 @@ function schematicHtml(orderNow, orderNext, appears = [], goes = []) {
  * be able to follow each section as it lands, and the label says out loud that
  * production does this in one frame.
  */
-const CHOREO = { duration: 1200, stagger: 900, t: null };
+const CHOREO = { duration: 1200, stagger: 900, t: null, pending: [] };
 
 /**
  * EVERY SECTION IN THE MOVE CARRIES ITS OWN EVIDENCE — on the section, where the
@@ -580,14 +580,16 @@ function markMoves(moves, span) {
   const landing = [...moves].sort((a, b) => a.to - b.to);
   const place = (id, text, cls, delay) => {
     const el = secEl(id); if (!el) return;
-    setTimeout(() => {
+    // A badge is SCHEDULED, so it must be cancellable: one queued before a
+    // Restart used to land on the fresh visitor seconds later.
+    CHOREO.pending.push(setTimeout(() => {
       if (!document.body.contains(el)) return;
       const b = document.createElement('span');
       b.className = `movebadge${cls ? ` ${cls}` : ''}`;
       b.innerHTML = text;
       el.appendChild(b);
       applyHighlight(el);
-    }, delay);
+    }, delay));
   };
   landing.forEach((m, i) => {
     const climbed = m.to < m.from;
@@ -607,6 +609,7 @@ const secEl = (id) => document.querySelector(`#page [data-section="${id}"]`);
 /** They stay until the next press — his call: he wants to talk over them. */
 function clearMoveBadges() {
   clearTimeout(CHOREO.t);
+  CHOREO.pending.splice(0).forEach(clearTimeout);
   document.querySelectorAll('.movebadge').forEach((b) => b.remove());
 }
 
@@ -972,7 +975,8 @@ function connect() {
   if (S.ws) try { S.ws.close(); } catch {}
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}${API}/ws?visitorId=${VID}&vertical=${S.vertical}`);
-  ws.onmessage = (e) => { try { onFrame(JSON.parse(e.data)); } catch {} };
+  const epoch = RESET_EPOCH;
+  ws.onmessage = (e) => { if (epoch !== RESET_EPOCH) return; try { onFrame(JSON.parse(e.data)); } catch {} };
   ws.onclose = () => setTimeout(connect, 2500);
   S.ws = ws;
 }
@@ -1743,7 +1747,9 @@ async function sequenceBand(acts) {
 async function gateThen(acts, fn) {
   if (PD.open) return;
   clearMoveBadges();
+  const epoch = RESET_EPOCH;
   await sequenceBand(acts);
+  if (epoch !== RESET_EPOCH) return;     // a restart happened while the band was open
   await captureIdle();
   GATE.open = true;
   try { fn(); } finally { GATE.open = false; }
@@ -1860,7 +1866,8 @@ async function browse(btn, targets) {   // targets are perform SPECS
     // DECLARE FIRST. The whole sequence is forecast on a copy and shown before
     // anything moves; OK lets her do it. Then each act runs for real, ungated.
     const acts = targets.map(actOf).filter(Boolean);
-    if (acts.length && !GATE.open) { await sequenceBand(acts); if (BZ.abort) return; }
+    const epoch = RESET_EPOCH;
+    if (acts.length && !GATE.open) { await sequenceBand(acts); if (BZ.abort || epoch !== RESET_EPOCH) return; }
     await captureIdle();
     GATE.open = true;
     for (const t of targets) {
@@ -2007,6 +2014,10 @@ $('btn-skip').onclick = () => skipTime(120);
 // today — this is real on the demo and a commitment on the product.
 const SHAPE_LABEL = { broad: 'category', narrow: 'line', need: 'occasion', band: 'price band', durable: 'taste', hue: 'colour', content: 'content', stage: 'stage' };
 let TUNED = false;
+// SLOT_STRATEGIES is a module-level table the dial MUTATES, so a new visitor
+// inherited the last one's tuning: the reset replaced S.config and left the
+// weights turned. This is the untouched copy the reset restores from.
+const PRISTINE_STRATEGIES = JSON.parse(JSON.stringify(SLOT_STRATEGIES));
 
 function renderDial() {
   const st = SLOT_STRATEGIES.hero;
@@ -3395,9 +3406,7 @@ $('palette').addEventListener('click', (e) => {
 $('dir-next').addEventListener('click', () => closePalette(), true);
 
 $('dir-stop').onclick = async () => {
-  if (PD.open) $('pd-go').click();  // a band open is not a reason to refuse a restart
-  DIR.arming = false;               // nor is a beat still arming
-  if (BZ.busy) BZ.abort = true;    // stop the visitor mid-stride — only if she is mid-stride
+  DIR.arming = false;               // a beat still arming is not a reason to refuse a restart
   setAuto(false); dirPlay(false); DIR.elapsedBefore = 0; DIR.i = 0;
   sessionStorage.removeItem('mrd_dir');
   await $('btn-reset').onclick();                  // a new visitor, in the object and on the page
@@ -3942,11 +3951,42 @@ function hideStrips() {
   S.fixLive = null; RAD.launched = null; RAD.recovered = null; S.heroXp = null;
   resetCaps();
 }
+/**
+ * A RESET MUST BE ATOMIC. Pressing it while a performance is mid-stride used to
+ * wipe the state and then let the remaining clicks land ON the fresh visitor —
+ * which is why it "worked sometimes". Every entry point now stops the room
+ * first, waits for it to actually be still, and bumps an epoch so any frame or
+ * fetch still in flight from the old session is dropped instead of adopted.
+ */
+let RESET_EPOCH = 0;
+async function stillness(maxMs = 4000) {
+  if (BZ.busy) BZ.abort = true;
+  if (PD.open) { PD.resolve?.(); PD.resolve = null; PD.open = false; $('predict').hidden = true; }
+  const t0 = Date.now();
+  while ((BZ.busy || captureInFlight()) && Date.now() - t0 < maxMs) await sleep(80);
+  await sleep(120);                                 // let the last handler unwind
+}
+
 $('btn-reset').onclick = async () => {
+  const epoch = ++RESET_EPOCH;
+  await stillness();
+  if (epoch !== RESET_EPOCH) return;                // a second press superseded this one
   hideStrips();                                    // the last session's banners are not this session's
+  // Everything the page keeps that is NOT in S: the trail, the offer, the
+  // moments, the drawers, the weights. A new visitor sees none of it.
+  $('conseq').innerHTML = '';
+  OFFER.live = false; OFFER.expiresAt = null; OFFER.dim = null; OFFER.value = null;
+  $('offer').hidden = true; $('offer').classList.remove('done', 'expiring');
+  $('choreo-note').hidden = true;
+  document.querySelectorAll('.moment.open').forEach((m) => m.classList.remove('open'));
+  $('xcard').hidden = true;
+  SLOT_STRATEGIES.hero = { ...PRISTINE_STRATEGIES.hero };
+  TUNED = false;
   S.sayLockUntil = 0; clockPause();
   await post('/reset', {}); S.seq = -1;
+  if (epoch !== RESET_EPOCH) return;
   await load(S.vertical); connect();
+  if (epoch !== RESET_EPOCH) return;
   clearBaseline(); $('btn-capture').classList.remove('on'); DONE.length = 0;
   $('btn-capture').innerHTML = 'Capture baseline<small>freeze the page now</small>';
   $('takeover').hidden = true; $('hero').style.display = '';
@@ -3955,6 +3995,7 @@ $('btn-reset').onclick = async () => {
   $('sentence').textContent = 'Nothing has happened yet.'; S.sayLockUntil = Date.now() + 4000;
   LASTPD = null; S.lastMovedDown = null; $('pd-pill').hidden = true;
   clockReset(); renderClockBar();
+  clearMoveBadges();                               // the fresh page carries no history
 };
 
 // Reflex moments: Coach's six stories, the hold, the honest countdowns.
