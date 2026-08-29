@@ -88,9 +88,14 @@ export function paintLayout(order, { duration = 700, easing = DEFAULT_EASING, ro
   //    takeover), so array indices and what a person sees drift apart: a row
   //    that visibly went third to second reported "was 5, now 3". Positions are
   //    computed over the VISIBLE sections, in both directions.
+  // A companion (the second story, the row's heading) is its own block on the
+  // page even though the grammar moves it with its section — so it counts in
+  // the positions the room reads, or the numbers skip and nothing lines up.
   const seen = new Map(sections.map((el) => [el.dataset.section, isVisible(el)]));
-  const visBefore = current.filter((id) => seen.get(id));
-  const visAfter = target.filter((id) => seen.get(id));
+  const withCompanions = (ids) => ids.flatMap((id) => (seen.get(id)
+    ? [id, ...companionsOf(host, id).filter(isVisible).map((c) => c.id || `${id}__c`)] : []));
+  const visBefore = withCompanions(current);
+  const visAfter = withCompanions(target);
   const moves = [];
   for (const id of current) {
     if (!seen.get(id)) continue;

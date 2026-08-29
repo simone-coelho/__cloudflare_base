@@ -605,8 +605,9 @@ function markMoves(moves, span) {
   if (firstId && !byId.has(firstId)) {
     const sec = S.layout?.sections?.find((x) => x.section === firstId);
     const pinned = sec?.strategy === 'pinned' || sec?.strategy === 'locked';
-    place(firstId, pinned ? 'held 1 · <b>pinned by the merchandiser</b>' : 'held 1 · <b>the page moved around it</b>',
-          'held', span + 500);        // after everything has landed, not with the last mover
+    // A pinned section wears its own PINNED · MERCHANDISER chip already; saying
+    // it twice on the same box is noise, and it hid the position number.
+    if (!pinned) place(firstId, 'held 1 · <b>the page moved around it</b>', 'held', span + 500);
   }
 }
 const secEl = (id) => document.querySelector(`#page [data-section="${id}"]`);
@@ -617,7 +618,11 @@ const secEl = (id) => document.querySelector(`#page [data-section="${id}"]`);
  * quiet chip with its own place, always, and a mover's badge sits beside it.
  */
 function paintPositions() {
-  const visible = [...document.querySelectorAll('#page [data-section]')].filter((el) => !el.hidden);
+  // EVERY BLOCK ON THE PAGE, in the order the eye reads them — including the
+  // companions (the second story) that the grammar carries with their section.
+  // A skipped number is worse than no number: it makes the movers unreadable.
+  const visible = [...document.querySelectorAll('#page [data-section], #page [data-follows]')]
+    .filter((el) => !el.hidden && el.offsetParent !== null && !el.classList.contains('row-head'));
   const seen = new Set();
   visible.forEach((el, i) => {
     seen.add(el);
@@ -2087,6 +2092,7 @@ function orderStrip(html, ttl) {
   applyHighlight(el);
   $('ostrip-t').innerHTML = html;
   el.hidden = false;
+  syncNotices();
   OSTRIP_UNTIL = NOW() + ttl;
 }
 /** Content that moved out of view is brought into view once the sections have finished moving. */
@@ -2098,6 +2104,28 @@ function revealSection(id, delay = 0) {
     if (r.top < p.top || r.bottom > p.bottom) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, delay);
 }
+
+/**
+ * The notices live behind one chip. They are NOT sections — showing them as
+ * full-width bands made the room count them as part of the page, which made
+ * every "was 4 · now 2" unreadable. The chip says how many there are; pressing
+ * it reads them out; the next press puts them away.
+ */
+function syncNotices() {
+  const live = [$('strip'), $('ostrip')].filter((el) => !el.hidden);
+  $('notices').hidden = live.length === 0;
+  if (!live.length) { $('strips').hidden = true; $('notice-chip').setAttribute('aria-expanded', 'false'); return; }
+  const kinds = live.map((el) => (el.id === 'ostrip' ? 'the page rearranged' : $('strip-k').textContent.toLowerCase()));
+  $('notice-chip').textContent = `${kinds.join(' · ')} — read it`;
+  $('notice-chip').classList.remove('fresh'); void $('notice-chip').offsetWidth; $('notice-chip').classList.add('fresh');
+}
+function closeNotices() { $('strips').hidden = true; $('notice-chip').setAttribute('aria-expanded', 'false'); }
+$('notice-chip').onclick = () => {
+  const open = $('strips').hidden;
+  $('strips').hidden = !open;
+  $('notice-chip').setAttribute('aria-expanded', String(open));
+};
+TIPS['notice-chip'] = ['The session notices — an audience entered or left, the page rearranged. Press to read them; they are not part of the page.', 'the next press puts them away'];
 
 let STRIP_UNTIL = 0, WELCOME_T = null;
 function strip(kind, html, ttl) {
@@ -2112,6 +2140,7 @@ function strip(kind, html, ttl) {
   $('strip-k').textContent = kind === 'out' ? 'Left an audience' : kind === 'cold' ? 'Welcome' : kind === 'stage' ? 'The content act' : 'Entered an audience';
   $('strip-t').innerHTML = html;
   el.hidden = false;
+  syncNotices();
   STRIP_UNTIL = NOW() + ttl;      // rides the demo clock — holds while you talk
 }
 
@@ -2148,7 +2177,7 @@ function dedupeAnnouncement() {
   if (!key) return;
   const norm = (k) => String(k).replace(/_affinity$/, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
   if (norm(key) === norm(ANNOUNCED)) {
-    $('strip').hidden = true; STRIP_UNTIL = 0; ANNOUNCED = null;
+    $('strip').hidden = true; STRIP_UNTIL = 0; ANNOUNCED = null; syncNotices();
   }
 }
 
@@ -2784,8 +2813,8 @@ setInterval(() => {
       const d = el.querySelector('.delta'); if (d) d.hidden = true;
     });
   }
-  if (STRIP_UNTIL && NOW() >= STRIP_UNTIL) { STRIP_UNTIL = 0; $('strip').hidden = true; $('ostrip').hidden = true; }
-  if (OSTRIP_UNTIL && NOW() >= OSTRIP_UNTIL) { OSTRIP_UNTIL = 0; $('ostrip').hidden = true; }
+  if (STRIP_UNTIL && NOW() >= STRIP_UNTIL) { STRIP_UNTIL = 0; $('strip').hidden = true; $('ostrip').hidden = true; syncNotices(); }
+  if (OSTRIP_UNTIL && NOW() >= OSTRIP_UNTIL) { OSTRIP_UNTIL = 0; $('ostrip').hidden = true; syncNotices(); }
   renderXp();
   renderClockBar();
   if (!$('pd-pill').hidden) showPdPill();   // track the bar's height
@@ -3355,6 +3384,7 @@ async function performBeat(beat) {
 
 async function goBeat(i) {
   clearMoveBadges();                  // the previous move's evidence retires on the press
+  closeNotices();
   if (!OFFER.live && $('offer').classList.contains('done')) $('offer').hidden = true;
   if (BZ.busy || DIR.arming) return;               // a beat is still being armed or performed
   DIR.arming = true;                               // Next pressed during a reset/reload/flip is ignored, not stacked
@@ -4001,7 +4031,7 @@ $('btn-financial').onclick = () => setVertical('financial');
 $('btn-return').onclick = () => location.reload();   // same id, same object, same profile
 /** A new demo starts clean: both strips gone, their clocks zeroed. */
 function hideStrips() {
-  hideLedger(); clearMoveBadges();
+  hideLedger(); clearMoveBadges(); closeNotices();
   STRIP_UNTIL = 0; OSTRIP_UNTIL = 0;
   $('strip').hidden = true; $('ostrip').hidden = true;
   XP.open = false; XP.arms = []; $('xcard').hidden = true;

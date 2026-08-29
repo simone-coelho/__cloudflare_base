@@ -61,9 +61,16 @@
            "in and out of an audience" that had no on-page voice here. -->
       <!-- Reflex moments mount here (moments.js): the hold, monogramming, curated, shift, occasion, revert. -->
       <div id="moments"></div>
-      <div class="strips" id="strips">
-        <div class="strip" id="strip" hidden><span class="strip-k" id="strip-k"></span><span id="strip-t"></span></div>
-        <div class="strip order" id="ostrip" hidden><span class="strip-k">Page rearranged</span><span id="ostrip-t"></span></div>
+      <!-- THE NOTICES ARE NOT SECTIONS. They used to take two full-width bands
+           of the page and read, to the room, like blocks of the page itself —
+           which made the section numbering impossible to follow. Collapsed to
+           one chip; press it to read them. -->
+      <div class="notices" id="notices" hidden>
+        <button class="notice-chip" id="notice-chip" type="button" aria-expanded="false"></button>
+        <div class="strips" id="strips" hidden>
+          <div class="strip" id="strip" hidden><span class="strip-k" id="strip-k"></span><span id="strip-t"></span></div>
+          <div class="strip order" id="ostrip" hidden><span class="strip-k">Page rearranged</span><span id="ostrip-t"></span></div>
+        </div>
       </div>
 
       <!-- CONTENT IS A CATALOGUE TOO — compact slots with permanent identity chips.
