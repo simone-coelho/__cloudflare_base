@@ -185,10 +185,10 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 20, act: 2, cap: 'C36', title: 'Content is a catalogue too', secs: 75, mark: 'THE TAPESTRY THESIS',
-    perform: [{ sel: '#btn-receipts' }],
+    perform: [{ stage: 'content' }, { sel: '#btn-receipts' }],
     why: 'The differentiator: everyone recommends products; almost nobody runs the same engine over content. The wire on screen is the contract a customer’s front end paints from.',
     do: 'Point at the three chipped slots — the merch strip, the content hero, the carousel — then open the receipts and show the content push.',
-    watch: 'Every content slot carries its chip and its why. In the receipts: the literal payload — contentId, customerContentId, type, slot, order, score, explain. One push per page.',
+    watch: 'The shelf narrows to one line and the content areas hold the stage — the merch ad, the stories, the content hero, the carousel, each with its strip: the why on the left, the type and the customer id on the right. In the receipts: the literal payload — contentId, customerContentId, type, slot, order, score, explain. One push per page.',
     say: 'Everything you have watched the engine do to products, it is doing to content — same arithmetic, second catalogue. These are your pieces, with your CMS ids, scored by the same affinities and delivered as decisions by ID: we push the id, the slot, the score and the why; your front end paints. That is the whole integration. And the merch strip has not moved all session — it is non-personalizable by your config, and the engine ranks around it.',
     real: 'content catalogue REPRESENTATIVE (your CMS in production) · scoring LIVE · the payload REAL' },
 
@@ -196,7 +196,7 @@ export const BEATS = [
     perform: [{ line: { name: 'Fenwick', n: 0 } }],
     why: 'The schematic pre-card: the room sees the page-plan before it happens, then watches it come true — the Tapestry design document, live.',
     do: 'Press Next. Read the band: the page-now and page-after schematics, the destinations badged on the page behind it. Then OK.',
-    watch: 'The band shows “your page now → after” as coloured slot maps; ghost badges on the page say where each slot will go. On OK the carousel re-ranks to knitwear content and the content hero picks up the Fenwick guide.',
+    watch: 'The band shows “your page now → after” as coloured slot maps; ghost badges on the page say where each slot will go. On OK the carousel and the stories re-rank to knitwear content and the content hero picks up the Fenwick guide.',
     say: 'Before anything moves, the engine tells you the plan — this block here, that block there, and why: the scores, against the thresholds. Then it does exactly that. Content recommendations with the same receipts as products. Nobody wrote a rule; she touched a sweater.',
     real: 'scoring LIVE · schematic computed from the same forecast' },
 

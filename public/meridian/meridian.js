@@ -224,7 +224,8 @@ const CONTENT_SECTIONS = [
   { id: 'chero',    kind: 'content', answers: { content: 0.6, broad: 0.4 }, lead: 'content' },
   { id: 'carousel', kind: 'content', answers: { content: 0.5, need: 0.5 },  lead: 'content' },
 ];
-const SLOT_COLOURS = { hero: '#D6472F', offer: '#171A20', row: '#1E8A45', block_a: '#C08A12', merch: '#4E5F7A', chero: '#6236C9', carousel: '#0E7C74', takeover: '#171A20' };
+const SLOT_COLOURS = { hero: '#D6472F', offer: '#171A20', row: '#1E8A45', block_a: '#C08A12', block_b: '#C08A12', merch: '#4E5F7A', chero: '#6236C9', carousel: '#0E7C74', takeover: '#171A20' };
+const SCHEM_H = { hero: 26, offer: 16, row: 22, merch: 13, chero: 20, carousel: 16, block_a: 15, block_b: 15 };
 function contentSlots() {
   const pinnedPiece = S.content.find((p) => p.slotTypes?.includes('merch'));
   return [
@@ -236,47 +237,81 @@ function contentSlots() {
         test: (p) => p.type === 'guide' && (p.tags?.[narrowKey()] || []).includes(byId(S.anchorId).line),
         bonus: 0.5, label: `the ${byId(S.anchorId).line} in her bag`,
       } } : {}) },
+    { slot: 'story', take: 2, weights: { contentType: 0.3, occasion: 0.25, [broadKey()]: 0.25, styleWorld: 0.2 } },
     { slot: 'carousel', take: 5, weights: { [narrowKey()]: 0.3, [broadKey()]: 0.25, occasion: 0.25, contentType: 0.2 } },
   ];
 }
 const topDriver = (d) => d?.explain?.drivers?.[0];
+const whyOf = (d) => {
+  if (!d) return '';
+  if (d.strategy === 'default') return 'no signal yet — the slot default';
+  const t = topDriver(d);
+  return t ? `${t.dim} · ${t.value} ${t.a.toFixed(2)} × ${t.weight}` : '';
+};
+/** A piece rendered AS ITS TYPE: a film looks like a film, an editorial reads like one. */
+function pieceCard(p, d) {
+  const film = p.type === 'film';
+  const art = p.art
+    ? `<div class="p-art" style="background-image:url(${p.art})">${film ? `<span class="play"></span><span class="rtg">${escapeHtml(p.runtime || '')}</span>` : ''}</div>`
+    : '';
+  return `<div class="piece${p.art ? '' : ' noart'}" data-id="${p.id}">${art}
+      <div class="p-copy"><h4>${escapeHtml(p.title)}</h4><p>${escapeHtml(p.excerpt || p.subtitle || '')}</p></div>
+    </div>
+    <div class="sec-strip"><span class="why">${escapeHtml(whyOf(d))}</span><span class="schip">${escapeHtml(p.type)} · ${escapeHtml(p.customerContentId)}</span></div>`;
+}
 function paintContent(prev, next) {
   const has = S.content.length > 0;
   for (const id of ['merch', 'chero', 'carousel']) $(id).hidden = !has;
   if (!has) return;
   const by = (ds, slot) => ds.filter((x) => x.slot === slot);
   const piece = (id) => S.content.find((p) => p.id === id);
-  // merch — tenant-pinned, never ranked
+  // merch — the merchandiser's AD: art-backed, tenant-pinned, never ranked
   const m = by(next, 'merch')[0];
   if (m) {
     const p = piece(m.contentId);
-    $('merch-body').innerHTML = `<b>${escapeHtml(p.title)}</b><span>${escapeHtml(p.subtitle || '')}</span><span class="cta">${escapeHtml(p.cta || 'Shop the event')}</span>`;
-    $('merch-why').textContent = `tenant config · non-personalizable · ${p.customerContentId}`;
+    $('merch-title').textContent = p.title;
+    $('merch-sub').textContent = p.subtitle || '';
+    $('merch-cta').textContent = p.cta || 'Shop the event';
+    $('merch-ad').style.setProperty('--art', p.art ? `url(${p.art})` : 'none');
+    $('merch-chip').textContent = 'PINNED · MERCHANDISER';
+    $('merch-chip').title = `tenant config · non-personalizable · ${p.customerContentId}`;
   }
-  // content hero
+  // content hero — the excerpt makes it an article, the strip carries its meta
   const h = by(next, 'chero')[0]; const hPrev = by(prev, 'chero')[0];
   if (h) {
     const p = piece(h.contentId);
+    $('chero').classList.toggle('noart', !p.art);
     $('chero-art').style.backgroundImage = p.art ? `url(${p.art})` : '';
-    $('chero-type').textContent = `${p.type}${p.runtime ? ` · ${p.runtime}` : ''} · ${p.customerContentId}`;
-    $('chero-title').textContent = p.title; $('chero-sub').textContent = p.subtitle || '';
-    const t = topDriver(h);
-    $('chero-why').textContent = h.strategy === 'default' ? 'no signal yet — the slot default'
-      : t ? `${t.dim} · ${t.value} ${t.a.toFixed(2)} × ${t.weight}` : '';
+    $('chero-title').textContent = p.title;
+    $('chero-ex').textContent = p.excerpt || p.subtitle || '';
+    $('chero-chip').textContent = `${p.type} · ${p.customerContentId}${p.runtime ? ` · ${p.runtime}` : ''}`;
+    $('chero-why').textContent = whyOf(h);
     if (hPrev && hPrev.contentId !== h.contentId) { applyHighlight($('chero')); $('chero').classList.remove('changedc'); void $('chero').offsetWidth; $('chero').classList.add('changedc'); }
   }
-  // carousel
+  // the stories — block_a and block_b belong to the content lane now
+  const stories = by(next, 'story'); const prevStories = by(prev, 'story');
+  ['block_a', 'block_b'].forEach((sec, i) => {
+    const d = stories[i]; const el = $(sec);
+    if (!d) { if (S.content.length) el.innerHTML = ''; return; }
+    const p = piece(d.contentId);
+    el.innerHTML = pieceCard(p, d);
+    if (prevStories[i] && prevStories[i].contentId !== d.contentId) { applyHighlight(el); el.classList.remove('changedc'); void el.offsetWidth; el.classList.add('changedc'); }
+  });
+  // carousel — type and runtime in the caption, never over the art
   const slides = by(next, 'carousel'); const prevIds = by(prev, 'carousel').map((x) => x.contentId);
   $('car-track').innerHTML = slides.map((d, i) => {
     const p = piece(d.contentId);
     const t = topDriver(d);
+    const film = p.type === 'film';
     const changed = prevIds.length && prevIds[i] !== d.contentId;
     return `<article class="slide${changed ? ' changedc' : ''}" data-id="${p.id}" title="${escapeHtml(`${p.customerContentId} · score ${d.score}${t ? ` · ${t.dim}·${t.value}` : ''}`)}">
-      <div class="ty">${escapeHtml(p.type)}</div>${p.runtime ? `<div class="rt">${escapeHtml(p.runtime)}</div>` : ''}
-      <div class="im" style="background-image:url(${p.art || ''})"></div>
+      <div class="im" style="background-image:url(${p.art || ''})">${film ? `<span class="play sm"></span><span class="rtg">${escapeHtml(p.runtime || '')}</span>` : ''}</div>
       <div class="tt">${escapeHtml(p.title)}</div>
+      <div class="tm">${escapeHtml(p.type)}${p.runtime ? ` · ${escapeHtml(p.runtime)}` : ''}</div>
     </article>`;
   }).join('');
+  $('car-why').textContent = slides.every((d) => d.strategy === 'default') ? 'no signal yet — the catalogue order'
+    : 'ranked for her — hover a slide for its score';
 }
 
 /** The literal push — one payload per page. Shown in the receipts because the wire IS the contract. */
@@ -290,7 +325,7 @@ function contentWire() {
 
 /** The schematic pair for the band: your page now → after, slot colours matched. */
 function schematicHtml(orderNow, orderNext) {
-  const blk = (id) => `<span class="blk" style="background:${SLOT_COLOURS[id] || '#4E5665'}">${escapeHtml(SECTION_NAME[id] || id)}</span>`;
+  const blk = (id) => `<span class="blk" style="background:${SLOT_COLOURS[id] || '#4E5665'};--h:${SCHEM_H[id] || 18}px">${escapeHtml(SECTION_NAME[id] || id)}</span>`;
   const col = (t, ids) => `<div class="col"><h6>${t}</h6>${ids.filter((x) => x !== 'takeover').map(blk).join('')}</div>`;
   return `<div class="pd-schem">${col('Your page now', orderNow)}<span class="arrow">→</span>${col('After', orderNext)}</div>`;
 }
@@ -309,6 +344,23 @@ function showDestBadges(orderNext) {
   });
 }
 function clearDestBadges() { document.querySelectorAll('.destbadge').forEach((b) => b.remove()); }
+
+/** The content act's stage mode: the shelf narrows to one line and the hero
+ *  yields a little height, so the content areas are ON the stage rather than
+ *  below the fold. Presentation only — the profile, the scores and the wire
+ *  are untouched. Declared through the band like every other act. */
+function applyContentStage() {
+  const on = !!S.rowCompact;
+  document.querySelector('.page')?.classList.toggle('contentstage', on);
+  $('sortzone').classList.toggle('compact', on);
+  document.querySelector('.row-head')?.classList.toggle('compact', on);
+}
+function engageContentStage() {
+  if (S.rowCompact) return;
+  S.rowCompact = true; applyContentStage();
+  strip('stage', '<b>The content lane takes the stage</b> — the shelf narrows to one line. Nothing about her profile changed.', 30_000);
+  consequence('Content takes the stage', 'the shelf → one line · the content areas hold the fold', 'a presentation choice, declared — no score moved');
+}
 
 /** Engine time. Everything the reflex engine sees goes through this. */
 const NOW = () => S.clock;
@@ -376,7 +428,7 @@ async function load(vertical) {
     heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, withdrawn: new Set(), dept: null,
     behaved: false, anchorId: null, claimedAt: {}, audiencePriority: [], priorityEngaged: false,
     arrived: false, cohort: null, coldPrior: null, coldPicks: null,
-    contentDecisions: [], merchPin: 1,   // content itself comes from r.content above — never zero it here
+    contentDecisions: [], merchPin: 1, merchPinVisible: 0, rowCompact: false,   // content itself comes from r.content above — never zero it here
   });
   S.published = [];
   document.documentElement.dataset.vertical = vertical;
@@ -1165,6 +1217,7 @@ function actOf(t) {
   if (t.line) return { kind: 'card', line: t.line.name, n: t.line.n };
   if (t.sel === '#hero-cta') return { kind: 'cta' };
   if (t.sel === '#btn-skip') return { kind: 'skip' };
+  if (t.stage === 'content') return { kind: 'contentstage' };
   return null;
 }
 
@@ -1234,6 +1287,8 @@ function forecastSequence(acts) {
       anchor = item.id;
       did.push(`Adds to bag ${item.name} — the hero`);
       step('intent_start', extractTouches(item, cfg));
+    } else if (a.kind === 'contentstage') {
+      did.push('The content lane takes the stage — the shelf narrows to one line; nothing about her changes');
     } else if (a.kind === 'skip') {
       clock += 120_000;
       const res = tick(reflex, clock, cfg);
@@ -1329,6 +1384,7 @@ async function sequenceBand(acts) {
       + schematicHtml((S.layout?.order || []), f.orderNext || []));
     showDestBadges(f.orderNext || []);
   }
+  if (acts.some((a) => a.kind === 'contentstage')) will.push(willItem('The shelf narrows to <b>one line</b> — the content areas take the stage', ['a presentation choice, declared like everything else — her profile does not move']));
   if (acts.some((a) => a.kind === 'arrive')) will.push(willItem('Nothing about <b>her</b> yet — behaviour none', ['the neighbourhood priors sit in her profile and decay like everything else', 'her first engagement hands the page from the cohort to her']));
   if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
   await openPredictBand({
@@ -1656,7 +1712,7 @@ function strip(kind, html, ttl) {
   const el = $('strip');
   el.classList.toggle('out', kind === 'out');
   el.classList.toggle('cold', kind === 'cold');
-  $('strip-k').textContent = kind === 'out' ? 'Left an audience' : kind === 'cold' ? 'Welcome' : 'Entered an audience';
+  $('strip-k').textContent = kind === 'out' ? 'Left an audience' : kind === 'cold' ? 'Welcome' : kind === 'stage' ? 'The content act' : 'Entered an audience';
   $('strip-t').innerHTML = html;
   el.hidden = false;
   STRIP_UNTIL = NOW() + ttl;      // rides the demo clock — holds while you talk
@@ -1866,11 +1922,11 @@ function paint(prev, next, first, rowMoved = false, tick = false) {
   if (first || heroChanged) swap($('hero'), () => paintHero(pick(next, 'hero')), first);
   if (first || rowChanged || rowMoved) paintRow(next.filter((d) => d.slot === 'row'), prevRow, first, rowMoved, tick);
   paintContent(prevContentOf(), S.contentDecisions);
-  if (first || pick(prev, 'block_a')?.blockId !== pick(next, 'block_a')?.blockId) {
+  if (!S.content.length && (first || pick(prev, 'block_a')?.blockId !== pick(next, 'block_a')?.blockId)) {
     swap($('block_a'), () => paintBlock(pick(next, 'block_a'), 'block_a'), first);
   }
   // The composer always scored a second block; the page never rendered it.
-  if (first || pick(prev, 'block_b')?.blockId !== pick(next, 'block_b')?.blockId) {
+  if (!S.content.length && (first || pick(prev, 'block_b')?.blockId !== pick(next, 'block_b')?.blockId)) {
     swap($('block_b'), () => paintBlock(pick(next, 'block_b'), 'block_b'), first);
   }
 }
@@ -2854,6 +2910,7 @@ function resolveTarget(t) {
   if (typeof t === 'string') return document.querySelector(t);
   if (t.wait) return { wait: t.wait };
   if (t.arrive) return { run: arrive };
+  if (t.stage === 'content') return { run: engageContentStage };
   if (t.predict) { const inner = resolveTarget(t.predict); return inner ? { predict: true, el: inner } : null; }
   if (t.tab) { showTab(t.tab); return null; }
   if (t.surface != null) return document.querySelectorAll('#surfaces .surface')[t.surface] || null;
@@ -3480,6 +3537,7 @@ $('btn-reset').onclick = async () => {
   clearBaseline(); $('btn-capture').classList.remove('on'); DONE.length = 0;
   $('btn-capture').innerHTML = 'Capture baseline<small>freeze the page now</small>';
   $('takeover').hidden = true; $('hero').style.display = '';
+  applyContentStage();                             // the stage mode is a session thing, not a visitor thing
   // A new visitor's Why is the cold sentence, whatever the last one said.
   $('sentence').textContent = 'Nothing has happened yet.'; S.sayLockUntil = Date.now() + 4000;
   LASTPD = null; S.lastMovedDown = null; $('pd-pill').hidden = true;

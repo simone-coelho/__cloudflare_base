@@ -69,9 +69,11 @@
       <!-- CONTENT IS A CATALOGUE TOO — compact slots with permanent identity chips.
            merch: non-personalizable by tenant config, PINNABLE AT ANY POSITION. -->
       <section class="cslot merch" id="merch" data-section="merch" hidden>
-        <span class="cchip">MERCH · PINNED</span>
-        <div class="merch-body" id="merch-body"></div>
-        <span class="cwhy" id="merch-why"></span>
+        <div class="ad" id="merch-ad">
+          <div class="ad-copy"><b id="merch-title"></b><span id="merch-sub"></span></div>
+          <span class="cta" id="merch-cta">Shop the event</span>
+          <span class="ad-chip" id="merch-chip"></span>
+        </div>
       </section>
       <section class="hero zone" id="hero" data-section="hero" data-label="PERSONALIZED · HERO">
         <div class="hero-copy">
@@ -84,18 +86,17 @@
       </section>
 
       <section class="cslot chero" id="chero" data-section="chero" hidden>
-        <span class="cchip">CONTENT HERO</span>
         <div class="chero-art" id="chero-art"></div>
-        <div class="chero-copy"><div class="ctype" id="chero-type"></div><h3 id="chero-title"></h3><p id="chero-sub"></p></div>
-        <span class="cwhy" id="chero-why"></span>
+        <div class="chero-copy"><h3 id="chero-title"></h3><p class="ex" id="chero-ex"></p></div>
+        <div class="sec-strip"><span class="why" id="chero-why"></span><span class="schip" id="chero-chip"></span></div>
       </section>
 
       <section class="cslot carousel" id="carousel" data-section="carousel" hidden>
-        <span class="cchip">CAROUSEL</span>
         <div class="car-track" id="car-track"></div>
+        <div class="sec-strip"><span class="why" id="car-why"></span><span class="schip" id="car-chip">CAROUSEL</span></div>
       </section>
 
-      <section class="offer" id="offer" data-section="offer" hidden>
+      <section class="offer" id="offer" data-section="offer" data-label="JOURNEY · OFFER" hidden>
         <div class="offer-main">
           <div class="offer-kick" id="offer-kick"></div>
           <div class="offer-title" id="offer-title"></div>
@@ -112,8 +113,8 @@
         <div class="row" id="row"></div>
       </section>
 
-      <section class="zone" id="block_a" data-section="block_a" data-label="PERSONALIZED · CONTENT"></section>
-      <section class="zone" id="block_b" data-follows="block_a" data-label="PERSONALIZED · CONTENT"></section>
+      <section class="zone cslot story" id="block_a" data-section="block_a"></section>
+      <section class="zone cslot story" id="block_b" data-follows="block_a"></section>
 
     </div>
   </main>

@@ -309,9 +309,9 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 ### Beat 20 · Content is a catalogue too (Act 2 · 1:15 planned · ⏸ THE TAPESTRY THESIS)
 
-**You press:** Next presses "Show the receipts". Before the modal lands, point at the three chipped slots that have been sitting on the page all along — the merch strip, the content hero, the content carousel — so the room realises the content lane has been running the whole time.
+**You press:** Next. The band declares two things: the shelf narrows to one line (a presentation choice — no score moves), and "Show the receipts" opens. On OK the content areas hold the stage: the merch **ad** at the top — real artwork, a real button — the stories, the content hero, the carousel. Point at them; they have been running the whole time.
 
-**The room sees:** Three content slots already on the page: the merch strip *"The Calder Winter Sale"* — badged tenant config · non-personalizable · CMP-1007 — the content hero, and the content carousel, every one carrying a colour chip and a why line. Then the receipts modal: *"THE CONTENT PUSH"* — the literal payload, `{contentId, customerContentId, type, slot, order, score, explain}`. One push per page.
+**The room sees:** Content rendered as content: the Winter Sale **ad** (artwork, *Shop the event*, a `PINNED · MERCHANDISER` chip), two **stories** — a film with a play control and its runtime, an editorial with a real paragraph — the content hero with its excerpt, and five art slides in the carousel. Every content slot carries a strip inside its box: the why on the left, the type and the customer id on the right. Then the receipts modal: *"THE CONTENT PUSH"* — the literal payload, `{contentId, customerContentId, type, slot, order, score, explain}` — merch, hero, both stories and all five slides. One push per page.
 
 **Tell it like this:** Everything you have watched this engine do to products, it is doing to content — the same arithmetic, pointed at a second catalogue. These are your pieces, with your CMS ids, scored by the same affinities you have been watching move all session, and delivered as decisions *by ID*: we push the id, the slot, the score and the why, and your front end paints. That payload on the screen is the entire integration. And notice the merch strip — it has not moved all session, because your config says it is non-personalizable, and the engine ranks around it.
 
@@ -323,7 +323,7 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **You press:** Next. The band opens on the schematic — *your page now → after*, two coloured mini-wireframes of the slots — and ghost badges appear on the page behind it, each saying where its slot will go. Read the map with the room. Then OK, and the cursor clicks a Fenwick — she touches a sweater.
 
-**The room sees:** The plan, drawn before the move: two slot maps in the band, now and after, with ghost badges on the page itself. On OK the click lands, the carousel re-ranks to knitwear content, and the content hero becomes *"The Heritage Wardrobe"*.
+**The room sees:** The plan, drawn before the move: two slot maps in the band, now and after, with ghost badges on the page itself. On OK the click lands, the carousel and the stories re-rank to knitwear content, and the content hero becomes *"The Heritage Wardrobe"*.
 
 **Tell it like this:** Before anything moves, the engine tells you the plan: this block here, that block there — and why: the scores, against the thresholds. Then it does exactly that, in front of you. Content recommendations with the same receipts as the products have. Nobody wrote a rule for any of it. She touched a sweater.
 

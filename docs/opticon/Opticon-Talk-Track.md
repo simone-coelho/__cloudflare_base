@@ -226,7 +226,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You say —** Eight things about her, each with its own memory. Taste moves slowly. What she is looking at right now moves fast. One engine holds both. And the line she is in follows her last click, not her running total — step from Drover to Linden and Linden leads at once, while Drover trails until it decays out on its own.
 
-*Why 0:50:* Sets up the staircase in beat 21. Without it, the retreats later look arbitrary.
+*Why 0:50:* Sets up the staircase in beat 27. Without it, the retreats later look arbitrary.
 
 ---
 
@@ -308,7 +308,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You do —** Point at the three chipped slots — the merch strip, the content hero, the carousel — then open the receipts and show the content push.
 
-**They watch —** Every content slot carries its chip and its why. In the receipts: the literal payload — contentId, customerContentId, type, slot, order, score, explain. One push per page.
+**They watch —** The shelf narrows to one line and the content areas hold the stage — the merch ad, the stories, the content hero, the carousel, each with its strip: the why on the left, the type and the customer id on the right. In the receipts: the literal payload — contentId, customerContentId, type, slot, order, score, explain. One push per page.
 
 **You say —** Everything you have watched the engine do to products, it is doing to content — same arithmetic, second catalogue. These are your pieces, with your CMS ids, scored by the same affinities and delivered as decisions by ID: we push the id, the slot, the score and the why; your front end paints. That is the whole integration. And the merch strip has not moved all session — it is non-personalizable by your config, and the engine ranks around it.
 
@@ -322,7 +322,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You do —** Press Next. Read the band: the page-now and page-after schematics, the destinations badged on the page behind it. Then OK.
 
-**They watch —** The band shows “your page now → after” as coloured slot maps; ghost badges on the page say where each slot will go. On OK the carousel re-ranks to knitwear content and the content hero picks up the Fenwick guide.
+**They watch —** The band shows “your page now → after” as coloured slot maps; ghost badges on the page say where each slot will go. On OK the carousel and the stories re-rank to knitwear content and the content hero picks up the Fenwick guide.
 
 **You say —** Before anything moves, the engine tells you the plan — this block here, that block there, and why: the scores, against the thresholds. Then it does exactly that. Content recommendations with the same receipts as products. Nobody wrote a rule; she touched a sweater.
 
@@ -369,7 +369,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You say —** That clock is not a marketing timer. It runs to the instant the engine calculates her intent crosses back under its threshold — so it cannot be extended, and when it ends it will tell you the number that ended it.
 
-*Why 0:45:* The anti-urgency-theatre argument. One beat, because the payoff is at expiry in beat 21.
+*Why 0:45:* The anti-urgency-theatre argument. One beat, because the payoff is at expiry in beat 27.
 
 ---
 

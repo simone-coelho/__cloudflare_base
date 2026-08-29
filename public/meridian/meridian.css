@@ -100,15 +100,17 @@ body{
 
 /* zone badge — one colour, used for nothing else, revealed on hover */
 .zone{position:relative}
-.zone::after{content:attr(data-label);position:absolute;bottom:100%;right:0;margin-bottom:5px;z-index:5;
-  font:600 11px/1 ui-monospace,monospace;letter-spacing:.12em;padding:5px 8px;border-radius:3px;
-  background:var(--accent);color:#fff;opacity:0;transition:opacity .16s;pointer-events:none}
-.zone:hover::after{opacity:.92}
+.zone[data-label]:not(.cslot)::after{content:attr(data-label);position:absolute;bottom:8px;right:10px;z-index:4;
+  font:700 9px/1 ui-monospace,monospace;letter-spacing:.11em;background:rgba(238,235,228,.92);color:#5A5648;
+  padding:4px 7px;border-radius:3px;pointer-events:none}
+.offer[data-label]::after{content:attr(data-label);position:absolute;bottom:8px;right:10px;z-index:4;
+  font:700 9px/1 ui-monospace,monospace;letter-spacing:.11em;background:rgba(238,235,228,.92);color:#5A5648;
+  padding:4px 7px;border-radius:3px;pointer-events:none}
 .zone.pulse{animation:glow var(--t-glow) ease-out}
 @keyframes glow{0%{box-shadow:0 0 0 0 var(--hl)}100%{box-shadow:0 0 0 18px transparent}}
 
 /* HERO — the star. Large, simple, dominant. */
-.hero{margin:18px 0 0;min-height:0;padding:26px 34px;border-radius:10px;position:relative;overflow:hidden;
+.hero{margin:14px 0 0;min-height:0;padding:18px 28px;border-radius:10px;position:relative;overflow:hidden;border-left:6px solid #D6472F;
   background:#fff;
   border:2px solid var(--line); border-top:10px solid var(--accent);
   box-shadow:0 1px 0 rgba(28,26,23,.04), 0 8px 24px -16px rgba(28,26,23,.4);
@@ -117,18 +119,34 @@ body{
 .hero.swapping{opacity:0;transition-duration:var(--t-hero-out)}
 .hero-copy{flex:1}
 .hero .kicker{font:600 13px/1 inherit;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
-.hero h2{font:300 34px/1.1 var(--serif);margin:9px 0 8px;letter-spacing:-.01em}
-.hero p{font-size:20px;color:var(--muted);margin:0 0 26px;max-width:46ch}
+.hero h2{font:300 27px/1.1 var(--serif);margin:7px 0 6px;letter-spacing:-.01em}
+.hero p{font-size:16px;color:var(--muted);margin:0 0 14px;max-width:46ch}
+.contentstage .hero{padding:12px 24px;margin-top:8px}
+.contentstage .hero-art{width:120px;height:120px}
+.contentstage .hero h2{font-size:23px;margin:5px 0 4px}
+.contentstage .hero p{font-size:14px;margin:0 0 10px}
+.contentstage .hero .cta{padding:9px 18px}
 .hero .cta{display:inline-block;padding:13px 26px;border-radius:4px;background:var(--ink);color:#fff;
   font:500 16px/1 inherit;border:0;cursor:pointer}
-.hero-art{width:250px;height:250px;border-radius:8px;overflow:hidden;border:2px solid var(--line);background:#fff;flex:none}
+.hero-art{width:170px;height:170px;border-radius:8px;overflow:hidden;border:2px solid var(--line);background:#fff;flex:none}
 .hero-art svg{width:100%;height:100%;display:block}
 
 /* SORT ZONE — one tight row, one axis of movement, quiet around it */
 .row-head{display:flex;align-items:baseline;gap:14px;margin:40px 0 12px}
 .row-head h3{font:500 20px/1 var(--serif);margin:0}
 .row-head span{font-size:13px;color:var(--muted)}
-.sortzone{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.55);padding:20px}
+.sortzone{border:1px solid var(--line);border-left:6px solid #1E8A45;border-radius:12px;background:rgba(255,255,255,.55);padding:20px;position:relative}
+.sortzone.compact{padding:12px 12px 22px}
+.sortzone.compact .row{gap:10px}
+.sortzone.compact .card:nth-child(n+6){display:none}
+.sortzone.compact .card .ph{aspect-ratio:auto;height:104px}
+.sortzone.compact .card .meta{padding:7px 9px 9px}
+.sortzone.compact .card .nm{font-size:13px}
+.sortzone.compact .card .mt{font-size:11px;margin-top:2px}
+.sortzone.compact .card .pr{font-size:13.5px;margin-top:4px}
+.sortzone.compact .card .add{display:none}
+.sortzone.compact .card .rank{width:20px;height:20px;font:700 11px/20px ui-monospace,monospace;top:6px;left:6px}
+.row-head.compact{margin:14px 0 8px}
 .row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
 
 .card{background:var(--card);border:2px solid #E1DCD3;
@@ -1207,35 +1225,84 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 
 /* ── CONTENT SLOTS — compact bands; identity by colour + chip, never by size ── */
 .cslot[hidden]{display:none !important}   /* the slot's own display:flex must never beat hidden */
-.cslot{position:relative;margin:14px 0 0;border-radius:9px;background:#fff;border:1.5px solid var(--line)}
-.cchip{position:absolute;top:-9px;left:12px;z-index:3;font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.12em;padding:5px 8px;border-radius:4px;color:#fff}
-.cwhy{position:absolute;right:10px;bottom:8px;font:500 10.5px/1.3 ui-monospace,monospace;color:var(--muted);max-width:46%;text-align:right}
-.cslot.merch{border-left:8px solid #4E5F7A} .cslot.merch .cchip{background:#4E5F7A}
-.cslot.chero{border-left:8px solid #6236C9} .cslot.chero .cchip{background:#6236C9}
-.cslot.carousel{border-left:8px solid #0E7C74} .cslot.carousel .cchip{background:#0E7C74}
-.cslot.merch{display:flex;align-items:center;min-height:56px;background:#171A20;color:#fff;border-color:#171A20}
-.merch-body{flex:1;display:flex;align-items:baseline;gap:14px;padding:10px 16px 10px 20px;font:400 15px/1.3 var(--sans)}
-.merch-body b{font:400 18px/1.2 var(--serif)}
-.merch-body .cta{margin-left:auto;font:600 12px/1 var(--sans);background:#FFD166;color:#2A2200;padding:8px 12px;border-radius:4px;white-space:nowrap}
-.cslot.chero{display:flex;gap:18px;min-height:150px;max-height:190px;overflow:hidden}
-.chero-art{flex:0 0 300px;background:#EEF1F5 center/cover no-repeat}
-.chero-copy{padding:16px 18px 14px;min-width:0}
-.chero-copy .ctype{font:700 10px/1 ui-monospace,monospace;letter-spacing:.13em;text-transform:uppercase;color:#6236C9;margin-bottom:6px}
-.chero-copy h3{margin:0 0 5px;font:400 21px/1.2 var(--serif)}
-.chero-copy p{margin:0;font-size:13.5px;line-height:1.45;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.car-track{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:16px 14px 12px}
+.cslot{position:relative;margin:14px 0 0;border-radius:9px;background:#fff;border:1.5px solid var(--line);overflow:hidden}
+.cslot.merch{border-left:8px solid #4E5F7A}
+.cslot.chero{border-left:8px solid #6236C9}
+.cslot.carousel{border-left:8px solid #0E7C74}
+.cslot.story{border-left:8px solid #C08A12;margin-top:14px}
+
+/* THE STRIP — the slot's meta lives INSIDE its box, at the bottom, in the flow.
+   Never on the top edge (it read as touching the section above), never over
+   the art. Why on the left, the type/id chip on the right. */
+.sec-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:5px 10px 5px 14px;border-top:1px solid var(--line);background:#F6F4EF;min-height:26px}
+.sec-strip .why{font:500 10.5px/1.35 ui-monospace,monospace;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.schip{flex:none;font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.11em;text-transform:uppercase;
+  color:#fff;padding:5px 8px;border-radius:3px;background:#4E5665}
+.chero .schip{background:#6236C9} .carousel .schip{background:#0E7C74} .story .schip{background:#C08A12}
+
+/* THE MERCH AD — the merchandiser's creative, art-backed, with a clear CTA.
+   The light gradient keeps ink legible over the left of the artwork. */
+.cslot.merch .ad{position:relative;display:flex;align-items:center;gap:18px;min-height:96px;
+  background-image:var(--art);background-size:cover;background-position:center}
+.cslot.merch .ad::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg, rgba(250,249,246,.93) 0%, rgba(250,249,246,.72) 32%, rgba(250,249,246,.05) 62%)}
+.ad-copy{position:relative;z-index:1;padding:14px 0 14px 18px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.ad-copy b{font:400 22px/1.15 var(--serif);color:var(--ink)}
+.ad-copy span{font:400 12.5px/1.3 var(--sans);color:#4A463C}
+.cslot.merch .cta{position:relative;z-index:1;margin-left:auto;margin-right:20px;flex:none;
+  font:600 12.5px/1 var(--sans);background:#FFD166;color:#2A2200;padding:10px 16px;border-radius:4px;
+  white-space:nowrap;box-shadow:0 2px 8px -2px rgba(0,0,0,.35);cursor:default}
+.ad-chip{position:absolute;right:8px;bottom:6px;z-index:1;font:700 8.5px/1 ui-monospace,monospace;
+  letter-spacing:.1em;background:rgba(23,26,32,.82);color:#fff;padding:4px 7px;border-radius:3px}
+
+/* THE CONTENT HERO — art left, copy with a real excerpt, strip below. */
+.cslot.chero{display:grid;grid-template-columns:280px 1fr;grid-template-areas:"art copy" "strip strip"}
+.cslot.chero .chero-art{grid-area:art;min-height:150px;background:#EEF1F5 center/cover no-repeat}
+.cslot.chero.noart .chero-art{display:none}
+.cslot.chero.noart{grid-template-columns:1fr;grid-template-areas:"copy" "strip"}
+.cslot.chero .chero-copy{grid-area:copy;padding:16px 18px 12px;min-width:0}
+.cslot.chero .sec-strip{grid-area:strip}
+.chero-copy h3{margin:0 0 6px;font:400 22px/1.2 var(--serif)}
+.chero-copy .ex{margin:0;font-size:13.5px;line-height:1.5;color:var(--muted);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* A STORY PIECE — an editorial looks like an article, a film looks like a film. */
+.piece{display:grid;grid-template-columns:230px 1fr;gap:0}
+.piece .p-art{position:relative;min-height:126px;background:#EEF1F5 center/cover no-repeat}
+.piece .p-copy{padding:14px 18px 12px;min-width:0}
+.piece .p-copy h4{margin:0 0 6px;font:400 21px/1.2 var(--serif)}
+.piece .p-copy p{margin:0;font-size:13px;line-height:1.5;color:var(--muted);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.piece.noart{grid-template-columns:1fr}
+.piece.noart .p-art{display:none}
+.piece.noart .p-copy{padding:18px 22px 14px;border-left:4px solid #EEEBE4}
+
+/* the film treatment: a play control and the runtime, ON the thumbnail */
+.play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;
+  border-radius:50%;background:rgba(23,26,32,.72);box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.play::before{content:'';position:absolute;left:16px;top:11px;border-left:13px solid #fff;
+  border-top:9px solid transparent;border-bottom:9px solid transparent}
+.play.sm{width:28px;height:28px}
+.play.sm::before{left:11px;top:8px;border-left-width:9px;border-top-width:6px;border-bottom-width:6px}
+.rtg{position:absolute;right:6px;bottom:6px;font:700 9px/1 ui-monospace,monospace;
+  background:rgba(0,0,0,.75);color:#fff;padding:3px 6px;border-radius:3px}
+
+/* THE CAROUSEL — art-led slides; type and runtime in the caption, not over the art. */
+.car-track{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:14px 14px 10px}
 .slide{position:relative;border-radius:7px;overflow:hidden;border:1.5px solid var(--line);background:#fff;cursor:default}
-.slide .im{height:92px;background:#EEF1F5 center/cover no-repeat}
-.slide .tt{padding:7px 9px 8px;font:600 11.5px/1.3 var(--sans);color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
-.slide .ty{position:absolute;top:6px;left:6px;font:700 8.5px/1 ui-monospace,monospace;letter-spacing:.1em;background:rgba(23,26,32,.85);color:#fff;padding:4px 6px;border-radius:3px;text-transform:uppercase}
-.slide .rt{position:absolute;top:6px;right:6px;font:700 9px/1 ui-monospace,monospace;background:#fff;color:var(--ink);padding:4px 6px;border-radius:3px}
+.slide .im{position:relative;height:92px;background:#EEF1F5 center/cover no-repeat}
+.slide .tt{padding:7px 9px 2px;font:600 11.5px/1.3 var(--sans);color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+.slide .tm{padding:0 9px 7px;font:600 9px/1 ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:#8A8578}
 .slide.changedc{outline:3px solid var(--hl);outline-offset:2px}
-.destbadge{position:absolute;top:-9px;right:12px;z-index:4;font:700 10px/1 ui-monospace,monospace;letter-spacing:.08em;background:#0E5FBF;color:#fff;padding:5px 9px;border-radius:4px;box-shadow:0 4px 10px -4px rgba(0,0,0,.4)}
+.destbadge{position:absolute;top:8px;right:10px;z-index:6;font:700 10px/1 ui-monospace,monospace;letter-spacing:.08em;background:#0E5FBF;color:#fff;padding:5px 9px;border-radius:4px;box-shadow:0 4px 10px -4px rgba(0,0,0,.4)}
 .destbadge.stay{background:#4E5F7A}
 .pd-schem{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-top:8px}
 .pd-schem .col{display:flex;flex-direction:column;gap:4px}
 .pd-schem .col h6{margin:0 0 3px;font:700 10px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:#4E5F7A}
-.pd-schem .blk{display:flex;align-items:center;gap:7px;font:600 10.5px/1 ui-monospace,monospace;color:#fff;border-radius:4px;padding:6px 8px}
+.pd-schem .blk{display:flex;align-items:center;gap:7px;font:600 10.5px/1 ui-monospace,monospace;color:#fff;border-radius:4px;padding:0 8px;min-height:var(--h,22px)}
 .pd-schem .arrow{font-size:20px;color:#0E5FBF}
 .choreo-note[hidden]{display:none}
 .choreo-note{position:fixed;left:50%;transform:translateX(-50%);top:14px;z-index:800;font:600 12px/1 ui-monospace,monospace;letter-spacing:.06em;background:#171A20;color:#FFD166;padding:9px 14px;border-radius:99px;box-shadow:0 10px 24px -10px rgba(0,0,0,.5)}

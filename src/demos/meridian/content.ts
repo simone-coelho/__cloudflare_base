@@ -44,6 +44,8 @@ export interface ContentPiece {
   lifecycle: { status: 'live' | 'draft' | 'expired' };
   /** Approved, committed artwork under /meridian/content/ — or null for a text-only piece. */
   art: string | null;
+  /** Two or three sentences of body copy — what makes an editorial look like one. Display only. */
+  excerpt?: string;
   /** Films only, e.g. "2:14". */
   runtime?: string;
 }
