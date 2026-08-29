@@ -808,8 +808,24 @@ body.has-director .page{padding-bottom:250px}
 .dir-do{font-size:13px;margin-top:5px}
 .dir-say{font-size:15px;margin-top:8px}
 .dir-clock{font-size:26px}
-.dir-palette{border-top:1px solid #2A3644;background:#0E131A;padding:8px 20px 10px;
-  display:flex;flex-wrap:wrap;gap:6px 18px;align-items:flex-start}
+/* THE PALETTE IS A DRAWER. The room never needs these buttons; the presenter
+   summons them. It overlays the page above the reading strip, so the viewport
+   keeps the height permanently — the strip is the bar's whole footprint. */
+.dir-palette{position:absolute;left:0;right:0;bottom:100%;z-index:-1;
+  border-top:2px solid #7FB8FF;background:#0E131A;padding:10px 96px 12px 20px;
+  display:flex;flex-wrap:wrap;gap:6px 18px;align-items:flex-start;
+  box-shadow:0 -14px 40px rgba(0,0,0,.45);
+  opacity:0;transform:translateY(10px);pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease}
+.director.pal-open .dir-palette{opacity:1;transform:none;pointer-events:auto;z-index:1}
+.pal-handle{font:600 10.5px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;
+  margin-top:6px;padding:5px 9px;border-radius:4px;background:#1B2430;border:1px solid #2A3644;
+  color:#8FA0B5;cursor:pointer;float:right}
+.pal-handle:hover,.director.pal-open .pal-handle{border-color:#7FB8FF;color:#CFE2FA}
+.pal-pin{position:absolute;right:10px;top:8px;font:600 9.5px/1 ui-monospace,monospace;letter-spacing:.08em;
+  text-transform:uppercase;padding:5px 8px;border-radius:4px;background:#1B2430;border:1px solid #2A3644;
+  color:#8FA0B5;cursor:pointer}
+.pal-pin.on{background:#F0A92B;border-color:#F0A92B;color:#241500}
 .dir-palette .cgroup{margin:0;display:flex;align-items:center;gap:8px}
 .dir-palette .clabel{margin:0;color:#8FA0B5;white-space:nowrap}
 .dir-palette .controls{display:flex;flex-wrap:wrap;gap:7px;margin:0}

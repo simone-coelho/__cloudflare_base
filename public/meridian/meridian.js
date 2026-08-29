@@ -1516,12 +1516,16 @@ async function browse(btn, targets) {   // targets are perform SPECS
       if (!el) continue;
       if (el.wait) { await sleep(el.wait); continue; }        // a beat may pause to let a retreat land
       if (el.run) { el.run(); await sleep(1400); continue; }   // an act with no element to click (the arrival)
+      if (el instanceof Element && el.closest('.dir-palette') && !palIsOpen()) {
+        openPalette(); PAL.autoOpened = true; await sleep(380);   // the room sees the press
+      }
       await moveCursorTo(el);
       await sleep(700);                                        // between clicks — Coach's cadence
     }
   } finally {
     GATE.open = false;
     hideCursor();
+    if (PAL.autoOpened) { PAL.autoOpened = false; closePalette(); }
     BZ.busy = false; BZ.abort = false; btn.classList.remove('busy'); btn.classList.remove('running');
     document.querySelectorAll('[id^="bz-"]').forEach((b) => { b.disabled = false; });
   }
@@ -2982,6 +2986,34 @@ function openDirector() {
 $('dir-next').onclick = () => goBeat(DIR.i + 1);
 $('dir-prev').onclick = () => { setAuto(false); goBeat(DIR.i - 1); };
 $('dir-play').onclick = () => { if (DIR.auto && BZ.busy) BZ.abort = true; setAuto(!DIR.auto); };
+// ── The palette drawer ──────────────────────────────────────────────────────
+// The room never needs the buttons; the presenter summons them. Hover the
+// handle (a beat of rest first, so a passing cursor never pops it), pin it for
+// rehearsal, and any performance that clicks a palette button opens it itself
+// so the room watches a real press — never a click against an invisible button.
+const PAL = { pinned: false, openT: null, closeT: null, autoOpened: false };
+function palApply(open) { $('director').classList.toggle('pal-open', open || PAL.pinned); }
+function openPalette() { clearTimeout(PAL.closeT); palApply(true); }
+function closePalette(force) { clearTimeout(PAL.openT); if (PAL.pinned && !force) return; palApply(false); }
+const palIsOpen = () => $('director').classList.contains('pal-open');
+$('pal-handle').onmouseenter = () => { clearTimeout(PAL.openT); PAL.openT = setTimeout(openPalette, 280); };
+$('pal-handle').onmouseleave = () => { clearTimeout(PAL.openT); PAL.closeT = setTimeout(() => closePalette(), 350); };
+$('pal-handle').onclick = () => (palIsOpen() ? closePalette(true) : openPalette());
+$('palette').onmouseenter = () => clearTimeout(PAL.closeT);
+$('palette').onmouseleave = () => { PAL.closeT = setTimeout(() => closePalette(), 300); };
+$('pal-pin').onclick = () => {
+  PAL.pinned = !PAL.pinned;
+  $('pal-pin').classList.toggle('on', PAL.pinned);
+  $('pal-pin').textContent = PAL.pinned ? 'Pinned' : 'Pin open';
+  if (PAL.pinned) openPalette(); else closePalette(true);
+};
+// A press does the work; the drawer's job is done. (Only a human press — the
+// perform machinery closes it once its whole sequence has played.)
+$('palette').addEventListener('click', (e) => {
+  if (e.isTrusted && e.target.closest('button') && !e.target.closest('#pal-pin')) closePalette();
+});
+$('dir-next').addEventListener('click', () => closePalette(), true);
+
 $('dir-stop').onclick = async () => {
   if (PD.open) $('pd-go').click();  // a band open is not a reason to refuse a restart
   DIR.arming = false;               // nor is a beat still arming
@@ -2998,7 +3030,7 @@ addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') { e.preventDefault(); goBeat(DIR.i + 1); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); goBeat(DIR.i - 1); }
   if (e.key === ' ') { e.preventDefault(); setAuto(!DIR.auto); }
-  if (e.key === 'Escape') { const m = document.querySelector('.moment.open'); if (m) { m.classList.remove('open'); return; } if (BZ.busy) BZ.abort = true; }
+  if (e.key === 'Escape') { const m = document.querySelector('.moment.open'); if (m) { m.classList.remove('open'); return; } if (palIsOpen()) { closePalette(true); return; } if (BZ.busy) BZ.abort = true; }
 });
 setInterval(dirTick, 500);
 
