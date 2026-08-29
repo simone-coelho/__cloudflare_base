@@ -2101,9 +2101,32 @@ function announceAudiences(entered, exited) {
   if (inn.length) {
     strip('in', `You entered <b>${prettyAudience(inn[0])}</b> — the edit re-centred on it. `
       + 'Nobody wrote a rule; the score crossed its entry threshold.', 9000);
+    ANNOUNCED = inn[0];
+    $('strip').dataset.aud = inn[0];
   } else if (out.length) {
     strip('out', `You drifted out of <b>${prettyAudience(out[0])}</b> — what it was holding on the page let go. `
       + 'The score decayed under its exit threshold on its own.', 9000);
+  }
+}
+
+/**
+ * The strip yields to the moment. When a moment card announces the SAME entry
+ * in richer words, two banners stack saying one thing — so the strip retires
+ * the instant the card appears. The moment is the better telling: it has the
+ * title, the reason and the way out.
+ */
+let ANNOUNCED = null;
+function dedupeAnnouncement() {
+  if (!ANNOUNCED || $('strip').hidden) return;
+  // BY KEY, not by prose. The card's wording differs per kind ("Occasion
+  // affinity · 0.62", "Decided live · You entered …") but the event it is
+  // about is the same audience, and that is what must not be said twice.
+  const card = document.querySelector('#moments .mmt[data-key]');
+  const key = card?.dataset.key || '';
+  if (!key) return;
+  const norm = (k) => String(k).replace(/_affinity$/, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+  if (norm(key) === norm(ANNOUNCED)) {
+    $('strip').hidden = true; STRIP_UNTIL = 0; ANNOUNCED = null;
   }
 }
 
@@ -2208,8 +2231,6 @@ function recompose(first, opts = {}) {
   const movedSections = first ? [] : paintLayout(S.layout.order, { duration: CHOREO.duration, stagger: CHOREO.stagger });
   if (movedSections.length) {
     const span = CHOREO.duration + CHOREO.stagger * Math.max(0, movedSections.length - 1);
-    $('choreo-note').hidden = false;
-    clearTimeout(CHOREO.t); CHOREO.t = setTimeout(() => { $('choreo-note').hidden = true; }, span + 1400);
     markMoves(movedSections, span);
   }
   if (movedSections.length) {
@@ -3425,7 +3446,7 @@ addEventListener('keydown', (e) => {
   if (e.key === ' ') { e.preventDefault(); setAuto(!DIR.auto); }
   if (e.key === 'Escape') { const m = document.querySelector('.moment.open'); if (m) { m.classList.remove('open'); return; } if (palIsOpen()) { closePalette(true); return; } if (BZ.busy) BZ.abort = true; }
 });
-setInterval(() => { dirTick(); syncBarControls(); }, 500);
+setInterval(() => { dirTick(); syncBarControls(); dedupeAnnouncement(); }, 500);
 
 // ── The reflex moment ───────────────────────────────────────────────────────
 // A white-glove offer earned by intent, running to an instant the ENGINE
@@ -3981,7 +4002,6 @@ $('btn-reset').onclick = async () => {
   $('conseq').innerHTML = '';
   OFFER.live = false; OFFER.expiresAt = null; OFFER.dim = null; OFFER.value = null;
   $('offer').hidden = true; $('offer').classList.remove('done', 'expiring');
-  $('choreo-note').hidden = true;
   document.querySelectorAll('.moment.open').forEach((m) => m.classList.remove('open'));
   $('xcard').hidden = true;
   SLOT_STRATEGIES.hero = { ...PRISTINE_STRATEGIES.hero };

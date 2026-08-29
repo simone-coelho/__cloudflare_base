@@ -251,7 +251,7 @@ export function initMoments(opts = {}) {
     const kind = c.ending ? 'ending' : m.kind;
     const live = !c.ending && !!st.offer && st.offer.story === m && !st.offer.docked;
     rows.card.innerHTML =
-      `<div class="mmt" data-kind="${esc(kind)}" role="status" aria-live="polite">` +
+      `<div class="mmt" data-kind="${esc(kind)}" data-key="${esc(m.key || '')}" role="status" aria-live="polite">` +
         '<div class="mmt-strip">' +
           `<span class="mmt-badge">${esc(c.ending ? 'Ended' : (m.badge || 'Live'))}</span>` +
           '<div class="mmt-text">' +

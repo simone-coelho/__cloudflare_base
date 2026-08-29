@@ -212,9 +212,9 @@ export const BEATS = [
     perform: [{ sel: '#btn-pinmerch' }],
     why: 'The governance answer: nothing is ever permanently pinned, and anything can be pinned at any position — the engine ranks around the pins. Choreographed slowly, and labelled so.',
     do: 'Press Next — the banner pins at #3 and the page re-ranks around it, one slot at a time. Say the label out loud: slowed for the room.',
-    watch: 'The merch strip travels to position 3 and everything else re-ranks around it, one section at a time; the strip names the tenant-config rule. The “slowed for the room” label is on screen.',
+    watch: 'The merch strip travels to position 3 and everything else re-ranks around it, one section at a time; the strip names the tenant-config rule. Say the “slowed for the room” line yourself as it moves — the glass carries the badges, not a banner.',
     say: 'Your merchandiser wanted the banner third — contract says the banner is theirs, so it goes third, and the engine ranks around it. Nothing here is ever permanently pinned, and anything can be pinned at any position. In production this re-ranking is one frame; we slowed it so you could watch it think.',
-    real: 'pin + rank-around LIVE · movement slowed for the room, labelled' },
+    real: 'pin + rank-around LIVE · movement slowed for the room — say so' },
 
   { n: 24, act: 2, cap: 'C33', title: 'An offer that cannot be extended', secs: 45,
     why: 'The anti-urgency-theatre argument. One beat, because the payoff is at expiry in beat 27.',
