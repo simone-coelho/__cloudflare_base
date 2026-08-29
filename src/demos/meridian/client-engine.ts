@@ -24,3 +24,4 @@ export {
 } from '@/reflex/core';
 export { packshot, silhouetteFor } from './silhouettes';
 export type { MeridianItem, MeridianBlock, MeridianSlot, MeridianDecision } from './types';
+export { composeContent } from './contentCompose';

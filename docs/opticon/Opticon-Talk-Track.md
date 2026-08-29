@@ -10,12 +10,12 @@ Print this. The director bar on screen shows the room the beat and what to watch
 |---|---|---|---|
 | 0 | The frame | 4:00 | 4:00 |
 | 1 | The Arrival | 6:00 | 6:00 |
-| 2 | The Handoff & The Session | 15:00 | 15:00 |
+| 2 | The Handoff & The Session | 20:00 | 20:00 |
 | 3 | The Operator | 8:00 | 8:00 |
 | 4 | The Business | 4:00 | 4:00 |
 | 5 | The Moment | 3:00 | 3:00 |
 | 6 | Questions | 5:00 | 5:00 |
-| | **Total** | **45:00** | |
+| | **Total** | **50:00** | |
 
 ---
 
@@ -168,9 +168,9 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-## Act 2 — The Handoff & The Session · 15 min
+## Act 2 — The Handoff & The Session · 20 min
 
-*The engine, and the flip.*
+*The engine, the content lane, and the flip.*
 
 ### 11. The handoff
 
@@ -301,7 +301,65 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 20. An offer that cannot be extended
+### 20. Content is a catalogue too
+
+**1:15** · C36 · content catalogue REPRESENTATIVE (your CMS in production) · scoring LIVE · the payload REAL
+> ### ⏸ THE TAPESTRY THESIS
+
+**You do —** Point at the three chipped slots — the merch strip, the content hero, the carousel — then open the receipts and show the content push.
+
+**They watch —** Every content slot carries its chip and its why. In the receipts: the literal payload — contentId, customerContentId, type, slot, order, score, explain. One push per page.
+
+**You say —** Everything you have watched the engine do to products, it is doing to content — same arithmetic, second catalogue. These are your pieces, with your CMS ids, scored by the same affinities and delivered as decisions by ID: we push the id, the slot, the score and the why; your front end paints. That is the whole integration. And the merch strip has not moved all session — it is non-personalizable by your config, and the engine ranks around it.
+
+*Why 1:15:* The differentiator: everyone recommends products; almost nobody runs the same engine over content. The wire on screen is the contract a customer’s front end paints from.
+
+---
+
+### 21. Content follows her, with the map
+
+**1:15** · C36 · scoring LIVE · schematic computed from the same forecast
+
+**You do —** Press Next. Read the band: the page-now and page-after schematics, the destinations badged on the page behind it. Then OK.
+
+**They watch —** The band shows “your page now → after” as coloured slot maps; ghost badges on the page say where each slot will go. On OK the carousel re-ranks to knitwear content and the content hero picks up the Fenwick guide.
+
+**You say —** Before anything moves, the engine tells you the plan — this block here, that block there, and why: the scores, against the thresholds. Then it does exactly that. Content recommendations with the same receipts as products. Nobody wrote a rule; she touched a sweater.
+
+*Why 1:15:* The schematic pre-card: the room sees the page-plan before it happens, then watches it come true — the Tapestry design document, live.
+
+---
+
+### 22. The complement — content completing a product
+
+**1:15** · C36 · scoring LIVE · journey stage LIVE
+
+**You do —** Press Next — she adds the sweater to the bag; watch the content answer the decision.
+
+**They watch —** Journey stage flips to deciding; the content hero becomes the styling guide that completes the piece; the carousel keeps her lines.
+
+**You say —** She committed, and the content changed jobs: from inspiring her to helping her finish — what to wear it with, how to care for it. Same engine, reading the stage of her journey, choosing content the way it chooses complements. That is content personalization as Tapestry means it.
+
+*Why 1:15:* Content that answers what she is DOING, not just what she likes: a styling guide injected because she committed to a piece.
+
+---
+
+### 23. Pin it anywhere
+
+**1:15** · C36 · pin + rank-around LIVE · movement slowed for the room, labelled
+> ### ⏸ THE CONTRACT LINE
+
+**You do —** Press Next — the banner pins at #3 and the page re-ranks around it, one slot at a time. Say the label out loud: slowed for the room.
+
+**They watch —** The merch strip travels to position 3 and everything else re-ranks around it, one section at a time; the strip names the tenant-config rule. The “slowed for the room” label is on screen.
+
+**You say —** Your merchandiser wanted the banner third — contract says the banner is theirs, so it goes third, and the engine ranks around it. Nothing here is ever permanently pinned, and anything can be pinned at any position. In production this re-ranking is one frame; we slowed it so you could watch it think.
+
+*Why 1:15:* The governance answer: nothing is ever permanently pinned, and anything can be pinned at any position — the engine ranks around the pins. Choreographed slowly, and labelled so.
+
+---
+
+### 24. An offer that cannot be extended
 
 **0:45** · C33 · LIVE
 
@@ -315,7 +373,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 21. Your merchandiser outranks it
+### 25. Your merchandiser outranks it
 
 **0:45** · C11 · C19 · LIVE
 
@@ -329,7 +387,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 22. The refusal
+### 26. The refusal
 
 **1:00** · C20 · LIVE
 > ### ⏸ SLOW DOWN
@@ -346,7 +404,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 23. Watch her leave
+### 27. Watch her leave
 
 **1:55** · C10 · C33 · LIVE
 > ### ⏸ THE BEAT NOBODY ELSE HAS
@@ -361,7 +419,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 24. She came back
+### 28. She came back
 
 **0:50** · C12 · edge memory LIVE · ODP wired-dormant
 
@@ -377,7 +435,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 25. I changed what we sell
+### 29. I changed what we sell
 
 **1:35** · C34 · LIVE
 > ### ⏸ THE STRONGEST LINE
@@ -398,7 +456,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *Opal and experimentation.*
 
-### 26. Opal proposes
+### 30. Opal proposes
 
 **1:10** · C21 · LIVE (US-only)
 
@@ -412,7 +470,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 27. A person decides
+### 31. A person decides
 
 **0:50** · C21 · GATED — enabled
 
@@ -426,7 +484,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 28. It cannot invent a scene
+### 32. It cannot invent a scene
 
 **1:15** · C22 · LIVE
 
@@ -440,7 +498,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 29. A stylist that cannot oversell
+### 33. A stylist that cannot oversell
 
 **1:15** · C23 · LIVE
 
@@ -454,7 +512,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 30. The product is real, the scene is styling
+### 34. The product is real, the scene is styling
 
 **0:45** · C24 · LIVE
 
@@ -468,7 +526,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 31. A real experiment, thirty seconds ago
+### 35. A real experiment, thirty seconds ago
 
 **1:20** · C25 · LIVE
 
@@ -482,7 +540,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 32. Bandits — real rules, honest readouts
+### 36. Bandits — real rules, honest readouts
 
 **1:25** · C26 · C27 · rules REAL · readouts REPRESENTATIVE
 
@@ -500,7 +558,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *Revenue Radar.*
 
-### 33. The average lied
+### 37. The average lied
 
 **1:50** · C28 · compute LIVE · traffic SIMULATED
 > ### ⏸ THE BIGGEST WOW — SLOW RIGHT DOWN
@@ -515,7 +573,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 34. Launch the fix — and prove it in the room
+### 38. Launch the fix — and prove it in the room
 
 **1:20** · C29 · audience/flag LIVE · recovery REPRESENTATIVE · in-session fix LIVE
 
@@ -529,7 +587,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 35. We hand you the rows
+### 39. We hand you the rows
 
 **0:50** · C30 · LIVE
 
@@ -547,7 +605,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 *Signal to live creative.*
 
-### 36. A signal we did not generate
+### 40. A signal we did not generate
 
 **0:35** · C31 · SIMULATED, labelled
 
@@ -561,7 +619,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 37. Opal writes the moment
+### 41. Opal writes the moment
 
 **0:45** · C31 · LIVE
 
@@ -575,7 +633,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 38. It ships as a real bandit — and the loop closes
+### 42. It ships as a real bandit — and the loop closes
 
 **0:50** · C31 · C12 · C13 · rule REAL · copy REAL · allocation REPRESENTATIVE · signal SIMULATED
 
@@ -589,7 +647,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ---
 
-### 39. What I did not show you
+### 43. What I did not show you
 
 **0:50** · — · —
 
@@ -611,13 +669,15 @@ If you are running short, these are the ones that do not get compressed.
 - **11. The handoff** — STOP *(1:50)*
 - **13. The control** — DO NOT SKIP *(0:45)*
 - **15. It waited until it was sure** — SLOW DOWN *(0:55)*
-- **22. The refusal** — SLOW DOWN *(1:00)*
-- **23. Watch her leave** — THE BEAT NOBODY ELSE HAS *(1:55)*
-- **25. I changed what we sell** — THE STRONGEST LINE *(1:35)*
-- **33. The average lied** — THE BIGGEST WOW — SLOW RIGHT DOWN *(1:50)*
+- **20. Content is a catalogue too** — THE TAPESTRY THESIS *(1:15)*
+- **23. Pin it anywhere** — THE CONTRACT LINE *(1:15)*
+- **26. The refusal** — SLOW DOWN *(1:00)*
+- **27. Watch her leave** — THE BEAT NOBODY ELSE HAS *(1:55)*
+- **29. I changed what we sell** — THE STRONGEST LINE *(1:35)*
+- **37. The average lied** — THE BIGGEST WOW — SLOW RIGHT DOWN *(1:50)*
 
 ## Every caution
 
-- **Beat 22, The refusal:** RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.
-- **Beat 24, She came back:** DO NOT say "ODP is the memory". ODP is deliberately not connected on this surface. If asked: connect ODP and this becomes durable across devices and shareable with the rest of your stack — that is a credential, not a code change.
-- **Beat 25, I changed what we sell:** The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.
+- **Beat 26, The refusal:** RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.
+- **Beat 28, She came back:** DO NOT say "ODP is the memory". ODP is deliberately not connected on this surface. If asked: connect ODP and this becomes durable across devices and shareable with the rest of your stack — that is a credential, not a code change.
+- **Beat 29, I changed what we sell:** The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.

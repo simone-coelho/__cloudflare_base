@@ -271,3 +271,33 @@ describe('layout receipts', () => {
     expect(bound[0]!.args.length).toBe(MRD_DECISION_COLUMNS.length);
   });
 });
+
+// ── PIN AT ANY POSITION — the contract requirement (2026-08-29) ──────────────
+import { composeLayout as composeLayout2, SECTIONS as SECTIONS2 } from './layout';
+describe('pin at any position', () => {
+  const base = () => ({
+    affinity: { dims: {}, audiences: [] as string[] },
+    config: cfg, shapeOfKey: SHAPE_OF_KEY,
+    extraSections: [{ id: 'merch', kind: 'merch' as const, answers: { content: 1 }, lead: 'content' }],
+  });
+  it('a pinned section sits exactly at its position and the engine ranks around it', () => {
+    const r = composeLayout2({ ...base(), pinnedAt: { merch: 3 } } as any);
+    expect(r.order[2]).toBe('merch');
+    expect(r.sections.find((s) => s.section === 'merch')!.strategy).toBe('pinned');
+    expect(r.sections.find((s) => s.section === 'merch')!.explain.movedBecause).toMatch(/pinned at #3/);
+    // everyone else keeps their relative order
+    const others = r.order.filter((id) => id !== 'merch');
+    const plain = composeLayout2(base() as any).order.filter((id) => id !== 'merch');
+    expect(others).toEqual(plain);
+  });
+  it('nothing is permanently pinned: without pinnedAt the section ranks by the walk', () => {
+    const r = composeLayout2(base() as any);
+    expect(r.sections.find((s) => s.section === 'merch')!.strategy).not.toBe('pinned');
+  });
+  it('ranks are contiguous after a pin', () => {
+    const r = composeLayout2({ ...base(), pinnedAt: { merch: 1 } } as any);
+    expect(r.sections.map((s) => s.rank)).toEqual(r.sections.map((_, i) => i));
+    expect(r.order[0]).toBe('merch');
+  });
+});
+

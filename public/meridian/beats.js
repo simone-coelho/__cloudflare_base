@@ -27,7 +27,7 @@
 export const ACTS = [
   { n: 0, name: 'The frame', mins: 4, note: 'Slides. No product on screen yet.' },
   { n: 1, name: 'The Arrival', mins: 6, note: 'The ecosystem. Keep it moving — it sets up Act 2, it is not the point.' },
-  { n: 2, name: 'The Handoff & The Session', mins: 15, note: 'The engine, and the flip.' },
+  { n: 2, name: 'The Handoff & The Session', mins: 20, note: 'The engine, the content lane, and the flip.' },
   { n: 3, name: 'The Operator', mins: 8, note: 'Opal and experimentation.' },
   { n: 4, name: 'The Business', mins: 4, note: 'Revenue Radar.' },
   { n: 5, name: 'The Moment', mins: 3, note: 'Signal to live creative.' },
@@ -184,14 +184,46 @@ export const BEATS = [
     say: 'She stopped browsing and started deciding. That is an eighth dimension, and it is the only one not read off a product — it is read off what she did. So the page stops offering her more coats and starts completing the one she chose. It gained a section, not just different contents.',
     real: 'LIVE' },
 
-  { n: 20, act: 2, cap: 'C33', title: 'An offer that cannot be extended', secs: 45,
+  { n: 20, act: 2, cap: 'C36', title: 'Content is a catalogue too', secs: 75, mark: 'THE TAPESTRY THESIS',
+    perform: [{ sel: '#btn-receipts' }],
+    why: 'The differentiator: everyone recommends products; almost nobody runs the same engine over content. The wire on screen is the contract a customer’s front end paints from.',
+    do: 'Point at the three chipped slots — the merch strip, the content hero, the carousel — then open the receipts and show the content push.',
+    watch: 'Every content slot carries its chip and its why. In the receipts: the literal payload — contentId, customerContentId, type, slot, order, score, explain. One push per page.',
+    say: 'Everything you have watched the engine do to products, it is doing to content — same arithmetic, second catalogue. These are your pieces, with your CMS ids, scored by the same affinities and delivered as decisions by ID: we push the id, the slot, the score and the why; your front end paints. That is the whole integration. And the merch strip has not moved all session — it is non-personalizable by your config, and the engine ranks around it.',
+    real: 'content catalogue REPRESENTATIVE (your CMS in production) · scoring LIVE · the payload REAL' },
+
+  { n: 21, act: 2, cap: 'C36', title: 'Content follows her, with the map', secs: 75,
+    perform: [{ line: { name: 'Fenwick', n: 0 } }],
+    why: 'The schematic pre-card: the room sees the page-plan before it happens, then watches it come true — the Tapestry design document, live.',
+    do: 'Press Next. Read the band: the page-now and page-after schematics, the destinations badged on the page behind it. Then OK.',
+    watch: 'The band shows “your page now → after” as coloured slot maps; ghost badges on the page say where each slot will go. On OK the carousel re-ranks to knitwear content and the content hero picks up the Fenwick guide.',
+    say: 'Before anything moves, the engine tells you the plan — this block here, that block there, and why: the scores, against the thresholds. Then it does exactly that. Content recommendations with the same receipts as products. Nobody wrote a rule; she touched a sweater.',
+    real: 'scoring LIVE · schematic computed from the same forecast' },
+
+  { n: 22, act: 2, cap: 'C36', title: 'The complement — content completing a product', secs: 75,
+    perform: [{ predict: { sel: '#bz-decide' } }],
+    why: 'Content that answers what she is DOING, not just what she likes: a styling guide injected because she committed to a piece.',
+    do: 'Press Next — she adds the sweater to the bag; watch the content answer the decision.',
+    watch: 'Journey stage flips to deciding; the content hero becomes the styling guide that completes the piece; the carousel keeps her lines.',
+    say: 'She committed, and the content changed jobs: from inspiring her to helping her finish — what to wear it with, how to care for it. Same engine, reading the stage of her journey, choosing content the way it chooses complements. That is content personalization as Tapestry means it.',
+    real: 'scoring LIVE · journey stage LIVE' },
+
+  { n: 23, act: 2, cap: 'C36', title: 'Pin it anywhere', secs: 75, mark: 'THE CONTRACT LINE',
+    perform: [{ sel: '#btn-pinmerch' }],
+    why: 'The governance answer: nothing is ever permanently pinned, and anything can be pinned at any position — the engine ranks around the pins. Choreographed slowly, and labelled so.',
+    do: 'Press Next — the banner pins at #3 and the page re-ranks around it, one slot at a time. Say the label out loud: slowed for the room.',
+    watch: 'The merch strip travels to position 3 and everything else re-ranks around it, one section at a time; the strip names the tenant-config rule. The “slowed for the room” label is on screen.',
+    say: 'Your merchandiser wanted the banner third — contract says the banner is theirs, so it goes third, and the engine ranks around it. Nothing here is ever permanently pinned, and anything can be pinned at any position. In production this re-ranking is one frame; we slowed it so you could watch it think.',
+    real: 'pin + rank-around LIVE · movement slowed for the room, labelled' },
+
+  { n: 24, act: 2, cap: 'C33', title: 'An offer that cannot be extended', secs: 45,
     why: 'The anti-urgency-theatre argument. One beat, because the payoff is at expiry in beat 21.',
     do: 'Point at the offer band.',
     watch: 'A white-glove offer with a countdown — and it climbed to the TOP of the page the moment she decided. Service, not a discount.',
     say: 'That clock is not a marketing timer. It runs to the instant the engine calculates her intent crosses back under its threshold — so it cannot be extended, and when it ends it will tell you the number that ended it.',
     real: 'LIVE' },
 
-  { n: 21, act: 2, cap: 'C11 · C19', title: 'Your merchandiser outranks it', secs: 45,
+  { n: 25, act: 2, cap: 'C11 · C19', title: 'Your merchandiser outranks it', secs: 45,
     perform: [{ tab: 'affinity' }, { sel: '#btn-pin' }],
     why: 'Two governance points that answer the same objection; taking them together keeps the pace up.',
     do: 'Open the audience list, then pin the hero — and RELEASE the pin before moving on.',
@@ -199,7 +231,7 @@ export const BEATS = [
     say: 'Nobody wrote these audiences. They are minted from your catalogue, in your merchandising language. And declared precedence — gates, then pins, then ranking. Your merchandiser outranks the machine, and the machine says so on the record.',
     real: 'LIVE' },
 
-  { n: 22, act: 2, cap: 'C20', title: 'The refusal', secs: 60, mark: 'SLOW DOWN',
+  { n: 26, act: 2, cap: 'C20', title: 'The refusal', secs: 60, mark: 'SLOW DOWN',
     perform: [{ sel: '#btn-pin' }, { sel: '#btn-soldout' }, { tab: 'glass' }],
     caution: 'RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.',
     why: 'The most persuasive thing the engine does. It is also the least expected, so it needs setup and silence.',
@@ -208,7 +240,7 @@ export const BEATS = [
     say: 'That is the engine declining a click it would have won. It scored highest, a rule said no, and it kept the score so you can see what it gave up. Showing you the refusal is worth more than showing you the win.',
     real: 'LIVE' },
 
-  { n: 23, act: 2, cap: 'C10 · C33', title: 'Watch her leave', secs: 115, mark: 'THE BEAT NOBODY ELSE HAS',
+  { n: 27, act: 2, cap: 'C10 · C33', title: 'Watch her leave', secs: 115, mark: 'THE BEAT NOBODY ELSE HAS',
     perform: [{ sel: '#btn-skip' }],
     why: 'Two presses of two minutes each and the three retreats have landed, in order, with their numbers. Nothing happens while you wait any more — time passes when you say so.',
     do: 'Press "Let two minutes pass". The retreats land one after another; talk over them. Press it again for the rest.',
@@ -216,7 +248,7 @@ export const BEATS = [
     say: 'Now watch it forget — in order. The aisle she wandered through goes first; the price band holds longer; taste holds longest, because we made their clocks different on purpose. Each exit names its number. Nobody wrote a rule to remove her from anything — the same arithmetic that let her in is letting her out.',
     real: 'LIVE' },
 
-  { n: 24, act: 2, cap: 'C12', title: 'She came back', secs: 50,
+  { n: 28, act: 2, cap: 'C12', title: 'She came back', secs: 50,
     why: 'Short and factual. The danger here is overclaiming, so keep it tight.',
     arm: { returnVisit: true },
     do: 'Come back later — same visitor, new session.',
@@ -225,7 +257,7 @@ export const BEATS = [
     caution: 'DO NOT say "ODP is the memory". ODP is deliberately not connected on this surface. If asked: connect ODP and this becomes durable across devices and shareable with the rest of your stack — that is a credential, not a code change.',
     real: 'edge memory LIVE · ODP wired-dormant' },
 
-  { n: 25, act: 2, cap: 'C34', title: 'I changed what we sell', secs: 95, mark: 'THE STRONGEST LINE',
+  { n: 29, act: 2, cap: 'C34', title: 'I changed what we sell', secs: 95, mark: 'THE STRONGEST LINE',
     caution: 'The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.',
     why: 'The act’s payoff. It needs the silence after it more than it needs the words in it.',
     arm: { vertical: 'financial' },
@@ -235,7 +267,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   // ── ACT 3 · the operator · 480s ────────────────────────────────────────────
-  { n: 26, act: 3, cap: 'C21', title: 'Opal proposes', secs: 70,
+  { n: 30, act: 3, cap: 'C21', title: 'Opal proposes', secs: 70,
     perform: [{ sel: '#btn-opal' }],
     why: 'The room needs to read the generated rule, not just watch it appear.',
     arm: { vertical: 'retail' },
@@ -244,14 +276,14 @@ export const BEATS = [
     say: 'A real model call against your own vocabulary. It cannot invent a dimension — the schema is built from the live registry, so an invented one is rejected before it reaches our code. And it proposed. It did not publish.',
     real: 'LIVE (US-only)' },
 
-  { n: 27, act: 3, cap: 'C21', title: 'A person decides', secs: 50,
+  { n: 31, act: 3, cap: 'C21', title: 'A person decides', secs: 50,
     why: 'The governance beat. Short, deliberate, and it answers the AI-safety question in the room.',
     do: 'Click Publish.',
     watch: 'It goes live. The page can target it.',
     say: 'That is the governance beat. The machine proposes, a person decides, and both are on the record with a name and a timestamp.',
     real: 'GATED — enabled' },
 
-  { n: 28, act: 3, cap: 'C22', title: 'It cannot invent a scene', secs: 75,
+  { n: 32, act: 3, cap: 'C22', title: 'It cannot invent a scene', secs: 75,
     perform: [{ sel: '#btn-ask' }],
     why: 'The anti-hallucination argument, made structurally rather than promised.',
     do: 'Type a request in words.',
@@ -259,7 +291,7 @@ export const BEATS = [
     say: 'The model’s only job is routing that sentence to one of eight approved scenes. It cannot invent one, because the schema is an enum. And it does not pick the products — the deterministic engine still ranks those.',
     real: 'LIVE' },
 
-  { n: 29, act: 3, cap: 'C23', title: 'A stylist that cannot oversell', secs: 75,
+  { n: 33, act: 3, cap: 'C23', title: 'A stylist that cannot oversell', secs: 75,
     perform: [{ sel: '#btn-conc' }],
     why: 'The second turn is the point. Budget enough for both turns and the refusal.',
     do: 'Ask for a look. Then correct it. Then ask for something we do not sell.',
@@ -267,14 +299,14 @@ export const BEATS = [
     say: 'Every id it can return is bound to your live catalogue, minus everything it has already shown — so repeating itself is not something it is asked to avoid, it is something it cannot represent. And when you ask for something you do not carry, it says so instead of substituting quietly.',
     real: 'LIVE' },
 
-  { n: 30, act: 3, cap: 'C24', title: 'The product is real, the scene is styling', secs: 45,
+  { n: 34, act: 3, cap: 'C24', title: 'The product is real, the scene is styling', secs: 45,
     why: 'A caption beat. It exists to pre-empt "is that image real", so it must be unhurried and plain.',
     do: 'Point at the editorial hero.',
     watch: 'The product is the real product. The scene is an approved still.',
     say: 'The bag is your real product. The scene around it is styling, it is composed onto an approved still rather than generated, and the caption on screen says so.',
     real: 'LIVE' },
 
-  { n: 31, act: 3, cap: 'C25', title: 'A real experiment, thirty seconds ago', secs: 80,
+  { n: 35, act: 3, cap: 'C25', title: 'A real experiment, thirty seconds ago', secs: 80,
     perform: [{ sel: '#btn-ab' }],
     why: 'Includes opening the Optimizely console. Allow for the tab switch and the page load.',
     do: 'Dispatch. Then open Optimizely and show it.',
@@ -282,7 +314,7 @@ export const BEATS = [
     say: 'Created in the real project, thirty seconds ago. Not a mock, not a screenshot — that is your console.',
     real: 'LIVE' },
 
-  { n: 32, act: 3, cap: 'C26 · C27', title: 'Bandits — real rules, honest readouts', secs: 85,
+  { n: 36, act: 3, cap: 'C26 · C27', title: 'Bandits — real rules, honest readouts', secs: 85,
     perform: [{ sel: '#btn-mab' }, { wait: 6000 }, { sel: '#btn-cmab' }],
     why: 'The card shows Opal doing it and says on every line what is real and what is representative. That honesty is the credibility beat.',
     do: 'Create the MAB, then the CMAB. Point at the badge, the ids, and the word REPRESENTATIVE.',
@@ -291,7 +323,7 @@ export const BEATS = [
     real: 'rules REAL · readouts REPRESENTATIVE' },
 
   // ── ACT 4 · the business · 240s ────────────────────────────────────────────
-  { n: 33, act: 4, cap: 'C28', title: 'The average lied', secs: 110, mark: 'THE BIGGEST WOW — SLOW RIGHT DOWN',
+  { n: 37, act: 4, cap: 'C28', title: 'The average lied', secs: 110, mark: 'THE BIGGEST WOW — SLOW RIGHT DOWN',
     perform: [{ sel: '#btn-radar' }, { wait: 2500 }, { sel: '#rad-c-gen_z' }],
     why: 'One filter and an arithmetic reveal. The blended number has to be seen looking ordinary first, or the collapse reads as staged.',
     do: 'Open Revenue Radar on everyone. Then filter to Gen-Z.',
@@ -299,7 +331,7 @@ export const BEATS = [
     say: 'Across all customers this checkout looked fine — that is the number in your weekly report. Segment to Gen-Z and it collapses forty-four percent at the payment step. About seven and a half thousand dollars walking out the door, computed from the rows, not typed in.',
     real: 'compute LIVE · traffic SIMULATED' },
 
-  { n: 34, act: 4, cap: 'C29', title: 'Launch the fix — and prove it in the room', secs: 80,
+  { n: 38, act: 4, cap: 'C29', title: 'Launch the fix — and prove it in the room', secs: 80,
     perform: [{ sel: '#rad-launch' }, { wait: 6000 }, { sel: '#rad-prove' }],
     why: 'The recoverable arithmetic is shown term by term, a real object is created, the funnel recovers, and the payment step changes for that shopper. All four need to be seen.',
     do: 'Launch the fix. Watch the funnel recover. Then open the checkout.',
@@ -307,7 +339,7 @@ export const BEATS = [
     say: 'It found the leak, built the fix, launched a real experiment targeted at a real audience — and proved the recovery, in the room. And here is that shopper’s payment step, right now: installments and social proof, served by that experiment. Not a report you read next quarter.',
     real: 'audience/flag LIVE · recovery REPRESENTATIVE · in-session fix LIVE' },
 
-  { n: 35, act: 4, cap: 'C30', title: 'We hand you the rows', secs: 50,
+  { n: 39, act: 4, cap: 'C30', title: 'We hand you the rows', secs: 50,
     perform: [{ sel: '#btn-receipts' }],
     why: 'The closing credibility move of the act. Plain, short, and unhedged.',
     do: 'Export.',
@@ -316,14 +348,14 @@ export const BEATS = [
     real: 'LIVE' },
 
   // ── ACT 5 · the moment · 180s ──────────────────────────────────────────────
-  { n: 36, act: 5, cap: 'C31', title: 'A signal we did not generate', secs: 35,
+  { n: 40, act: 5, cap: 'C31', title: 'A signal we did not generate', secs: 35,
     why: 'The honesty label goes first, before the impressive part, or it reads as an excuse afterwards.',
     do: 'Point at the detection chip.',
     watch: 'SIMULATED · partner social-listening layer, not Optimizely.',
     say: 'This part is simulated and it is labelled, because we do not ship social listening. Everything after it is ours.',
     real: 'SIMULATED, labelled' },
 
-  { n: 37, act: 5, cap: 'C31', title: 'Opal writes the moment', secs: 45,
+  { n: 41, act: 5, cap: 'C31', title: 'Opal writes the moment', secs: 45,
     perform: [{ sel: '#btn-moment' }],
     why: 'The elapsed counter is the point. Talk across it rather than watching it.',
     do: 'Trigger the moment.',
@@ -331,7 +363,7 @@ export const BEATS = [
     say: 'Reading the signal, writing the moment. Talk across this — it takes about eight seconds and I want you watching the clock, not me.',
     real: 'LIVE' },
 
-  { n: 38, act: 5, cap: 'C31 · C12 · C13', title: 'It ships as a real bandit — and the loop closes', secs: 50,
+  { n: 42, act: 5, cap: 'C31 · C12 · C13', title: 'It ships as a real bandit — and the loop closes', secs: 50,
     perform: [{ sel: '#btn-skip' }, { wait: 1200 }, { sel: '#btn-skip' }, { wait: 1200 }, { sel: '#btn-skip' }],
     why: 'The loop closing is the payoff. The bandit moves only as demo time moves, so the room sees each round land on a press.',
     do: 'Press Next: six minutes pass in three consented steps. Read the card as the traffic shifts.',
@@ -339,7 +371,7 @@ export const BEATS = [
     say: 'That rule is real — open Optimizely and it is there. The traffic is not: nobody in this room is buying, so the allocation you are watching is representative and it says so. Signal to a live, optimizing experience inside the window — before the moment cooled. Today a human still presses Launch; autonomy is roadmap.',
     real: 'rule REAL · copy REAL · allocation REPRESENTATIVE · signal SIMULATED' },
 
-  { n: 39, act: 5, cap: '—', title: 'What I did not show you', secs: 50,
+  { n: 43, act: 5, cap: '—', title: 'What I did not show you', secs: 50,
     why: 'Closing on the limits is what makes everything before it credible. Do not skip it to save time.',
     do: 'Nothing.',
     watch: '—',

@@ -428,7 +428,7 @@ var SLOT_STRATEGIES = {
   // Each slot's HIGHEST-weighted shape is its lead, and the lead is what decides
   // whether the slot may still claim the visitor as its reason. Leads are chosen
   // so that the three surfaces sit on three different decay constants — narrow
-  // (60s), broad (90s), need (120s) — which is what turns one stretch of
+  // (120s), broad (180s), need (240s) — which is what turns one stretch of
   // inactivity into three separate, nameable retreats instead of one collapse.
   //
   // The hero commits. It leans on the slow axes so it does not flap.
@@ -806,7 +806,7 @@ function composeLayout(input) {
   const { config } = input;
   const coldStart = Object.keys(input.affinity.dims).length === 0;
   const lockedIds = new Set(input.locked ?? []);
-  const isSection = (id) => SECTIONS.some((s) => s.id === id);
+  const isSection = (id) => SECTIONS.some((s) => s.id === id) || !!input.extraSections?.some((s) => s.id === id);
   const external = [...lockedIds].filter((id) => !isSection(id));
   const offset = external.length;
   const prevRaw = input.prevOrder ?? [];
@@ -831,7 +831,8 @@ function composeLayout(input) {
     items: [],
     blocks: []
   };
-  const scored = SECTIONS.map((spec, i) => scoreSection(
+  const grammar = input.extraSections?.length ? [...SECTIONS, ...input.extraSections] : SECTIONS;
+  const scored = grammar.map((spec, i) => scoreSection(
     spec,
     i,
     !!spec.locked || lockedIds.has(spec.id),
@@ -939,6 +940,24 @@ function composeLayout(input) {
       }
     });
   });
+  const pins = Object.entries(input.pinnedAt ?? {}).filter(([id]) => sections.some((x) => x.section === id)).sort((a, b) => a[1] - b[1]);
+  if (pins.length) {
+    const pinnedIds = new Set(pins.map(([id]) => id));
+    const rest = sections.filter((x) => !pinnedIds.has(x.section));
+    for (const [id, pos] of pins) {
+      const sec = sections.find((x) => x.section === id);
+      const at = Math.max(0, Math.min(rest.length, offset + (pos - 1)));
+      rest.splice(at, 0, {
+        ...sec,
+        strategy: "pinned",
+        explain: { ...sec.explain, movedBecause: `pinned at #${pos} by the merchandiser \u2014 tenant config; the engine ranks around it` }
+      });
+    }
+    rest.forEach((x, i) => {
+      x.rank = i;
+    });
+    return { order: rest.map((x) => x.section), sections: rest };
+  }
   return { order: sections.map((s) => s.section), sections };
 }
 
@@ -990,6 +1009,68 @@ function packshot(item, opts = {}) {
 function esc(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
+
+// src/demos/meridian/contentCompose.ts
+function composeContent(pieces, affinity, slots) {
+  const live = pieces.filter((p) => (p.lifecycle?.status ?? "live") === "live");
+  const used = /* @__PURE__ */ new Set();
+  const out = [];
+  let order = 0;
+  for (const slot of slots) {
+    if (slot.pinnedPieceId) {
+      const p = live.find((x) => x.id === slot.pinnedPieceId);
+      if (p) {
+        used.add(p.id);
+        out.push({
+          contentId: p.id,
+          customerContentId: p.customerContentId,
+          type: p.type,
+          slot: slot.slot,
+          order: order++,
+          score: 0,
+          strategy: "tenant-pinned",
+          explain: { drivers: [], note: "non-personalizable slot \u2014 tenant config; ranking never ran" }
+        });
+      }
+      continue;
+    }
+    const eligible = live.filter((p) => p.slotTypes.includes(slot.slot) && !used.has(p.id));
+    const scored = eligible.map((p) => {
+      const drivers = [];
+      let score = 0;
+      for (const [dim2, values] of Object.entries(p.tags)) {
+        const w = slot.weights[dim2] ?? 0;
+        if (!w) continue;
+        for (const v of values) {
+          const a = affinity.dims[dim2]?.[v] ?? 0;
+          if (a <= 0) continue;
+          score += a * w;
+          drivers.push({ dim: dim2, value: v, a, weight: w });
+        }
+      }
+      drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
+      return { p, score, drivers };
+    }).sort((x, y) => y.score - x.score || x.p.id.localeCompare(y.p.id));
+    let taken = 0;
+    for (const s of scored) {
+      if (taken >= slot.take) break;
+      const cold = s.score <= 0;
+      used.add(s.p.id);
+      out.push({
+        contentId: s.p.id,
+        customerContentId: s.p.customerContentId,
+        type: s.p.type,
+        slot: slot.slot,
+        order: order++,
+        score: Math.round(s.score * 1e3) / 1e3,
+        strategy: cold ? "default" : "affinity",
+        explain: { drivers: s.drivers.slice(0, 4), ...cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {} }
+      });
+      taken += 1;
+    }
+  }
+  return out;
+}
 export {
   DEMO_TAUS,
   LEAD_BY,
@@ -1004,6 +1085,7 @@ export {
   apply,
   audienceKey,
   compose,
+  composeContent,
   composeLayout,
   configFor,
   decidingValueFor,

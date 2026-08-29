@@ -66,6 +66,13 @@
         <div class="strip order" id="ostrip" hidden><span class="strip-k">Page rearranged</span><span id="ostrip-t"></span></div>
       </div>
 
+      <!-- CONTENT IS A CATALOGUE TOO — compact slots with permanent identity chips.
+           merch: non-personalizable by tenant config, PINNABLE AT ANY POSITION. -->
+      <section class="cslot merch" id="merch" data-section="merch" hidden>
+        <span class="cchip">MERCH · PINNED</span>
+        <div class="merch-body" id="merch-body"></div>
+        <span class="cwhy" id="merch-why"></span>
+      </section>
       <section class="hero zone" id="hero" data-section="hero" data-label="PERSONALIZED · HERO">
         <div class="hero-copy">
           <div class="kicker" id="hero-kicker">Welcome</div>
@@ -74,6 +81,18 @@
           <button class="cta" id="hero-cta">See the collection</button>
         </div>
         <div class="hero-art" id="hero-art"></div>
+      </section>
+
+      <section class="cslot chero" id="chero" data-section="chero" hidden>
+        <span class="cchip">CONTENT HERO</span>
+        <div class="chero-art" id="chero-art"></div>
+        <div class="chero-copy"><div class="ctype" id="chero-type"></div><h3 id="chero-title"></h3><p id="chero-sub"></p></div>
+        <span class="cwhy" id="chero-why"></span>
+      </section>
+
+      <section class="cslot carousel" id="carousel" data-section="carousel" hidden>
+        <span class="cchip">CAROUSEL</span>
+        <div class="car-track" id="car-track"></div>
       </section>
 
       <section class="offer" id="offer" data-section="offer" hidden>
@@ -236,6 +255,7 @@
             <button id="btn-replay">Show what changed<small>vs the standard order</small></button>
             <button id="btn-pin">Pin the hero<small>merchandiser wins</small></button>
             <button id="btn-soldout">Sell out the top<small>make a rule refuse</small></button>
+            <button id="btn-pinmerch">Pin the banner at #3<small>rank around it</small></button>
           </div>
         </div>
         <div class="cgroup" data-g="exp"><span class="clabel">Experiments</span>
@@ -281,6 +301,7 @@
         <div class="xc-foot" id="xc-foot" hidden></div>
       </section>
 
+<div class="choreo-note" id="choreo-note" hidden>SLOWED FOR THE ROOM — in production this is one frame</div>
 <div class="tip" id="tip" hidden><b id="tip-does"></b><span id="tip-look"></span></div>
 <button type="button" class="pd-pill" id="pd-pill" hidden><span class="k">Predicted</span>Show the last declaration again</button>
 

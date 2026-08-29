@@ -181,7 +181,7 @@ export interface MeridianExplain {
  *   'stage'     — intent priority: the visitor is deciding, so this outranks all
  *   'locked'    — fixed in the grammar; never passed, never moved
  */
-export type SectionStrategy = 'template' | 'affinity' | 'stage' | 'locked';
+export type SectionStrategy = 'template' | 'affinity' | 'stage' | 'locked' | 'pinned';
 
 /** One region of the page, declared against dimension SHAPES so it serves both verticals. */
 export interface SectionSpec {

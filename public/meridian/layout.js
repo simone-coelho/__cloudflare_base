@@ -52,7 +52,7 @@ const companionsOf = (host, id) =>
  * @param {{ duration?: number, easing?: string, root?: Element }} [opts]
  * @returns {Array<{ section: string, from: number, to: number }>} the visible sections that changed rank
  */
-export function paintLayout(order, { duration = 700, easing = DEFAULT_EASING, root } = {}) {
+export function paintLayout(order, { duration = 700, easing = DEFAULT_EASING, root, stagger = 0 } = {}) {
   const host = root ?? document.querySelector('.page-inner');
   if (!host || !Array.isArray(order)) return [];
   const sections = [...host.querySelectorAll(SELECTOR)];
@@ -108,14 +108,18 @@ export function paintLayout(order, { duration = 700, easing = DEFAULT_EASING, ro
       // ...and release it two frames on: the first commits the inverted
       // transform, the second lets the transition see a change.
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        for (const el of flying) release(el, duration, easing);
+        // CHOREOGRAPHED when asked: one section at a time, top of the new order
+        // first, so the room can follow each move — with the "slowed for the
+        // room" honesty carried by the caller.
+        const ordered = stagger ? [...flying].sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top) : flying;
+        ordered.forEach((el, i) => release(el, duration, easing, stagger ? i * stagger : 0));
       }));
     }
   }
   return moves;
 }
 
-function release(el, duration, easing) {
+function release(el, duration, easing, delay = 0) {
   let timer;
   function cleanup() {
     clearTimeout(timer);
@@ -131,7 +135,7 @@ function release(el, duration, easing) {
   }
   el.addEventListener('transitionend', done);
   // A section hidden mid-flight fires no transitionend; never leave a stale transform behind.
-  timer = setTimeout(cleanup, duration + 150);
-  el.style.transition = `transform ${duration}ms ${easing}`;
+  timer = setTimeout(cleanup, duration + delay + 150);
+  el.style.transition = `transform ${duration}ms ${easing} ${delay}ms`;
   el.style.transform = '';
 }

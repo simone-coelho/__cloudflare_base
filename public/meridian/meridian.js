@@ -12,7 +12,7 @@ import { captureBaseline, openCompare, clearBaseline, captureInFlight } from '/m
 import { paintLayout } from '/meridian/layout.js';
 import { initMoments } from '/meridian/moments.js';
 import {
-  compose, composeLayout, SHAPE_OF_KEY, SHAPE_ORDER, SLOT_STRATEGIES, configFor, packshot,
+  compose, composeLayout, composeContent, SHAPE_OF_KEY, SHAPE_ORDER, SLOT_STRATEGIES, configFor, packshot,
   apply, tick, snapshot, emptyState, extractTouches,
   stageTouchFor, decidingValueFor, stageKeyFor, expiryOf, audienceKey,
   leadValue, leadSentence, LEAD_BY,
@@ -210,6 +210,100 @@ function clockPause() {
 }
 function clockReset() { clockPause(); CLOCK.base = S.clock; renderClockBar(); }
 
+// ── CONTENT IS A CATALOGUE TOO — the Tapestry lane (doc 18), on the page ────
+// Three compact slots with permanent identities join the section grammar when
+// a content catalogue is loaded: the merch banner (non-personalizable, tenant
+// config, PINNABLE AT ANY POSITION), the content hero, the carousel. The same
+// engine ranks the pieces; the wire — {contentId, customerContentId, type,
+// slot, order, score, explain} — is shown in the receipts, because the wire IS
+// the contract the customer's head end paints from.
+let PREV_CONTENT = [];
+const prevContentOf = () => PREV_CONTENT;
+const CONTENT_SECTIONS = [
+  { id: 'merch',    kind: 'merch',   answers: { content: 1 },               lead: 'content' },
+  { id: 'chero',    kind: 'content', answers: { content: 0.6, broad: 0.4 }, lead: 'content' },
+  { id: 'carousel', kind: 'content', answers: { content: 0.5, need: 0.5 },  lead: 'content' },
+];
+const SLOT_COLOURS = { hero: '#D6472F', offer: '#171A20', row: '#1E8A45', block_a: '#C08A12', merch: '#4E5F7A', chero: '#6236C9', carousel: '#0E7C74', takeover: '#171A20' };
+function contentSlots() {
+  const pinnedPiece = S.content.find((p) => p.slotTypes?.includes('merch'));
+  return [
+    { slot: 'merch', take: 1, weights: {}, pinnedPieceId: pinnedPiece?.id },
+    { slot: 'chero', take: 1, weights: { contentType: 0.35, [narrowKey()]: 0.25, [broadKey()]: 0.2, styleWorld: 0.2 } },
+    { slot: 'carousel', take: 5, weights: { [narrowKey()]: 0.3, [broadKey()]: 0.25, occasion: 0.25, contentType: 0.2 } },
+  ];
+}
+const topDriver = (d) => d?.explain?.drivers?.[0];
+function paintContent(prev, next) {
+  const has = S.content.length > 0;
+  for (const id of ['merch', 'chero', 'carousel']) $(id).hidden = !has;
+  if (!has) return;
+  const by = (ds, slot) => ds.filter((x) => x.slot === slot);
+  const piece = (id) => S.content.find((p) => p.id === id);
+  // merch — tenant-pinned, never ranked
+  const m = by(next, 'merch')[0];
+  if (m) {
+    const p = piece(m.contentId);
+    $('merch-body').innerHTML = `<b>${escapeHtml(p.title)}</b><span>${escapeHtml(p.subtitle || '')}</span><span class="cta">${escapeHtml(p.cta || 'Shop the event')}</span>`;
+    $('merch-why').textContent = `tenant config · non-personalizable · ${p.customerContentId}`;
+  }
+  // content hero
+  const h = by(next, 'chero')[0]; const hPrev = by(prev, 'chero')[0];
+  if (h) {
+    const p = piece(h.contentId);
+    $('chero-art').style.backgroundImage = p.art ? `url(${p.art})` : '';
+    $('chero-type').textContent = `${p.type}${p.runtime ? ` · ${p.runtime}` : ''} · ${p.customerContentId}`;
+    $('chero-title').textContent = p.title; $('chero-sub').textContent = p.subtitle || '';
+    const t = topDriver(h);
+    $('chero-why').textContent = h.strategy === 'default' ? 'no signal yet — the slot default'
+      : t ? `${t.dim} · ${t.value} ${t.a.toFixed(2)} × ${t.weight}` : '';
+    if (hPrev && hPrev.contentId !== h.contentId) { applyHighlight($('chero')); $('chero').classList.remove('changedc'); void $('chero').offsetWidth; $('chero').classList.add('changedc'); }
+  }
+  // carousel
+  const slides = by(next, 'carousel'); const prevIds = by(prev, 'carousel').map((x) => x.contentId);
+  $('car-track').innerHTML = slides.map((d, i) => {
+    const p = piece(d.contentId);
+    const t = topDriver(d);
+    const changed = prevIds.length && prevIds[i] !== d.contentId;
+    return `<article class="slide${changed ? ' changedc' : ''}" data-id="${p.id}" title="${escapeHtml(`${p.customerContentId} · score ${d.score}${t ? ` · ${t.dim}·${t.value}` : ''}`)}">
+      <div class="ty">${escapeHtml(p.type)}</div>${p.runtime ? `<div class="rt">${escapeHtml(p.runtime)}</div>` : ''}
+      <div class="im" style="background-image:url(${p.art || ''})"></div>
+      <div class="tt">${escapeHtml(p.title)}</div>
+    </article>`;
+  }).join('');
+}
+
+/** The literal push — one payload per page. Shown in the receipts because the wire IS the contract. */
+function contentWire() {
+  return S.contentDecisions.map((d) => ({
+    contentId: d.contentId, customerContentId: d.customerContentId, type: d.type,
+    slot: d.slot, order: d.order, score: d.score, strategy: d.strategy,
+    explain: d.explain.note || (topDriver(d) ? `${topDriver(d).dim}·${topDriver(d).value} ${topDriver(d).a.toFixed(2)}×${topDriver(d).weight}` : ''),
+  }));
+}
+
+/** The schematic pair for the band: your page now → after, slot colours matched. */
+function schematicHtml(orderNow, orderNext) {
+  const blk = (id) => `<span class="blk" style="background:${SLOT_COLOURS[id] || '#4E5665'}">${escapeHtml(SECTION_NAME[id] || id)}</span>`;
+  const col = (t, ids) => `<div class="col"><h6>${t}</h6>${ids.filter((x) => x !== 'takeover').map(blk).join('')}</div>`;
+  return `<div class="pd-schem">${col('Your page now', orderNow)}<span class="arrow">→</span>${col('After', orderNext)}</div>`;
+}
+
+/** Ghost destination badges on the page while the band predicts a rearrangement. */
+function showDestBadges(orderNext) {
+  clearDestBadges();
+  const next = orderNext.filter((x) => x !== 'takeover');
+  document.querySelectorAll('#page [data-section]').forEach((el) => {
+    const id = el.dataset.section; if (el.hidden) return;
+    const to = next.indexOf(id); if (to < 0) return;
+    const now = [...document.querySelectorAll('#page [data-section]')].filter((x) => !x.hidden).map((x) => x.dataset.section).indexOf(id);
+    const b = document.createElement('span'); b.className = 'destbadge' + (to === now ? ' stay' : '');
+    b.textContent = to === now ? (id === 'merch' ? 'stays — pinned' : 'stays') : `→ #${to + 1}`;
+    el.appendChild(b);
+  });
+}
+function clearDestBadges() { document.querySelectorAll('.destbadge').forEach((b) => b.remove()); }
+
 /** Engine time. Everything the reflex engine sees goes through this. */
 const NOW = () => S.clock;
 /** An act happened: carry forward a LITTLE real time (never a conversation). */
@@ -257,7 +351,7 @@ const S = {
   // greens, no offers retiring mid-sentence. The room can talk for ten
   // minutes and nothing moves uninvited.
   clock: Date.now(), lastReal: Date.now(),
-  seq: -1, ws: null, heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, sayLockUntil: 0, dept: null,
+  seq: -1, ws: null, heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, sayLockUntil: 0, dept: null, content: [], contentDecisions: [], merchPin: 1,
   claimedAt: {},
   withdrawn: new Set(),
 };
@@ -270,12 +364,13 @@ const pick = (ds, slot) => ds.find((d) => d.slot === slot);
 async function load(vertical) {
   const r = await fetch(`${API}/catalog?vertical=${vertical}`, { credentials: 'omit' }).then((x) => x.json());
   Object.assign(S, {
-    vertical, items: r.items, blocks: r.blocks, registry: r.registry,
+    vertical, items: r.items, blocks: r.blocks, registry: r.registry, content: r.content ?? [],
     config: configFor(vertical), reflex: emptyState(configFor(vertical)),
     audiences: new Set(), decisions: [], prevRank: new Map(),
     heroOverride: null, usedSurfaces: new Set(), sinceArrival: 0, withdrawn: new Set(), dept: null,
     behaved: false, anchorId: null, claimedAt: {}, audiencePriority: [], priorityEngaged: false,
     arrived: false, cohort: null, coldPrior: null, coldPicks: null,
+    content: [], contentDecisions: [], merchPin: 1,
   });
   S.published = [];
   document.documentElement.dataset.vertical = vertical;
@@ -506,6 +601,18 @@ function openDy() {
 $('dyvs-close').onclick = () => $('dyvs').classList.remove('open');
 $('btn-dyvs').onclick = openDy;
 $('bz-arrive').onclick = (e) => browse(e.currentTarget, [{ arrive: true }]);
+$('btn-pinmerch').onclick = () => {
+  // PIN AT ANY POSITION — the contract requirement, performed. Nothing is
+  // permanently pinned; the tenant chooses the position and the engine ranks
+  // around it. The move is choreographed and labelled "slowed for the room".
+  S.merchPin = S.merchPin === 3 ? 1 : 3;
+  S.choreo = true;
+  recompose();
+  orderStrip(`<b>The merch banner</b> is pinned at <b>#${S.merchPin}</b> — tenant config. The engine re-ranked everything else <b>around</b> it. Nothing is ever permanently pinned; any slot can be pinned at any position.`, 16000);
+  consequence('Pin at any position', `Merch banner → #${S.merchPin}`, 'Tenant config: slot → position index; the engine ranks around the pins. The contract requirement, live.');
+  $('btn-pinmerch').innerHTML = S.merchPin === 3 ? 'Unpin the banner<small>back to #1</small>' : 'Pin the banner at #3<small>rank around it</small>';
+};
+TIPS['btn-pinmerch'] = ['Pins the merchandiser banner at position 3 — tenant config is slot → position, and the engine ranks around the pin. Press again to send it back to #1.', 'the sections re-order around the pinned strip, one at a time'];
 
 function connect() {
   if (S.ws) try { S.ws.close(); } catch {}
@@ -1146,7 +1253,7 @@ function forecastSequence(acts) {
   const lead = lay.sections.filter((x) => x.strategy !== 'locked' && x.strategy !== 'template').sort((a, b) => a.rank - b.rank)[0];
   return { did, weights, moves, entered: [...new Set(entered)], exited: [...new Set(exited)],
            heroChanges: heroNextTitle !== heroNowTitle, heroNextTitle, picksNow, picksNext,
-           rearranged: orderNow.length > 0 && JSON.stringify(orderNow) !== JSON.stringify(orderNext), lead,
+           rearranged: orderNow.length > 0 && JSON.stringify(orderNow) !== JSON.stringify(orderNext), lead, orderNext: lay.order,
            dept, deptChanged: dept !== S.dept,
            completion: next.some((d) => d.strategy === 'completion') && !S.decisions.some((d) => d.strategy === 'completion') };
 }
@@ -1196,7 +1303,9 @@ async function sequenceBand(acts) {
   if (f.rearranged) {
     const why = String(f.lead?.explain?.movedBecause || '');
     const subs = why.split(/;\s*/).flatMap((part) => part.split(/,\s*(?=[a-z])/)).map((x) => x.trim()).filter(Boolean).map(escapeHtml);
-    will.push(willItem(`The page <b>rearranges</b> — ${pill(SECTION_NAME[f.lead?.section] || f.lead?.section || 'a different section')} now leads`, subs));
+    will.push(willItem(`The page <b>rearranges</b> — ${pill(SECTION_NAME[f.lead?.section] || f.lead?.section || 'a different section')} now leads`, subs)
+      + schematicHtml((S.layout?.order || []), f.orderNext || []));
+    showDestBadges(f.orderNext || []);
   }
   if (acts.some((a) => a.kind === 'arrive')) will.push(willItem('Nothing about <b>her</b> yet — behaviour none', ['the neighbourhood priors sit in her profile and decay like everything else', 'her first engagement hands the page from the cohort to her']));
   if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
@@ -1260,6 +1369,7 @@ $('pd-go').onclick = async () => {
   if (captureInFlight()) { const t = $('pd-go').textContent; $('pd-go').textContent = 'capturing the baseline — one moment…'; await captureIdle(); $('pd-go').textContent = t; }
   // Keep the declaration so the presenter can bring it back mid-discussion.
   LASTPD = { done: $('pd-done').innerHTML, act: $('pd-act').innerHTML, math: $('pd-math').innerHTML, will: $('pd-will').innerHTML };
+  clearDestBadges();
   $('predict').hidden = true; PD.open = false; if (window.MOMENTS) window.MOMENTS.resume(); PD.resolve?.(); PD.resolve = null;
   showPdPill();
 };
@@ -1595,6 +1705,8 @@ function holdSteady(prev, next) {
 function recompose(first, opts = {}) {
   const snap = snapshot(S.reflex, NOW(), S.config);
   checkHandoff(snap);
+  PREV_CONTENT = S.contentDecisions;
+  if (S.content.length) S.contentDecisions = composeContent(S.content, snap, contentSlots());
   let next = compose({ affinity: snap, state: S.reflex, items: S.items, rowItems: rowPool(), coldPicks: S.coldPicks || undefined, blocks: S.blocks,
                        config: S.config, shapeOfKey: SHAPE_OF_KEY, rowSize: 10, pins: S.pins,
                        audiencePriority: S.priorityEngaged ? S.audiencePriority : undefined,
@@ -1611,6 +1723,7 @@ function recompose(first, opts = {}) {
   S.layout = composeLayout({
     affinity: snap, config: S.config, shapeOfKey: SHAPE_OF_KEY,
     prevOrder: prevLayout?.order, locked: $('takeover').hidden ? [] : ['takeover'],
+    ...(S.content.length ? { extraSections: CONTENT_SECTIONS, pinnedAt: { merch: S.merchPin } } : {}),
   });
   const rankOf = (lay, id) => lay?.sections.find((x) => x.section === id)?.rank;
   const rowMoved = !!prevLayout && rankOf(prevLayout, 'row') !== rankOf(S.layout, 'row');
@@ -1633,7 +1746,9 @@ function recompose(first, opts = {}) {
   // the previous session's arrangement in the DOM, and the next tick "moved"
   // the sections back — announcing a rearrangement that was only the reset.
   if (first) paintLayout(S.layout.order, { duration: 0 });
-  const movedSections = first ? [] : paintLayout(S.layout.order, { duration: 700 });
+  const choreo = S.choreo; S.choreo = false;
+  if (choreo) { $('choreo-note').hidden = false; setTimeout(() => { $('choreo-note').hidden = true; }, 5200); }
+  const movedSections = first ? [] : paintLayout(S.layout.order, choreo ? { duration: 900, stagger: 420 } : { duration: 700 });
   if (movedSections.length) {
     capDone(7);
     const top = S.layout.sections.filter((x) => x.strategy !== 'locked' && x.strategy !== 'template')
@@ -1728,6 +1843,7 @@ function paint(prev, next, first, rowMoved = false, tick = false) {
 
   if (first || heroChanged) swap($('hero'), () => paintHero(pick(next, 'hero')), first);
   if (first || rowChanged || rowMoved) paintRow(next.filter((d) => d.slot === 'row'), prevRow, first, rowMoved, tick);
+  paintContent(prevContentOf(), S.contentDecisions);
   if (first || pick(prev, 'block_a')?.blockId !== pick(next, 'block_a')?.blockId) {
     swap($('block_a'), () => paintBlock(pick(next, 'block_a'), 'block_a'), first);
   }
@@ -2188,7 +2304,7 @@ function renderChips(entered, exited) {
 }
 
 const SURFACE_NAME = { hero: 'The hero', row: 'The product row', block_a: 'The story' };
-const SECTION_NAME = { hero: 'The hero', offer: 'The offer', row: 'The product row', block_a: 'The story', block_b: 'The second story', takeover: 'The takeover' };
+const SECTION_NAME = { hero: 'The hero', offer: 'The offer', row: 'The product row', block_a: 'The story', block_b: 'The second story', takeover: 'The takeover', merch: 'The merch banner', chero: 'The content hero', carousel: 'The carousel' };
 
 /**
  * The staircase, narrated. Each dimension carries its own decay constant, so a
@@ -2409,6 +2525,10 @@ $('btn-receipts').onclick = async () => {
       const v = row[c]; const t = v == null ? '' : String(v);
       return `<td title="${t.replace(/"/g, '&quot;')}">${t.length > 42 ? t.slice(0, 42) + '…' : t}</td>`;
     }).join('')}</tr>`).join('') + '</tbody>';
+  if (S.contentDecisions.length) {
+    $('rec-table').innerHTML += `<tbody><tr><td colspan="99" style="padding:14px 8px 6px;font:700 11px/1 ui-monospace,monospace;letter-spacing:.1em;color:#0E3F8A">THE CONTENT PUSH — one payload per page; your front end paints</td></tr>`
+      + `<tr><td colspan="99"><pre style="margin:0;font:500 11.5px/1.6 ui-monospace,monospace;white-space:pre-wrap">${escapeHtml(JSON.stringify(contentWire(), null, 1))}</pre></td></tr></tbody>`;
+  }
   openMoment('receipts');
   consequence('Receipts', `${r.rows.length} decision rows exported`,
     'Every slot, every candidate count, every driver, every refusal, and the config version it ran under. We hand you the rows; you compute the lift.');

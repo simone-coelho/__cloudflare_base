@@ -95,6 +95,20 @@ export interface LayoutInput {
   /** Last frame's order. Holds a raised rank while its lead is still confident. */
   prevOrder?: readonly string[];
   /**
+   * Extra sections joining the grammar for this tenant (the content slots:
+   * merch banner, content hero, carousel). Appended after SECTIONS so the
+   * fixed grammar and its tests stay untouched; they rank by the same walk.
+   */
+  extraSections?: readonly SectionSpec[];
+  /**
+   * PIN AT ANY POSITION — the contract requirement (2026-08-29): tenant config
+   * is `section id → 1-based position`, and the engine ranks AROUND the pins.
+   * Nothing is permanently pinned; anything can be pinned anywhere. A pinned
+   * section is lifted out of the walk's result and re-inserted at its position
+   * (after any external locked ids, e.g. the takeover), ranks recomputed.
+   */
+  pinnedAt?: Readonly<Record<string, number>>;
+  /**
    * Sections that hold their rank regardless. Ids outside SECTIONS (the
    * takeover) sit ahead of the grammar, at rank 0 onward, in the order given.
    */
@@ -212,7 +226,7 @@ export function composeLayout(input: LayoutInput): LayoutResult {
   const { config } = input;
   const coldStart = Object.keys(input.affinity.dims).length === 0;
   const lockedIds = new Set(input.locked ?? []);
-  const isSection = (id: string) => SECTIONS.some((s) => s.id === id);
+  const isSection = (id: string) => SECTIONS.some((s) => s.id === id) || !!input.extraSections?.some((s) => s.id === id);
 
   // Locked ids outside the grammar (the takeover) sit ahead of it, as given.
   const external = [...lockedIds].filter((id) => !isSection(id));
@@ -236,7 +250,9 @@ export function composeLayout(input: LayoutInput): LayoutResult {
   const composeInput: ComposeInput = {
     affinity: input.affinity, config, shapeOfKey: input.shapeOfKey, items: [], blocks: [],
   };
-  const scored = SECTIONS.map((spec, i) => scoreSection(
+  const grammar: readonly SectionSpec[] = input.extraSections?.length
+    ? [...SECTIONS, ...input.extraSections] : SECTIONS;
+  const scored = grammar.map((spec, i) => scoreSection(
     spec, i, !!spec.locked || lockedIds.has(spec.id),
     input, composeInput, decidingValues, stagePriority,
   ));
@@ -344,5 +360,23 @@ export function composeLayout(input: LayoutInput): LayoutResult {
     });
   });
 
+  // ── pins: lift out, re-insert at the contracted position, rank around ──────
+  const pins = Object.entries(input.pinnedAt ?? {})
+    .filter(([id]) => sections.some((x) => x.section === id))
+    .sort((a, b) => a[1] - b[1]);
+  if (pins.length) {
+    const pinnedIds = new Set(pins.map(([id]) => id));
+    const rest = sections.filter((x) => !pinnedIds.has(x.section));
+    for (const [id, pos] of pins) {
+      const sec = sections.find((x) => x.section === id)!;
+      const at = Math.max(0, Math.min(rest.length, offset + (pos - 1)));
+      rest.splice(at, 0, {
+        ...sec, strategy: 'pinned',
+        explain: { ...sec.explain, movedBecause: `pinned at #${pos} by the merchandiser — tenant config; the engine ranks around it` },
+      });
+    }
+    rest.forEach((x, i) => { x.rank = i; });
+    return { order: rest.map((x) => x.section), sections: rest };
+  }
   return { order: sections.map((s) => s.section), sections };
 }
