@@ -4,13 +4,13 @@ Every control on the stage, what it does, what appears on screen and where to lo
 
 ---
 
-## 0 · The bar, and the palette drawer
+## 0 · The bar, the transport, and the palette drawer
 
-The bottom bar is a **reading strip** (~100px): the transport, the beat counter and title, the *watch* and *You:* lines, and the clock — everything you read mid-beat and nothing else. The palette (Vertical / Ask / She browses / Compare / Merchandiser / Experiments / Session) is a **drawer** that overlays the page and hides again, so the viewport keeps the height.
+The bottom bar is a **reading strip** (~100px): the transport, the beat counter and title, the *watch* and *You:* lines, and the clock — everything you read mid-beat and nothing else. The transport carries three presses beyond the script's own: **Capture** and **Compare**, mirrors of the palette's two, always visible and quiet until a baseline exists; and **Do it**, which appears only while a declaration card is open and performs the same press as the card's *OK — let her do it*. They live on the bar because they are pressed mid-sentence, where your hand already is. The palette (Vertical / Ask / She browses / Compare / Merchandiser / Experiments / Session) is a **drawer** that overlays the page and hides again, so the viewport keeps the height.
 
 | To do this | Do this |
 |---|---|
-| Open it | Hover the **▲ PALETTE** handle at the bottom-right (it waits about a third of a second, so a cursor passing the bottom of the screen never pops it), or click the handle. |
+| Open it | Hover the **▲ PALETTE** handle at the bottom-right — a filled **amber** button, the one unmistakable control on the strip (it waits about a third of a second, so a cursor passing the bottom of the screen never pops it) — or click it. It turns **blue** while the drawer is open. |
 | Keep it open | **Pin open** in the drawer's top-right — for rehearsal or free play it behaves exactly as it used to. Click again to unpin. |
 | Close it | Move off it, press any control in it, press **Next**, or hit **Esc**. |
 | During a performed beat | A beat that presses a palette button **opens the drawer itself**, lets the cursor click in full view, and closes it after — the room never watches a click against a button it cannot see. |
@@ -23,6 +23,8 @@ The bottom bar is a **reading strip** (~100px): the transport, the beat counter 
 | **Next ▶** | Advances the script **and performs the beat**: the declaration band opens (what she does · the weights · the arithmetic · what will change); you press **OK — let her do it**; the cursor then does her acts, clicking real controls. Beats that perform also **auto-capture a Compare "Before"** first. | The band, then the 44px cursor with the red click marks; the page answers each click. |
 | **Auto** | Auto-advances, one beat every ~6 s. Still stops at **every** band for your OK — Auto never consents for you. Press again to pause; the in-flight beat finishes. | The button reads *Pause* while on. |
 | **↻** | Restart: aborts anything in flight, closes any band or window, resets to a brand-new visitor (server profile wiped), returns the script to beat 1, clears both strips, the drawer, the Why line and the demo-clock readout. Always clickable. | The page returns to the standard order; the Why reads "Nothing has happened yet." |
+| **Do it** | Appears **only** while a declaration card is open, and performs the same press as the card's **OK — let her do it** — the same act, from the bar. It does not appear while the Predicted pill is replaying a card, because a replay runs nothing. | The card closes and the act performs, exactly as if you had pressed OK. |
+| **Capture** · **Compare** | The same two presses as the palette's Compare group, mirrored on the bar so they are reachable mid-sentence. Quiet grey until there is something to say: Capture fills green while a baseline is held, Compare arms teal alongside it. | Identical to the drawer's — the *"Before captured."* strip, then Before/Now with the draggable seam. |
 
 ## 2 · Vertical
 
@@ -61,7 +63,7 @@ Each button plays a scripted visitor sequence: the band declares **all** its act
 |---|---|---|
 | **Show what changed** | Re-highlights, in the step colour, every card sitting **above its standard-order position**, badged `std N`. True whenever pressed — it is a fresh comparison against the control order, not a replay. | The row lights up; a strip says *"N cards sit above where the standard order puts them"* (or *"Nothing has moved — this is the standard order"*). |
 | **Pin the hero / Release the pin** | The merchandiser override: pins the hero to an item the engine did **not** choose, so the override is unmistakable; ranking is skipped for that slot. The button's label always states the current state. | A **PINNED BY THE MERCHANDISER** badge on the hero itself, a strip, and the receipts record it. Release → ranking resumes. |
-| **Sell out the top** | Marks the **hero's** item sold out — an item property, never a visitor property. A rule refuses it; the engine re-decides in front of the room; her affinity is untouched. | The hero changes; a strip names the refusal; the Glass box shows it; the refusal beat (band 22) builds on this. |
+| **Sell out the top** | Marks the **hero's** item sold out — an item property, never a visitor property. A rule refuses it; the engine re-decides in front of the room; her affinity is untouched. | The hero changes; a strip names the refusal; the Glass box shows it; the refusal beat (beat 27) builds on this. |
 | **Pin the banner at #3 / Unpin the banner** | The content act's pin: the tenant-config merch strip (non-personalizable, `CMP-1007`) moves to **visible position 3** and the engine re-ranks everything else around it — the contract is *slot → position index*, and nothing is ever permanently pinned; any slot can be pinned at any position. The movement is choreographed one section at a time under a **"SLOWED FOR THE ROOM — in production this is one frame"** label. Position counts what the room can **see** — the engine maps past hidden sections. | The strip travels; the sticky *Page rearranged* strip, the Why and the trail all say **#3**; the button's label states the current state. |
 
 ## 7 · Experiments
@@ -93,18 +95,33 @@ The pieces are a content catalogue — 18 retail with committed art and authored
 
 ## 9 · The instrument (right panel)
 
-- **Live affinity** — the eight bars with thresholds; the **demo clock bar** on top: paused by default, **Resume ×15** (4 real seconds = 1 demo minute) to watch an affinity expire, Pause, Reset, and the *next to lapse* readout with its time.
+- **Live affinity** — the eight bars with thresholds; the **demo clock bar** on top: paused by default, **Resume ×15** (4 real seconds = 1 demo minute) to watch an affinity expire, Pause, Reset, and the *next to lapse* readout with its time. Below the bars, the **audience priority** list — the merchandiser's order; the highest match wins the hero.
 - **The trail** — the consequence log, newest first: every act, what it moved, and why.
 - **Cold start** — the census row and source, the price-band derivation, **your receipts** (lines, shares, band, attach, the grain used), the honesty tags, and the button into *How the cold start works*.
-- **Glass box** — why this hero, exactly: section order and its reason, the chosen item, strategy, candidates, refusals, thresholds.
+- **Glass box** — why this hero, exactly: section order and its reason, the chosen item, strategy, candidates, refusals, thresholds. **The tuning dial lives here**, under the explain: six sliders (category, line, price band, taste, occasion, colour) on 0–0.60. Turning one writes straight into the live strategy table the composer reads on every decision, so the **next** decision uses it — no rebuild, no redeploy — and the footer reads *hero · line = 0.60 · re-decided now · …+tuned*. Its limits, plainly, because someone will ask: it tunes the **hero slot** and it moves **weights only** — thresholds and decay clocks are configuration on the same footing but they are not on this dial; a **pin outranks it** (gates, then pins, then weighted ranking), and an enforced audience priority outranks it too, with the footer saying which is deciding; with no affinity yet there is nothing to weigh, and it says so. The *+tuned* suffix is the dial's own readout — the Glass box explain and the exported rows carry the config version string itself. (Beat 25 turns this dial, but switches the panel to *Live affinity* as it does — open the Glass box tab first, or turn the slider by hand there, if you want the room to watch the knob move.)
 - **The 15** — Coach's capability checklist, verbatim, each ticking **only when the room has seen it happen** in this session; the tab badge counts.
 
 ## 10 · The band, the strips, the colours
 
 - **The predict band** opens before every act (scripted or by hand): *what she has done* · *what we are watching for* (the acts, the weights, the arithmetic against thresholds) · *what will change*. **OK — let her do it** performs it. Its scrim never swallows presses on the bar.
-- **Strips** pin to the top of the page as it scrolls: audience entered/left, *Page rearranged* (names which section now leads and why), Welcome (the cold start), merchandiser actions, sold-out. Restart clears them.
+- **Strips** pin to the top of the page as it scrolls: audience entered/left, *Page rearranged*, Welcome (the cold start), merchandiser actions, sold-out. Restart clears them. The rearrangement sentence names the section that actually **moved**, with the number that moved it — *"The product row moved up to position 3 — occasion·evening 0.53 ≥ θout 0.45; outscored hero (0.51), offer (0.29) on narrow+need. The hero moved below it. The merch banner stays where the merchandiser pinned it — ranking never runs for it."* A section that held its place is never the subject of a sentence about change: the pinned banner sitting at the top has not moved, and the strip says so instead of crediting it with the lead.
 - **The step colour** rotates red → green → yellow → blue on every step that changes the page, shared by the hero's edging and drop shadow, the moved cards and their badges — so consecutive changes never look alike.
+
+## 10a · The decisions band — every decision this press makes
+
+Under the declaration card's three columns sits a full-width band, *Why — every decision this press makes*. It is part of the card, not a feature of the rearranging beats: one row per decision, always the same four columns.
+
+| Column | What it holds |
+|---|---|
+| **What** | The thing that changed — a slot, a section, a content piece, an audience: *"The hero → The Drover leads near you"*, *"The merch banner → stays at 1"*, *"Picked for her, first line"*. |
+| **Why — the number** | The arithmetic that decided it, in its own terms: *"occasion·travel 0.731 × 0.1827 + category·Bags 0.622 × 0.1556"*, or *"Drover 35% of 320 shoppers in New York metro"*. |
+| **Against** | What that number cleared or beat: a threshold (*"crossed θin 0.60"*), a rival (*"tied Holloway Weekender · Navy at 0.632 — the catalogue's order broke the tie"*), or the honest absence of both (*"nothing observed about her yet — the cohort opens the page"*). |
+| **Authority** | Who made the call, from a fixed vocabulary that is never improvised: **engine** · **engine · intent priority** · **tenant config · pinned** · **merchandiser pin** · **campaign claim** · **rule refusal** · **neighbourhood cohort** · **tenant strategy default**. |
+
+The authority column is the honest one. *engine* means the arithmetic chose it. *neighbourhood cohort* means nothing had been observed about her yet and the cohort opened the page. *campaign claim* means an arrival surface supplied it, and it holds until the claim stops leading or decays under θout. *rule refusal* means a gate declined the engine's own highest-scoring answer, with the score it gave up kept on the record. *tenant strategy default* means there was no signal to rank on and the catalogue's own order stands. And **tenant config · pinned means the engine did not choose that placement at all** — a merchandiser holds the position, ranking never ran for it, and the engine ranked everything else around it. Say that one out loud the first time it appears; a demo that tells the room which parts are not the algorithm is the one they believe about the parts that are.
+
+The **now → after page map** rides beside the band and appears **only** when the section order changes. The band caps at **seven rows** so it can never push OK off the screen; past that it says *"and N more — every one of them in the trail"*. The **Predicted** pill re-opens the whole card, band included, read-only — nothing runs, and the bar's *Do it* button stays hidden while it is up.
 
 ---
 
-*Generated 2026-08-28. The tooltip table in `public/meridian/meridian.js` (`TIPS`) must stay in sync with this guide.*
+*Generated 2026-08-29. The tooltip table in `public/meridian/meridian.js` (`TIPS`) must stay in sync with this guide.*

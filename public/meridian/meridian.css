@@ -1374,6 +1374,7 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 .pd-dt .au.au-campaign{background:#E7E1FA;color:#4A2E96}
 .pd-dt .au.au-rule{background:#FADEDE;color:#8E2020}
 .pd-dt .au.au-cohort{background:#DDEDF9;color:#1B5480}
+.pd-dt .au.au-tune{background:#FDF0C7;color:#6B5200}
 .pd-schem{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-top:0}
 .pd-schem .col{display:flex;flex-direction:column;gap:4px}
 .pd-schem .col h6{margin:0 0 3px;font:700 10px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:#4E5F7A}

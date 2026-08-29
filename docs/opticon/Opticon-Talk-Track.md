@@ -626,9 +626,9 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **You do —** Point at the detection chip.
 
-**They watch —** SIMULATED · partner social-listening layer, not Optimizely.
+**They watch —** Nothing on the glass yet — this line is yours to say. The ledger appears with the moment: SIMULATED · 1 (the detection) against REAL · 4 and REPRESENTATIVE · 1.
 
-**You say —** This part is simulated and it is labelled, because we do not ship social listening. Everything after it is ours.
+**You say —** One thing in this beat is simulated: the detection. We do not sell social listening — in production that signal comes from your listening vendor or from your own team, and it reaches us as an API call carrying what is trending, which product it points at, and which approved artwork to use. Everything after it is real, and in a moment it will all be on the screen: the copy written now, the artwork approved before today, the flag and the rule in your project, and the window. One simulated thing, four real ones, and the traffic split labelled representative because nobody in this room is buying.
 
 *Why 0:35:* The honesty label goes first, before the impressive part, or it reads as an excuse afterwards.
 

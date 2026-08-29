@@ -357,6 +357,7 @@ const AUTHORITY = {
   stage:    ['engine · intent priority', 'au-engine'],
   pin:      ['tenant config · pinned', 'au-pin'],
   merch:    ['merchandiser pin', 'au-pin'],
+  tuning:   ['tuning · configuration', 'au-tune'],
   campaign: ['campaign claim', 'au-campaign'],
   rule:     ['rule refusal', 'au-rule'],
   cohort:   ['neighbourhood cohort', 'au-cohort'],
@@ -397,7 +398,7 @@ function decisionRows(f) {
     }
   }
   if (f.dialTurn) push(`The ${SHAPE_LABEL[f.dialTurn.shape] || f.dialTurn.shape} weight → ${f.dialTurn.to.toFixed(2)}`,
-    `configuration, from ${f.dialTurn.from.toFixed(2)}`, 'applied hot — the next decision reads it', 'merch');
+    `configuration, from ${f.dialTurn.from.toFixed(2)}`, 'applied hot — the next decision reads it', 'tuning');
   // 2 — a refusal is a decision, and it has its own authority
   const refused = heroD?.explain?.refused?.[0];
   if (refused) push(`Refused → ${byId(refused.id)?.name || refused.id}`, `scored ${num(refused.score)}`,
@@ -420,9 +421,12 @@ function decisionRows(f) {
     const e = sec.explain || {};
     const lead = e.lead?.dim ? `${e.lead.dim}·${e.lead.value ?? '—'} ${num(e.confidence)}` : `${e.lead?.shape ?? '—'}`;
     const beat = /outscored ([^;]+)/.exec(e.movedBecause || '');
-    push(`${nm(sec.section)} → position ${to + 1}`, `${lead} ≥ θout ${e.thetaOut ?? '—'} · section score ${num(sec.score)}`,
-         beat ? beat[1] : (to < from ? `up from ${from + 1}` : `pushed down from ${from + 1}`),
-         sec.strategy === 'stage' ? 'stage' : 'engine');
+    const pinned = sec.strategy === 'pinned' || sec.strategy === 'locked';
+    push(`${nm(sec.section)} → position ${to + 1}`,
+         pinned ? 'the merchandiser chose the position' : `${lead} ≥ θout ${e.thetaOut ?? '—'} · section score ${num(sec.score)}`,
+         pinned ? 'tenant config — the engine ranked the rest around it'
+                : (beat ? beat[1] : (to < from ? `up from ${from + 1}` : `pushed down from ${from + 1}`)),
+         pinned ? 'pin' : sec.strategy === 'stage' ? 'stage' : 'engine');
   }
   // 5 — and what did NOT move, because someone bought that position
   for (const sec of (f.nextLayout?.sections || [])) {
@@ -572,7 +576,8 @@ function clearDestBadges() { document.querySelectorAll('.destbadge').forEach((b)
 function turnDial(shape, to) {
   const el = $(`dial-${shape}`);
   if (!el) return;
-  showTab('affinity');
+  showTab('glass');            // the sliders live in the Glass box pane — panes are exclusive
+  el.scrollIntoView({ block: 'center' });
   el.value = String(to);
   el.dispatchEvent(new Event('input', { bubbles: true }));
 }
@@ -1962,6 +1967,9 @@ function renderDial() {
       const v = parseFloat(e.target.value);
       SLOT_STRATEGIES.hero[sh] = v;
       $(`dialv-${sh}`).textContent = v.toFixed(2);
+      // THE RECEIPT MUST CARRY IT, or the beat's claim is a caption. The version
+      // is what every explain stamps, so the version is what gets marked.
+      if (!TUNED) S.config = { ...S.config, version: `${S.config.version}+tuned` };
       TUNED = true;
       S.heroOverride = null;                        // the merchandiser outranks the campaign's copy
       S.heroDirty = true;
@@ -1972,7 +1980,7 @@ function renderDial() {
         ? 'Audience priority is ENFORCED, so it outranks these weights for the hero — release it in Live affinity to let the dial decide.'
         : strongest < 0.05
         ? 'Nothing to weigh yet — she has no affinity. Browse first, then turn this.'
-        : `hero · ${SHAPE_LABEL[sh] || sh} = ${v.toFixed(2)} · re-decided now · ${S.config.version}+tuned`;
+        : `hero · ${SHAPE_LABEL[sh] || sh} = ${v.toFixed(2)} · re-decided now · ${S.config.version}`;
     };
   });
   $('dial-foot').textContent = 'Turn one. The hero recomposes on the new weight and the receipt records the version.';

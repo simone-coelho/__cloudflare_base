@@ -229,7 +229,7 @@ export const BEATS = [
   // by name. It was in the product and missing from the deck.
   { n: 25, act: 2, cap: 'C11 · C19', title: 'Turn a knob, in front of them', secs: 45,
     mark: 'NO BLACK BOX',
-    perform: [{ tab: 'affinity' }, { dial: { shape: 'narrow', to: 0.6 } }],
+    perform: [{ tab: 'glass' }, { dial: { shape: 'narrow', to: 0.6 } }],
     why: 'The one beat that proves the weights are configuration and not a model. Everything else in the deck asks them to believe the arithmetic; this lets them change it.',
     do: 'Turn the line weight up. The hero re-decides on the new weight, and the receipt stamps the config version.',
     watch: 'The hero recomposes on the press · the Why line names the new weight · the receipt version reads “+tuned”. Nothing was rebuilt and nothing was redeployed.',
@@ -363,8 +363,8 @@ export const BEATS = [
   { n: 41, act: 5, cap: 'C31', title: 'A signal we did not generate', secs: 35,
     why: 'The honesty label goes first, before the impressive part, or it reads as an excuse afterwards.',
     do: 'Point at the detection chip.',
-    watch: 'SIMULATED · partner social-listening layer, not Optimizely.',
-    say: 'This part is simulated and it is labelled, because we do not ship social listening. Everything after it is ours.',
+    watch: 'Nothing on the glass yet — this line is yours to say. The ledger appears with the moment: SIMULATED · 1 (the detection) against REAL · 4 and REPRESENTATIVE · 1.',
+    say: 'One thing in this beat is simulated: the detection. We do not sell social listening — in production that signal comes from your listening vendor or from your own team, and it reaches us as an API call carrying what is trending, which product it points at, and which approved artwork to use. Everything after it is real, and in a moment it will all be on the screen: the copy written now, the artwork approved before today, the flag and the rule in your project, and the window. One simulated thing, four real ones, and the traffic split labelled representative because nobody in this room is buying.',
     real: 'SIMULATED, labelled' },
 
   { n: 42, act: 5, cap: 'C31', title: 'Opal writes the moment', secs: 45,
