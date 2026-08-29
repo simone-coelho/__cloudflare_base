@@ -195,6 +195,15 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 - [x] **The dial did nothing.** Two causes: no affinity to weigh (a weight times nothing is nothing — it now says "nothing to weigh yet" instead of sitting there), and the campaign's hero copy was masking the re-decision. Turning a slider now clears the override: the merchandiser outranks the campaign. Verified: line weight to 0.60 → hero re-decides to the Shorewell Trench, kicker "because of what you have looked at", driver `line=Shorewell w=0.3851`.
 - [x] "fell to 0.42, under the exit threshold of 0.42" — exit and entry sentences at 4dp, same fix as the offer.
 
+## 16 · Phase 8 — the third walkthrough pass (2026-08-28, late)
+
+- [x] **The page never scrolls itself after a rearrangement** (his call, after trying both ways): the strip explains; the ride down to the moved section is performed by hand. Compare opens at the top (the previous decision) — the pair now match.
+- [x] **The bar has a static height**: title/watch/do clamp to two lines AND reserve them, so long beats (e.g. beat 10) no longer grow the bar or push the page; the Predicted pill tracks the bar's edge every second.
+- [x] **The bar's groups are told apart by colour** — muted tints on the blue theme: Ask violet, She browses green, Compare cyan, Merchandiser amber, Experiments blue, Session rose; labels match.
+- [x] **"How the cold start works" sizes to its content** — wide as before, no reserved height, no empty band (gap 0 to the CTA).
+
+---
+
 ## 15 · Phase 7 — the second walkthrough pass (2026-08-28, night)
 
 - [x] **The band's middle column reads cleanly** — the acts were 22px serif packed in a small area; now the same clean sans as the other columns, 14.5px, one act per line with breathing room.

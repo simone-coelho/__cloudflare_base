@@ -449,14 +449,14 @@ table.rec tr:hover td{background:var(--paper);color:var(--ink)}
   box-shadow:0 -14px 40px rgba(0,0,0,.45);color:#EDF2F8}
 .dir-where{font:600 12px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;
   color:#7FB8FF;display:flex;gap:12px;margin-bottom:7px}
-.dir-title{font:400 25px/1.15 var(--serif);color:#fff}
+.dir-title{font:400 25px/1.15 var(--serif);color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.3em}
 .dir-mark{margin-top:9px;display:inline-block;font:700 12px/1 ui-monospace,monospace;letter-spacing:.1em;
   background:#F0A92B;color:#241500;padding:6px 9px;border-radius:4px}
 .dir-mark[hidden]{display:none}
 .dir-label{font:600 11px/1 ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;
   color:#8A97A8;margin-bottom:6px}
-.dir-watch{font:400 19px/1.42 inherit;color:#fff}
-.dir-do{margin-top:8px;font:500 15px/1.45 inherit;color:#7FB8FF}
+.dir-watch{font:400 16px/1.4 inherit;color:#fff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.8em}
+.dir-do{margin-top:6px;font:500 13.5px/1.4 inherit;color:#7FB8FF;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.8em}
 .dir-do::before{content:'You: ';color:#8A97A8;font-weight:600}
 .dir-caution{margin-top:10px;font:500 15px/1.45 inherit;color:#241500;background:#F0A92B;
   padding:9px 11px;border-radius:5px}
@@ -786,8 +786,8 @@ body.has-director .page{padding-bottom:250px}
 #dir-next{background:#7FB8FF;border-color:#7FB8FF;color:#08121f;min-width:88px}
 #dir-play.on{background:#F0A92B;border-color:#F0A92B;color:#241500}
 .dir-title{font-size:21px}
-.dir-watch{font-size:16px;line-height:1.4}
-.dir-do{font-size:14px;margin-top:5px}
+.dir-watch{font-size:15px;line-height:1.4}
+.dir-do{font-size:13px;margin-top:5px}
 .dir-say{font-size:15px;margin-top:8px}
 .dir-clock{font-size:26px}
 .dir-palette{border-top:1px solid #2A3644;background:#0E131A;padding:8px 20px 10px;
@@ -1010,7 +1010,7 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
   background:#fff;color:var(--p-text);border:1.5px solid var(--p-line);text-align:left}
 .cold-btn:hover{border-color:var(--p-blue);color:var(--p-blue)}
 /* DY vs us — two columns, light, the contrast in the copy not the colour */
-.dy-box{width:min(1500px,94vw);max-width:none;min-height:min(84vh,880px);display:flex;flex-direction:column}
+.dy-box{width:min(1500px,94vw);max-width:none;display:flex;flex-direction:column}
 .dy-box .mo-head h3{font-size:30px}
 .dy-box .mo-head p{font-size:15px;max-width:70ch}
 #dyvs .dy-cols{flex:1}
@@ -1186,3 +1186,21 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 .pd-pill:hover{background:#DCF3E6}
 .pd-pill .k{font:700 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;background:var(--changed);color:var(--changed-ink);padding:4px 7px;border-radius:4px}
 .predict.review .pd-k{background:#E9EDF3;border-color:#B7C2D2;color:#2B3647}
+
+/* ── THE BAR'S GROUPS, TOLD APART BY COLOUR — muted tints on the blue theme ── */
+.cgroup[data-g] .clabel{font-weight:700}
+.cgroup[data-g="vertical"] .clabel{color:#8FA0B5}
+.cgroup[data-g="ask"] .clabel{color:#B9B3F0}
+.cgroup[data-g="ask"] .controls button{background:#35305C;border-color:#7A72C9}
+.cgroup[data-g="browse"] .clabel{color:#9AD8BC}
+.cgroup[data-g="browse"] .controls button{background:#1F4636;border-color:#4E9E7A}
+.cgroup[data-g="compare"] .clabel{color:#9AD4E6}
+.cgroup[data-g="compare"] .controls button{background:#173F4B;border-color:#4FA3BD}
+.cgroup[data-g="merch"] .clabel{color:#EBD3A0}
+.cgroup[data-g="merch"] .controls button{background:#4A3A1C;border-color:#C9A45A}
+.cgroup[data-g="exp"] .clabel{color:#A9C8F5}
+.cgroup[data-g="exp"] .controls button{background:#1C3A66;border-color:#5E8FD6}
+.cgroup[data-g="session"] .clabel{color:#EFB3C9}
+.cgroup[data-g="session"] .controls button{background:#472B38;border-color:#C97795}
+.cgroup[data-g] .controls button:hover{filter:brightness(1.25)}
+.cgroup[data-g] .controls button.on{background:#7FB8FF;border-color:#7FB8FF;color:#08121f}

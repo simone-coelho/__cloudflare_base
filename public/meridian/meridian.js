@@ -1660,7 +1660,9 @@ function recompose(first, opts = {}) {
         : 'ranked on the same vector as the products');
     orderStrip(`<b>${lead}</b> now leads the page — ${why}`
       + (down ? `. <b>${SECTION_NAME[down.section] || down.section}</b> moved below it.` : '.'), 14000);
-    if (down) { revealSection(down.section, 780); S.lastMovedDown = { section: down.section, at: Date.now() }; }
+    // THE SCROLL IS THE PRESENTER'S. The strip explains the rearrangement; the
+    // ride down to the moved section is performed by hand — the page never
+    // scrolls itself here (his call, after trying it both ways).
   }
   renderGlass(pick(next, 'hero'));
   captureDecisions(next);
@@ -2172,6 +2174,7 @@ setInterval(() => {
   if (OSTRIP_UNTIL && NOW() >= OSTRIP_UNTIL) { OSTRIP_UNTIL = 0; $('ostrip').hidden = true; }
   renderXp();
   renderClockBar();
+  if (!$('pd-pill').hidden) showPdPill();   // track the bar's height
 }, 1000);
 
 const isStageAudience = (a) => /^(journeystage|applicationstage)_/.test(a);
