@@ -51,7 +51,7 @@ export const SLOT_STRATEGIES: Record<MeridianSlot, Record<string, number>> = {
   // Each slot's HIGHEST-weighted shape is its lead, and the lead is what decides
   // whether the slot may still claim the visitor as its reason. Leads are chosen
   // so that the three surfaces sit on three different decay constants — narrow
-  // (60s), broad (90s), need (120s) — which is what turns one stretch of
+  // (120s), broad (180s), need (240s) — which is what turns one stretch of
   // inactivity into three separate, nameable retreats instead of one collapse.
   //
   // The hero commits. It leans on the slow axes so it does not flap.
