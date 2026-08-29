@@ -345,7 +345,7 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 ### Beat 23 · Pin it anywhere (Act 2 · 1:15 planned · ⏸ THE CONTRACT LINE)
 
-**You press:** Next presses "Pin the banner at #3" (Merchandiser group). Say the label out loud as it appears — slowed for the room — and then let the movement play; it is choreographed to be watched.
+**You press:** Next. The band declares the pin first, like every other act — *the merch banner pins at #3, the engine re-ranks around it* — with the page-now → page-after map showing **the same blocks in a new order**, nothing added and nothing dropped. Read it, press OK, and the palette drawer opens itself so the room watches the cursor press "Pin the banner at #3". Say the label out loud as it appears — slowed for the room — then let the movement play; it is choreographed to be watched.
 
 **The room sees:** The label first: *"SLOWED FOR THE ROOM — in production this is one frame."* Then the merch strip travels to visible position 3 one section at a time — about 420 milliseconds a step, slow enough to watch it think — while everything else re-ranks around it. The sticky strip: *"The merch banner is pinned at #3 — tenant config. The engine re-ranked everything else around it. Nothing is ever permanently pinned; any slot can be pinned at any position."* Every panel — the strip, the Why, the trail — says #3.
 

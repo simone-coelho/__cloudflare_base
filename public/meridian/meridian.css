@@ -1319,6 +1319,11 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 .pd-schem .col{display:flex;flex-direction:column;gap:4px}
 .pd-schem .col h6{margin:0 0 3px;font:700 10px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:#4E5F7A}
 .pd-schem .blk{display:flex;align-items:center;gap:7px;font:600 10.5px/1 ui-monospace,monospace;color:#fff;border-radius:4px;padding:0 8px;min-height:var(--h,22px)}
+.pd-schem .blk{justify-content:space-between}
+.pd-schem .blk em{font:700 8.5px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;
+  font-style:normal;background:rgba(255,255,255,.9);color:#1B2430;padding:3px 5px;border-radius:3px}
+.pd-schem .blk.gone{opacity:.42;text-decoration:line-through}
+.pd-schem .blk.new{box-shadow:0 0 0 2px #14C46A}
 .pd-schem .arrow{font-size:20px;color:#0E5FBF}
 .choreo-note[hidden]{display:none}
 .choreo-note{position:fixed;left:50%;transform:translateX(-50%);top:14px;z-index:800;font:600 12px/1 ui-monospace,monospace;letter-spacing:.06em;background:#171A20;color:#FFD166;padding:9px 14px;border-radius:99px;box-shadow:0 10px 24px -10px rgba(0,0,0,.5)}

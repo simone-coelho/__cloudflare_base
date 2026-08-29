@@ -4,6 +4,17 @@ Every control on the stage, what it does, what appears on screen and where to lo
 
 ---
 
+## 0 · The bar, and the palette drawer
+
+The bottom bar is a **reading strip** (~100px): the transport, the beat counter and title, the *watch* and *You:* lines, and the clock — everything you read mid-beat and nothing else. The palette (Vertical / Ask / She browses / Compare / Merchandiser / Experiments / Session) is a **drawer** that overlays the page and hides again, so the viewport keeps the height.
+
+| To do this | Do this |
+|---|---|
+| Open it | Hover the **▲ PALETTE** handle at the bottom-right (it waits about a third of a second, so a cursor passing the bottom of the screen never pops it), or click the handle. |
+| Keep it open | **Pin open** in the drawer's top-right — for rehearsal or free play it behaves exactly as it used to. Click again to unpin. |
+| Close it | Move off it, press any control in it, press **Next**, or hit **Esc**. |
+| During a performed beat | A beat that presses a palette button **opens the drawer itself**, lets the cursor click in full view, and closes it after — the room never watches a click against a button it cannot see. |
+
 ## 1 · The transport (bottom-left)
 
 | Control | What it does | What you see |

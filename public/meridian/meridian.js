@@ -323,11 +323,51 @@ function contentWire() {
   }));
 }
 
+/**
+ * Where the pin lands if it is toggled now — ONE implementation, so the band
+ * declares exactly what the press performs. `visible` is the position the room
+ * counts; `arrayPos` is that position among delivered sections, skipping the
+ * ones the page is not rendering (the offer before she decides).
+ */
+function merchPinTarget() {
+  const visible = (S.merchPinVisible || S.merchPin) === 3 ? 1 : 3;
+  if (visible <= 1 || !S.layout) return { visible, arrayPos: visible };
+  let seen = 0, arrayPos = visible;
+  const order = S.layout.order.filter((id) => id !== 'takeover' && id !== 'merch');
+  for (let i = 0; i < order.length; i += 1) {
+    const el = document.querySelector(`[data-section="${order[i]}"]`);
+    if (el && !el.hidden) seen += 1;
+    if (seen === visible - 1) { arrayPos = i + 2; break; }
+  }
+  return { visible, arrayPos };
+}
+
+/** Is this section on the page right now? The one fact the map and the forecast share. */
+const onPage = (id) => {
+  const el = document.querySelector(`#page [data-section="${id}"]`);
+  return !!el && !el.hidden;
+};
+
 /** The schematic pair for the band: your page now → after, slot colours matched. */
-function schematicHtml(orderNow, orderNext) {
-  const blk = (id) => `<span class="blk" style="background:${SLOT_COLOURS[id] || '#4E5665'};--h:${SCHEM_H[id] || 18}px">${escapeHtml(SECTION_NAME[id] || id)}</span>`;
-  const col = (t, ids) => `<div class="col"><h6>${t}</h6>${ids.filter((x) => x !== 'takeover').map(blk).join('')}</div>`;
-  return `<div class="pd-schem">${col('Your page now', orderNow)}<span class="arrow">→</span>${col('After', orderNext)}</div>`;
+function schematicHtml(orderNow, orderNext, appears = [], goes = []) {
+  // ONLY WHAT THE ROOM CAN SEE. A section the grammar knows about but the page
+  // does not render (the offer before she decides) is not a block on screen, so
+  // it is not a block on the map. Both columns therefore hold the same blocks —
+  // unless one genuinely arrives or leaves, and then it is labelled.
+  const rendered = new Set([...document.querySelectorAll('#page [data-section]')]
+    .filter((el) => !el.hidden).map((el) => el.dataset.section));
+  // NOTHING IS EVER SUBTRACTED. A block that ends (the offer running out) stays
+  // where it is and says so — removing it would be the silent drop this map
+  // exists to prevent. Only a genuine arrival changes the count.
+  const app = new Set(appears), gone = new Set(goes);
+  const afterSet = new Set([...rendered, ...app]);
+  const nowIds = orderNow.filter((id) => id !== 'takeover' && rendered.has(id));
+  const afterIds = orderNext.filter((id) => id !== 'takeover' && afterSet.has(id));
+  const blk = (id, tag) => `<span class="blk${tag ? ` ${tag}` : ''}" style="background:${SLOT_COLOURS[id] || '#4E5665'};--h:${SCHEM_H[id] || 18}px">`
+    + `${escapeHtml(SECTION_NAME[id] || id)}${tag === 'new' ? '<em>appears</em>' : tag === 'gone' ? '<em>ends</em>' : ''}</span>`;
+  const col = (t, ids, tagOf) => `<div class="col"><h6>${t}</h6>${ids.map((id) => blk(id, tagOf(id))).join('')}</div>`;
+  return `<div class="pd-schem">${col('Your page now', nowIds, () => '')}`
+    + `<span class="arrow">→</span>${col('After', afterIds, (id) => (app.has(id) ? 'new' : gone.has(id) ? 'gone' : ''))}</div>`;
 }
 
 /** Ghost destination badges on the page while the band predicts a rearrangement. */
@@ -668,18 +708,8 @@ $('btn-pinmerch').onclick = () => {
   // she decides). The contract's position is among delivered sections; a
   // headless head end renders everything delivered, so this mapping is a
   // stage concern, not a contract change.
-  const want = S.merchPin === 3 ? 1 : 3;
-  if (want > 1 && S.layout) {
-    let seen = 0, arrayPos = want;
-    const order = S.layout.order.filter((id) => id !== 'takeover' && id !== 'merch');
-    for (let i = 0; i < order.length; i += 1) {
-      const el = document.querySelector(`[data-section="${order[i]}"]`);
-      if (el && !el.hidden) seen += 1;
-      if (seen === want - 1) { arrayPos = i + 2; break; }
-    }
-    S.merchPin = arrayPos;
-  } else S.merchPin = want;
-  S.merchPinVisible = want;
+  const t = merchPinTarget();
+  S.merchPin = t.arrayPos; S.merchPinVisible = t.visible;
   S.choreo = true;
   recompose();
   orderStrip(`<b>The merch banner</b> is pinned at <b>#${S.merchPinVisible || S.merchPin}</b> — tenant config. The engine re-ranked everything else <b>around</b> it. Nothing is ever permanently pinned; any slot can be pinned at any position.`, 16000);
@@ -1218,6 +1248,10 @@ function actOf(t) {
   if (t.sel === '#hero-cta') return { kind: 'cta' };
   if (t.sel === '#btn-skip') return { kind: 'skip' };
   if (t.stage === 'content') return { kind: 'contentstage' };
+  // The merchandiser's pin rearranges the page, so it is an act and it gets
+  // declared. It was performing unannounced — the one act in the deck that
+  // moved the page without the band saying so first.
+  if (t.sel === '#btn-pinmerch') return { kind: 'pinmerch' };
   return null;
 }
 
@@ -1231,6 +1265,7 @@ function forecastSequence(acts) {
   const before = snapshot(reflex, clock, cfg);
   const entered = [], exited = [], did = [], weights = [];
   const poolOf = () => (dept ? S.items.filter((i) => i.category === dept) : S.items);
+  let pin = null;                       // set if this sequence moves the merchandiser's pin
   const arriving = acts.some((a) => a.kind === 'arrive');
   const handsOff = acts.some((a) => a.kind !== 'arrive' && a.kind !== 'skip');
   const simPicks = handsOff ? undefined : (arriving && cohortUsable(S.cohort) ? coldPicksFor(S.cohort) : (S.coldPicks || undefined));
@@ -1287,6 +1322,11 @@ function forecastSequence(acts) {
       anchor = item.id;
       did.push(`Adds to bag ${item.name} — the hero`);
       step('intent_start', extractTouches(item, cfg));
+    } else if (a.kind === 'pinmerch') {
+      pin = merchPinTarget();
+      did.push(pin.visible === 1
+        ? 'The merchandiser releases the banner — it returns to the top and the page re-ranks around it'
+        : `The merchandiser pins the banner at #${pin.visible} — tenant config; the engine ranks around it`);
     } else if (a.kind === 'contentstage') {
       did.push('The content lane takes the stage — the shelf narrows to one line; nothing about her changes');
     } else if (a.kind === 'skip') {
@@ -1298,8 +1338,15 @@ function forecastSequence(acts) {
   }
   const after = snapshot(reflex, clock, cfg);
   const next = composeSim(after);
+  // THE FORECAST COMPOSES THE SAME PAGE THE PAGE COMPOSES. Without the content
+  // sections the predicted order held four blocks against the seven on screen,
+  // so the map looked like three blocks were being deleted and every band
+  // claimed a rearrangement that never happened.
   const lay = composeLayout({ affinity: after, config: cfg, shapeOfKey: SHAPE_OF_KEY,
-    prevOrder: S.layout?.order, locked: $('takeover').hidden ? [] : ['takeover'] });
+    prevOrder: S.layout?.order, locked: $('takeover').hidden ? [] : ['takeover'],
+    ...(S.content.length ? { extraSections: CONTENT_SECTIONS,
+                             pinnedAt: { merch: pin ? pin.arrayPos : S.merchPin },
+                             pinnedLabel: { merch: `#${pin ? pin.visible : (S.merchPinVisible || S.merchPin)}` } } : {}) });
 
   // The handoff rule, applied to the copy: a campaign's claim ends when what it
   // was about stops leading, or decays under its exit threshold.
@@ -1321,6 +1368,17 @@ function forecastSequence(acts) {
     }
   }
   moves.sort((x, y) => Math.abs(y.to - y.from) - Math.abs(x.to - x.from));
+  // A block the page will gain or lose is SAID so, with its own marker. The map
+  // never drops a block silently — a shorter column reads as "these are going
+  // away", and the only honest way to show that is to show it.
+  // ONE READING, not two. "Will it appear" and "is it drawn" must consult the
+  // same fact — the element on the page. Asking OFFER.live here and the DOM in
+  // the map made an ended-but-still-rendered offer count as both.
+  const stageDim = stageKeyFor(S.vertical), decidingV = decidingValueFor(S.vertical);
+  const appears = [], goes = [];
+  if (!onPage('offer') && entered.includes(audienceKey(stageDim, decidingV))) appears.push('offer');
+  if (onPage('offer') && OFFER.live && OFFER.expiresAt <= clock) goes.push('offer');
+
   const heroNowTitle = $('hero-title').textContent;
   const heroD = next.find((d) => d.slot === 'hero');
   const heroNextTitle = override ? override.title : ((heroD?.itemId && byId(heroD.itemId)?.name) || heroNowTitle);
@@ -1331,6 +1389,7 @@ function forecastSequence(acts) {
   return { did, weights, moves, entered: [...new Set(entered)], exited: [...new Set(exited)],
            heroChanges: heroNextTitle !== heroNowTitle, heroNextTitle, picksNow, picksNext,
            rearranged: orderNow.length > 0 && JSON.stringify(orderNow) !== JSON.stringify(orderNext), lead, orderNext: lay.order,
+           appears, goes, pin,
            dept, deptChanged: dept !== S.dept,
            completion: next.some((d) => d.strategy === 'completion') && !S.decisions.some((d) => d.strategy === 'completion') };
 }
@@ -1381,9 +1440,14 @@ async function sequenceBand(acts) {
     const why = String(f.lead?.explain?.movedBecause || '');
     const subs = why.split(/;\s*/).flatMap((part) => part.split(/,\s*(?=[a-z])/)).map((x) => x.trim()).filter(Boolean).map(escapeHtml);
     will.push(willItem(`The page <b>rearranges</b> — ${pill(SECTION_NAME[f.lead?.section] || f.lead?.section || 'a different section')} now leads`, subs)
-      + schematicHtml((S.layout?.order || []), f.orderNext || []));
+      + schematicHtml((S.layout?.order || []), f.orderNext || [], f.appears, f.goes));
     showDestBadges(f.orderNext || []);
   }
+  if (f.pin) will.push(willItem(f.pin.visible === 1
+    ? 'The merch banner <b>returns to the top</b> — the pin is released'
+    : `The merch banner <b>pins at #${f.pin.visible}</b> — tenant config`,
+    ['nothing is ever permanently pinned; any slot can be pinned at any position',
+     'the engine re-ranks every other section around it']));
   if (acts.some((a) => a.kind === 'contentstage')) will.push(willItem('The shelf narrows to <b>one line</b> — the content areas take the stage', ['a presentation choice, declared like everything else — her profile does not move']));
   if (acts.some((a) => a.kind === 'arrive')) will.push(willItem('Nothing about <b>her</b> yet — behaviour none', ['the neighbourhood priors sit in her profile and decay like everything else', 'her first engagement hands the page from the cohort to her']));
   if (!will.length) will.push('Scores move; nothing on the page changes yet — not enough signal.');
