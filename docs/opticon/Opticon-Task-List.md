@@ -195,6 +195,19 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 - [x] **The dial did nothing.** Two causes: no affinity to weigh (a weight times nothing is nothing — it now says "nothing to weigh yet" instead of sitting there), and the campaign's hero copy was masking the re-decision. Turning a slider now clears the override: the merchandiser outranks the campaign. Verified: line weight to 0.60 → hero re-decides to the Shorewell Trench, kicker "because of what you have looked at", driver `line=Shorewell w=0.3851`.
 - [x] "fell to 0.42, under the exit threshold of 0.42" — exit and entry sentences at 4dp, same fix as the offer.
 
+## 17 · Phase 9 — the content act (IN DISCUSSION with Simone, 2026-08-29 — design agreed, build pending his go)
+
+The differentiator Tapestry signed for: one engine, two catalogues (products AND content), push-by-ID, glass box on both. Agreed so far:
+- Same Calder page grows compact content slots (merch banner ~56px pinned strip · content hero ~170px · carousel ~150px · story ~110px); below-the-fold for two of six slots is acceptable; slides are REAL content (design-time composited from approved artwork, titled), never coloured rectangles.
+- Slot identity by colour + chip (HERO/CAROUSEL/STORY/MERCH·PINNED/RECS); destinations badged on the page at predict time (→ 2 · stays); the move choreographed one slot at a time with a visible "slowed for the room — in production this is one frame" label; Compare reads by the chips.
+- **The pre-card redesigned for this beat like the Tapestry content design doc**: a page-schematic pair — "your page now" → "your page after" as mini-wireframes with the slot chips — plus the explanation and the formula.
+- The wire on screen: the literal `{contentId, type, slot, order, score, explain}` payload in the receipts — the Mandeep contract made visible.
+- Content cold start from the same cohort (metro lead lines → content), then content-follows-behaviour, then the complement (a styling guide injected on a product click), then:
+- [ ] **PIN AT ANY POSITION — new beat + architecture requirement.** Nothing is permanently pinned and anything can be pinned anywhere: pin the merchandiser banner at position 3 and the engine reorganizes AROUND it. ⚠ **Tapestry implementation TODO:** the pin/tenant-config contract must be `slot → position index` (rank-around-pins), not top-only — carry into doc 18's delivery contract and the co-design annex before the Tapestry build.
+- [ ] Build the content act (catalogue ~18 pieces, slots, composer generalisation with dedupe/defaults/pin-at-position, the schematic pre-card, beats + talk track) — awaiting Simone's go.
+
+---
+
 ## 16 · Phase 8 — the third walkthrough pass (2026-08-28, late)
 
 - [x] **The page never scrolls itself after a rearrangement** (his call, after trying both ways): the strip explains; the ride down to the moved section is performed by hand. Compare opens at the top (the previous decision) — the pair now match.
