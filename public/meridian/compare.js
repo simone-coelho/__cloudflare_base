@@ -587,7 +587,7 @@ export function hasBaseline() { armPress(); return baseline !== null; }
     it says that too. Resolves { before, now, beforeAt, nowAt, scrollTop } with
     the two data URLs — or { …, now:null, error } after opening the overlay on
     the failure message. */
-export async function openCompare(rootEl) {
+export async function openCompare(rootEl, opts = {}) {
   assertRoot(rootEl, 'openCompare');
   lastRoot = rootEl; armPress();
   let note = '';
@@ -598,7 +598,9 @@ export async function openCompare(rootEl) {
       note = 'No baseline had been captured, so this is the page against itself. Press Capture, wait for "Baseline captured", change something, then compare.';
     }
     const now = await capture(rootEl);
-    const changeY = firstChangeY(baseline.sig, now.sig);
+    // A caller that KNOWS what moved (a rearranged section) names the Y to open
+    // at; the pixel heuristic is the fallback.
+    const changeY = opts.focusY != null ? opts.focusY : firstChangeY(baseline.sig, now.sig);
     if (!note && now.w !== baseline.w) {
       note = 'The window was resized since the baseline; the frames may not register.';
     }

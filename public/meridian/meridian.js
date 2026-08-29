@@ -443,6 +443,7 @@ function arrive() {
 
 /** Her FIRST engagement hands the page from the cohort to her. The priors stay and decay like everything else. */
 function handoffFromCohort() {
+  if ($('strip').classList.contains('cold')) $('strip').hidden = true;   // the welcome has done its job
   if (S.heroOverride?.from !== 'cohort' && !S.coldPicks) return;
   if (S.heroOverride?.from === 'cohort') { S.heroOverride = null; S.heroDirty = true; }
   S.coldPicks = null;
@@ -1230,14 +1231,37 @@ function openPredictBand({ mode, act, actHtml, math, will, note, button }) {
   return openBandRaw();
 }
 
+let LASTPD = null;
+function showPdPill() {
+  const p = $('pd-pill'); if (!p) return;
+  p.hidden = !LASTPD;
+  const bar = $('director'); const barH = bar && !bar.hidden ? bar.getBoundingClientRect().height : 0;
+  p.style.bottom = `${barH + 14}px`;
+}
+function openPdReview() {
+  if (!LASTPD || !$('predict').hidden) return;
+  PD.review = true;
+  $('pd-mode').textContent = 'what we said would happen — it already has';
+  $('pd-done').innerHTML = LASTPD.done; $('pd-act').innerHTML = LASTPD.act;
+  $('pd-math').innerHTML = LASTPD.math; $('pd-will').innerHTML = LASTPD.will;
+  $('pd-note').textContent = 'The declaration from the last step, exactly as it was shown. Nothing runs from here.';
+  $('pd-go').textContent = 'Close';
+  $('predict').classList.add('review');
+  $('predict').hidden = false;
+}
+
 function openBandRaw() {
   $('predict').hidden = false; PD.open = true;
   if (window.MOMENTS) window.MOMENTS.pause();
   return new Promise((resolve) => { PD.resolve = resolve; });
 }
 $('pd-go').onclick = async () => {
+  if (PD.review) { PD.review = false; $('predict').hidden = true; $('predict').classList.remove('review'); return; }
   if (captureInFlight()) { const t = $('pd-go').textContent; $('pd-go').textContent = 'capturing the baseline — one moment…'; await captureIdle(); $('pd-go').textContent = t; }
+  // Keep the declaration so the presenter can bring it back mid-discussion.
+  LASTPD = { done: $('pd-done').innerHTML, act: $('pd-act').innerHTML, math: $('pd-math').innerHTML, will: $('pd-will').innerHTML };
   $('predict').hidden = true; PD.open = false; if (window.MOMENTS) window.MOMENTS.resume(); PD.resolve?.(); PD.resolve = null;
+  showPdPill();
 };
 
 // ── The scripted browse ─────────────────────────────────────────────────────
@@ -1490,8 +1514,13 @@ function revealSection(id, delay = 0) {
   }, delay);
 }
 
-let STRIP_UNTIL = 0;
+let STRIP_UNTIL = 0, WELCOME_T = null;
 function strip(kind, html, ttl) {
+  // The welcome may not squat on the viewport: it retires on her first act
+  // (handoffFromCohort) and after 45 REAL seconds regardless — the demo clock
+  // is paused between acts, so a demo-time TTL would keep it forever.
+  clearTimeout(WELCOME_T);
+  if (kind === 'cold') WELCOME_T = setTimeout(() => { if ($('strip').classList.contains('cold')) $('strip').hidden = true; }, 45_000);
   const el = $('strip');
   el.classList.toggle('out', kind === 'out');
   el.classList.toggle('cold', kind === 'cold');
@@ -1631,7 +1660,7 @@ function recompose(first, opts = {}) {
         : 'ranked on the same vector as the products');
     orderStrip(`<b>${lead}</b> now leads the page — ${why}`
       + (down ? `. <b>${SECTION_NAME[down.section] || down.section}</b> moved below it.` : '.'), 14000);
-    if (down) revealSection(down.section, 780);
+    if (down) { revealSection(down.section, 780); S.lastMovedDown = { section: down.section, at: Date.now() }; }
   }
   renderGlass(pick(next, 'hero'));
   captureDecisions(next);
@@ -2420,7 +2449,14 @@ $('btn-compare').onclick = async () => {
   b.innerHTML = 'Compare<small>waiting for the page to settle…</small>';
   await pageSettled();                                   // never a Now frame mid-move
   b.innerHTML = t;
-  openCompare($('page'));
+  // After a rearrangement, open the comparison AT the section that moved down —
+  // the room came to see the hero below the row, not the top of the shelf.
+  let focusY;
+  if (S.lastMovedDown && Date.now() - S.lastMovedDown.at < 180_000) {
+    const el = document.querySelector(`[data-section="${S.lastMovedDown.section}"]`);
+    if (el) { const pr = $('page').getBoundingClientRect(); focusY = el.getBoundingClientRect().top - pr.top + $('page').scrollTop; }
+  }
+  openCompare($('page'), { focusY });
 };
 $('btn-conc').onclick = () => { openMoment('conc'); $('conc-q').focus(); };
 $('conc-close').onclick = () => $('conc').classList.remove('open');
@@ -3302,6 +3338,7 @@ $('btn-reset').onclick = async () => {
   $('takeover').hidden = true; $('hero').style.display = '';
   // A new visitor's Why is the cold sentence, whatever the last one said.
   $('sentence').textContent = 'Nothing has happened yet.'; S.sayLockUntil = Date.now() + 4000;
+  LASTPD = null; S.lastMovedDown = null; $('pd-pill').hidden = true;
   clockReset(); renderClockBar();
 };
 
@@ -3316,6 +3353,8 @@ window.MOMENTS = initMoments({
 });
 
 renderCaps(); wireTips();
+$('pd-pill').onclick = openPdReview;
+TIPS['pd-pill'] = ['Re-opens the last step’s declaration exactly as it was shown — read-only, nothing runs.', 'the band, in review'];
 $('cb-resume').onclick = clockResume; $('cb-pause').onclick = clockPause; $('cb-reset').onclick = clockReset;
 TIPS['cb-resume'] = ['Runs the demo clock at 15× — four real seconds are one demo minute — so the room watches an affinity expire. The same decay, not a skip.', 'the bars fall; the next-to-lapse audience leaves; the offer ends'];
 TIPS['cb-pause'] = ['Pauses the demo clock. Nothing moves while you talk.', 'the readout freezes'];

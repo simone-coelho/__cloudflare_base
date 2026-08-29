@@ -195,6 +195,17 @@ Simone's review of the deployed demo: it shows STATE, not CAUSE. Products swap p
 - [x] **The dial did nothing.** Two causes: no affinity to weigh (a weight times nothing is nothing — it now says "nothing to weigh yet" instead of sitting there), and the campaign's hero copy was masking the re-decision. Turning a slider now clears the override: the merchandiser outranks the campaign. Verified: line weight to 0.60 → hero re-decides to the Shorewell Trench, kicker "because of what you have looked at", driver `line=Shorewell w=0.3851`.
 - [x] "fell to 0.42, under the exit threshold of 0.42" — exit and entry sentences at 4dp, same fix as the offer.
 
+## 15 · Phase 7 — the second walkthrough pass (2026-08-28, night)
+
+- [x] **The band's middle column reads cleanly** — the acts were 22px serif packed in a small area; now the same clean sans as the other columns, 14.5px, one act per line with breathing room.
+- [x] **Tooltips no longer blend with the bar** — white card, blue edge, dark ink.
+- [x] **The welcome strip retires** — on her first act (the handoff), and after 45 *real* seconds regardless (a demo-time TTL never fired: the demo clock is paused between acts).
+- [x] **Compare opens at what moved** — after a rearrangement the stage opens scrolled to the moved-down section (meridian passes `focusY`; the pixel heuristic is the fallback). Verified: the quiz → Compare shows "You told us: evening" below the row, not the top of the shelf.
+- [x] **"How the cold start works" fills the viewport** — width min(1500px, 94vw), min-height 84vh, 15.5px columns, spaced lists.
+- [x] **The prediction persists** — after OK the declaration docks to a *Predicted · show the last declaration again* pill above the bar; clicking reopens it read-only ("what we said would happen — it already has"); Close continues; a new step replaces it; Restart clears it.
+
+---
+
 ## 14 · Phase 6 — Simone's walkthrough feedback (2026-08-28, evening)
 
 - [x] **A · The page is not a dumping ground.** The experiment card is a **floating drawer** over the page's right edge (never in the flow); the empty "Selected for you" after add-to-bag in a department was a real bug (Complete the look excluded the bag's own category inside a department-scoped shelf) — complements now come from the whole store; the hold / white-glove / offer modules are real offer banners (deep green, white type, gold edge; the deciding offer with its countdown labelled).
