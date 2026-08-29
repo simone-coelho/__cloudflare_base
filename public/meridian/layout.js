@@ -83,12 +83,20 @@ export function paintLayout(order, { duration = 700, easing = DEFAULT_EASING, ro
     host.appendChild(byId.get(id));
   }
 
-  // 3. What moved, in rank terms.
+  // 3. What moved — IN THE POSITIONS THE ROOM COUNTS. The grammar's array holds
+  //    sections the page is not rendering (the offer before she decides, the
+  //    takeover), so array indices and what a person sees drift apart: a row
+  //    that visibly went third to second reported "was 5, now 3". Positions are
+  //    computed over the VISIBLE sections, in both directions.
+  const seen = new Map(sections.map((el) => [el.dataset.section, isVisible(el)]));
+  const visBefore = current.filter((id) => seen.get(id));
+  const visAfter = target.filter((id) => seen.get(id));
   const moves = [];
-  current.forEach((id, from) => {
-    const to = target.indexOf(id);
-    if (to !== from && isVisible(byId.get(id))) moves.push({ section: id, from, to });
-  });
+  for (const id of current) {
+    if (!seen.get(id)) continue;
+    const from = visBefore.indexOf(id), to = visAfter.indexOf(id);
+    if (to !== from) moves.push({ section: id, from, to });
+  }
 
   // 4. FLIP the pixels, unless the viewer asked for no motion.
   if (duration > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {

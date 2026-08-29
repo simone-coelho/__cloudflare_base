@@ -588,7 +588,10 @@ function markMoves(moves, span) {
       b.className = `movebadge${cls ? ` ${cls}` : ''}`;
       b.innerHTML = text;
       el.appendChild(b);
-      applyHighlight(el);
+      // A SECTION THAT MOVED DROPS ITS "I JUST CHANGED" SHADE. The hero keeps
+      // the landing glow from its own swap; once the page moves it, that glow
+      // is about the wrong event and the badge is the news.
+      el.classList.remove('landed', 'pulse');
     }, delay));
   };
   landing.forEach((m, i) => {
@@ -2214,7 +2217,8 @@ function recompose(first, opts = {}) {
     const top = S.layout.sections.filter((x) => x.strategy !== 'locked' && x.strategy !== 'template')
       .sort((a, b) => a.rank - b.rank)[0];
     consequence('Which box comes first',
-      movedSections.map((m) => `${SECTION_NAME[m.section] || m.section} ${m.from} → ${m.to}`).join(' · '),
+      // POSITIONS ARE COUNTED FROM ONE, everywhere a person reads them.
+      movedSections.map((m) => `${SECTION_NAME[m.section] || m.section} ${m.from + 1} → ${m.to + 1}`).join(' · '),
       top?.explain?.movedBecause || 'The sections re-ordered on the same vector that ranks the products.');
     S.sayLockUntil = Date.now() + 5000;
     $('sentence').textContent = rearrangeSentence(movedSections, { plain: true });
