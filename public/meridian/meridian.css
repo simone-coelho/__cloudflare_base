@@ -1000,7 +1000,7 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 .pd-t .leaves{font-weight:700;background:#9A5410;color:#fff;padding:2px 8px;border-radius:4px}
 .pd-t .decays{color:#9A5410;font-weight:600}
 .pd-foot{position:sticky;bottom:0;z-index:2;background:#EEF1F6;display:flex;justify-content:space-between;align-items:center;gap:20px;margin-top:16px;padding-top:12px;border-top:1px solid #C4CEDD}
-.pd-foot span{font:400 12.5px/1.5 ui-monospace,monospace;color:var(--muted);max-width:70ch}
+.pd-foot span{font:400 13.5px/1.5 var(--sans);color:var(--muted);max-width:70ch}
 #pd-go{font:600 15px/1 var(--sans);padding:12px 20px;border-radius:6px;border:0;background:var(--ink);color:#fff;cursor:pointer;white-space:nowrap}
 #pd-go:hover{background:#000}
 @media (max-width:1400px){.pd-grid{grid-template-columns:1fr 1.35fr 1fr;gap:12px}.pd-act{font-size:19px}}
@@ -1353,21 +1353,23 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 /* THE DECISIONS BAND — full width under the three columns, so a four-column
    table is readable instead of squeezed into a third of the card. */
 .pd-why[hidden]{display:none}
+.pd-why .pd-calc-k{font:600 12.5px/1.2 var(--sans);letter-spacing:.06em;color:#4E5F7A}
 .pd-why{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start;
   margin:12px 18px 0;padding:12px 14px;background:#fff;border:1px solid #D6DBE4;border-radius:9px;
   max-height:34vh;overflow:auto}
 .pd-why-m:empty{display:none}
 .pd-dt{width:100%;border-collapse:collapse;margin-top:6px}
-.pd-dt th{text-align:left;font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.11em;text-transform:uppercase;
-  color:#6B7385;padding:0 10px 6px 0;border-bottom:1px solid #E4E8EF}
-.pd-dt td{padding:7px 10px 7px 0;border-bottom:1px solid #EEF1F6;vertical-align:top;font-size:12.5px;color:#1B2430}
+.pd-dt th{text-align:left;font:600 11.5px/1.2 var(--sans);letter-spacing:.06em;text-transform:uppercase;
+  color:#6B7385;padding:0 14px 7px 0;border-bottom:1px solid #E4E8EF}
+.pd-dt td{padding:9px 14px 9px 0;border-bottom:1px solid #EEF1F6;vertical-align:top;
+  font:400 14px/1.45 var(--sans);color:#1B2430}
 .pd-dt tr:last-child td{border-bottom:0}
 .pd-dt .w{font-weight:600;white-space:nowrap}
-.pd-dt .n{font:600 12px/1.4 ui-monospace,monospace;color:#0E5FBF}
-.pd-dt .g{font:500 12px/1.4 ui-monospace,monospace;color:#4A5468}
+.pd-dt .n{font:500 14px/1.45 var(--sans);color:#0E5FBF;font-variant-numeric:tabular-nums}
+.pd-dt .g{font:400 14px/1.45 var(--sans);color:#4A5468;font-variant-numeric:tabular-nums}
 .pd-dt td:last-child{width:1px;white-space:nowrap}
 .pd-dt .au{display:inline-block;height:auto;vertical-align:top;
-  font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;
+  font:600 11px/1.2 var(--sans);letter-spacing:.04em;text-transform:uppercase;
   padding:4px 7px;border-radius:3px;white-space:nowrap;background:#E8EDF5;color:#33405A}
 .pd-dt .au.au-engine{background:#DFF3E6;color:#14663B}
 .pd-dt .au.au-pin{background:#FBEAD2;color:#7A4B06}
