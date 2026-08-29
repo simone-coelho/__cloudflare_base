@@ -588,6 +588,7 @@ function markMoves(moves, span) {
       b.className = `movebadge${cls ? ` ${cls}` : ''}`;
       b.innerHTML = text;
       el.appendChild(b);
+      const chip = el.querySelector(':scope > .poschip'); if (chip) chip.hidden = true;
       // A SECTION THAT MOVED DROPS ITS "I JUST CHANGED" SHADE. The hero keeps
       // the landing glow from its own swap; once the page moves it, that glow
       // is about the wrong event and the badge is the news.
@@ -609,11 +610,32 @@ function markMoves(moves, span) {
   }
 }
 const secEl = (id) => document.querySelector(`#page [data-section="${id}"]`);
+/**
+ * EVERY SECTION SHOWS THE POSITION IT IS IN — not only the ones that moved.
+ * "was 3 · now 4" is unreadable if nothing else is numbered: the room has to
+ * count from the top to find where 4 even is. So each visible section wears a
+ * quiet chip with its own place, always, and a mover's badge sits beside it.
+ */
+function paintPositions() {
+  const visible = [...document.querySelectorAll('#page [data-section]')].filter((el) => !el.hidden);
+  const seen = new Set();
+  visible.forEach((el, i) => {
+    seen.add(el);
+    let chip = el.querySelector(':scope > .poschip');
+    if (!chip) { chip = document.createElement('span'); chip.className = 'poschip'; el.appendChild(chip); }
+    chip.textContent = String(i + 1);
+    chip.hidden = !!el.querySelector(':scope > .movebadge');   // the mover's badge speaks for it
+  });
+  document.querySelectorAll('#page [data-section] > .poschip').forEach((c) => {
+    if (!seen.has(c.parentElement)) c.remove();
+  });
+}
 /** They stay until the next press — his call: he wants to talk over them. */
 function clearMoveBadges() {
   clearTimeout(CHOREO.t);
   CHOREO.pending.splice(0).forEach(clearTimeout);
   document.querySelectorAll('.movebadge').forEach((b) => b.remove());
+  paintPositions();                    // the plain numbers come back
 }
 
 /** Ghost destination badges on the page while the band predicts a rearrangement. */
@@ -2254,6 +2276,7 @@ function recompose(first, opts = {}) {
     // ride down to the moved section is performed by hand — the page never
     // scrolls itself here (his call, after trying it both ways).
   }
+  paintPositions();
   renderGlass(pick(next, 'hero'));
   captureDecisions(next);
   const n = [...S.audiences].filter((a) => !isStageAudience(a)).length, dims = Object.keys(snap.dims).length;
@@ -3332,6 +3355,7 @@ async function performBeat(beat) {
 
 async function goBeat(i) {
   clearMoveBadges();                  // the previous move's evidence retires on the press
+  if (!OFFER.live && $('offer').classList.contains('done')) $('offer').hidden = true;
   if (BZ.busy || DIR.arming) return;               // a beat is still being armed or performed
   DIR.arming = true;                               // Next pressed during a reset/reload/flip is ignored, not stacked
   // Stage management: a modal left open by the previous beat (Ask, the
@@ -3485,6 +3509,14 @@ function offerTick() {
     `${OFFER.dim} · ${OFFER.value} fell to ${(a ?? 0).toFixed(4)}, under its exit threshold of `
     + `${thetaOut}. Nothing was on a timer. The clock was the engine's own `
     + 'closed form for when that interest crosses out, so it could never have been extended.';
+  // It said its piece; it does not sit there for the rest of the session.
+  if (!$('offer').querySelector('.offer-x')) {
+    const x = document.createElement('button');
+    x.type = 'button'; x.className = 'offer-x'; x.textContent = '×';
+    x.title = 'Clear the ended offer';
+    x.onclick = () => { $('offer').hidden = true; };
+    $('offer').appendChild(x);
+  }
   consequence('Reflex moment', 'The offer ended, and said why',
     'The countdown was derived from the decay curve, not chosen. No urgency theatre: '
     + 'when the interest went, so did the offer.');

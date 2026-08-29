@@ -1214,8 +1214,17 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 /* the hero wears its experiment */
 .hero .xbadge{position:absolute;top:0;right:0;z-index:2;font:700 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;
   background:#0E5FBF;color:#fff;padding:7px 10px;border-radius:0 0 0 8px}
-.hero .pinbadge{position:absolute;top:0;left:0;z-index:2;font:700 10.5px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;
-  background:var(--ink);color:#fff;padding:7px 10px;border-radius:0 0 8px 0}
+/* CENTRED: at the left it sat on the kicker and the title, at the right on the
+   photograph. The top middle belongs to neither. */
+.hero .pinbadge{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:3;
+  font:700 10.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;
+  background:var(--ink);color:#fff;padding:7px 12px;border-radius:0 0 8px 8px}
+
+.offer-x{position:absolute;right:10px;top:8px;z-index:4;width:26px;height:26px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.25);color:#fff;
+  font:700 15px/1 var(--sans);cursor:pointer}
+.offer-x:hover{background:rgba(0,0,0,.45)}
+.offer{position:relative}
 
 /* ── OFFERS THAT LAND LIKE OFFERS: the hold / white glove / the deciding offer ── */
 .mmt{--mmt-line:#0B6B3A; --mmt-ink:#FFFFFF; --mmt-bg:#0F8A4B; --mmt-bar:#0B6B3A;
@@ -1358,6 +1367,13 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
    its own section lands and stays until the next press. */
 /* TOP-RIGHT, where the eye lands. At the bottom of a two-row product grid the
    badge was simply never seen. */
+/* The section's own place, always on, quiet. A mover's badge sits where this
+   chip sits and hides it for as long as it is up. */
+.poschip{position:absolute;right:12px;top:10px;z-index:6;min-width:20px;text-align:center;
+  font:700 11px/1 var(--sans);color:#5A6472;background:rgba(238,235,228,.94);
+  border:1px solid rgba(0,0,0,.08);padding:4px 6px;border-radius:4px}
+.poschip[hidden]{display:none}
+.hero .poschip,.hero .movebadge{top:34px}       /* clear of the hero's own top-edge badges */
 .movebadge{position:absolute;right:12px;top:10px;z-index:7;
   font:600 11.5px/1 var(--sans);letter-spacing:.02em;
   background:var(--hl);color:var(--hl-ink);padding:6px 10px;border-radius:4px;
