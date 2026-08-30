@@ -1378,15 +1378,17 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
    badge was simply never seen. */
 /* The section's own place, always on, quiet. A mover's badge sits where this
    chip sits and hides it for as long as it is up. */
-.poschip{position:absolute;right:12px;top:10px;z-index:6;min-width:20px;text-align:center;
-  font:700 11px/1 var(--sans);color:#5A6472;background:rgba(238,235,228,.94);
-  border:1px solid rgba(0,0,0,.08);padding:4px 6px;border-radius:4px}
+/* Solid ink, white numeral: legible from the back of a room. Not green —
+   green means promoted in this demo and nothing else. */
+.poschip{position:absolute;right:12px;top:10px;z-index:6;min-width:26px;text-align:center;
+  font:700 14px/1 var(--sans);color:#fff;background:#2B3647;
+  box-shadow:0 2px 8px -2px rgba(0,0,0,.45);padding:6px 8px;border-radius:5px}
 .poschip[hidden]{display:none}
 .hero .poschip,.hero .movebadge{top:34px}       /* clear of the hero's own top-edge badges */
 .movebadge{position:absolute;right:12px;top:10px;z-index:7;
-  font:600 11.5px/1 var(--sans);letter-spacing:.02em;
-  background:var(--hl);color:var(--hl-ink);padding:6px 10px;border-radius:4px;
-  box-shadow:0 4px 12px -4px rgba(0,0,0,.45);animation:badgein .28s ease-out}
+  font:700 13.5px/1 var(--sans);letter-spacing:.01em;
+  background:var(--hl);color:var(--hl-ink);padding:7px 12px;border-radius:5px;
+  box-shadow:0 6px 16px -4px rgba(0,0,0,.5);animation:badgein .28s ease-out}
 .movebadge b{font-weight:700}
 .movebadge.held{background:#2B3647;color:#fff}
 .movebadge.down{opacity:.9}

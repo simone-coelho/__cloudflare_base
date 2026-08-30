@@ -92,8 +92,13 @@ export function paintLayout(order, { duration = 700, easing = DEFAULT_EASING, ro
   // page even though the grammar moves it with its section — so it counts in
   // the positions the room reads, or the numbers skip and nothing lines up.
   const seen = new Map(sections.map((el) => [el.dataset.section, isVisible(el)]));
+  // A HEADING IS NOT A BLOCK. Only companions that are content in their own
+  // right count — the second story does, the row's title line does not — and
+  // this must match paintPositions() in meridian.js exactly, or a badge says
+  // "now 4" over a chip that says 3.
+  const counts = (el) => isVisible(el) && !el.classList.contains('row-head');
   const withCompanions = (ids) => ids.flatMap((id) => (seen.get(id)
-    ? [id, ...companionsOf(host, id).filter(isVisible).map((c) => c.id || `${id}__c`)] : []));
+    ? [id, ...companionsOf(host, id).filter(counts).map((c) => c.id || `${id}__c`)] : []));
   const visBefore = withCompanions(current);
   const visAfter = withCompanions(target);
   const moves = [];
