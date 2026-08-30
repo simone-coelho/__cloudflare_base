@@ -45,6 +45,13 @@ function denied(c: { env: Env; req: { query: (k: string) => string | undefined; 
 
 // rec=hero: record the #hero title sequence from document-start, so a DURING-LOAD flash
 // (e.g. "The Tabby Shop" → "The Summer Edit") is captured even though the screenshot settles after it.
+/** Run the caller's script on every document, once the page has settled. */
+const persistWrap = (js: string) => `(() => {
+  const run = () => { try { (0, eval)(${JSON.stringify(js)}); } catch (e) { window.__shotErr = String(e); } };
+  if (document.readyState === 'complete') setTimeout(run, 400);
+  else window.addEventListener('load', () => setTimeout(run, 400));
+})()`;
+
 const REC_SCRIPT = `window.__herolog=[];(function(){var last=null,t0=Date.now();var iv=setInterval(function(){var el=document.querySelector('#hero-content .hero-title');var t=el?(el.textContent||'').trim():'';if(t!==last){window.__herolog.push({ms:Date.now()-t0,title:t||'(empty)'});last=t;}},16);setTimeout(function(){clearInterval(iv);},9000);})();`;
 
 /** Reuse a free Browser Rendering session when one exists — ACQUISITIONS are
@@ -76,12 +83,24 @@ shot.get('/', async (c) => {
   const wait = Math.min(8000, parseInt(q.wait || '1400', 10) || 1400);
   const clicks = (q.clicks || '').split(',').map((s) => s.trim()).filter(Boolean);
   const rec = q.rec || '';
+  const persist = q.persist === '1';
+  const hold = Math.min(240000, parseInt(q.hold || '0', 10) || 0);
   let browser: any;
   try {
     browser = await getBrowser(c.env);
     const page = await browser.newPage();
     await page.setViewport({ width: w, height: h });
     if (rec) { try { await page.evaluateOnNewDocument(REC_SCRIPT); } catch (e) { /* recorder optional */ } }
+    // ACROSS A RELOAD. page.evaluate runs in ONE document: when the page under
+    // test reloads itself — the demo has a beat that does exactly that — the
+    // context dies, the script's promise rejects into the catch below, and the
+    // screenshot lands on whatever the fresh page happens to look like. With
+    // `persist=1` the script is installed on EVERY document instead, so it runs
+    // again after the reload and can watch what happens next. Pair it with
+    // `hold` to keep the page alive long enough to see it.
+    if (persist && q.js) {
+      try { await page.evaluateOnNewDocument(persistWrap(q.js)); } catch (e) { /* optional */ }
+    }
     await page.goto(url.toString(), { waitUntil: 'networkidle0', timeout: 30000 });
     await sleep(wait);
     // A swallowed click is how a screenshot "verifies" something that never
@@ -100,7 +119,8 @@ shot.get('/', async (c) => {
     }
     if (clickLog.length) c.header('x-shot-clicks', clickLog.join(' '));
     if (clickLog.some((l) => l.startsWith('FAIL:'))) c.header('x-shot-ok', 'false');
-    if (q.js) { try { await page.evaluate(q.js); await sleep(Math.max(900, wait)); } catch (e) { /* eval optional */ } }
+    if (q.js && !persist) { try { await page.evaluate(q.js); await sleep(Math.max(900, wait)); } catch (e) { /* eval optional */ } }
+    if (hold > 0) await sleep(hold);
     if (rec) { const herolog = await page.evaluate('window.__herolog || []'); return c.json({ ok: true, herolog }); }
     let buf: Uint8Array;
     if (q.clip) {
