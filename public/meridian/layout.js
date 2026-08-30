@@ -123,6 +123,12 @@ export function paintLayout(order, { duration = 700, easing = DEFAULT_EASING, ro
       const dy = b.top - a.top;
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
       // Sit it back where it came from, with no transition...
+      // A CSS ANIMATION BEATS AN INLINE TRANSFORM. Re-inserting a node to
+      // reorder it RESTARTS its animations, so a section with an entry
+      // animation that touches transform (the offer's offerIn) replayed its
+      // entry and threw the travel away — it snapped while its neighbours
+      // slid. Animations stand down for the length of the flight.
+      el.classList.add('flipping');
       el.style.transition = 'none';
       el.style.transform = `translate(${dx}px, ${dy}px)`;
       flying.push(el);
@@ -147,6 +153,7 @@ function release(el, duration, easing, delay = 0) {
   function cleanup() {
     clearTimeout(timer);
     el.removeEventListener('transitionend', done);
+    el.classList.remove('flipping');
     el.style.transition = '';
     el.style.transform = '';
   }
