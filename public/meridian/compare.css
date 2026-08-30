@@ -139,3 +139,23 @@
 #btn-capture.busy small{animation:cmp-busy 1s ease-in-out infinite}
 @keyframes cmp-busy{0%,100%{opacity:1}50%{opacity:.45}}
 @media (prefers-reduced-motion:reduce){#btn-capture.busy small{animation:none}}
+
+/* ── the tools: how to compare, and how close to look ───────────────────── */
+.cmp-tools{display:flex;align-items:center;gap:10px}
+.cmp-seg{display:flex;border:1px solid var(--cmp-line);border-radius:6px;overflow:hidden}
+.cmp-btn.seg{border:0;border-radius:0;padding:7px 12px}
+.cmp-btn.seg + .cmp-btn.seg{border-left:1px solid var(--cmp-line)}
+.cmp-btn.seg.on{background:var(--cmp-blue);color:#fff}
+.cmp-btn.seg.zoomv{min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
+
+/* ── side by side: two whole pages, scrolling together ──────────────────── */
+.cmp-split[hidden]{display:none}
+.cmp-split{display:flex;gap:18px;margin:0 auto}
+.cmp-pane{position:relative;overflow:auto;background:var(--cmp-ground);
+  border:1px solid var(--cmp-line);border-radius:6px}
+.cmp-shot{background:var(--cmp-paper) center top no-repeat;background-size:100% auto}
+.cmp-pane-tag{position:sticky;top:0;z-index:2;display:inline-block;
+  font:600 11px/1 var(--cmp-sans);letter-spacing:.06em;text-transform:uppercase;
+  background:rgba(11,14,19,.82);color:#fff;padding:6px 10px;border-radius:0 0 6px 0}
+.cmp-pane-tag.now{background:var(--cmp-blue)}
+

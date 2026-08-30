@@ -67,7 +67,12 @@ let pending = null;    // the captureBaseline() in flight, if any — a second p
 let gen = 0;           // bumped by clearBaseline(): a capture that started before it is discarded
 let h2c = null;        // html2canvas, once loaded
 let ui = null;         // overlay element refs, once injected
-const view = { seam: SEAM_DEFAULT, open: false, disabled: false, lastFocus: null, frameW: 0, frameH: 0, scale: 1, note: '' };
+const view = { seam: SEAM_DEFAULT, open: false, disabled: false, lastFocus: null, frameW: 0, frameH: 0, scale: 1, note: '',
+  mode: 'seam',        // 'seam' — the draggable reveal · 'split' — both pages, whole
+  zoom: null };        // null = fit the envelope; otherwise a fixed scale
+// Past 100% on purpose: magnifying a badge or a price to point at it from the
+// front of a room is the whole reason a presenter reaches for zoom.
+const ZOOMS = [0.35, 0.5, 0.65, 0.8, 1, 1.25, 1.5, 2];
 
 // ── html2canvas ─────────────────────────────────────────────────────────────
 
@@ -295,7 +300,18 @@ const MARKUP = `
 <div class="cmp-box">
   <div class="cmp-bar">
     <h2 class="cmp-title" id="cmp-title">Before and now</h2>
-    <button type="button" class="cmp-btn" id="cmp-close">Close <kbd>Esc</kbd></button>
+    <div class="cmp-tools">
+      <div class="cmp-seg" role="group" aria-label="How to compare">
+        <button type="button" class="cmp-btn seg on" id="cmp-mode-seam">Seam</button>
+        <button type="button" class="cmp-btn seg" id="cmp-mode-split">Side by side</button>
+      </div>
+      <div class="cmp-seg" role="group" aria-label="Zoom">
+        <button type="button" class="cmp-btn seg" id="cmp-zoom-out" aria-label="Zoom out">&minus;</button>
+        <button type="button" class="cmp-btn seg zoomv" id="cmp-zoom-fit">Fit</button>
+        <button type="button" class="cmp-btn seg" id="cmp-zoom-in" aria-label="Zoom in">+</button>
+      </div>
+      <button type="button" class="cmp-btn" id="cmp-close">Close <kbd>Esc</kbd></button>
+    </div>
   </div>
   <div class="cmp-stage" id="cmp-stage" style="--cmp-seam:50%" tabindex="0" role="slider"
        aria-label="Before / Now seam" aria-orientation="horizontal"
@@ -306,6 +322,13 @@ const MARKUP = `
     <span class="cmp-tag cmp-tag-before" id="cmp-tag-before">Before</span>
     <span class="cmp-tag cmp-tag-now" id="cmp-tag-now">Now</span>
     <div class="cmp-msg" id="cmp-msg" hidden></div>
+  </div>
+  <!-- SIDE BY SIDE — the same two frames, whole, scrolling together. The seam
+       is the better instrument for "what moved"; this is the better one for
+       "read them both". Neither replaces the other. -->
+  <div class="cmp-split" id="cmp-split" hidden>
+    <div class="cmp-pane" id="cmp-pane-before"><div class="cmp-pane-tag">Before</div><div class="cmp-shot" id="cmp-shot-before"></div></div>
+    <div class="cmp-pane" id="cmp-pane-now"><div class="cmp-pane-tag now">Now</div><div class="cmp-shot" id="cmp-shot-now"></div></div>
   </div>
   <div class="cmp-hint" id="cmp-hint" aria-live="polite"></div>
 </div>`;
@@ -325,6 +348,10 @@ function ensureOverlay() {
     back, stage: $('cmp-stage'), before: $('cmp-before'), after: $('cmp-after'),
     divider: $('cmp-divider'), close: $('cmp-close'), msg: $('cmp-msg'), hint: $('cmp-hint'),
     tagBefore: $('cmp-tag-before'), tagNow: $('cmp-tag-now'),
+    split: $('cmp-split'), paneBefore: $('cmp-pane-before'), paneNow: $('cmp-pane-now'),
+    shotBefore: $('cmp-shot-before'), shotNow: $('cmp-shot-now'),
+    modeSeam: $('cmp-mode-seam'), modeSplit: $('cmp-mode-split'),
+    zoomIn: $('cmp-zoom-in'), zoomOut: $('cmp-zoom-out'), zoomFit: $('cmp-zoom-fit'),
   };
   wire();
   return ui;
@@ -357,6 +384,22 @@ function wire() {
 
   // Keys from inside the dialog stop here: the page's own shortcuts (director
   // beats on the arrows, 'd', space) must not fire underneath a modal.
+  u.modeSeam.addEventListener('click', () => setMode('seam'));
+  u.modeSplit.addEventListener('click', () => setMode('split'));
+  u.zoomIn.addEventListener('click', () => stepZoom(1));
+  u.zoomOut.addEventListener('click', () => stepZoom(-1));
+  u.zoomFit.addEventListener('click', () => setZoom(view.zoom == null ? 1 : null));
+
+  // THEY SCROLL TOGETHER, or the comparison is worthless: the same band of the
+  // page has to be under both eyes at once.
+  let syncing = false;
+  const tie = (from, to) => from.addEventListener('scroll', () => {
+    if (syncing) return; syncing = true;
+    to.scrollTop = from.scrollTop; to.scrollLeft = from.scrollLeft;
+    requestAnimationFrame(() => { syncing = false; });
+  });
+  tie(u.paneBefore, u.paneNow); tie(u.paneNow, u.paneBefore);
+
   u.back.addEventListener('keydown', onDialogKey);
 }
 
@@ -372,23 +415,91 @@ function setSeam(pct) {
 }
 
 const HINT = 'Drag the seam · Before to its left, Now to its right · scroll for the rest of the page · ← → nudge · Home / End to the edges';
+const SPLIT_HINT = 'Both pages, whole · they scroll together · ± to zoom · Seam goes back to the draggable reveal';
 
 function fit() {
   if (!ui) return;
-  const maxW = Math.min(window.innerWidth * ENVELOPE.vw, ENVELOPE.maxW);
-  const maxH = Math.min(window.innerHeight * ENVELOPE.vh, ENVELOPE.maxH);
+  const split = view.mode === 'split';
+  // Two pages need the width of two pages. The box grows for this mode only.
+  const maxW = split ? Math.min(window.innerWidth * 0.96, 1960)
+                     : Math.min(window.innerWidth * ENVELOPE.vw, ENVELOPE.maxW);
+  const maxH = split ? Math.min(window.innerHeight * 0.82, 900)
+                     : Math.min(window.innerHeight * ENVELOPE.vh, ENVELOPE.maxH);
+  if (split) { fitSplit(maxW, maxH); return; }
   let w = maxW, h = maxH;
   let contentH = h, s = 1;
   if (view.frameW > 0 && view.frameH > 0) {
     // Fit the WIDTH; the frames are full-page tall and scroll inside the stage,
     // so what changed below the fold is in the comparison, not cropped out.
-    s = Math.min(1, maxW / view.frameW);              // never upscale — pixels stay pixels
+    s = view.zoom != null ? view.zoom : Math.min(1, maxW / view.frameW);
     w = view.frameW * s; contentH = view.frameH * s; h = Math.min(maxH, contentH);
   }
   view.scale = s;
-  ui.stage.style.width = `${Math.round(w)}px`;
+  const stageW = Math.min(w, maxW);          // w is the image's own width; the stage is capped
+  ui.stage.style.width = `${Math.round(stageW)}px`;
   ui.stage.style.height = `${Math.round(h)}px`;
+  // Zoomed past the stage, the page pans instead of being cropped.
+  ui.stage.style.overflowX = view.frameW * s > stageW + 1 ? 'auto' : 'hidden';
   for (const el of [ui.before, ui.after, ui.divider]) el.style.height = `${Math.round(contentH)}px`;
+  for (const el of [ui.before, ui.after]) el.style.backgroundSize = `${Math.round(view.frameW * s)}px auto`;
+  syncTools();
+}
+
+/** Side by side: two panes of equal width, each holding a whole page. */
+function fitSplit(maxW, maxH) {
+  const gap = 18;
+  const paneW = Math.floor((maxW - gap) / 2);
+  const s = view.zoom != null ? view.zoom : Math.min(1, paneW / (view.frameW || 1));
+  view.scale = s;
+  ui.split.style.width = `${Math.round(maxW)}px`;
+  ui.split.style.height = `${Math.round(maxH)}px`;
+  for (const el of [ui.paneBefore, ui.paneNow]) el.style.width = `${paneW}px`;
+  for (const el of [ui.shotBefore, ui.shotNow]) {
+    el.style.height = `${Math.round(view.frameH * s)}px`;
+    el.style.backgroundSize = `${Math.round(view.frameW * s)}px auto`;
+  }
+  syncTools();
+}
+
+/** The tools show the state they are in — no guessing which mode is live. */
+function syncTools() {
+  if (!ui) return;
+  const split = view.mode === 'split';
+  ui.modeSeam.classList.toggle('on', !split);
+  ui.modeSplit.classList.toggle('on', split);
+  ui.zoomFit.textContent = view.zoom == null ? 'Fit' : `${Math.round(view.scale * 100)}%`;
+  ui.zoomFit.classList.toggle('on', view.zoom != null);
+}
+
+/** Switch how the two frames are shown. The captures do not change. */
+function setMode(mode) {
+  if (!ui || view.disabled) return;
+  view.mode = mode === 'split' ? 'split' : 'seam';
+  const split = view.mode === 'split';
+  ui.stage.hidden = split;
+  ui.split.hidden = !split;
+  if (split) {
+    ui.shotBefore.style.backgroundImage = ui.before.style.backgroundImage;
+    ui.shotNow.style.backgroundImage = ui.after.style.backgroundImage;
+  }
+  fit();
+  ui.hint.textContent = view.note || (split ? SPLIT_HINT : HINT);
+  (split ? ui.paneNow : ui.stage).focus?.();
+}
+
+/** Zoom, the way the composer does it: presets, and ± walks them. */
+function setZoom(z) {
+  if (!ui) return;
+  view.zoom = z;                       // null means fit
+  fit();
+}
+function stepZoom(dir) {
+  const cur = view.zoom != null ? view.zoom : view.scale;
+  const i = ZOOMS.findIndex((z) => z > cur + 0.001);
+  const next = dir > 0
+    ? (i === -1 ? ZOOMS[ZOOMS.length - 1] : ZOOMS[i])
+    : ([...ZOOMS].reverse().find((z) => z < cur - 0.001) ?? ZOOMS[0]);
+  setZoom(next);
 }
 
 function onDialogKey(e) {
@@ -438,6 +549,8 @@ function open(focusEl) {
 
 function showFrames(before, now, note, changeY = null) {
   const u = ensureOverlay();
+  view.zoom = null;                    // every comparison opens fitted
+  setMode('seam');                     // and on the seam — the mode he built the demo around
   view.note = note || '';
   // Full-page frames legitimately differ in height (a rearrangement makes the
   // page taller). Both are anchored at the top inside the taller box; nothing
@@ -449,6 +562,8 @@ function showFrames(before, now, note, changeY = null) {
   u.tagBefore.hidden = false; u.tagNow.hidden = false;
   u.before.style.backgroundImage = `url("${before.url}")`;
   u.after.style.backgroundImage = `url("${now.url}")`;
+  u.shotBefore.style.backgroundImage = `url("${before.url}")`;
+  u.shotNow.style.backgroundImage = `url("${now.url}")`;
   u.tagBefore.innerHTML = `Before<span>· ${fmtTime(before.at)}</span>`;
   u.tagNow.innerHTML = `Now<span>· ${fmtTime(now.at)} · ${fmtDelta(now.at - before.at)}</span>`;
   u.stage.tabIndex = 0;
