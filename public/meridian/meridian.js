@@ -3779,7 +3779,8 @@ async function conciergeAsk(message) {
     const it = byId(id);
     if (!it) return '';
     return `<div class="conc-it${isAnchor ? ' anchor' : ''}" style="--hue:${it.hex}">
-      <div class="art">${packshot(it, { withName: false, square: true })}</div>
+      <div class="art">${packshot(it, { withName: false, square: true })}${it.image
+        ? `<img src="${it.image}" alt="" loading="lazy" onload="this.dataset.loaded=1" onerror="this.remove()">` : ''}</div>
       ${isAnchor ? '<div class="conc-anchor-tag">the anchor</div>' : ''}
       <div class="nm">${it.name}</div>
       <div class="mt">${it.category} · ${it.subcategory}</div>

@@ -274,6 +274,10 @@ body{
    when the presenter calls them and give it back. */
 .moment{position:fixed;inset:0;background:rgba(11,14,19,.72);backdrop-filter:blur(4px);
   z-index:90;display:none;place-items:center;padding:40px}
+/* Every panel stops short of the director's bar, and sizes itself to the room
+   that leaves — not to the viewport it cannot have. */
+body.has-director .moment{padding-bottom:calc(var(--dir-h, 120px) + 20px)}
+body.has-director .moment-box{max-height:calc(96vh - var(--dir-h, 120px))}
 .moment.open{display:grid}
 .moment-box{background:var(--card);border-radius:14px;width:min(1180px,94vw);max-height:88vh;
   overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 90px rgba(11,14,19,.5)}
@@ -420,7 +424,10 @@ table.rec tr:hover td{background:var(--paper);color:var(--ink)}
 /* ── Style concierge ───────────────────────────────────────────────────────
    A thread, not a results page. Each turn keeps its own look on screen so the
    room can see that a refinement produced DIFFERENT pieces, not a reshuffle. */
-.conc-thread{margin-top:16px;display:flex;flex-direction:column;gap:16px;max-height:62vh;overflow-y:auto}
+.conc-thread{margin:16px 0 0;padding:0 26px 22px;display:flex;flex-direction:column;gap:18px;
+  max-height:62vh;overflow-y:auto}
+.conc-look{padding:0}
+.conc-items{margin-top:12px}
 .conc-turn{border-top:1px solid var(--line);padding-top:14px}
 .conc-turn:first-child{border-top:0;padding-top:0}
 .conc-said{font:400 15px/1.5 inherit;color:var(--muted);margin-bottom:10px}
@@ -431,8 +438,14 @@ table.rec tr:hover td{background:var(--paper);color:var(--ink)}
   border-radius:5px;padding:9px 11px;margin-bottom:12px;max-width:74ch}
 .conc-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
 .conc-it{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
-.conc-it .art{aspect-ratio:1;background:#F4F5F7;display:grid;place-items:center}
+/* The real packshot rides OVER the placeholder, exactly as the shelf does —
+   the drawing is only what you see until the photograph has loaded. */
+.conc-it .art{position:relative;aspect-ratio:1;background:#fff;display:grid;place-items:center}
 .conc-it .art svg{width:74%;height:74%}
+.conc-it .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  background:#fff;opacity:0;transition:opacity .15s linear}
+.conc-it .art img[data-loaded]{opacity:1}
+.conc-it .art:has(img[data-loaded]) svg{display:none}
 .conc-it .nm{font-size:13.5px;padding:9px 10px 3px;line-height:1.3}
 .conc-it .mt{font:400 11.5px/1 ui-monospace,monospace;color:var(--muted);padding:0 10px 10px}
 .conc-it.anchor{border-color:var(--p-blue);box-shadow:0 0 0 1px var(--p-blue) inset}
@@ -1170,7 +1183,10 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 
 /* ── Revenue Radar: Coach's padding grammar, in the light theme ─────────── */
 .rad-box{max-width:1180px}
-.rad-body{padding:16px 20px 22px;background:#fff}
+/* THE PANEL ENDS ABOVE THE BAR. The body scrolls inside the box instead of the
+   box growing under the controls — the Radar is the tallest panel in the deck
+   and it was running off the bottom of the screen. */
+.rad-body{padding:16px 20px 22px;background:#fff;overflow-y:auto;min-height:0}
 .rad-cohorts{margin:0 0 16px}
 .rad-c.gen{font-weight:600}
 .rad-step .drop{font:600 11.5px/1 ui-monospace,monospace;color:var(--p-dim);margin-left:8px}
