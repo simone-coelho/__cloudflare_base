@@ -1378,11 +1378,12 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
    badge was simply never seen. */
 /* The section's own place, always on, quiet. A mover's badge sits where this
    chip sits and hides it for as long as it is up. */
-/* Solid ink, white numeral: legible from the back of a room. Not green —
-   green means promoted in this demo and nothing else. */
+/* GREEN, white numeral. Dark chips read as the product cards' own rank
+   badges, and two different numbering systems in the same colour is the one
+   thing this must not do. */
 .poschip{position:absolute;right:12px;top:10px;z-index:6;min-width:26px;text-align:center;
-  font:700 14px/1 var(--sans);color:#fff;background:#2B3647;
-  box-shadow:0 2px 8px -2px rgba(0,0,0,.45);padding:6px 8px;border-radius:5px}
+  font:700 14px/1 var(--sans);color:#fff;background:#1E8A45;
+  box-shadow:0 2px 8px -2px rgba(0,0,0,.4);padding:6px 8px;border-radius:5px}
 .poschip[hidden]{display:none}
 .hero .poschip,.hero .movebadge{top:34px}       /* clear of the hero's own top-edge badges */
 .movebadge{position:absolute;right:12px;top:10px;z-index:7;
