@@ -830,6 +830,7 @@ body.has-director .page{padding-bottom:250px}
 .dir-transport #dir-compare.armed{background:#0E7C74;border-color:#0E7C74;color:#fff}
 /* The card's OK, repeated where his hand already is. Same colour as the card's
    button so the room reads them as one control. */
+#dir-speed{min-width:44px;font:700 12px/1 ui-monospace,monospace}
 #dir-doit{background:#14C46A;border-color:#14C46A;color:#04220f;font-weight:700;min-width:74px}
 #dir-doit:hover{background:#2FE083;border-color:#2FE083}
 #dir-doit[hidden]{display:none}
@@ -1024,6 +1025,15 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 .pd-t .enters{font-weight:700;background:var(--changed);color:var(--changed-ink);padding:2px 8px;border-radius:4px}
 .pd-t .leaves{font-weight:700;background:#9A5410;color:#fff;padding:2px 8px;border-radius:4px}
 .pd-t .decays{color:#9A5410;font-weight:600}
+/* The run's own controls, on the card: how long until it consents, and the
+   way to stop it exactly here. */
+.pd-count{font:600 13px/1 ui-monospace,monospace;color:#4E5F7A;min-width:34px;text-align:right;
+  font-variant-numeric:tabular-nums}
+.pd-pause[hidden]{display:none}
+.pd-pause{font:600 13.5px/1 var(--sans);padding:11px 16px;border-radius:6px;cursor:pointer;
+  background:#fff;border:1.5px solid #C4CEDD;color:#2B3647}
+.pd-pause:hover{border-color:#0E5FBF}
+.pd-pause.on{background:#F0A92B;border-color:#F0A92B;color:#241500}
 .pd-foot{position:sticky;bottom:0;z-index:2;background:#EEF1F6;display:flex;justify-content:space-between;align-items:center;gap:20px;margin-top:16px;padding-top:12px;border-top:1px solid #C4CEDD}
 .pd-foot span{font:400 13.5px/1.5 var(--sans);color:var(--muted);max-width:70ch}
 #pd-go{font:600 15px/1 var(--sans);padding:12px 20px;border-radius:6px;border:0;background:var(--ink);color:#fff;cursor:pointer;white-space:nowrap}

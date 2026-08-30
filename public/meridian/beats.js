@@ -193,7 +193,7 @@ export const BEATS = [
     real: 'content catalogue REPRESENTATIVE (your CMS in production) · scoring LIVE · the payload REAL' },
 
   { n: 21, act: 2, cap: 'C36', title: 'Content follows her, with the map', secs: 75,
-    perform: [{ line: { name: 'Fenwick', n: 0 } }],
+    perform: [{ dept: 'Knitwear' }, { line: { name: 'Fenwick', n: 0 } }],
     why: 'The schematic pre-card: the room sees the page-plan before it happens, then watches it come true — the Tapestry design document, live.',
     do: 'Press Next. Read the band: the page-now and page-after schematics, the destinations badged on the page behind it. Then OK.',
     watch: 'The band shows “your page now → after” as coloured slot maps; ghost badges on the page say where each slot will go. On OK the carousel and the stories re-rank to knitwear content and the content hero picks up the Fenwick guide.',
@@ -236,9 +236,9 @@ export const BEATS = [
     say: 'These are not learned parameters you have to trust. They are configuration, and they are yours. I am turning up how much the line matters, right now, and the next decision uses it — no rebuild, no redeploy, and the receipt records which version of the weights made the call. That is what we mean by no black box: you can read the decision, and you can change the rule that made it.',
     real: 'LIVE · the weight is written into the live strategy table the composer reads' },
   { n: 26, act: 2, cap: 'C11 · C19', title: 'Your merchandiser outranks it', secs: 45,
-    perform: [{ tab: 'affinity' }, { sel: '#btn-pin' }],
+    perform: [{ tab: 'affinity' }, { sel: '#btn-pin' }, { wait: 900 }, { tab: 'glass' }],
     why: 'Two governance points that answer the same objection; taking them together keeps the pace up.',
-    do: 'Open the audience list, then pin the hero — and RELEASE the pin before moving on.',
+    do: 'Open the audience list, then pin the hero. Leave it pinned — the next beat releases it.',
     watch: 'Audiences in the catalogue’s own words. Hero locks; explain reads "pinned · ranking skipped". The button becomes "Release the pin".',
     say: 'Nobody wrote these audiences. They are minted from your catalogue, in your merchandising language. And declared precedence — gates, then pins, then ranking. Your merchandiser outranks the machine, and the machine says so on the record.',
     real: 'LIVE' },
@@ -253,9 +253,9 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 28, act: 2, cap: 'C10 · C33', title: 'Watch her leave', secs: 90, mark: 'THE BEAT NOBODY ELSE HAS',
-    perform: [{ sel: '#btn-skip' }],
+    perform: [{ sel: '#btn-skip' }, { wait: 1400 }, { sel: '#btn-skip' }, { wait: 1400 }, { sel: '#btn-skip' }],
     why: 'Two presses of two minutes each and the three retreats have landed, in order, with their numbers. Nothing happens while you wait any more — time passes when you say so.',
-    do: 'Press "Let two minutes pass". The retreats land one after another; talk over them. Press it again for the rest.',
+    do: 'Press Next. Three advances of two minutes — the retreats land one after another; talk over them.',
     watch: 'Three separate retreats, in order — the aisle first (category), then the price band, then taste — each naming its dimension and its number as it lands. The offer ends and says why. The row returns to discovery.',
     say: 'Now watch it forget — in order. The aisle she wandered through goes first; the price band holds longer; taste holds longest, because we made their clocks different on purpose. Each exit names its number. Nobody wrote a rule to remove her from anything — the same arithmetic that let her in is letting her out.',
     real: 'LIVE' },
@@ -280,7 +280,7 @@ export const BEATS = [
 
   // ── ACT 3 · the operator · 480s ────────────────────────────────────────────
   { n: 31, act: 3, cap: 'C21', title: 'Opal proposes', secs: 70,
-    perform: [{ sel: '#btn-opal' }],
+    perform: [{ sel: '#btn-opal' }, { wait: 800 }, { chip: { of: 'oq', n: 0 } }],
     why: 'The room needs to read the generated rule, not just watch it appear.',
     arm: { vertical: 'retail' },
     do: 'Ask Opal in plain English.',
@@ -289,14 +289,16 @@ export const BEATS = [
     real: 'LIVE (US-only)' },
 
   { n: 32, act: 3, cap: 'C21', title: 'A person decides', secs: 50,
+    // Publish lives inside Opal, which arriving at this beat closed.
+    perform: [{ show: 'opal' }, { wait: 700 }, { sel: '#opal-publish' }],
     why: 'The governance beat. Short, deliberate, and it answers the AI-safety question in the room.',
-    do: 'Click Publish.',
+    do: 'Press Next — Opal comes back and the audience goes live.',
     watch: 'It goes live. The page can target it.',
     say: 'That is the governance beat. The machine proposes, a person decides, and both are on the record with a name and a timestamp.',
     real: 'GATED — enabled' },
 
   { n: 33, act: 3, cap: 'C22', title: 'It cannot invent a scene', secs: 75,
-    perform: [{ sel: '#btn-ask' }],
+    perform: [{ sel: '#btn-ask' }, { wait: 1000 }, { chip: { of: 'q', n: 0 } }],
     why: 'The anti-hallucination argument, made structurally rather than promised.',
     do: 'Type a request in words.',
     watch: 'A curated scene, our copy, engine-ranked products, and the provenance line.',
@@ -304,7 +306,7 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 34, act: 3, cap: 'C23', title: 'A stylist that cannot oversell', secs: 75,
-    perform: [{ sel: '#btn-conc' }],
+    perform: [{ sel: '#btn-conc' }, { wait: 1000 }, { chip: { of: 'conc-q', n: 0 } }],
     why: 'The second turn is the point. Budget enough for both turns and the refusal.',
     do: 'Ask for a look. Then correct it. Then ask for something we do not sell.',
     watch: 'Real catalogue pieces. The refinement repeats nothing. The refusal names what is missing.',
@@ -344,7 +346,8 @@ export const BEATS = [
     real: 'compute LIVE · traffic SIMULATED' },
 
   { n: 39, act: 4, cap: 'C29', title: 'Launch the fix — and prove it in the room', secs: 80,
-    perform: [{ sel: '#rad-launch' }, { wait: 6000 }, { sel: '#rad-prove' }],
+    perform: [{ show: 'radar' }, { wait: 1000 }, { sel: '#rad-c-gen_z' }, { wait: 2000 },
+               { sel: '#rad-launch' }, { wait: 6000 }, { sel: '#rad-prove' }],
     why: 'The recoverable arithmetic is shown term by term, a real object is created, the funnel recovers, and the payment step changes for that shopper. All four need to be seen.',
     do: 'Launch the fix. Watch the funnel recover. Then open the checkout.',
     watch: 'A real audience id and a real experiment targeted at the diagnosed cohort · the payment bar climbs (green) with the fix applied · the checkout’s payment step now shows Pay in 4 with social proof.',
@@ -376,7 +379,8 @@ export const BEATS = [
     real: 'LIVE' },
 
   { n: 43, act: 5, cap: 'C31 · C12 · C13', title: 'It ships as a real bandit — and the loop closes', secs: 50,
-    perform: [{ sel: '#btn-skip' }, { wait: 1200 }, { sel: '#btn-skip' }, { wait: 1200 }, { sel: '#btn-skip' }],
+    perform: [{ show: 'xcard' }, { wait: 700 }, { sel: '#btn-skip' }, { wait: 1200 },
+               { sel: '#btn-skip' }, { wait: 1200 }, { sel: '#btn-skip' }],
     why: 'The loop closing is the payoff. The bandit moves only as demo time moves, so the room sees each round land on a press.',
     do: 'Press Next: six minutes pass in three consented steps. Read the card as the traffic shifts.',
     watch: 'The experiment card: a real multi_armed_bandit rule with its flag and rule ids · the 28:00 window · traffic 50/50 → 40/60 → 27/73 → 20/80 · “Loop closed in ≈6:00 of 28:00 — winner promoted automatically.”',

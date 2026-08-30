@@ -1825,12 +1825,50 @@ function openPdReview() {
   $('predict').hidden = false;
 }
 
+/**
+ * A SECOND DECLARATION MUST NOT ORPHAN THE FIRST. PD.resolve used to be
+ * overwritten, so whatever was awaiting the earlier promise waited for ever.
+ */
 function openBandRaw() {
+  if (PD.open && PD.resolve) { const stale = PD.resolve; PD.resolve = null; stale(); }
   $('predict').hidden = false; PD.open = true;
   if (window.MOMENTS) window.MOMENTS.pause();
+  armBandConsent();
   return new Promise((resolve) => { PD.resolve = resolve; });
 }
+
+/**
+ * WHEN AUTO IS RUNNING, THE CARD READS ITSELF OUT AND THEN CONSENTS. Capped
+ * well under Compare's 25s press claim and the forecast's clock snapshot, so
+ * the baseline can never go stale behind an open card and the declared numbers
+ * are always the ones the engine then produces. Pause holds it here.
+ */
+const BAND_READ_MS = 9000;
+function armBandConsent() {
+  clearTimeout(AUTO.consentT);
+  syncBandAuto();
+  if (!DIR.auto || PD.review) return;
+  const until = Date.now() + Math.max(2500, BAND_READ_MS / AUTO.speed);
+  const tick = () => {
+    if (!DIR.auto || !PD.open || PD.review) { syncBandAuto(); return; }
+    if (AUTO.paused) { $('pd-count').textContent = 'paused'; AUTO.consentT = setTimeout(tick, 150); return; }
+    const left = Math.ceil((until - Date.now()) / 1000);
+    if (left <= 0) { $('pd-count').textContent = ''; $('pd-go').click(); return; }
+    $('pd-count').textContent = `${left}s`;
+    AUTO.consentT = setTimeout(tick, 200);
+  };
+  tick();
+}
+/** The card shows a Pause only while a run is on. */
+function syncBandAuto() {
+  const p = $('pd-pause'); if (!p) return;
+  p.hidden = !DIR.auto;
+  p.textContent = AUTO.paused ? 'Resume the run' : 'Pause here';
+  p.classList.toggle('on', AUTO.paused);
+  if (!DIR.auto) $('pd-count').textContent = '';
+}
 $('pd-go').onclick = async () => {
+  clearTimeout(AUTO.consentT); $('pd-count').textContent = '';
   if (PD.review) { PD.review = false; $('predict').hidden = true; $('predict').classList.remove('review'); return; }
   if (captureInFlight()) { const t = $('pd-go').textContent; $('pd-go').textContent = 'capturing the baseline — one moment…'; await captureIdle(); $('pd-go').textContent = t; }
   // Keep the declaration so the presenter can bring it back mid-discussion.
@@ -3372,8 +3410,34 @@ function resolveTarget(t) {
   if (t.dept) return dept(t.dept)();
   if (t.card) return cardOf(t.card.cat, t.card.n)();
   if (t.line) return cardOfLine(t.line.name, t.line.n)();
+  // A CHIP IS A PRESS THE ROOM CAN SEE. Ask, Opal and the concierge open a
+  // panel and wait for a sentence; a beat that promises an answer has to ask
+  // the question itself. Pressing the chip is exactly what a hand would do.
+  if (t.chip) {
+    const chip = document.querySelectorAll(`.mo-chips[data-for="${t.chip.of}"] button`)[t.chip.n || 0];
+    return chip || null;
+  }
+  // A panel the beat needs but goBeat's housekeeping has just closed. Reopening
+  // is not a reset: showPanel restores what is already rendered.
+  if (t.show) return { run: () => showPanel(t.show) };
   if (t.sel) return document.querySelector(t.sel);
   return null;
+}
+
+/**
+ * Bring back a panel this beat is about. goBeat closes every modal and hides
+ * the experiment drawer on entry — correct for a clean stage, fatal for the
+ * three beats whose whole content lives in one of them: the Radar's launch and
+ * proof, the bandit's closing loop, and Opal's Publish. Nothing here re-runs
+ * anything; it only makes visible what is already there.
+ */
+function showPanel(id) {
+  if (id === 'xcard') { if ($('xc-readout')?.innerHTML.trim()) $('xcard').hidden = false; return; }
+  const el = $(id);
+  if (el && el.classList.contains('moment')) {
+    document.querySelectorAll('.moment.open').forEach((m) => { if (m !== el) m.classList.remove('open'); });
+    el.classList.add('open');
+  }
 }
 
 async function performBeat(beat) {
@@ -3403,22 +3467,76 @@ async function goBeat(i) {
   } finally { DIR.arming = false; }
   if (!DIR.running) dirPlay(true);                 // the clock starts on the first Next
   await performBeat(BEATS[DIR.i]);
-  if (DIR.auto) scheduleAuto();
 }
 
-// Auto: advance on its own, with a gap the presenter can talk in — Coach's
-// 6.2s. Pause is simply Auto off; the beat in flight always completes.
-function scheduleAuto() {
-  clearTimeout(DIR.autoTimer);
-  if (DIR.i >= BEATS.length - 1) { setAuto(false); return; }
-  DIR.autoTimer = setTimeout(() => { if (DIR.auto) goBeat(DIR.i + 1); }, 6200);
+/**
+ * AUTO RUNS THE SHOW, it does not merely nudge the script.
+ *
+ * It used to be a 6.2s timer re-armed on the LAST line of goBeat — so the
+ * declaration card, whose promise only the OK press resolves, held goBeat open
+ * forever and the chain died silently while the button still read "Pause". And
+ * 6.2s is not a beat: the deck plans 30-110s each, and a performed beat needs
+ * ~15s of machine time, so any beat still running when the timer fired was
+ * dropped (which also killed the chain).
+ *
+ * Now it is a loop that AWAITS each beat and then dwells for that beat's own
+ * planned seconds, scaled by a speed the presenter controls. The card consents
+ * itself after a readable pause — and can be stopped from the card.
+ */
+const AUTO = { speed: 1, running: false, hold: null, consentT: null, paused: false };
+const SPEEDS = [1, 2, 4];
+const autoSleep = (ms) => new Promise((resolve) => {
+  const t0 = Date.now();
+  const tick = () => {
+    if (!DIR.auto) return resolve();
+    if (AUTO.paused) { AUTO.hold = setTimeout(tick, 120); return; }
+    if (Date.now() - t0 >= ms) return resolve();
+    AUTO.hold = setTimeout(tick, 120);
+  };
+  tick();
+});
+
+async function autoRun() {
+  if (AUTO.running) return;
+  AUTO.running = true;
+  try {
+    while (DIR.auto) {
+      if (DIR.i >= BEATS.length - 1) { setAuto(false); break; }
+      await goBeat(DIR.i + 1);                       // awaits the whole performance
+      if (!DIR.auto) break;
+      const b = BEATS[DIR.i];
+      // The beat's own planned time is the pace of the show. Reading time is
+      // what is left after the machine has finished moving.
+      await autoSleep(Math.max(1500, ((b?.secs ?? 40) * 1000) / AUTO.speed));
+    }
+  } finally { AUTO.running = false; }
 }
+
 function setAuto(on) {
-  DIR.auto = on; clearTimeout(DIR.autoTimer);
+  DIR.auto = on;
+  clearTimeout(DIR.autoTimer); clearTimeout(AUTO.hold);
+  AUTO.paused = false;
+  sessionStorage.setItem('mrd_auto', on ? '1' : '');   // survives beat 29's reload
   $('dir-play').classList.toggle('on', on);
   $('dir-play').textContent = on ? 'Pause' : 'Auto';
-  if (on) scheduleAuto();
+  syncBandAuto();
+  if (on) autoRun();
 }
+
+/** The speed the show runs at. One control, three settings, always visible. */
+function setSpeed(x) {
+  AUTO.speed = x;
+  $('dir-speed').textContent = `×${x}`;
+  $('dir-speed').title = x === 1 ? 'Real pace — each beat takes its planned time' : `${x}× faster than the planned pace`;
+}
+$('pd-pause').onclick = () => {
+  AUTO.paused = !AUTO.paused;
+  syncBandAuto();
+  if (!AUTO.paused) armBandConsent();     // the countdown starts again from full
+};
+TIPS['pd-pause'] = ['Stops the run right here, on this card, so you can talk over the arithmetic. Press again and the run continues.', 'only while Auto is on'];
+$('dir-speed').onclick = () => setSpeed(SPEEDS[(SPEEDS.indexOf(AUTO.speed) + 1) % SPEEDS.length]);
+TIPS['dir-speed'] = ['How fast Auto runs: ×1 is the pace the deck is planned at, ×2 and ×4 compress the reading time between beats.', 'the performances themselves always run at full speed'];
 
 function dirPlay(on) {
   if (on && !DIR.running) { DIR.totalStart = Date.now(); DIR.beatStart = Date.now(); }
@@ -3522,9 +3640,12 @@ addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') { e.preventDefault(); goBeat(DIR.i + 1); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); goBeat(DIR.i - 1); }
   if (e.key === ' ') { e.preventDefault(); setAuto(!DIR.auto); }
+  if (e.key === 'Escape' && DIR.auto && PD.open) { $('pd-pause').click(); return; }
   if (e.key === 'Escape') { const m = document.querySelector('.moment.open'); if (m) { m.classList.remove('open'); return; } if (palIsOpen()) { closePalette(true); return; } if (BZ.busy) BZ.abort = true; }
 });
 setInterval(() => { dirTick(); syncBarControls(); dedupeAnnouncement(); }, 500);
+// Beat 29 reloads the page; a run that ends there is not a run.
+if (sessionStorage.getItem('mrd_auto')) setTimeout(() => { if (!DIR.auto) setAuto(true); }, 1500);
 
 // ── The reflex moment ───────────────────────────────────────────────────────
 // A white-glove offer earned by intent, running to an instant the ENGINE

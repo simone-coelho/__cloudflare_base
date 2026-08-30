@@ -346,12 +346,12 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 ### 23. Pin it anywhere
 
-**1:15** · C36 · pin + rank-around LIVE · movement slowed for the room, labelled
+**1:15** · C36 · pin + rank-around LIVE · movement slowed for the room — say so
 > ### ⏸ THE CONTRACT LINE
 
 **You do —** Press Next — the banner pins at #3 and the page re-ranks around it, one slot at a time. Say the label out loud: slowed for the room.
 
-**They watch —** The merch strip travels to position 3 and everything else re-ranks around it, one section at a time; the strip names the tenant-config rule. The “slowed for the room” label is on screen.
+**They watch —** The merch strip travels to position 3 and everything else re-ranks around it, one section at a time; the strip names the tenant-config rule. Say the “slowed for the room” line yourself as it moves — the glass carries the badges, not a banner.
 
 **You say —** Your merchandiser wanted the banner third — contract says the banner is theirs, so it goes third, and the engine ranks around it. Nothing here is ever permanently pinned, and anything can be pinned at any position. In production this re-ranking is one frame; we slowed it so you could watch it think.
 
@@ -392,7 +392,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **0:45** · C11 · C19 · LIVE
 
-**You do —** Open the audience list, then pin the hero — and RELEASE the pin before moving on.
+**You do —** Open the audience list, then pin the hero. Leave it pinned — the next beat releases it.
 
 **They watch —** Audiences in the catalogue’s own words. Hero locks; explain reads "pinned · ranking skipped". The button becomes "Release the pin".
 
@@ -424,7 +424,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 **1:30** · C10 · C33 · LIVE
 > ### ⏸ THE BEAT NOBODY ELSE HAS
 
-**You do —** Press "Let two minutes pass". The retreats land one after another; talk over them. Press it again for the rest.
+**You do —** Press Next. Three advances of two minutes — the retreats land one after another; talk over them.
 
 **They watch —** Three separate retreats, in order — the aisle first (category), then the price band, then taste — each naming its dimension and its number as it lands. The offer ends and says why. The row returns to discovery.
 
@@ -489,7 +489,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **0:50** · C21 · GATED — enabled
 
-**You do —** Click Publish.
+**You do —** Press Next — Opal comes back and the audience goes live.
 
 **They watch —** It goes live. The page can target it.
 
