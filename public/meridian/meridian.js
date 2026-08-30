@@ -3462,16 +3462,27 @@ function syncBarControls() {
 // handle (a beat of rest first, so a passing cursor never pops it), pin it for
 // rehearsal, and any performance that clicks a palette button opens it itself
 // so the room watches a real press — never a click against an invisible button.
-const PAL = { pinned: false, openT: null, closeT: null, autoOpened: false };
+// A CLICK IS A DECISION; HOVER IS A GUESS. Pressing the handle used to leave
+// the hover timers running underneath, so the drawer opened and a stale
+// close-timer shut it again — the flicker. A click makes it STICKY: every
+// pending timer is cancelled and nothing may close it until the pointer has
+// actually left the drawer, or he presses something.
+const PAL = { pinned: false, sticky: false, openT: null, closeT: null, autoOpened: false };
+const palTimers = () => { clearTimeout(PAL.openT); clearTimeout(PAL.closeT); };
 function palApply(open) { $('director').classList.toggle('pal-open', open || PAL.pinned); }
-function openPalette() { clearTimeout(PAL.closeT); palApply(true); }
-function closePalette(force) { clearTimeout(PAL.openT); if (PAL.pinned && !force) return; palApply(false); }
+function openPalette(sticky) { palTimers(); if (sticky) PAL.sticky = true; palApply(true); }
+function closePalette(force) {
+  palTimers();
+  if ((PAL.pinned || PAL.sticky) && !force) return;
+  PAL.sticky = false; palApply(false);
+}
 const palIsOpen = () => $('director').classList.contains('pal-open');
-$('pal-handle').onmouseenter = () => { clearTimeout(PAL.openT); PAL.openT = setTimeout(openPalette, 280); };
-$('pal-handle').onmouseleave = () => { clearTimeout(PAL.openT); PAL.closeT = setTimeout(() => closePalette(), 350); };
-$('pal-handle').onclick = () => (palIsOpen() ? closePalette(true) : openPalette());
-$('palette').onmouseenter = () => clearTimeout(PAL.closeT);
-$('palette').onmouseleave = () => { PAL.closeT = setTimeout(() => closePalette(), 300); };
+$('pal-handle').onmouseenter = () => { if (PAL.sticky) return; palTimers(); PAL.openT = setTimeout(() => openPalette(false), 280); };
+$('pal-handle').onmouseleave = () => { if (PAL.sticky) return; palTimers(); PAL.closeT = setTimeout(() => closePalette(), 350); };
+$('pal-handle').onclick = () => (palIsOpen() ? closePalette(true) : openPalette(true));
+$('palette').onmouseenter = () => palTimers();
+// Leaving the drawer is what restarts the clock — his rule.
+$('palette').onmouseleave = () => { PAL.sticky = false; palTimers(); PAL.closeT = setTimeout(() => closePalette(), 300); };
 $('pal-pin').onclick = () => {
   PAL.pinned = !PAL.pinned;
   $('pal-pin').classList.toggle('on', PAL.pinned);
@@ -3481,9 +3492,9 @@ $('pal-pin').onclick = () => {
 // A press does the work; the drawer's job is done. (Only a human press — the
 // perform machinery closes it once its whole sequence has played.)
 $('palette').addEventListener('click', (e) => {
-  if (e.isTrusted && e.target.closest('button') && !e.target.closest('#pal-pin')) closePalette();
+  if (e.isTrusted && e.target.closest('button') && !e.target.closest('#pal-pin')) closePalette(true);
 });
-$('dir-next').addEventListener('click', () => closePalette(), true);
+$('dir-next').addEventListener('click', () => closePalette(true), true);
 
 $('dir-stop').onclick = async () => {
   DIR.arming = false;               // a beat still arming is not a reason to refuse a restart
