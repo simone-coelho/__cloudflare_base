@@ -3467,19 +3467,29 @@ function syncBarControls() {
 // close-timer shut it again — the flicker. A click makes it STICKY: every
 // pending timer is cancelled and nothing may close it until the pointer has
 // actually left the drawer, or he presses something.
-const PAL = { pinned: false, sticky: false, openT: null, closeT: null, autoOpened: false };
+const PAL = { pinned: false, sticky: false, openedBy: null, openT: null, closeT: null, autoOpened: false };
 const palTimers = () => { clearTimeout(PAL.openT); clearTimeout(PAL.closeT); };
 function palApply(open) { $('director').classList.toggle('pal-open', open || PAL.pinned); }
 function openPalette(sticky) { palTimers(); if (sticky) PAL.sticky = true; palApply(true); }
 function closePalette(force) {
   palTimers();
   if ((PAL.pinned || PAL.sticky) && !force) return;
-  PAL.sticky = false; palApply(false);
+  PAL.sticky = false; PAL.openedBy = null; palApply(false);
 }
 const palIsOpen = () => $('director').classList.contains('pal-open');
-$('pal-handle').onmouseenter = () => { if (PAL.sticky) return; palTimers(); PAL.openT = setTimeout(() => openPalette(false), 280); };
+$('pal-handle').onmouseenter = () => { if (PAL.sticky) return; palTimers(); PAL.openT = setTimeout(() => { PAL.openedBy = 'hover'; openPalette(false); }, 280); };
 $('pal-handle').onmouseleave = () => { if (PAL.sticky) return; palTimers(); PAL.closeT = setTimeout(() => closePalette(), 350); };
-$('pal-handle').onclick = () => (palIsOpen() ? closePalette(true) : openPalette(true));
+/**
+ * THE PRESS CANNOT UNDO THE HOVER. Moving to the button hovers it, and the
+ * hover opens the drawer ~280ms later — so the click that followed found it
+ * already open and toggled it SHUT. That was the flicker: open on hover, closed
+ * by the very press meant to open it. A click on a hover-opened drawer PINS it
+ * instead; only a click on a drawer he himself clicked open closes it again.
+ */
+$('pal-handle').onclick = () => {
+  if (!palIsOpen() || PAL.openedBy === 'hover') { PAL.openedBy = 'click'; openPalette(true); return; }
+  PAL.openedBy = null; closePalette(true);
+};
 $('palette').onmouseenter = () => palTimers();
 // Leaving the drawer is what restarts the clock — his rule.
 $('palette').onmouseleave = () => { PAL.sticky = false; palTimers(); PAL.closeT = setTimeout(() => closePalette(), 300); };
