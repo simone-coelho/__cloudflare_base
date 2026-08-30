@@ -2113,19 +2113,16 @@ function revealSection(id, delay = 0) {
  */
 function syncNotices() {
   const live = [$('strip'), $('ostrip')].filter((el) => !el.hidden);
-  $('notices').hidden = live.length === 0;
-  if (!live.length) { $('strips').hidden = true; $('notice-chip').setAttribute('aria-expanded', 'false'); return; }
-  const kinds = live.map((el) => (el.id === 'ostrip' ? 'the page rearranged' : $('strip-k').textContent.toLowerCase()));
-  $('notice-chip').textContent = `${kinds.join(' · ')} — read it`;
-  $('notice-chip').classList.remove('fresh'); void $('notice-chip').offsetWidth; $('notice-chip').classList.add('fresh');
+  const btn = $('dir-notices');
+  btn.hidden = live.length === 0;
+  if (!live.length) { $('noticepop').hidden = true; return; }
+  btn.textContent = `Notices ${live.length}`;   // the detail is one press away
+  btn.title = live.map((el) => (el.id === 'ostrip' ? 'the page rearranged' : 'an audience changed')).join(' · ');
+  btn.classList.remove('fresh'); void btn.offsetWidth; btn.classList.add('fresh');
 }
-function closeNotices() { $('strips').hidden = true; $('notice-chip').setAttribute('aria-expanded', 'false'); }
-$('notice-chip').onclick = () => {
-  const open = $('strips').hidden;
-  $('strips').hidden = !open;
-  $('notice-chip').setAttribute('aria-expanded', String(open));
-};
-TIPS['notice-chip'] = ['The session notices — an audience entered or left, the page rearranged. Press to read them; they are not part of the page.', 'the next press puts them away'];
+function closeNotices() { $('noticepop').hidden = true; }
+$('dir-notices').onclick = () => { $('noticepop').hidden = !$('noticepop').hidden; };
+TIPS['dir-notices'] = ['The session notices — an audience entered or left, the page rearranged. Yours, not the room\'s: it opens over the bar and never takes space on the page.', 'the next press puts it away'];
 
 let STRIP_UNTIL = 0, WELCOME_T = null;
 function strip(kind, html, ttl) {

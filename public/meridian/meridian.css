@@ -441,7 +441,7 @@ table.rec tr:hover td{background:var(--paper);color:var(--ink)}
 .offer[hidden]{display:none}
 .offer{display:flex;align-items:center;gap:22px;justify-content:space-between;
   background:linear-gradient(100deg,#171D26,#232C3A);color:#EDF2F8;
-  border-radius:10px;padding:18px 22px;margin:0 0 26px;
+  border-radius:10px;padding:18px 22px;margin:14px 0 26px;   /* it sat flush against the banner above */
   animation:offerIn .45s cubic-bezier(.2,.7,.3,1)}
 @keyframes offerIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .offer-kick{font:600 11px/1 ui-monospace,monospace;letter-spacing:.13em;text-transform:uppercase;
@@ -729,16 +729,13 @@ body.has-director .page{padding-bottom:250px}
    consequence, sits above the hero, and retires on its own. */
 /* The strips PIN to the top of the page as it scrolls — a banner that explains a
    rearrangement must survive the scroll that the rearrangement causes. */
-.notices[hidden]{display:none}
-.notices{position:sticky;top:0;z-index:30;background:var(--paper);display:flex;flex-direction:column;
-  align-items:flex-end;gap:6px;padding:6px 0 0}
-.notice-chip{font:600 11.5px/1 var(--sans);letter-spacing:.02em;padding:6px 11px;border-radius:99px;
-  background:#E9EDF3;border:1px solid #C4CEDD;color:#2B3647;cursor:pointer;display:flex;align-items:center;gap:7px}
-.notice-chip::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--hl,#1E8A45)}
-.notice-chip:hover{border-color:#7FB8FF}
-.notice-chip.fresh{animation:badgein .3s ease-out}
-.strips[hidden]{display:none}
-.strips{display:flex;flex-direction:column;gap:8px;align-self:stretch}
+.noticepop[hidden]{display:none}
+.noticepop{position:fixed;right:18px;bottom:calc(var(--dir-h, 120px) + 10px);z-index:890;
+  width:min(620px,52vw);background:var(--paper);border:2px solid #C4CEDD;border-radius:10px;
+  padding:12px;box-shadow:0 20px 50px -18px rgba(0,0,0,.6)}
+.strips{display:flex;flex-direction:column;gap:8px}
+#dir-notices{white-space:nowrap}
+#dir-notices.fresh{background:#1E8A45;border-color:#1E8A45;color:#fff}
 .strips:has(.strip:not([hidden])){padding:6px 0 8px;box-shadow:0 10px 16px -14px rgba(0,0,0,.35)}
 .strips .strip{margin:0}
 .strip[hidden]{display:none}

@@ -109,7 +109,12 @@ export function paintLayout(order, { duration = 700, easing = DEFAULT_EASING, ro
   }
 
   // 4. FLIP the pixels, unless the viewer asked for no motion.
-  if (duration > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  // NOT DECORATION — THE POINT. Watching each section travel is how the room
+  // reads what the engine did, so this one animation runs even when the
+  // machine asks for reduced motion. (It cost us the whole effect: on a laptop
+  // with animations off the page simply snapped, which is exactly what it was
+  // reported as.) Everything else on the page still honours the preference.
+  if (duration > 0) {
     const flying = [];
     for (const el of tracked) {
       const b = before.get(el);

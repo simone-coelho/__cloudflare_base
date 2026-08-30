@@ -61,17 +61,7 @@
            "in and out of an audience" that had no on-page voice here. -->
       <!-- Reflex moments mount here (moments.js): the hold, monogramming, curated, shift, occasion, revert. -->
       <div id="moments"></div>
-      <!-- THE NOTICES ARE NOT SECTIONS. They used to take two full-width bands
-           of the page and read, to the room, like blocks of the page itself —
-           which made the section numbering impossible to follow. Collapsed to
-           one chip; press it to read them. -->
-      <div class="notices" id="notices" hidden>
-        <button class="notice-chip" id="notice-chip" type="button" aria-expanded="false"></button>
-        <div class="strips" id="strips" hidden>
-          <div class="strip" id="strip" hidden><span class="strip-k" id="strip-k"></span><span id="strip-t"></span></div>
-          <div class="strip order" id="ostrip" hidden><span class="strip-k">Page rearranged</span><span id="ostrip-t"></span></div>
-        </div>
-      </div>
+
 
       <!-- CONTENT IS A CATALOGUE TOO — compact slots with permanent identity chips.
            merch: non-personalizable by tenant config, PINNABLE AT ANY POSITION. -->
@@ -210,6 +200,7 @@
       <button id="dir-prev">&#8592;</button>
       <button id="dir-next">Next &#9654;</button>
       <button id="dir-doit" hidden>Do it</button>
+      <button id="dir-notices" class="cmp" hidden></button>
       <button id="dir-play">Auto</button>
       <button id="dir-stop">&#8635;</button>
       <span class="dir-sep"></span>
@@ -290,6 +281,15 @@
             <button id="btn-reset">New visitor<small>clears everything</small></button>
           </div>
         </div>
+  </div>
+</div>
+
+<!-- THE NOTICES ARE HIS, NOT THE ROOM'S. They took page real estate and read
+     as blocks of the page; they belong with the controls he presses. -->
+<div class="noticepop" id="noticepop" hidden>
+  <div class="strips" id="strips">
+    <div class="strip" id="strip" hidden><span class="strip-k" id="strip-k"></span><span id="strip-t"></span></div>
+    <div class="strip order" id="ostrip" hidden><span class="strip-k">Page rearranged</span><span id="ostrip-t"></span></div>
   </div>
 </div>
 
