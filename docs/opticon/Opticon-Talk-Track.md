@@ -411,7 +411,7 @@ Print this. The director bar on screen shows the room the beat and what to watch
 
 **They watch —** Highest score. Refused. The rule named.
 
-> ⚠️ **RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.**
+> ⚠️ **This beat releases the pin itself — a pinned hero skips ranking, and with nothing ranked there are no refusals to show. If you pinned it by hand as well, press the pin once before Next.**
 
 **You say —** That is the engine declining a click it would have won. It scored highest, a rule said no, and it kept the score so you can see what it gave up. Showing you the refusal is worth more than showing you the win.
 
@@ -694,6 +694,6 @@ If you are running short, these are the ones that do not get compressed.
 
 ## Every caution
 
-- **Beat 27, The refusal:** RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.
+- **Beat 27, The refusal:** This beat releases the pin itself — a pinned hero skips ranking, and with nothing ranked there are no refusals to show. If you pinned it by hand as well, press the pin once before Next.
 - **Beat 29, She came back:** DO NOT say "ODP is the memory". ODP is deliberately not connected on this surface. If asked: connect ODP and this becomes durable across devices and shareable with the rest of your stack — that is a credential, not a code change.
 - **Beat 30, I changed what we sell:** The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface KINDS, not the history.

@@ -3484,6 +3484,10 @@ async function goBeat(i) {
  * itself after a readable pause — and can be stopped from the card.
  */
 const AUTO = { speed: 1, running: false, hold: null, consentT: null, paused: false };
+// The page paints its bar before the catalogue has loaded. A run restored after
+// beat 29's reload turns ON immediately — so the presenter sees it is running —
+// and waits here for the store to actually exist before it advances a beat.
+let markReady; const READY = new Promise((r) => { markReady = r; });
 const SPEEDS = [1, 2, 4];
 const autoSleep = (ms) => new Promise((resolve) => {
   const t0 = Date.now();
@@ -3500,6 +3504,7 @@ async function autoRun() {
   if (AUTO.running) return;
   AUTO.running = true;
   try {
+    await READY;
     while (DIR.auto) {
       if (DIR.i >= BEATS.length - 1) { setAuto(false); break; }
       await goBeat(DIR.i + 1);                       // awaits the whole performance
@@ -3526,6 +3531,7 @@ function setAuto(on) {
 /** The speed the show runs at. One control, three settings, always visible. */
 function setSpeed(x) {
   AUTO.speed = x;
+  sessionStorage.setItem('mrd_speed', String(x));
   $('dir-speed').textContent = `×${x}`;
   $('dir-speed').title = x === 1 ? 'Real pace — each beat takes its planned time' : `${x}× faster than the planned pace`;
 }
@@ -3553,6 +3559,14 @@ function openDirector() {
   const saved = Number(sessionStorage.getItem('mrd_dir') ?? 0);
   DIR.i = Number.isFinite(saved) ? saved : 0;
   renderBeat();
+  // BEAT 29 RELOADS THE PAGE. A run that ends there is not a run — so the
+  // speed and the fact that Auto was on come back with the beat index, in the
+  // same breath rather than on a timer that raced this restore.
+  const sp = Number(sessionStorage.getItem('mrd_speed') || 1);
+  if (SPEEDS.includes(sp)) setSpeed(sp);
+  // BEAT 29 RELOADS THE PAGE. The run comes back with the beat index and the
+  // speed; autoRun holds at READY until the catalogue is in.
+  if (sessionStorage.getItem('mrd_auto') === '1' && !DIR.auto) setAuto(true);
 }
 
 $('dir-next').onclick = () => goBeat(DIR.i + 1);
@@ -3644,8 +3658,6 @@ addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { const m = document.querySelector('.moment.open'); if (m) { m.classList.remove('open'); return; } if (palIsOpen()) { closePalette(true); return; } if (BZ.busy) BZ.abort = true; }
 });
 setInterval(() => { dirTick(); syncBarControls(); dedupeAnnouncement(); }, 500);
-// Beat 29 reloads the page; a run that ends there is not a run.
-if (sessionStorage.getItem('mrd_auto')) setTimeout(() => { if (!DIR.auto) setAuto(true); }, 1500);
 
 // ── The reflex moment ───────────────────────────────────────────────────────
 // A white-glove offer earned by intent, running to an instant the ENGINE
@@ -4255,3 +4267,4 @@ paintPinButton();
 if (!new URLSearchParams(location.search).has('nodirector')) queueMicrotask(openDirector);  // rehearsal introspection only
 await load('retail');
 connect();
+markReady();     // the store is in; a restored run may now advance

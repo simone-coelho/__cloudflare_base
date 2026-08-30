@@ -245,7 +245,7 @@ export const BEATS = [
 
   { n: 27, act: 2, cap: 'C20', title: 'The refusal', secs: 40, mark: 'SLOW DOWN',
     perform: [{ sel: '#btn-pin' }, { sel: '#btn-soldout' }, { tab: 'glass' }],
-    caution: 'RELEASE THE HERO PIN FIRST. A pinned hero skips ranking entirely, so there are no refused candidates to show and this beat renders empty.',
+    caution: 'This beat releases the pin itself — a pinned hero skips ranking, and with nothing ranked there are no refusals to show. If you pinned it by hand as well, press the pin once before Next.',
     why: 'The most persuasive thing the engine does. It is also the least expected, so it needs setup and silence.',
     do: 'Open the explain on an excluded item.',
     watch: 'Highest score. Refused. The rule named.',
