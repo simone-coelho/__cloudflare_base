@@ -64,7 +64,7 @@ export interface SearchAnswer {
   /** Ranked catalogue ids, up to 8. Hard-filtered to the intent's categories. */
   products: string[];
   /** The scene's approved plate, with the top-ranked product named for the overlay. */
-  hero: { image: string; productId: string | null } | null;
+  hero: { image: string; productId: string | null; leadFamily?: string | null } | null;
   ceiling: number | null;
   /** Which path answered. Shown on screen — never hidden. */
   source: 'model' | 'local' | 'none';
@@ -293,6 +293,16 @@ export function rankByIntent(
     pool = sellable;
   }
 
+  // A CEILING IS A CEILING. It was a +0.1 nudge, so "a gift under $150"
+  // returned a $165 sweater below the qualifying pieces — a number the room can
+  // check, and the Controls Guide already promised a hard filter. Stated in
+  // words, it now removes what does not qualify; if that empties the shelf we
+  // say nothing rather than pretend, and the caller falls back to the scene.
+  if (ceiling != null) {
+    const under = pool.filter((i) => i.value_usd <= ceiling);
+    if (under.length > 0) pool = under;
+  }
+
   const scoreOf = (item: MeridianItem): number => {
     let s = 0;
     if (wantLines.size > 0 && inLines(item)) s += WEIGHT_LINE;
@@ -494,8 +504,19 @@ export async function search(
     }
   }
 
-  const hero = scene
-    ? { image: scene.image ?? scene.art, productId: products[0] ?? null }
+  // THE PICTURE FOLLOWS THE ANSWER. The scene is chosen from the sentence, but
+  // its plate stars whatever family that scene was built around — so a gift
+  // query could show fragrance boxes above a page of knitwear. The plate is now
+  // the one starring the family of the FIRST RANKED PRODUCT, when we have one:
+  // the headline still answers the question, and the photograph shows what she
+  // is actually being offered. Falls back to the scene's own plate.
+  const top = products[0] ? itemsFor(vertical).find((i) => i.id === products[0]) : null;
+  const plate = top
+    ? scenesFor(vertical).find((sc) => sc.leadFamily && sc.leadFamily === (top as any).line && (sc.image || sc.art))
+    : null;
+  const face = plate ?? scene;
+  const hero = face
+    ? { image: face.image ?? face.art, productId: products[0] ?? null, leadFamily: face.leadFamily ?? null }
     : null;
 
   if (viaModel && scene) {

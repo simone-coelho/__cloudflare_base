@@ -156,12 +156,21 @@ describe('rankByIntent — deterministic scoring', () => {
     expect(ids[0]).toBe(items[1].id);
   });
 
-  it('a price ceiling lifts items under it without excluding the rest', () => {
+  // A ceiling stated in words is a promise, not a preference: someone in the
+  // room can read the price. It used to be a scoring bonus, so "under $150"
+  // answered with a $165 piece ranked below the ones that qualified.
+  it('a price ceiling EXCLUDES what is over it', () => {
     const items = [
       synth({ value_usd: 400 }),
       synth({ value_usd: 120 }),
     ];
     const ids = rankByIntent('retail', items, EMPTY_INTENT, { ceiling: 200 });
-    expect(ids).toEqual([items[1].id, items[0].id]);
+    expect(ids).toEqual([items[1].id]);
+  });
+
+  it('but never empties the answer: with nothing under it, the ceiling stands down', () => {
+    const items = [synth({ value_usd: 400 }), synth({ value_usd: 380 })];
+    const ids = rankByIntent('retail', items, EMPTY_INTENT, { ceiling: 200 });
+    expect(ids).toHaveLength(2);
   });
 });

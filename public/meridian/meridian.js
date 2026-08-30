@@ -2936,9 +2936,11 @@ $('ask-form').onsubmit = async (e) => {
   const hues = distinctHues(picks);
 
   $('ask-art').style.backgroundImage = `url(${a.hero?.image || a.scene?.art || ''})`;
-  const shown = (a.products || [])[0];
-  $('ask-cap').textContent = shown
-    ? `Styled scene · the ${byId(shown.id)?.name || shown.name || 'product'} shown is the real piece`
+  // Say what the picture actually stars — the FAMILY the plate was built
+  // around, which is now the family of the first result.
+  const fam = a.hero?.leadFamily;
+  $('ask-cap').textContent = fam
+    ? `Styled scene · the ${fam} shown is a real piece from the range`
     : 'Styled scene · approved before this demo';
   $('ask-kick').textContent = query;
   $('ask-title').textContent = a.scene?.headline
