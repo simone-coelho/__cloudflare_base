@@ -446,6 +446,13 @@
       <button type="submit">Propose</button>
       <button type="button" id="opal-close">Close</button>
     </form>
+    <!-- Pills, like AI search. Nobody should have to invent a sentence on stage. -->
+    <div class="mo-chips" data-for="oq">
+      <button type="button">Shoppers who keep coming back to the Drover</button>
+      <button type="button">People buying a gift under $150</button>
+      <button type="button">Anyone leaning heritage in outerwear</button>
+      <button type="button">Shoppers in the premium band who browse on mobile</button>
+    </div>
     <div class="opal-body">
       <div class="opal-vocab" id="opal-vocab"></div>
       <div id="opal-out"></div>
@@ -490,11 +497,19 @@
     </div>
     <div class="ask-pre" id="ask-pre"></div>
     <div class="ask-answer" id="ask-answer" hidden>
-      <div class="ask-art" id="ask-art"></div>
+      <!-- THE SCENE IS THE ANSWER'S FACE: the whole picture, the copy written
+           over it, and the real products underneath — the Tapestry treatment.
+           It used to be a 380px column that cropped the photograph. -->
+      <div class="ask-art" id="ask-art">
+        <div class="ask-scrim"></div>
+        <div class="ask-over">
+          <div class="ask-kick" id="ask-kick"></div>
+          <h3 id="ask-title"></h3>
+          <p id="ask-sub"></p>
+        </div>
+        <span class="ask-cap" id="ask-cap"></span>
+      </div>
       <div class="ask-body">
-        <div class="ask-kick" id="ask-kick"></div>
-        <h3 id="ask-title"></h3>
-        <p id="ask-sub"></p>
         <div class="ask-prov" id="ask-prov"></div>
         <div class="row" id="ask-row"></div>
       </div>

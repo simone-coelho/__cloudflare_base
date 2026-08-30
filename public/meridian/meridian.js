@@ -2936,6 +2936,10 @@ $('ask-form').onsubmit = async (e) => {
   const hues = distinctHues(picks);
 
   $('ask-art').style.backgroundImage = `url(${a.hero?.image || a.scene?.art || ''})`;
+  const shown = (a.products || [])[0];
+  $('ask-cap').textContent = shown
+    ? `Styled scene · the ${byId(shown.id)?.name || shown.name || 'product'} shown is the real piece`
+    : 'Styled scene · approved before this demo';
   $('ask-kick').textContent = query;
   $('ask-title').textContent = a.scene?.headline
     || (a.intent?.categories?.length ? `${a.intent.categories.join(' & ')}, for you` : 'Found for you');
