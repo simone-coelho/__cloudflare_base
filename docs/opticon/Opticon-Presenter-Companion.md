@@ -28,6 +28,95 @@ How the acts hang on them: Act 0 and Act 1 are sentences 1 and 2. Act 2 is sente
 
 ---
 
+## 1b · The commercial spine — the same session, in the room's own currency
+
+*Sales gave us the business grammar for this: a value-proposition brief on edge computing for
+personalization, written for exactly the buyer in this room. It is worth internalising, because it does
+something the technical spine cannot — it says what the speed is **for**. The demo is the proof; that
+brief is the argument. Below is the argument, corrected where our engine differs, with the beat that
+proves each line.*
+
+**The one sentence to keep.** Learn this and you can answer half the questions in the room from it:
+
+> **Keep the deep computation and the system of record in the centre; push the fast, narrow, high-stakes
+> decisions to the edge.**
+
+That single line does three jobs at once. It tells them *where their data lives* — in the centre, theirs,
+untouched. It tells them *what we are not* — not a replacement for the warehouse, the CDP or the commerce
+platform. And it tells them *why the speed matters* — because the decision that has to be fast is a small
+one, and the decision that has to be deep does not have to be fast.
+
+**The commercial claim, in one breath.** For any business where the first few seconds of an interaction
+decide trust, conversion or risk, the delay between *something happens* and *the system responds* is a
+commercial lever, not an engineering detail. Personalization run centrally spends those seconds asking
+permission from a data centre. Run at the edge, the answer arrives inside the page load.
+
+### The four drivers, and the beat that proves each
+
+| The driver | Say it like this | Proved on stage by |
+|---|---|---|
+| **Reduced latency to relevance** | "Fewer seconds of a generic experience means fewer early-session drop-offs. The gap between *she arrives* and *this feels like it is for me* is where the conversion is lost." | **Beat 4** — the store opens on her metro's own receipts before she has clicked anything, and the latency badge is on screen while it happens |
+| **Real-time cohort inference** | "It turns anonymous, first-time traffic into an actionable audience with no login and no history. The alternative is a batch job that answers her tomorrow, when she is gone." | **Beats 5–11** — four surfaces become one profile, and the handoff happens mid-session |
+| **Reduced backend load** | "Simple decisions resolve at the edge; the heavy compute stays where it belongs. You are not paying a data centre round trip to swap a banner." | The architecture answer, and **beat 12** — the measured round trip on screen |
+| **Scalable personalization** | "The same architecture extends to another market, another campaign, another brand without re-engineering anything central." | **Beat 30** — the vertical flip, and the multi-brand answer behind it |
+
+### The two verticals in the room, and the honest bridge between them
+
+The brief makes a retail case and a banking case, and this room holds both. That is a gift, because
+**beat 30 flips the store to Calder Financial in front of them.** Use the brief's framing to give that
+flip a commercial reason instead of letting it be a party trick:
+
+> "Retail optimises for engagement in the first few seconds of a *relationship*. Banking optimises for
+> trust in the first few seconds of a *transaction*. Same pattern, same architecture — the fast, narrow
+> decision moves to the edge and the deep record stays in the centre. What changes is the vocabulary,
+> and you are about to watch it change."
+
+**The line you must not cross.** The brief's banking example is fraud interdiction and transaction
+authorisation. **We do not do fraud detection, and nothing in this demo does.** What the financial
+vertical shows is the personalization instance of the same architectural pattern. If someone in banking
+asks, the honest and still-strong answer is: *"The pattern is identical and the industry already trusts
+it for authorisation decisions. What you are watching is the same edge, making a merchandising decision
+rather than a risk one — and the reason I can show you it in a marketing session is that it is the same
+engine either way."*
+
+### Two words to change before you use the brief out loud
+
+1. **"Probabilistic" — do not say it.** The brief describes edge signals as "lightweight, probabilistic".
+   Ours are lightweight and **readable**: deterministic arithmetic, every score a number on the screen,
+   no model on the decision path. Saying probabilistic hands back the black box you spend Act 2 taking
+   away. Say *"lightweight, and every one of them readable."*
+2. **Do not name the cloud.** The brief names AWS services as examples. We run at the edge of a global
+   network; the useful phrasing for the room is *"the same edge layer your CDN already runs on"*, which
+   is true and keeps the conversation on the decision rather than the vendor.
+
+### The gift at the end of the brief
+
+The brief closes by saying ROI figures should be validated against the organisation's own traffic before
+anyone invests. **That is Act 4.** Revenue Radar computes every number on screen from the rows on that
+request — not from a case study, not from an industry benchmark. So the closing caveat of the sales
+document is the thing you *perform*:
+
+> "The honest version of every vendor ROI slide is: validate it against your own traffic. So rather than
+> show you my benchmark, here is the arithmetic run on a week of sessions, term by term — and here is the
+> fix, launched in the room, recomputed on the same rows."
+
+### How this sits on top of the five sentences
+
+The technical spine in section 1 says what is *true*. This section says what it is *worth*. They map
+cleanly, and you can move between them mid-sentence:
+
+- Sentence 1 (*most of your traffic is a stranger*) is the **market** the four drivers are addressed to.
+- Sentence 2 (*your receipts plus free public data*) is **reduced latency to relevance** and **real-time
+  cohort inference** in one move.
+- Sentence 3 (*explained and tunable*) is what makes the speed **safe to buy** — it is the answer to
+  "fast, but can I govern it?"
+- Sentence 4 (*real objects in your own project*) is **reduced backend load** made concrete: the flag
+  lives in their console, not in a black box of ours.
+- Sentence 5 (*time and decay are honest*) is why the relevance **stays** relevant — a cohort inference
+  that never expires is a stale segment with a faster clock.
+
+---
+
 ## 2 · The Dynamic Yield answer, mastered
 
 *(For your mouth only. The screen never names them. Sources: pages fetched 2026-08-29 — support.dynamicyield.com and mastercard.com pages via the r.jina.ai reader proxy because both domains block direct fetches; quotes are verbatim from the full pages. Two items marked repo-sourced come from `docs/opticon/Research-Personalization-Demos.md`, the 2026-08-28 cited research pass.)*
@@ -68,6 +157,8 @@ If the asker is technical, the one-line version: "A counter is a running total. 
 
 Format, every beat: what Next performs · what the room sees · the story in your voice · the simple math where there is math · the questions that will come, answered. The planned seconds are a pacing intention, not a timer — nothing interrupts you mid-sentence. The eleven marked beats (STOP, SLOW DOWN, NO BLACK BOX, etc.) are the ones that never get compressed if you run short.
 
+**And now on every beat: what it's worth.** Under the story in your voice, each of the forty-four carries a *What it's worth* line — the same claim as the sentence above it, said in the room's own currency of conversion, cost, risk, control and time, rather than a second script to memorise. It is what you reach for the moment somebody says *"so what does this get me"*: tell the beat, then give the worth, and stop.
+
 **New, and on every card: the decisions band.** Under the declaration card's three columns there is now a full-width band — *Why — every decision this press makes*. It is not only for the beats that rearrange the page; it is part of the card. One row per decision, always the same four columns: **what** changed · **why**, in the actual number · **against** what — the threshold it cleared or the rival it beat · and by whose **authority**. Three rows from the running build, so you know the shape of them:
 
 > **Picked for her, first line** | occasion·travel 0.731 × 0.1827 + category·Bags 0.622 × 0.1556 | tied Holloway Weekender · Navy at 0.632 — the catalogue's order broke the tie | **ENGINE**
@@ -92,6 +183,8 @@ Three sentences the whole session rests on. The room holds these for forty minut
 
 **Tell it like this:** Most of the traffic on your site is unidentified, and most of it has never been seen before. Every personalization system in this room — including ours, until now — does its best work on the identified minority: the logged-in, the cookied, the known. That is the minority. I am going to spend the next forty-five minutes on the majority: the stranger who just arrived, about whom you know nothing. If we can be useful to *her*, everything else gets easier.
 
+**What it's worth:** It moves the room off the identified minority that every personalization budget already serves and onto the majority of sessions nothing in their stack currently reaches, which is where the unclaimed conversion in their business actually sits.
+
 **If they ask:**
 - *"What share of our traffic is actually anonymous?"* — Your number is yours and worth measuring this week. In most retail books the unidentified share is the majority — which is exactly why the whole industry's demos start with a logged-in user. This one starts with a stranger.
 
@@ -103,6 +196,8 @@ Three sentences the whole session rests on. The room holds these for forty minut
 
 **Tell it like this:** When I say "the edge" I do not mean a datacentre your request travels to. I mean the same network hop that already served you the page — the decision runs where the request already is. There is no second trip, no round trip to a personalization server on another coast. That is the entire reason everything you are about to watch can happen inside a single click, while she is still on the page.
 
+**What it's worth:** It takes the round trip out of the buying question: if the decision happens on the hop that already served the page, relevance costs her no extra wait and costs their platform no extra work.
+
 **If they ask:**
 - *"Isn't that just a CDN?"* — A CDN caches files at that hop. This puts the *decision* at that hop: the profile, the arithmetic and the choice of what to show all live where the page is served. Same geography, different job.
 
@@ -113,6 +208,8 @@ Three sentences the whole session rests on. The room holds these for forty minut
 **The room sees:** The last slide before the store appears.
 
 **Tell it like this:** Before you see a single product, the rule of the house: your rules decide what *can* show. The engine decides what *does* show, in the space your rules leave — and it shows its receipts for every choice. Later in this session you will watch it decline a click it would have won, because a merchandising rule said no, and you will watch a pin beat the algorithm with the machine saying so on the record. Nothing in the next forty minutes asks you to trust a black box.
+
+**What it's worth:** It answers the question that quietly kills most personalization deployments — does the brand keep control — and it answers it before the room has seen anything that might frighten them.
 
 **If they ask:**
 - *"So can my team override it?"* — Yes, with declared precedence: gates first, pins second, ranking last. You will see a pin land mid-page at beat 23, the weights turned by hand at beat 25, the hero pinned at beat 26, and the refusal at beat 27 — hold the question until then and I will show you rather than tell you.
@@ -129,6 +226,8 @@ The rest of the world is on the left; the store in the centre; the instrument on
 
 **Tell it like this:** Nobody knows her. No account, no cookie, no segment — she is the majority visitor from my first slide. What we do know is where she is, because that is a property of the connection — and two things about *where she is*: what the public census says about her metro, which is free, and what shoppers from her metro actually bought, which is sitting in your own receipts. So the store opens on the Drover, because that is what New York carries, in your own purchase history. No licensing fee, real purchase intent, and it compounds because it is yours. Aggregate, never the individual. We curate — never price, never gate.
 
+**What it's worth:** Fewer seconds of a generic experience is fewer early-session drop-offs, and this opening relevance carries no data licence: it is built from receipts they already own and census data that is free.
+
 **The simple math:** The cold start plants a small price-band prior — visible on the bar at about 0.36, deliberately below every threshold. We know something; we have committed to nothing. Her first real act outweighs it.
 
 **If they ask:**
@@ -144,6 +243,8 @@ The rest of the world is on the left; the store in the centre; the instrument on
 
 **Tell it like this:** She opened that in her inbox — not on your site. The pixel fired, we captured it at the edge, and by the time she landed, the page had already answered the message she came from. She has not clicked a single thing here yet. Most stacks would call that a batch job and show her the answer tomorrow. This is the connection that served the page, answering inside it.
 
+**What it's worth:** The spend and the consent behind that send keep working after the click, because the page answers the message inside the same session rather than a batch job answering her tomorrow, when she has gone.
+
 **If they ask:**
 - *"Is that a real email client?"* — The inbox is a staged surface standing in for the rest of the world — we are not going to project someone's Gmail. The pipeline behind it is the live one: pixel, capture, identity resolution and the page's reaction all ran just now, on stage. The `real` label on this beat is LIVE, and that is what it refers to.
 
@@ -154,6 +255,8 @@ The rest of the world is on the left; the store in the centre; the instrument on
 **The room sees:** The UTM lands, the episode names the campaign, and the hero picks up the ad's promise.
 
 **Tell it like this:** Your media team paid real money to make that click happen. Most sites take the click, pocket the attribution, and then show the same homepage they show everyone — the campaign's promise dies on arrival. Here the landing already keeps it. Same mechanism as the email, different surface — I will stop labouring it, but notice it is the *second* system that would normally hold its own copy of this person.
+
+**What it's worth:** It protects media spend at the point it is most often wasted: the click is paid for once, and the landing either keeps the campaign's promise or spends that money on a homepage everybody else is also seeing.
 
 **If they ask:**
 - *"Does this need my ad platform's API?"* — No — the UTM is on the click and the capture is first-party, at the edge. Nothing here rents anyone's graph.
@@ -166,6 +269,8 @@ The rest of the world is on the left; the store in the centre; the instrument on
 
 **Tell it like this:** Different surface, same profile — and she has never typed an email address into your site. A phone number from an opt-in is first-party identity too, and it resolves into the same single view of her.
 
+**What it's worth:** Each new channel their marketing team opens stops being another personalization project — the opt-in resolves into the profile that is already deciding the page, so they add surfaces without adding stacks.
+
 **If they ask:**
 - *"Consent?"* — It is an opt-in surface — she signed up. Everything in this act is first-party data you already own; nothing is bought, matched or inferred from a third party.
 
@@ -176,6 +281,8 @@ The rest of the world is on the left; the store in the centre; the instrument on
 **The room sees:** Declared interest joins observed behaviour on the instrument — and the engine keeps them apart.
 
 **Tell it like this:** Now we hold two different kinds of evidence: what she *told* us and what she *did*. The engine weighs them differently — a stated preference counts double a click, because it is unambiguous. But here is the part I love: it decays on exactly the same clock as everything else. Telling us once, in March, that she likes evening pieces does not steer her page forever. Declared taste has to keep agreeing with behaviour, or it fades like everything else.
+
+**What it's worth:** It lets them take declared preference seriously without it becoming a liability, because a stated taste that keeps its weight forever is how a programme ends up serving last year's customer.
 
 **The simple math:** A declared preference weighs 2.0 against 1.0 for a click — double, but short of entering an audience on its own — and it sits in the same vector, on the same decay clock.
 
@@ -190,6 +297,8 @@ The rest of the world is on the left; the store in the centre; the instrument on
 
 **Tell it like this:** Email platform, ad platform, SMS, a partner form. In most stacks those are four systems holding four different views of this one person, reconciled — if ever — by a nightly identity job someone maintains. Here there was nothing to stitch, because the four surfaces resolved into one profile at the edge as they happened. And every one of those signals is first-party data you already own. Nothing in this act required buying data, renting a graph, or waiting for a batch.
 
+**What it's worth:** The reconciliation work disappears rather than moving: no nightly identity job to own, no four systems to keep in agreement, and no decision waiting on any of them.
+
 **If they ask:**
 - *"So is this a CDP?"* — It does not replace one — it means the *decision* does not have to wait for one. The profile that decides the page lives at the edge, per visitor; your CDP and warehouse stay the system of record and the export target.
 
@@ -200,6 +309,8 @@ The rest of the world is on the left; the store in the centre; the instrument on
 **The room sees:** The region off the connection · the census row with its source · your receipts by line with their shares · the grain used · the four honesty tags: geo real / census real / first-party representative / behaviour none. Then the two-column card: what the area tells us, what your own sales tell us, matched to your range.
 
 **Tell it like this:** Let me show the working, because everybody in this room has been sold a cold start before. The geography is real — it comes off the connection. The census is real and free — ACS, cited on the row with its vintage: income, home value, down to ZIP. And the receipts are *yours*: what shoppers from this metro bought, line by line, with the share — 320 of them here. Others will sell you receipts that have nothing to do with what you sell — a market-wide average of everyone's spending everywhere. This is your own data matched to your own range: people here earn about this, buy in this band, so the store opens there. One honest subtlety: when your own counts are thin in a geography, we roll up — ZIP to metro to state — and we *show the grain we used*. We roll up because your receipts are thin, never because the census is. And we curate. Never price.
+
+**What it's worth:** The cold start is an asset they already own rather than a subscription they rent, and it sharpens with every sale they make — and the printed grain is what lets a merchandiser judge how far to trust it in a market that is new to them.
 
 **The simple math:** The ladder gates on your own shopper count — a grain needs about thirty distinct buyers before we trust it — and stops at the first grain that clears. The grain used is printed on the panel, because the grain *is* the honesty.
 
@@ -219,6 +330,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** Stop. This is the most important sixty seconds in the session. The email said handbags. The ad said handbags. Every system she touched on the way here agreed about her. And she is looking at wallets. Watch what the page decides to believe. … It believed *her*. The campaign did not have to be wrong for that to matter — it was right when it was sent. She simply moved on, and the page moved with her, and the campaign's card on the left closed itself and said why. That is the difference between honouring a campaign and being trapped by one.
 
+**What it's worth:** Mid-session intent beats yesterday's segment, and following it is what stops a shopper bouncing off a page that is still arguing for something she has stopped wanting.
+
 **The simple math:** No rule fired. The campaign's evidence stopped accumulating and started decaying; her clicks started accumulating. The page follows whichever is winning, and says which.
 
 **If they ask:**
@@ -232,6 +345,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** One sentence about speed. No backend job ran just now, no segment rebuilt overnight, no profile was downloaded to this browser. That decision happened over a connection that was already open, while she was still on the page — and the number on that badge is measured on this stage, per event. Not a number from a slide.
 
+**What it's worth:** Relevance that costs no round trip costs the shopper no wait and the business no data-centre bill for swapping a banner, and because the number is measured rather than quoted it is one they can hold any vendor to, including us.
+
 **If they ask:**
 - *"What is the latency, exactly?"* — Read it off the badge, live — that is the discipline: quote the measured number in front of the room, never a rounder one from memory. If pressed on production: the decision path is the same hop that serves the page; anything that syncs to other systems is a separate, slower job and we say so.
 
@@ -243,6 +358,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** This row, right now, is the control: the order every shopper sees, ranked by nothing about her. Remember it. Every comparison for the next ten minutes is against this — and this room runs experiments for a living, so you know why I will not show you a single personalized ranking without first showing you the baseline it beat.
 
+**What it's worth:** Nothing gets credited to personalization that their standard order would have earned anyway, which is the only way a lift number survives contact with their own analysts.
+
 **If they ask:**
 - *"Is the baseline itself merchandised?"* — Yes — it is your catalogue's own order, identical for everyone. Personalization here is measured *against* your merchandising, never instead of it.
 
@@ -253,6 +370,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **The room sees:** Bars moving at different rates. Taste barely moves; the session bars jump.
 
 **Tell it like this:** Eight things about her, each with its own memory. What aisle she is in moves fast and fades in minutes. Her taste — the world she dresses in, the band she buys at — moves slowly and holds for a long time. One engine holds both speeds at once, which is what a person is actually like. And within a product line, the page follows her *last* step, not her running total — step from Drover to Linden and Linden leads immediately, while Drover trails until it fades out on its own. The page never ignores what she just did.
+
+**What it's worth:** One clock for everything is why so many programmes chase a shopper with the aisle she left twenty minutes ago; separate clocks per dimension keep the page current without throwing away what it knows about her taste.
 
 **The simple math:** Each dimension has its own decay clock — on the demo clock, the aisle fades in about three minutes and taste in about eight; in production the same dial reads days and weeks. Same math, different rate — and both tunings are published, because nothing here is a demo-only trick, only a demo-only speed.
 
@@ -266,6 +385,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **The room sees:** The third click lands; a bar crosses the entry line and turns green; an audience chip appears; a green strip above the hero says she entered the audience — and why.
 
 **Tell it like this:** I want you to notice what it did *not* do: it did not react to her first click. One click is noise. Two is a hint. Three is a pattern — and the band told you, before the click, exactly where the number would land. It waited until it was sure. And that shaded band on the bar is the gap between entering an audience and leaving it — she has to fall well below the entry line before she is released, which is why she will not flicker in and out of an audience all afternoon while your campaigns fire on the boundary.
+
+**What it's worth:** Audiences that flicker fire campaigns at the wrong people and make a week of reporting unreadable, so the gap between the entry and exit lines is worth as much operationally as the targeting is commercially.
 
 **The simple math:** Every browsing act counts one. Two signals put her at 0.53 — short of the 0.60 entry line. The third puts her at 0.625 — over it. Exit is at 0.45, not 0.60: that gap is the no-flapping guarantee. Nobody wrote a rule; a score crossed a line you can read and move.
 
@@ -281,6 +402,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** Watch the coral one climb from five to one. Every card keeps its colour so your eye can follow it across the shelf, and only the cards that actually moved are ringed — everything quiet is genuinely unchanged. Her audiences promoted a handful to the front; the rest hold your standard order. Personalization that cannot show you exactly what it moved is decoration.
 
+**What it's worth:** A merchandiser can see exactly what personalization moved and what it left alone, and that is what turns a nervous first deployment into a wider one.
+
 **If they ask:**
 - *"Why did that specific card climb?"* — Click its explain: the dimensions it carries, her live scores on each, the weighted sum, the rank it earned. Every card on this page can answer that question — that is the point.
 
@@ -291,6 +414,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **The room sees:** The hero claims her — and says why.
 
 **Tell it like this:** The hero just changed its reason. Until now it said "because of where you are" — because that was all it honestly had. Now it says "because of what you have looked at". It only claims her when it can support the claim. Small thing; it is the whole philosophy in one caption.
+
+**What it's worth:** The page never claims to know her better than it does, and a shopper who is not mis-addressed keeps reading — over-claimed personalization is the kind customers notice and resent.
 
 **If they ask:**
 - *"What if the evidence is thin again tomorrow?"* — Then the caption retreats with it — you will watch that happen at beat 28. The reason on the hero is always the strongest thing the engine can currently defend.
@@ -303,6 +428,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** Everything so far changed what is *inside* the boxes. This changed *which box comes first*. She is browsing coats, so the product row has climbed above the hero, and the campaign hero that brought her here dropped below it. Read the sentence on the strip while it is up: it names the section that *moved*, and it says plainly that the banner at the top did **not** — a merchandiser holds that position, and the engine ranked everything else around it. Watch for it again later: the moment she decides, the offer will climb to the very top. Same profile, same arithmetic — but the candidates are the sections of the page rather than the products in them. In our own roadmap documents this is the six-month tier. It is running in front of you.
 
+**What it's worth:** Re-ordering the page itself is normally a front-end release with a design review attached; here it is a decision made per visitor, so the layout can follow demand without occupying a development cycle.
+
 **If they ask:**
 - *"Isn't this just a recommender?"* — A recommender re-orders products. This re-ordered the *page* — hero, row, offer, story competing for position on the same scored evidence. That is layout as a decision, with the reason logged in the trail like every other decision.
 
@@ -313,6 +440,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **The room sees:** The row becomes *"Complete the look"* — and nothing in it comes from the same category as the coat she chose.
 
 **Tell it like this:** She stopped browsing and started deciding — and that is the eighth dimension, the only one not read off any product. It is read off the *verb*: what she did, not what she looked at. One decisive act is enough to enter it, because adding to a bag is not ambiguous. And look what the page did: it stopped offering her more coats — she has chosen her coat — and started completing the outfit around it. The page did not just change its contents. It gained a section.
+
+**What it's worth:** Once she has chosen, more of the same is a wasted shelf — completing the outfit is where the second item in the basket comes from, and nobody had to write the rule that decided it.
 
 **The simple math:** An add-to-bag weighs three browsing clicks, against a deliberately low bar for this dimension — one decisive act lands at 0.68, past the 0.60 entry line. Deciding is a state you enter on one act, and leave by decay like everything else.
 
@@ -327,6 +456,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** Everything you have watched this engine do to products, it is doing to content — the same arithmetic, pointed at a second catalogue. These are your pieces, with your CMS ids, scored by the same affinities you have been watching move all session, and delivered as decisions *by ID*: we push the id, the slot, the score and the why, and your front end paints. That payload on the screen is the entire integration. And notice the merch strip — it has not moved all session, because your config says it is non-personalizable, and the engine ranks around it.
 
+**What it's worth:** Personalizing content usually means a second product with a second integration; this is the same engine pushing an id into a slot, so a headless team adopts it without touching a template or re-platforming anything.
+
 **If they ask:**
 - *"We're headless — will this fight our front end?"* — The opposite, and the payload is the proof: `customerContentId` is your own CMS id, coming back in the decision. A headless front end paints by ID with no markup coupling at all — the engine never touches your templates; it hands you the id, the slot, the score and the why. (For you, not the room: this by-ID contract is, point for point, the contract the Tapestry engagement asked for. The name stays off the stage like every customer name.)
 - *"Is that real content?"* — The label: content catalogue REPRESENTATIVE — these pieces stand in for your CMS today, and in production this is your CMS behind the same slots. The scoring is LIVE, and the payload is REAL — that is the actual push, not an illustration of one.
@@ -339,6 +470,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** Before anything moves, the engine tells you the plan: this block here, that block there — and why: the scores, against the thresholds. Then it does exactly that, in front of you. Content recommendations with the same receipts as the products have. Nobody wrote a rule for any of it. She touched a sweater.
 
+**What it's worth:** A content team can see what will change before it changes, which is what makes them willing to hand their slots to an engine in the first place.
+
 **If they ask:**
 - *"Is that preview a mock-up?"* — No — the label is scoring LIVE, and the schematic is computed from the same forecast that then executes. The map and the move are one calculation, drawn before it runs — it cannot show you one plan and quietly do another.
 
@@ -349,6 +482,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **The room sees:** The journey stage flips to deciding. The content hero becomes *"What to Wear With a Fisherman Sweater"* — a guide, not a lookbook — and its why line names its driver: *"completes · the Fenwick in her bag 1.00 × 0.5"*.
 
 **Tell it like this:** She committed — and watch the content change jobs. A minute ago its job was inspiring her. Now its job is helping her finish: what to wear it with, how to care for it. Same engine, reading the stage of her journey, choosing content the way it chooses complements. And read that why line — the completion bonus is scored and shown, never smuggled in. That is content personalization as we mean it: not content that matches her taste, content that answers what she is *doing*.
+
+**What it's worth:** Content that answers what she is doing rather than what she likes is content that helps her finish, and finishing is the only thing on that page with a number attached to it.
 
 **The simple math:** The completion driver is arithmetic like every other driver: the piece in her bag at full strength, 1.00, times the 0.5 completes weight — and the product is printed on the guide's why line, next to the decision it made.
 
@@ -363,6 +498,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** Your merchandiser wanted the banner third. The contract says the banner is theirs — so it goes third, and the engine ranks everything else around it. Hold on to both halves of that sentence: nothing here is ever *permanently* pinned, and anything can be pinned at *any* position. And about the motion you just watched — in production this re-ranking is one frame. We slowed it so you could watch it think, and the screen said so before it moved.
 
+**What it's worth:** Their commercial commitments survive personalization intact — the funded placement, the seasonal campaign, the position a merchandiser promised somebody — so nothing goes live that a merchandiser did not allow and no contracted slot is quietly ranked away.
+
 **The subtlety (for you, not the room):** "#3" means the third position the room can *see* — the engine maps the pin past any hidden sections, so the banner lands third on the visible page, never third in some internal list the room cannot check.
 
 **If they ask:**
@@ -376,6 +513,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** Look at that clock, because it is not a marketing timer. It runs to the exact instant the engine calculates her intent will fall back under its threshold — a moment computed from her evidence and its decay, not chosen by a campaign calendar. Which means two things nobody's urgency banner can say: it cannot be extended, by anyone; and when it ends, it will name the number that ended it. This is what a countdown looks like when it is true.
 
+**What it's worth:** Shoppers have learned to disbelieve countdowns, so an expiry nobody in the business can extend buys back the urgency a discount usually has to pay for — and because this one offers service rather than money off, the margin stays where it was.
+
 **The simple math:** The expiry is closed-form arithmetic: from the current evidence and its decay clock, solve for the moment the score crosses back under the exit line. We can tell you the exact minute an offer will die because it is arithmetic, not a timer.
 
 **If they ask:**
@@ -388,6 +527,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **The room sees:** The hero genuinely re-deciding on the new weight, in front of them: on the run this document was checked against, the Drover Field Jacket gave way to the **Shorewell Rain Shell · Slate**. The Why line names the new weight. On the **Glass box** tab, the line slider now sits at 0.60 and the dial's footer reads *hero · line = 0.60 · re-decided now · …+tuned*.
 
 **Tell it like this:** Everything so far has asked you to believe the arithmetic. This is where you get to change it. These are not learned parameters somebody trained and handed you to trust — they are configuration, and they are yours. I am turning up how much the *line* matters, from where it was to nought point six, right now, while you watch. … And the next decision used it: a different hero, chosen on the new weight, with the record saying which version of the weights made the call. No rebuild. No redeploy. No ticket to us, and nobody's data science team in the loop. That is what we mean by no black box — you can read the decision, *and* you can change the rule that made it.
+
+**What it's worth:** Changing how the engine behaves stops being a support ticket and a release: strategy moves at the speed the merchandising team thinks, and every decision after it carries the version of the weights that made it.
 
 **The simple math:** The dial writes straight into the live strategy table the composer reads on every decision, so the change is hot — the *next* recompose reads the new number. Nothing is retrained, because nothing was trained; the weight is a term in a weighted sum you have been watching on screen all session.
 
@@ -408,6 +549,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** Two governance points, one press. First: nobody wrote these audiences. They are minted from your catalogue, in your catalogue's own vocabulary — every line, every occasion, every band arrives with its audience ready, and when your catalogue changes, so do they. Second: declared precedence — gates first, pins second, ranking last. You just watched me turn a weight; watch it lose. I pinned the hero to a piece the engine did not choose, and the engine's own record says "pinned, ranking skipped" — no weight on that dial can outrank this. Your merchandiser outranks the machine, and the machine says so on the record — it does not sulk, it does not route around you.
 
+**What it's worth:** This is what makes it safe to deploy at all — the brand keeps final say, in declared order, with the override on the record — and because the audiences are minted from their own catalogue, nobody has to run an audience-definition project before the first campaign.
+
 **If they ask:**
 - *"Does a pin fight the personalization?"* — No — precedence is declared, so there is nothing to fight. The pin wins, the receipt records that ranking was skipped, and the moment you release it, ranking resumes. Authority with an audit trail.
 
@@ -419,6 +562,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** This is my favourite thing the engine does. That item just scored highest — it would have won the slot, and probably the click. A rule said no — it is sold out — and the engine declined its own best answer, re-decided in front of you, and *kept the score* so you can see exactly what it gave up. Her affinity was not touched; the rule judged the item, not her. Any system can show you its wins. Showing you the refusal, with the number attached, is worth more than every win on this page — because it is the proof that when this engine and your rules disagree, your rules win, visibly.
 
+**What it's worth:** Rules that hold when the arithmetic disagrees are what let a brand put this on its own homepage: no sold-out item served, no embargo broken, and a record of exactly what the engine gave up in order to obey.
+
 **If they ask:**
 - *"Would it really surrender its best click in production?"* — Yes — that is what "gates outrank ranking" means, mechanically. The alternative is an engine that quietly bends your rules whenever the math disagrees with them, and nobody in this room wants to operate that.
 
@@ -429,6 +574,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **The room sees:** Three separate retreats, in order, each naming its dimension and its number: the hero stops claiming her aisle first, the row lets go of her price band next, the story releases her taste last. The offer ends and states the number that ended it. The row returns to discovery.
 
 **Tell it like this:** Everyone in this industry demonstrates joining an audience. Watch her *leave* one. I am going to let two minutes pass — nothing is faked, the exact same decay is running, I simply chose the moment, because on this stage time moves only when I say so. And notice it does not collapse all at once. What aisle she is in goes first, because that is the most perishable fact about her. Her price band holds longer. Taste goes last — taste is the slowest thing about any of us. Three retreats, three clocks, each one naming its number as it lets go. Nobody wrote an exit rule for any of that. It is the same arithmetic you watched enter her, running backwards. … And there is the offer, ending, telling you the number that ended it.
+
+**What it's worth:** Audiences that release themselves are audiences nobody has to clean, which removes the suppression lists and the periodic hygiene project that a growing set of segments normally drags behind it.
 
 **The simple math:** Exit is entry's mirror: each score decays on its own clock, and when one falls below the exit line, the audience releases her and prints the number. Different clocks per dimension is why the page lets go of her in stages instead of forgetting her all at once.
 
@@ -444,6 +591,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 
 **Tell it like this:** She closed the tab. She came back. No login, no cookie sync, nothing was downloaded to her browser and nothing had to be fetched from a distant profile store — the profile was held per visitor at the edge, where the page is served, and the page opened already knowing her. Short beat, honest beat: this is memory, exactly where the decision runs.
 
+**What it's worth:** A returning visitor gets her relevance back with no login to ask for and no profile store to query, so the second session starts where the first one ended instead of at the generic page again.
+
 **⚠️ The caution (from the script):** Do NOT say "ODP is the memory". ODP is deliberately not connected on this surface. If asked: connect ODP and this memory becomes durable across devices and shareable with the rest of your stack — and that is a credential, not a code change.
 
 **If they ask:**
@@ -457,6 +606,8 @@ The heart of the session. The campaign hands off to behaviour, the engine shows 
 **The room sees:** Eight bars stay in exactly their places and re-label. The four surfaces on the left keep their kinds — email, paid social, SMS, partner form — and change their language. The cold start recomputes from the metro's median home value at 80% loan-to-value. The centre becomes a bank: rates, cards, eligibility.
 
 **Tell it like this:** I changed what we sell. Watch what did not change: eight bars, in the same eight places, relabelled. Category became product family. Taste became life stage. Colour became card tier. Journey stage became application stage. The same four kinds of surface on the left, now speaking a bank's language. The centre you would not recognise — a bank does not merchandise, it makes offers and asks you to apply, so the page renders as rates and cards and eligibility, and the cold start now opens on a thirty-year fixed, sized from the metro's real median home value at eighty percent loan-to-value. One engine. Your front end paints it. Half this room sells credit, not coats — you already know this customer; you just do not know him in this vocabulary yet.
+
+**What it's worth:** One engine covering a second business line, a second market or a second brand without re-engineering anything central is what turns a pilot into a programme, and it is why the second deployment is a configuration exercise rather than another build.
 
 **⚠️ The caution (from the script):** The episode trail CLEARS on the flip — the vector is rebuilt under the new registry, which is the honest thing to do when the dimension keys change. Do not say "same trail". The continuity is the instrument and the surface *kinds*, not the history.
 
@@ -478,6 +629,8 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 
 **Tell it like this:** That was a real model call, just now, against your own vocabulary. Here is the part that matters for everyone who has been burned by AI demos: it *cannot invent a dimension*. The schema it answers into is built from the live registry — the same eight dimensions you have been watching all session — so an invented dimension is rejected at the boundary before it ever reaches our code. It can only speak your catalogue's language. And notice the second thing: it *proposed*. It did not publish.
 
+**What it's worth:** AI that cannot step outside the customer's own vocabulary is AI a brand can let near its site, and it turns audience building from a specialist task into a sentence somebody types.
+
 **If they ask:**
 - *"Which model, and where does it run?"* — A live model call — the label on this beat is LIVE, US-only: the call is served from US infrastructure. The model's freedom is the sentence; the structure it must answer into is ours.
 - *"What happens if it tries to invent something?"* — The schema rejects it before it reaches the application — structurally, not by hoping the prompt behaves. That is the pattern across everything AI does in this session: bounded by construction, not by promise.
@@ -490,6 +643,8 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 
 **Tell it like this:** That is the governance beat of the whole session. The machine proposes; a person decides; and both halves are on the record with a name and a timestamp. When your compliance team asks who created an audience and when — and they will ask — the answer is a record, not an archaeology project.
 
+**What it's worth:** Nothing reaches a customer that a named person did not publish, so when compliance asks who created an audience and when, the answer is a record rather than an investigation.
+
 **If they ask:**
 - *"Could we allow auto-publish?"* — The separation is the design: propose and publish are two different calls on purpose. Where you draw your own line is policy; the system's default posture is that activation is a human act, on the record.
 
@@ -500,6 +655,8 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 **The room sees:** A curated scene behind real, engine-ranked products, our copy, and a provenance line saying what did what.
 
 **Tell it like this:** Natural-language search, with the same discipline. The model's only job is routing that sentence to one of eight approved scenes — it cannot invent a scene, because the answer format is a closed list. And it does not pick the products either: the deterministic engine you have watched all session still ranks those, blending what she asked for with what she has shown us. The words are understood by a model; the merchandise is decided by arithmetic; the page says which did which.
+
+**What it's worth:** Natural-language search stops being a brand risk once the model's answer set is a closed list, and the merchandise behind it is still ranked by arithmetic their team can audit.
 
 **If they ask:**
 - *"Is that backdrop generated live?"* — No — the scenes were generated once, at design time, and reviewed by a human before they shipped. Nothing visual is created on stage, which is why nothing visual can go wrong on stage.
@@ -513,6 +670,8 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 
 **Tell it like this:** A stylist, not a list. Watch the three behaviours. It builds a look from real pieces — every item id it can even *utter* is bound to your live catalogue. Correct it, and it repeats nothing — because everything already shown is removed from its vocabulary before it answers, so repeating itself is not something it is asked politely to avoid, it is something it cannot represent. And ask for something you do not carry — it says so, plainly, and styles honestly around the gap instead of substituting something quietly and hoping. An AI that can say "we do not sell that" is an AI your brand can put in front of customers.
 
+**What it's worth:** An assistant that structurally cannot offer what they do not stock is one their brand and legal teams will let face customers, and one that can say it does not sell something earns the trust that makes the rest of its advice worth taking.
+
 **If they ask:**
 - *"How do you stop it hallucinating products?"* — Structurally: the id list it answers from is built from the live catalogue at that moment, minus what it has shown. A fake SKU is not discouraged — it is unrepresentable. That is the difference between prompt engineering and engineering.
 
@@ -523,6 +682,8 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 **The room sees:** The real product, composed onto an approved still. The caption on screen says exactly that.
 
 **Tell it like this:** Before anyone asks — that image. The bag is your real product, the real packshot. The scene around it is styling: composed onto a still that was approved in advance, not generated. And the caption on the screen says so, in front of your customers, because the honesty is not a footnote in my deck — it ships on the page.
+
+**What it's worth:** Every pixel that can appear has already passed brand review, which removes the single objection that stops most generated imagery ever reaching a live commerce page.
 
 **If they ask:**
 - *"Why not generate imagery live? Everyone else does."* — Because your brand team approved every pixel that can appear, and that guarantee is worth more than the party trick. Live generation puts an unreviewed image on a brand surface; we chose the version of this that survives your brand review.
@@ -535,6 +696,8 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 
 **Tell it like this:** We just created an experiment — a real flag and a real rule, fifty-fifty, in the real project. Not a mock. Not a screenshot. That is your console, and it was created while I was talking. Every press of that button creates a *new* rule, so "created just now" is always literally true — you can watch the API's own elapsed seconds while it happens.
 
+**What it's worth:** The experiment arrives as an object in the project their team already governs, so there is no second tool to buy, learn or audit, and the distance from idea to running test is a press rather than a sprint.
+
 **If they ask:**
 - *"Is that a demo org?"* — It is a real Optimizely project with writes enabled, and the card badges its own status honestly — live and created now, or writes off, or refused — never dressed up. On your rollout it is your project and your credentials.
 
@@ -545,6 +708,8 @@ The room stops being shoppers and becomes operators. The theme is bounded AI: th
 **The room sees:** Two cards: a `multi_armed_bandit` rule and a `contextual_multi_armed_bandit` rule in the real project, each with its ids and an *Open it now* link. The allocation figures and per-context winners labelled representative.
 
 **Tell it like this:** Two bandits — a multi-armed bandit that hunts the winning variant, and a contextual one that finds a *different* winner per kind of visitor. Both rules are real, both are in your project right now — open them. And here is what I will not do: I will not pretend this room is traffic. A bandit's allocation curve comes from thousands of real sessions, and you have thirty people and fifty minutes — so the movement you see on this card is representative, and it says so on the line where it is shown. The rule is the product. The traffic is yours.
+
+**What it's worth:** Traffic moves toward the winning variant while the test is running rather than after it ends, so less of their traffic is spent on the one that was always going to lose — and the readouts are labelled, so nobody carries home a number their own traffic did not earn.
 
 **The simple math:** A bandit shifts traffic toward whichever variant is winning, continuously, instead of waiting for the test to end. The contextual one learns a winner per context — device, channel, band — instead of one winner for everyone.
 
@@ -564,6 +729,8 @@ From shopper to P&L. One filter, one collapse, one fix proved in the room, and t
 
 **Tell it like this:** Across all customers, this checkout looks fine — that is the number sitting in your weekly report right now, and it is telling you everything is fine. Filter to Gen-Z. It collapses — forty-four percent gone at the payment step. About seven and a half thousand dollars, this window, walking out the door — and look at how that number is built: computed from the rows, term by term, in front of you. Not typed into a slide. The average lied — not because anyone lied, but because a severe failure inside a slice of your traffic moves the blended number by a rounding error. Every one of you has a number like this hiding under an average that looks fine.
 
+**What it's worth:** A failure hiding under a blended average is revenue leaving the business every week that nobody is looking for, and the loss on screen is computed from their own rows rather than borrowed from a benchmark, which is the only kind of figure a finance director will accept.
+
 **The simple math:** Recoverable money is anchored on the *excess* drop only — the part worse than an ordinary checkout's ordinary loss — times the sessions it cost, times the average order, times a conservative recovery fraction. You cannot recover the ordinary drop; you can recover the anomaly.
 
 **If they ask:**
@@ -578,6 +745,8 @@ From shopper to P&L. One filter, one collapse, one fix proved in the room, and t
 
 **Tell it like this:** It found the leak. It built the fix — installments and social proof at the payment step, aimed at the exact audience it diagnosed. It launched a real experiment, targeted at a real audience, both in your project. The funnel recovered on screen. And here is the part I refuse to leave abstract — this is that shopper's payment step, right now: Pay in 4, social proof, served by that experiment, in this session. Diagnose, decide, activate, prove — one screen, no engineer, no analyst, no quarter-end readout.
 
+**What it's worth:** The distance from finding the problem to having the fix running in front of the affected cohort collapses from a roadmap item to a single screen, with no engineer and no analyst in the queue.
+
 **If they ask:**
 - *"Is the recovery real?"* — The label, proudly: audience and flag LIVE, in-session fix LIVE — the checkout you just saw was served by the real flag. The recovery curve is REPRESENTATIVE, because recovering revenue requires shoppers, and it is the same rows re-run with the defect lifted — the same arithmetic, not a second dataset drawn to look better.
 - *"Who approved that going live?"* — On stage, I did — the launch is a press. In your shop it is your workflow: the fix arrives as an experiment in your project, subject to whatever approval your team already runs there.
@@ -589,6 +758,8 @@ From shopper to P&L. One filter, one collapse, one fix proved in the room, and t
 **The room sees:** Warehouse rows: gates, scores, rank, tie-break hash, config version — every decision of the session, as data.
 
 **Tell it like this:** Last thing in this act, and it is the posture behind everything you have seen: we hand you the rows. Every decision this engine made today — what was gated, what scored what, what ranked where, which config version did it, down to the tie-break — exported to your warehouse, yours. You compute the lift, in your own analytics, on your own definitions. We will never present our own uplift number as the proof of our own product. If a vendor grades their own homework, the grade is marketing.
+
+**What it's worth:** They can answer the question their CFO will ask — did this actually work — in their own warehouse, on their own definitions, without taking our word for any of it.
 
 **If they ask:**
 - *"What would we actually do with these?"* — Join them to your orders and sessions and measure everything independently: lift by audience, by slot, by config version. The tie-break hash means even coin-flips are reproducible. It is an audit trail designed to be audited.
@@ -605,6 +776,8 @@ The closing arc: a trend signal becomes live, optimizing creative inside its own
 
 **Tell it like this:** A product just spiked on social. **One** thing in the next sixty seconds is simulated — the detection — and I am telling you before you see it, not after. We do not ship social listening and I am not going to pretend we do: in production that signal arrives from your listening vendor, or from your own team, over a webhook. Everything after it is real, and in a moment it will all be on the screen, itemised, while it runs.
 
+**What it's worth:** Saying what is simulated before the impressive part is what makes the other forty-three beats believable, and it tells the buyer precisely where the listening vendor they already pay for plugs in.
+
 **If they ask:**
 - *"So what fires this in real life?"* — Any signal source you already pay for — social listening, trend detection, even your own analytics anomaly alerts. The contract is a webhook; the loop from signal to shipped experience is what you are about to watch, and that part is real.
 
@@ -615,6 +788,8 @@ The closing arc: a trend signal becomes live, optimizing creative inside its own
 **The room sees:** The honesty ledger, up from the instant of the press and staying up — three columns, counted, so the word "simulated" can never be read as covering the whole beat. **SIMULATED · 1**: the detection — no social listening; in production your vendor or your own team hands us the signal. **REAL · 4**: the copy, being written now by the model · the artwork, approved before today and composed, never generated · the flag and rule, about to be created in your Optimizely project · the 28:00 window, enforced. **REPRESENTATIVE · 1**: the traffic allocation — nobody in this room is buying. And beside it, the elapsed counter running while Opal reads the signal and writes the creative.
 
 **Tell it like this:** Reading the signal, writing the moment — copy written live, right now, composed onto artwork your brand approved in advance. Watch the clock, not me. … Eight seconds. Your current process for "a product is going viral, react" is a war room and a purchase order. This was eight seconds, and nothing unreviewed touched the page — the words are new, the canvas was approved before today. And read the ledger while it runs: one thing simulated, four real, one representative. Not a disclaimer at the end. A count, on the screen, during.
+
+**What it's worth:** Reacting to a live trend today costs them a war room and a purchase order; doing it in seconds, on artwork the brand approved in advance, is the difference between catching a moment and writing a retrospective about it.
 
 **If they ask:**
 - *"The image too?"* — The copy is written live; the scene is an approved still, never generated on stage — same discipline as the concierge. New words, pre-approved canvas, and the page says so.
@@ -627,6 +802,8 @@ The closing arc: a trend signal becomes live, optimizing creative inside its own
 
 **Tell it like this:** That creative did not ship as a banner — it shipped as a bandit. The rule is real: open Optimizely and it is sitting there, created moments ago. The traffic is not — nobody in this room is buying, so the allocation you are watching is representative and it says so on the card. But read what the loop means: signal, creative, live optimizing experience, winner promoted — all inside the window, before the moment cooled. Trends have a half-life; this is the machine that moves inside it. And the governance line, plainly: today a human still presses Launch. Autonomy is roadmap, and I will not sell you roadmap as product.
 
+**What it's worth:** Signal to optimising experience inside the window in which the trend is still alive is the only version of this that earns money rather than admiration, and a human still presses Launch, so the speed costs them no control.
+
 **If they ask:**
 - *"What's real on this card?"* — The label, line by line: rule REAL, copy REAL, allocation REPRESENTATIVE, signal SIMULATED — and the ledger beside it does the counting for you: one simulated, four real, one representative, each one named. Six claims, six labels, all on screen while they happen. That split is the demo's whole character in one card.
 
@@ -637,6 +814,8 @@ The closing arc: a trend signal becomes live, optimizing creative inside its own
 **The room sees:** You.
 
 **Tell it like this:** Let me close on what I did not show you. I did not show you a lift chart, a reallocation curve, or a per-context winner — because this room did not generate the traffic those numbers need, and a number without its traffic is a decoration. I did not show you social listening, because we do not ship it. Everything else you watched this afternoon was running — real engine, real audiences, real experiments in a real project — and the parts that were simulated told you so on screen, while they were doing it. That is the standard I would ask you to hold every vendor to, including us. Questions.
+
+**What it's worth:** The room leaves able to repeat which parts were real and which were not, and that is the difference between a demo they enjoyed and a demo they can defend to the people who were not in it.
 
 **If they ask:** This beat *is* the answer. Then stop talking — the act budget leaves five minutes for questions, and the note in the run of show says: leave the silence; do not fill it.
 
