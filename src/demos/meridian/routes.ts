@@ -258,7 +258,11 @@ meridian.get('/experiment/status', (c) => c.json(fxStatus(c.env)));
 meridian.post('/opal/propose', async (c) => {
   const body = await c.req.json().catch(() => null as any);
   const vertical = verticalOf(body?.vertical);
-  const out = await propose(c.env, vertical, String(body?.ask ?? ''));
+  // The conversation's memory, sent by the page: what the follow-up is about.
+  const prior = body?.prior && Array.isArray(body.prior.conditions)
+    ? { name: String(body.prior.name ?? ''), conditions: body.prior.conditions.slice(0, 3) }
+    : null;
+  const out = await propose(c.env, vertical, String(body?.ask ?? ''), prior);
   return c.json({ ...out, key: out.name ? audienceKeyFor(out.name) : undefined });
 });
 

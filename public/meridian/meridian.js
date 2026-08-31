@@ -3174,7 +3174,11 @@ document.querySelectorAll('.mo-chips').forEach((box) => {
   const input = $(box.dataset.for);
   const form = input.closest('.moment-box').querySelector('form');
   box.querySelectorAll('button').forEach((b) => {
-    b.onclick = () => { input.value = b.textContent; form.dispatchEvent(new Event('submit', { cancelable: true })); };
+    b.onclick = () => {
+      if (box.dataset.for === 'oq') opalNewSubject(true);   // an opener starts a new audience
+      input.value = b.textContent;
+      form.dispatchEvent(new Event('submit', { cancelable: true }));
+    };
   });
 });
 
@@ -3278,6 +3282,25 @@ $('opal-close').onclick = () => $('opal').classList.remove('open');
  * a replacement.
  */
 let OPAL_TURN = 0;
+let OPAL_LAST = null;      // the audience a follow-up refines
+/**
+ * WHICH FOLLOW-UPS REFINE, AND WHICH START OVER. Typing after a proposal
+ * continues it — that is what "narrow that to the premium band" means, and the
+ * conversation would be worthless if it forgot. Pressing an opener chip, or
+ * "Start a new audience", plainly begins a different one. The presenter is
+ * never left guessing which of the two he is about to get.
+ */
+function opalNewSubject(label) {
+  OPAL_LAST = null;
+  $('opal-new').hidden = true;
+  if (label && $('opal-out').children.length) {
+    const d = document.createElement('div');
+    d.className = 'op-sep'; d.innerHTML = '<span>new audience</span>';
+    $('opal-out').appendChild(d);
+  }
+}
+$('opal-new').onclick = () => { opalNewSubject(true); $('oq').focus(); };
+TIPS['opal-new'] = ['Clears what the next question is about, so it proposes a fresh audience instead of refining the last one.', 'typing without it refines'];
 $('opal-form').onsubmit = async (e) => {
   e.preventDefault();
   const ask = $('oq').value.trim(); if (!ask) return;
@@ -3301,7 +3324,9 @@ $('opal-form').onsubmit = async (e) => {
 
   const p = await fetch(`${API}/opal/propose`, {
     method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ vertical: S.vertical, ask }),
+    // What the follow-up is about. One call, same latency; the model is told to
+    // ignore it when the request is plainly a different audience.
+    body: JSON.stringify({ vertical: S.vertical, ask, prior: OPAL_LAST }),
   }).then((x) => x.json()).catch(() => null);
   clearInterval(tick);
   input.disabled = false; input.focus();
@@ -3329,6 +3354,8 @@ $('opal-form').onsubmit = async (e) => {
         <button id="opal-publish" class="op-publish">Publish this audience</button>
       </div>
     </article>`;
+  OPAL_LAST = { name: p.name, conditions: p.conditions };
+  $('opal-new').hidden = false;
   const btn = turn.querySelector('.op-publish');
   btn.id = 'opal-publish';
   btn.onclick = () => publishAudience(p, id);
@@ -4270,6 +4297,7 @@ $('btn-reset').onclick = async () => {
   // Everything the page keeps that is NOT in S: the trail, the offer, the
   // moments, the drawers, the weights. A new visitor sees none of it.
   $('conseq').innerHTML = '';
+  $('opal-out').innerHTML = ''; OPAL_LAST = null; OPAL_TURN = 0; $('opal-new').hidden = true;
   OFFER.live = false; OFFER.expiresAt = null; OFFER.dim = null; OFFER.value = null;
   $('offer').hidden = true; $('offer').classList.remove('done', 'expiring');
   document.querySelectorAll('.moment.open').forEach((m) => m.classList.remove('open'));

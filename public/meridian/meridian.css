@@ -362,6 +362,13 @@ body.has-director .moment-box{max-height:calc(96vh - var(--dir-h, 120px))}
 .op-publish.done{background:#DFF3E6;border-color:#BFE6CD;color:#14663B;cursor:default}
 .op-refused{font:400 14px/1.5 var(--sans);color:#8E2020;background:#FADEDE;border-radius:8px;padding:12px 14px}
 
+.op-sep{display:flex;align-items:center;gap:12px;color:var(--muted);
+  font:600 10px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase}
+.op-sep::before,.op-sep::after{content:'';flex:1;height:1px;background:var(--line)}
+#opal-new{background:transparent;border:1px solid var(--line);color:var(--muted);
+  font:500 13px/1 var(--sans);padding:12px 14px;border-radius:8px;cursor:pointer}
+#opal-new:hover{border-color:#7A3BE0;color:#7A3BE0}
+#opal-new[hidden]{display:none}
 .opal-form{border-top:1px solid var(--line);border-bottom:0}
 .opal-vocab{padding:0 26px 16px;font:400 12px/1.5 var(--sans);color:var(--muted)}
   border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:20px}

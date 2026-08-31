@@ -53,7 +53,12 @@ export function vocabularyFor(vertical: Vertical): Record<string, string[]> {
 
 const TIMEOUT_MS = 6000;
 
-export async function propose(env: Env, vertical: Vertical, ask: string): Promise<AudienceProposal> {
+/** The audience a follow-up is refining — the conversation's own memory. */
+export interface PriorAudience { name: string; conditions: Array<{ dim: string; value: string; atLeast: number }> }
+
+export async function propose(
+  env: Env, vertical: Vertical, ask: string, prior?: PriorAudience | null,
+): Promise<AudienceProposal> {
   const t0 = Date.now();
   const vocabulary = vocabularyFor(vertical);
   const dims = Object.keys(vocabulary) as [string, ...string[]];
@@ -84,6 +89,19 @@ export async function propose(env: Env, vertical: Vertical, ask: string): Promis
       Object.entries(vocabulary).map(([d, vs]) => `  ${d}: ${vs.join(', ')}`).join('\n') + '\n' +
       `Use one to three conditions. Default atLeast to 0.6 unless the request implies stronger intent.\n` +
       `Name it the way a merchandiser would, not the way a database would.\n` +
+      // REFINEMENT IS A CONVERSATION, not a fresh question each time. The prior
+      // audience travels with the request so "narrow that to the premium band"
+      // KEEPS what it is narrowing. The model is told in the same breath that a
+      // request describing a different audience is not a refinement, so a new
+      // subject never inherits conditions nobody asked for.
+      (prior
+        ? `The merchandiser is refining this audience:\n`
+          + `  name: ${prior.name}\n`
+          + prior.conditions.map((c) => `  condition: ${c.dim} = ${c.value} >= ${c.atLeast}`).join('\n') + '\n'
+          + `KEEP those conditions and add or tighten as the request asks, unless the request contradicts one — `
+          + `then replace only the contradicted condition. If the request describes a DIFFERENT audience rather `
+          + `than a change to this one, ignore the audience above and answer the request on its own.\n`
+        : '') +
       `Request: """${ask}"""`,
   });
 
