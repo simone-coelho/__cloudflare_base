@@ -862,6 +862,13 @@ body.has-director .page{padding-bottom:250px}
 .led-col li{margin:2px 0}
 .led-col li small{display:block;color:#8FA0B5;font:400 11px/1.35 var(--sans)}
 .led-col.sim{background:rgba(240,169,43,.07)}
+/* Beside the drawer: left-anchored, and never wider than the space left over. */
+.ledger.beside{left:18px;right:auto;transform:none;
+  grid-template-columns:1fr}
+.ledger.beside .led-col{border-right:0;border-bottom:1px solid #2A3644;padding:8px 14px 9px}
+.ledger.beside .led-col:last-child{border-bottom:0}
+.ledger.beside .led-col ul{display:flex;flex-wrap:wrap;gap:2px 18px}
+.ledger.beside .led-col li small{display:inline;margin-left:6px}
 #dir-next{background:#7FB8FF;border-color:#7FB8FF;color:#08121f;min-width:88px}
 #dir-play.on{background:#F0A92B;border-color:#F0A92B;color:#241500}
 .dir-title{font-size:21px}
@@ -1247,7 +1254,12 @@ ol.pd-body,ul.pd-body{padding-left:36px;font-size:14.5px;line-height:1.5}
 .tip span::before{content:'Look at: ';font-weight:600;color:#7FB8FF}
 
 /* ── THE EXPERIMENT DRAWER: floats over the page's right edge, never in the flow ── */
-.xdrawer{position:fixed;z-index:700;width:560px;max-height:72vh;overflow:auto;margin:0;
+/* THE DRAWER AND THE LEDGER SHARE THE BOTTOM OF THE SCREEN. Both are pinned
+   above the bar, so on the moment beat the ledger sat across the drawer's
+   readout. The drawer keeps the right; the ledger takes the left and stops
+   where the drawer begins. */
+.xdrawer{position:fixed;z-index:700;right:18px;bottom:calc(var(--dir-h, 120px) + 14px);
+  width:560px;max-height:72vh;overflow:auto;margin:0;
   box-shadow:0 30px 70px -20px rgba(0,0,0,.55), 0 0 0 1px rgba(14,95,191,.18)}
 .xc-x{margin-left:auto;font:600 18px/1 var(--sans);width:30px;height:30px;border-radius:6px;border:1.5px solid #B9CFF2;background:#fff;color:#0E3F8A;cursor:pointer}
 .xc-x:hover{background:#0E3F8A;color:#fff}

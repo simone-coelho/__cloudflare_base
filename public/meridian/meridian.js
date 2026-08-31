@@ -164,7 +164,20 @@ function placeDrawer() {
   d.style.bottom = `${barH + 14}px`;
   d.style.maxHeight = `${Math.max(320, innerHeight - barH - 120)}px`;
 }
-window.addEventListener('resize', placeDrawer);
+/** The ledger fills the space the drawer leaves — measured, not assumed. */
+function placeLedger() {
+  const l = $('ledger'); if (!l || l.hidden) return;
+  const d = $('xcard');
+  const beside = d && !d.hidden;
+  l.classList.toggle('beside', beside);
+  if (beside) {
+    const r = d.getBoundingClientRect();
+    l.style.width = `${Math.max(360, Math.round(r.left - 36))}px`;
+  } else {
+    l.style.width = '';
+  }
+}
+window.addEventListener('resize', () => { placeDrawer(); placeLedger(); });
 
 // ── THE DEMO CLOCK, IN HAND. Paused by default (nothing moves while you talk).
 // Resume runs it at 15× — four real seconds are one demo minute — so the room can
@@ -526,6 +539,7 @@ function showLedger(phase, m, fx, secs) {
       + li('the 28:00 window', `loop closed in ${secs ?? '—'}s of 28:00`);
   $('led-rep').innerHTML = li('the traffic allocation', 'nobody in this room is buying — the rule is real, the split is illustrative');
   $('ledger').hidden = false;
+  placeLedger();                 // beside the drawer, never across it
 }
 const hideLedger = () => { $('ledger').hidden = true; };
 
@@ -4043,7 +4057,7 @@ function openXpCard(flavour, title) {
   $('xc-steps').innerHTML = ''; $('xc-rows').hidden = true; $('xc-readout').hidden = true; $('xc-foot').hidden = true;
   applyHighlight($('xcard'));
   $('xcard').hidden = false;
-  placeDrawer();
+  placeDrawer(); placeLedger();
 }
 function xpBadge(r) {
   const b = $('xc-badge'); b.hidden = false;
