@@ -316,8 +316,54 @@ body.has-director .moment-box{max-height:calc(96vh - var(--dir-h, 120px))}
   text-decoration:none;border-bottom:1px solid rgba(107,176,255,.4)}
 .cq-link:hover{color:var(--p-blue);border-color:var(--p-blue)}
 
-.opal-body{padding:24px 28px 28px;overflow-y:auto}
-.opal-vocab{font:400 13px/1.6 ui-monospace,monospace;color:var(--muted);background:var(--paper);
+/* ── ASK OPAL — a conversation, dressed like one ──────────────────────────── */
+.opal-head{align-items:flex-start}
+.opal-id{display:flex;gap:14px;align-items:flex-start}
+.opal-mark{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;
+  font:700 18px/1 var(--sans);color:#fff;
+  background:linear-gradient(140deg,#7A3BE0 0%,#0E5FBF 100%);
+  box-shadow:0 6px 16px -6px rgba(122,59,224,.7)}
+.opal-mark.sm{width:28px;height:28px;border-radius:8px;font-size:13px;margin-top:2px}
+
+.opal-thread{flex:1 1 auto;min-height:0;overflow-y:auto;padding:18px 26px 6px;
+  display:flex;flex-direction:column;gap:20px;background:var(--paper)}
+.opal-thread:empty{display:none}
+.op-turn{display:flex;flex-direction:column;gap:12px}
+.op-you{align-self:flex-end;max-width:74%;background:#0E5FBF;color:#fff;border-radius:12px 12px 4px 12px;padding:10px 14px}
+.op-you span{display:block;font:700 9.5px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;opacity:.75;margin-bottom:4px}
+.op-you p{margin:0;font:400 15px/1.4 var(--sans)}
+.op-reply{display:flex;gap:12px;align-items:flex-start}
+.op-body{flex:1;min-width:0}
+.op-said{font:400 15px/1.5 var(--sans);color:var(--ink);margin-bottom:10px}
+
+.op-think{display:flex;align-items:center;gap:8px;font:400 14px/1.4 var(--sans);color:var(--muted)}
+.op-think i{width:6px;height:6px;border-radius:50%;background:#7A3BE0;opacity:.35;animation:opdot 1s infinite}
+.op-think i:nth-child(2){animation-delay:.15s} .op-think i:nth-child(3){animation-delay:.3s}
+@keyframes opdot{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+.op-ms{margin-left:auto;font:600 12px/1 ui-monospace,monospace;color:#7A3BE0}
+
+.op-card{background:#fff;border:1.5px solid var(--line);border-left:5px solid #7A3BE0;border-radius:10px;
+  overflow:hidden;box-shadow:0 8px 22px -14px rgba(11,14,19,.35)}
+.op-card-h{display:flex;align-items:baseline;gap:12px;padding:14px 18px 6px}
+.op-card-h h4{margin:0;font:400 24px/1.15 var(--serif);flex:1}
+.op-key{font:600 11px/1 ui-monospace,monospace;color:var(--muted)}
+.op-why{margin:0;padding:0 18px 14px;font:400 14.5px/1.5 var(--sans);color:var(--muted)}
+.op-rule{padding:12px 18px;background:var(--paper);border-top:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.op-rule-k{width:100%;font:700 9.5px/1 var(--sans);letter-spacing:.11em;text-transform:uppercase;color:#6B7385;margin-bottom:2px}
+.op-cond{font:500 13px/1 var(--sans);background:#fff;border:1px solid #D6DBE4;border-radius:6px;padding:7px 10px}
+.op-cond b{font-weight:700} .op-cond em{font-style:normal;color:#7A3BE0;font-weight:600}
+.op-act{display:flex;align-items:center;gap:16px;padding:12px 18px;border-top:1px solid var(--line)}
+.op-state{flex:1;font:400 12.5px/1.45 var(--sans);color:var(--muted)}
+.op-state b{color:var(--ink)} .op-state .op-live{color:#14663B}
+.op-publish{font:600 14px/1 var(--sans);padding:11px 18px;border-radius:7px;cursor:pointer;
+  background:#7A3BE0;border:1px solid #7A3BE0;color:#fff;white-space:nowrap}
+.op-publish:hover{background:#8B4CF0}
+.op-publish.done{background:#DFF3E6;border-color:#BFE6CD;color:#14663B;cursor:default}
+.op-refused{font:400 14px/1.5 var(--sans);color:#8E2020;background:#FADEDE;border-radius:8px;padding:12px 14px}
+
+.opal-form{border-top:1px solid var(--line);border-bottom:0}
+.opal-vocab{padding:0 26px 16px;font:400 12px/1.5 var(--sans);color:var(--muted)}
   border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:20px}
 .opal-vocab b{color:var(--ink)}
 .prop{border:1px solid var(--line);border-radius:10px;padding:22px 24px;background:var(--card)}

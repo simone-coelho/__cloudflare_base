@@ -444,22 +444,31 @@
 
 <div class="moment" id="opal">
   <div class="moment-box">
-    <form class="ask-form" id="opal-form" autocomplete="off">
-      <input id="oq" placeholder="Describe an audience in plain English…" aria-label="Ask Opal">
-      <button type="submit">Propose</button>
+    <!-- IT IS A CONVERSATION, so it looks like one: who you are talking to, what
+         it may do, the exchange itself, and the decision that stays yours. -->
+    <div class="mo-head opal-head">
+      <div class="opal-id">
+        <span class="opal-mark" aria-hidden="true">O</span>
+        <div>
+          <h3>Ask Opal</h3>
+          <p>Describe the shoppers you want in your own words. Opal writes the rule in your catalogue's vocabulary — and only proposes. Publishing stays yours.</p>
+        </div>
+      </div>
       <button type="button" id="opal-close">Close</button>
+    </div>
+    <div class="opal-thread" id="opal-out"></div>
+    <form class="ask-form opal-form" id="opal-form" autocomplete="off">
+      <input id="oq" placeholder="Describe an audience — “shoppers who keep coming back to the Drover”" aria-label="Ask Opal">
+      <button type="submit">Ask Opal</button>
     </form>
-    <!-- Pills, like AI search. Nobody should have to invent a sentence on stage. -->
+    <!-- Openers, so nobody has to invent a sentence on stage. -->
     <div class="mo-chips" data-for="oq">
       <button type="button">Shoppers who keep coming back to the Drover</button>
       <button type="button">People buying a gift under $150</button>
       <button type="button">Anyone leaning heritage in outerwear</button>
       <button type="button">Shoppers in the premium band who browse on mobile</button>
     </div>
-    <div class="opal-body">
-      <div class="opal-vocab" id="opal-vocab"></div>
-      <div id="opal-out"></div>
-    </div>
+    <div class="opal-vocab" id="opal-vocab"></div>
   </div>
 </div>
 

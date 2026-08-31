@@ -3270,45 +3270,81 @@ $('btn-opal').onclick = async () => {
 };
 $('opal-close').onclick = () => $('opal').classList.remove('open');
 
+/**
+ * ASK OPAL IS A CONVERSATION, and it looks like one: what you said, Opal
+ * thinking with the clock running, then the audience it proposes — its name,
+ * its reasoning, the rule in the catalogue's own words, and the decision that
+ * stays with a person. Turns accumulate, so refining is a dialogue rather than
+ * a replacement.
+ */
+let OPAL_TURN = 0;
 $('opal-form').onsubmit = async (e) => {
   e.preventDefault();
   const ask = $('oq').value.trim(); if (!ask) return;
-  const input = $('oq'); const was = input.placeholder;
-  input.disabled = true; input.placeholder = 'Opal is reading your catalogue…';
-  $('opal-out').innerHTML = '';
+  const input = $('oq');
+  input.value = ''; input.disabled = true;
+  const id = ++OPAL_TURN;
+
+  const turn = document.createElement('div');
+  turn.className = 'op-turn';
+  turn.innerHTML = `<div class="op-you"><span>You</span><p>${escapeHtml(ask)}</p></div>
+    <div class="op-reply" id="op-r${id}">
+      <span class="opal-mark sm" aria-hidden="true">O</span>
+      <div class="op-body"><div class="op-think"><i></i><i></i><i></i>
+        <span>Opal is reading your catalogue — it may only use dimensions and values you actually have…</span>
+        <b class="op-ms" id="op-ms${id}">0.0s</b></div></div>
+    </div>`;
+  $('opal-out').appendChild(turn);
+  $('opal-out').scrollTop = $('opal-out').scrollHeight;
+  const t0 = Date.now();
+  const tick = setInterval(() => { const el = $(`op-ms${id}`); if (el) el.textContent = `${((Date.now() - t0) / 1000).toFixed(1)}s`; }, 100);
 
   const p = await fetch(`${API}/opal/propose`, {
     method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ vertical: S.vertical, ask }),
   }).then((x) => x.json()).catch(() => null);
-  input.disabled = false; input.placeholder = was;
+  clearInterval(tick);
+  input.disabled = false; input.focus();
+  const body = turn.querySelector('.op-body');
 
   if (!p?.ok) {
-    $('opal-out').innerHTML = `<div class="prop"><div class="refused">${
-      p?.reason ?? 'Opal could not be reached.'} Nothing was proposed and nothing was written.</div></div>`;
+    body.innerHTML = `<div class="op-refused"><b>Opal did not propose anything.</b>
+      ${escapeHtml(p?.reason ?? 'The model could not be reached.')} Nothing was written.</div>`;
+    $('opal-out').scrollTop = $('opal-out').scrollHeight;
     return;
   }
-  input.value = '';
-  $('opal-out').innerHTML = `<div class="prop">
-    <h3>${p.name}</h3>
-    <p class="why">${p.rationale}</p>
-    <div class="cond">${p.conditions.map((c) => `<span>${c.dim} = ${c.value} ≥ ${c.atLeast}</span>`).join('')}</div>
-    <div class="foot">
-      <div class="k">Proposed by the model in ${p.ms}ms · key <b>${p.key}</b><br>
-        Nothing is live yet. Opal proposed it; you decide.</div>
-      <button id="opal-publish">Publish</button>
-    </div></div>`;
-  $('opal-publish').onclick = () => publishAudience(p);
+
+  body.innerHTML = `<div class="op-said">Here is an audience for that. It uses
+      ${p.conditions.length} of your own dimension${p.conditions.length === 1 ? '' : 's'}; I have not published it.</div>
+    <article class="op-card">
+      <div class="op-card-h"><h4>${escapeHtml(p.name)}</h4><span class="op-key">${escapeHtml(p.key)}</span></div>
+      <p class="op-why">${escapeHtml(p.rationale)}</p>
+      <div class="op-rule">
+        <div class="op-rule-k">The rule, in your vocabulary</div>
+        ${p.conditions.map((c) => `<span class="op-cond"><b>${escapeHtml(c.dim)}</b> = ${escapeHtml(String(c.value))}
+          <em>≥ ${c.atLeast}</em></span>`).join('')}
+      </div>
+      <div class="op-act">
+        <div class="op-state" id="op-state${id}">Proposed in ${p.ms}ms · <b>nothing is live yet</b> — Opal proposed it, you decide.</div>
+        <button id="opal-publish" class="op-publish">Publish this audience</button>
+      </div>
+    </article>`;
+  const btn = turn.querySelector('.op-publish');
+  btn.id = 'opal-publish';
+  btn.onclick = () => publishAudience(p, id);
+  $('opal-out').scrollTop = $('opal-out').scrollHeight;
   capDone(10);
   consequence('Opal', `Proposed "${p.name}"`,
     `${p.conditions.length} condition${p.conditions.length === 1 ? '' : 's'} over the real registry. Not published — a person still has to say yes.`);
 };
 
 /** The governance beat: a person publishes, and the engine starts evaluating it. */
-function publishAudience(p) {
+function publishAudience(p, turnId) {
   S.published.push({ key: p.key, name: p.name, conditions: p.conditions });
   const btn = $('opal-publish');
   if (btn) { btn.textContent = 'Published ✓'; btn.classList.add('done'); btn.disabled = true; }
+  const st = turnId != null ? $(`op-state${turnId}`) : null;
+  if (st) st.innerHTML = '<b class="op-live">Live</b> — a person approved it, with a name and a timestamp. The page can target it from the next signal onward.';
   consequence('Published', `"${p.name}" is live`,
     'A person approved it, with a name and a timestamp. The engine evaluates it from the next signal onward.');
   $('sentence').textContent =
