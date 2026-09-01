@@ -1,5 +1,11 @@
 # Can we match their SFCC sort-rule behaviour? — the product grid question
 
+> **SUPERSEDED IN PART, 2026-08-31.** The closing section of this document says product grid
+> sorting is "not in the contracted scope." **That is no longer true.** We told Mandeep and Nitin
+> we would support their Salesforce Commerce Cloud feed, and that commitment stands. Everything
+> here about the two integration patterns and their costs remains accurate and useful; only the
+> scope statement is stale. Do not quote the scope statement.
+
 **Prepared by:** Simone Coelho · **Date:** 2026-08-21 · **Status:** INTERNAL, with a paste-ready answer at the end
 **Question from the account team:** *today they pass a sort rule / query parameter to SFCC, which returns the ordered product grid. Would they be able to easily configure the order with the edge solution, or are the sorting rules defined once and then AI does its thing?*
 

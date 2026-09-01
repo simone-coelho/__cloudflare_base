@@ -8,7 +8,8 @@ for explanation. He wants the document amended. Replying in prose is what has ke
 item below gives the reply *and* the amended section, and the covering note should say the revised
 appendix follows.
 
-One item needs an internal decision before it goes: see item 5.
+Item 5 splits a sentence that conflates a capability with an integration. Supporting their
+Salesforce Commerce Cloud feed is committed; only the tense and the placement change.
 
 ---
 
@@ -164,22 +165,19 @@ anything is served.
 section headed available on signature. Either it is available today and the language should be fixed, or
 it belongs in Section 2 with a delivery date.
 
-**Before sending, confirm with the commercial owner whether SFCC grid sorting is inside contracted
-scope.** Our own documents currently take more than one position on this, and his question cannot be
-answered without settling it. The reply below is written to be true either way, and the final clause is
-the one that changes.
-
 **Reply, ready to send:**
 
-A fair catch, and the sentence is conflating two different things. We will split it.
+A fair catch, and the sentence conflates two things. Supporting your Salesforce Commerce Cloud feed is
+committed and is not in question. What the sentence gets wrong is putting a capability and an
+integration into one clause under a present-tense heading.
 
-The ranking capability is real and present-tense. The engine re-ranks a candidate set per shopper against
-the same affinity profile that drives content, and returns the reordered IDs for your front end to
-paint. That belongs in Section 1 and the language should say so plainly, with no future tense.
+The ranking capability is real and present-tense. The engine re-ranks a candidate product set per
+shopper against the same affinity profile that drives content, and returns the reordered IDs for your
+front end to paint. That belongs in Section 1 and the language should say so plainly, with no future
+tense.
 
-The connection to any given commerce source is an integration rather than a product feature, and it
-depends on an endpoint your side provides. It should carry a date. Which date depends on which of two
-patterns you want, and they have materially different costs:
+The connection to your commerce source is a joint integration, so it carries a date. Which date depends
+on which of two patterns you want, and they have materially different costs:
 
 Re-ranking what the platform returns. Your page calls Salesforce Commerce Cloud exactly as it does now,
 the returned candidate IDs come to our decision endpoint, and we return the same IDs in a per-visitor
@@ -203,12 +201,11 @@ profile that drives content decisions, and returns the reordered product IDs for
 render. Tapestry's commerce platform remains authoritative for availability, price and entitlements.
 Ranking operates within the candidate set returned.
 
-**And the sentence that moves, to Section 2 with a date if it is contracted, or out of the appendix and
-into a separately scoped addendum if it is not:**
+**And the sentence that moves to Section 2 with a date:**
 
-Connection to a specific commerce source, including a Salesforce Commerce Cloud feed, is a joint
-integration. Tapestry provides an endpoint returning a candidate set carrying the attributes the engine
-scores against, and the delivery date depends on which integration pattern is selected.
+Connection to Tapestry's Salesforce Commerce Cloud feed is a joint integration delivered under Section 2.
+Tapestry provides an endpoint returning a candidate set carrying the attributes the engine scores
+against, and the date is set at kickoff against the selected integration pattern.
 
 ---
 
@@ -224,4 +221,4 @@ so the redline reads without needing a call, and we are glad to walk through any
 ---
 
 *Prepared by the delivery side. Nothing in these replies changes acceptance criteria or the customer
-dependency list. Item 5 is the one that needs a commercial decision before it is sent.*
+dependency list.*
