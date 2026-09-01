@@ -15,6 +15,9 @@ The governance rule, stated once:
 > clause is written that is not first entered here.** Anything a customer could hold us to lives on this
 > list from the moment it is written down, not from the moment we start building it.
 
+**How this list is worked: `21-tapestry-gap-closure-plan.md`** — four parallel lanes, keyed to the five
+contract deadlines. This document stays the register of clauses; 21 is the operating plan.
+
 Related: `19-tapestry-delivery-ledger.md` (the CW work items), `18-content-affinity-engine.md` (the
 design), `docs/handover/03-tapestry-pending.md` (the promised-vs-built audit that preceded this).
 
