@@ -31,7 +31,8 @@ So the first act is not writing code. It is re-keying the work to the contract.
 Dates assume the document's own reference Kickoff of 7 September 2026 and move with it.
 
 **The uncomfortable arithmetic.** Ledger 19 sizes the scoped work at roughly 37 agent-days with a critical
-path near 20.5. From today to the integration kit is about seven weeks. That is achievable, but only if the
+path near 20.5; the stage-two design adds about 13.5 across CW19 to CW23, of which only Phase 0 (2.5)
+is on the pre-launch critical path. From today to the integration kit is about seven weeks. That is achievable, but only if the
 lanes below genuinely run in parallel, and only if we start. Everything in the CW queue except the Meridian
 content prototype is unchanged since the 2026-07-24 audit.
 
@@ -108,7 +109,12 @@ is exactly the rework the risk register warns about.
 | Priors import | CW11 | — | §1.8 promises it; nothing accepts an externally derived prior |
 | Authenticated export at customer grain | CW11 | — | Export exists demo-scoped and unauthenticated |
 | Per-slot autonomous weight mixing | CW5 | 1.5 | §1.4's autonomy note in v8 now states this in writing. Slot strategies are hardcoded constants with no `mode` switch |
-| Stage-two design document | CW13 | 1.5 | §2.4 commits to showing it at M2 so their data scientists can critique it |
+| Stage-two design document | CW13 | ✅ | Written 2026-09-01 as `22-outcome-learning-design.md`. The build items below come from it |
+| **Phase 0 · Record**: decision + outcome ledgers (queues, R2 partitions, D1 recent index), holdout assignment | CW19 | 2.5 | The only phase whose delay costs data that cannot be recovered. Also closes ledger 20 row 5 (persistence at every grain) and the Snowflake outbound share, since the R2 partitions *are* the share |
+| **Phase 1 · Shadow**: online attribution in the shopper DO, LearnStats DO with decayed counts, versioned lift snapshots to KV, γ = 0 | CW20 | 3.5 | Learning runs and shows in every explain record; nothing on the site changes until a person raises γ |
+| **Phase 2 · Apply**: γ per slot, exploration policies, assisted autonomy job with bounds | CW21 | 2 | Defines T7 precisely: proposals with evidence, then autonomous within bounds |
+| Learning console: lift grid, policy comparison, version history, freeze / reset / reject, the dials | CW22 | 3 | The surface the data scientists and marketers will judge us on. Rides the tuning surface (CW9) |
+| **Phase 3 · Extend**: imported priors, external model hook (service / table / Workers AI), replay endpoint | CW23 | 2.5 | Priors import closes ledger 20 row 4; the hook is the "bring your own model" answer to Nitin |
 
 ---
 
