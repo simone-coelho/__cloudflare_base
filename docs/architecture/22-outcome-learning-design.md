@@ -692,6 +692,30 @@ worth reusing rather than rewriting:
 - Read is open, write is authenticated and fails closed. Reading the dials should never require a token;
   moving them always should.
 
+### 18.8 The default pooling ladder depends on two dimensions that are not built
+
+§5.4's default cell is `channel, visit bucket, region, affinity`, and the ladder pools upward from the
+finest populated level. Levels 3 and 4 are fine: request geolocation is real (`src/routes/geo.ts`) and the
+affinity cell is the interest state. **Levels 1 and 2 are not.**
+
+| Level | Component | State in code |
+|---|---|---|
+| 1 | Channel | **Absent.** No entry-channel classifier exists on the engine path. `utm`/referrer parsing lives only in `src/utils/pixel.ts` and the Meridian demo's CMAB attributes, neither of which feeds a scoring dimension |
+| 2 | Visit bucket | **Present but wrong.** `SessionManager.ts:127` increments `sessionCount` inside `createOrUpdateSession`, which runs on every call. It counts events, not visits. There is no visit-boundary or idle-gap concept anywhere |
+
+The distinction matters more than the count of gaps. **A missing level degrades gracefully** — pooling
+falls back to the nearest populated ancestor and the explain record says so in words. **A wrong level does
+not.** A shopper who fires twelve events on their first visit is bucketed "4 or more", so evidence is
+attributed to a cell she was never in, at the two levels that do the most pooling work. Nothing surfaces
+as an error; the statistics are simply learning the wrong thing, slowly.
+
+This makes **CW7** (visit boundaries, entry-channel classification, vuid cutover) a prerequisite for
+Phase 1, not an independent correctness item. It is also cheap: the ledger sizes it at 1.5 days.
+
+Phase 0 is unaffected — it records the cell it is given, and a cell recorded with a wrong visit bucket can
+be recomputed from the ledger later. But Phase 1 must not publish a lift snapshot pooled on a bucket that
+counts events.
+
 ### 18.7 One thing this design should state that it currently leaves implied
 
 §10's holdout assignment has to exist **before the first decision is recorded**, not merely before the

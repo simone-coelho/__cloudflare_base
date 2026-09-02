@@ -98,7 +98,7 @@ is exactly the rework the risk register warns about.
 | Item | CW | Days | Note |
 |---|---|---|---|
 | Regional trending: `RegionTrend` DO, KV publish, λ-blend | CW6 | 3 | Mandeep's stated non-negotiable for v1, and the single dimension with the least code against the highest priority. Zero lines exist. The geo-cohort module is a reusable ingredient, **not** a substitute |
-| Visit boundaries, entry channel, vuid cutover | CW7 | 1.5 | Three correctness bugs undercutting three registry dimensions at once. `sessionCount` increments on every update, not per visit |
+| Visit boundaries, entry channel, vuid cutover | CW7 | 1.5 | **Now a Phase 1 prerequisite** (doc 22 §18.8), not just a correctness item. The learning design's default pooling ladder is channel then visit bucket; channel has no classifier and `sessionCount` counts events rather than visits, so level 2 is not missing but *wrong*, and a wrong level mis-attributes evidence silently where a missing one degrades gracefully |
 | Content telemetry, exposure-normalised | CW3 | 1.5 | Impression, click, dwell, video completion. Zero hits in the repo. Content-type affinity cannot be a learned dimension without it |
 | Purchase forwarding to ODP | — | 0.2 | The highest-weighted action in the engine falls through a `default: return null` |
 
@@ -134,6 +134,9 @@ times without naming a mechanism. Reconciled rather than left to collide, and re
   because once lift moves a score, config alone no longer identifies a decision.
 - Flagged for Phase 2: rollback rolls **forward**. An autonomy job that rewinds a counter loses the evidence
   a person needs to promote or demote a slot.
+- Flagged for Phase 1, and it moves work: §5.4's pooling ladder needs **channel** and **visit bucket**, and
+  neither is real. Visit bucket is the dangerous one because it exists and is wrong. CW7 is now a Phase 1
+  prerequisite.
 
 ---
 
