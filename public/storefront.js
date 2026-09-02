@@ -136,8 +136,9 @@ class CoachStorefront {
         // (SHOPPER_REFLEX.idFromName), so every tab/reload lands on the SAME object.
         // Persisted in localStorage with a cookie fallback; the per-load anonId
         // above retires as the transport key but stays for legacy/display uses.
-        // NOTE: the ODP vuid remains SESSION-derived (SHA-256(sessionId), see
-        // src/services/odpLoop.ts) until the identity cutover maps vuid ⇄ visitor id.
+        // The ODP vuid now derives from THIS id (CW7b, src/services/odpLoop.ts),
+        // so a shopper who comes back tomorrow is the same person to ODP. The
+        // session id is only the fallback for a client that cannot store one.
         this.visitorId = this.mintVisitorId();
     }
     mintVisitorId() {

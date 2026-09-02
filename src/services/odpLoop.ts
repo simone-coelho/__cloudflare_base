@@ -44,13 +44,62 @@ export function odpEnabled(env: Env): boolean {
   return Boolean(env.ODP_API_HOST && env.ODP_PUBLIC_KEY);
 }
 
-/** char(32) vuid derived from the session id — ODP validates the length hard. */
-export async function vuidFromSession(sessionId: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(sessionId));
+/**
+ * Who ODP thinks this is.
+ *
+ * THE CUTOVER (CW7b). The vuid used to be SHA-256(sessionId), which meant a new
+ * session was a new person: a cleared cookie, a new device, or simply coming back
+ * tomorrow produced a profile ODP had never seen. Every durable memory claim in
+ * the scope appendix rests on this identifier, and so does doc 22's visit bucket,
+ * because a visit count is only as good as the thing it is counted against.
+ *
+ * The stable id already existed. The client has minted and persisted
+ * `opt_visitor_id` in localStorage with a cookie fallback for some time, and
+ * sends it as `userId` on every action; it is also the name the per-shopper
+ * Durable Object is keyed on. Only the ODP derivation was still reading the
+ * session.
+ */
+export interface OdpIdentity {
+  /** The stable first-party visitor id (`opt_visitor_id`). Preferred. */
+  visitorId?: string | null;
+  /** The session id. Used ONLY when no stable id is available. */
+  sessionId: string;
+}
+
+/**
+ * The string the vuid is derived from, and whether it is the stable one.
+ *
+ * The fallback is deliberate rather than defensive: a client that predates the
+ * stable id, or one with localStorage and cookies both blocked, still gets a
+ * working profile for the length of its session. It is worse, and it is not
+ * nothing, and nothing throws.
+ */
+export function identityKeyOf(identity: OdpIdentity): { key: string; stable: boolean } {
+  const v = typeof identity.visitorId === 'string' ? identity.visitorId.trim() : '';
+  return v !== '' ? { key: v, stable: true } : { key: identity.sessionId, stable: false };
+}
+
+/** char(32) vuid from an identity key — ODP validates the length hard. */
+export async function vuidFrom(key: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
   return [...new Uint8Array(digest)]
     .slice(0, 16)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+/** The vuid for a shopper: stable across sessions wherever the stable id exists. */
+export async function vuidFor(identity: OdpIdentity): Promise<string> {
+  return vuidFrom(identityKeyOf(identity).key);
+}
+
+/**
+ * @deprecated Session-derived, so it produces a NEW person per session. Kept
+ * because it is the pre-cutover behaviour and its test pins the hash. Call
+ * vuidFor() with an OdpIdentity instead.
+ */
+export async function vuidFromSession(sessionId: string): Promise<string> {
+  return vuidFrom(sessionId);
 }
 
 // One catalog per isolate — never rebuild the affinity graph per event.
@@ -151,7 +200,7 @@ export function updateOdpRing(
  */
 export async function refreshOdpSeedIfDue(
   env: Env,
-  sessionId: string,
+  identity: OdpIdentity,
   ring: Array<Record<string, unknown>>,
   current: { seed: string[]; seedAt: number },
   nowMs: number,
@@ -159,7 +208,7 @@ export async function refreshOdpSeedIfDue(
 ): Promise<{ seed: string[]; seedAt: number }> {
   const throttle = ring.length ? 10_000 : 120_000;
   if (!membershipChanged && nowMs - current.seedAt <= throttle) return current;
-  const fetched = await fetchOdpAudiences(env, sessionId, ring);
+  const fetched = await fetchOdpAudiences(env, identity, ring);
   return { seed: fetched ?? current.seed, seedAt: nowMs };
 }
 
@@ -184,7 +233,7 @@ export function gqlObjectLiteral(obj: Record<string, unknown>): string {
 export async function forwardEventToOdp(
   env: Env,
   event: ActionEvent,
-  sessionId: string,
+  identity: OdpIdentity,
   receiptId?: string,
   pushReceipt?: (data: { receiptId: string; status: number; ts: number; source: string }) => void
 ): Promise<void> {
@@ -192,7 +241,7 @@ export async function forwardEventToOdp(
     if (!odpEnabled(env)) return;
     const mapped = mapActionToOdp(event);
     if (!mapped) return;
-    const vuid = await vuidFromSession(sessionId);
+    const vuid = await vuidFor(identity);
     const res = await fetch(`${env.ODP_API_HOST}/v3/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': env.ODP_PUBLIC_KEY as string },
@@ -230,13 +279,13 @@ export async function forwardEventToOdp(
  */
 export async function upsertOdpProfile(
   env: Env,
-  sessionId: string,
+  identity: OdpIdentity,
   affinity: { dims?: Record<string, Record<string, number>>; audiences?: string[] },
   journeyStage?: string
 ): Promise<void> {
   try {
     if (!odpEnabled(env)) return;
-    const vuid = await vuidFromSession(sessionId);
+    const vuid = await vuidFor(identity);
     const dims = affinity.dims ?? {};
     const lines = dims.line ?? {};
     const dominant = Object.entries(lines).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
@@ -272,12 +321,12 @@ export async function upsertOdpProfile(
  */
 export async function fetchOdpAudiences(
   env: Env,
-  sessionId: string,
+  identity: OdpIdentity,
   recentEvents?: Array<Record<string, unknown>>
 ): Promise<string[] | null> {
   try {
     if (!odpEnabled(env)) return null;
-    const vuid = await vuidFromSession(sessionId);
+    const vuid = await vuidFor(identity);
     const subset = ODP_MIRRORED_AUDIENCES.map((k) => `\\"${k}\\"`).join(',');
     const recentArg = recentEvents && recentEvents.length
       ? `, recent_events: [${recentEvents.map(gqlObjectLiteral).join(', ')}]`

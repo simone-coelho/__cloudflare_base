@@ -3,20 +3,66 @@
 // The ODP wire contract, pinned by tests — the shapes here are the ones
 // LIVE-VERIFIED against the Coach RTS instance (2026-07-03).
 import { describe, expect, it } from 'vitest';
-import { gqlObjectLiteral, mapActionToOdp, toRecentEventFlat, vuidFromSession, ODP_MIRRORED_AUDIENCES } from '@/services/odpLoop';
+import {
+  gqlObjectLiteral, identityKeyOf, mapActionToOdp, toRecentEventFlat,
+  vuidFor, vuidFrom, vuidFromSession, ODP_MIRRORED_AUDIENCES,
+} from '@/services/odpLoop';
 import type { ActionEvent } from '@/services/RealtimeSegmentEngine';
 
 const ev = (type: ActionEvent['type'], data: Record<string, any>): ActionEvent =>
   ({ type, userId: 'u', data, timestamp: 0, source: 't' }) as ActionEvent;
 
-describe('vuidFromSession — ODP validates char(32) hard', () => {
+describe('vuidFromSession — the PRE-CUTOVER behaviour, pinned', () => {
   it('always 32 hex chars, deterministic, session-distinct', async () => {
     const a1 = await vuidFromSession('s-ABC123');
     const a2 = await vuidFromSession('s-ABC123');
     const b = await vuidFromSession('s-DIFFERENT');
     expect(a1).toMatch(/^[0-9a-f]{32}$/);
-    expect(a1).toBe(a2);          // stable across reloads (same session)
-    expect(a1).not.toBe(b);       // New Shopper (new session) = new vuid
+    expect(a1).toBe(a2);
+    // The defect this function name describes: a new session was a new person.
+    expect(a1).not.toBe(b);
+  });
+});
+
+describe('vuidFor — the identity cutover (CW7b)', () => {
+  it('gives ONE vuid to one shopper across different sessions', async () => {
+    // The whole point. Before the cutover these were two people, so every
+    // cross-visit memory claim in the scope appendix was false for a returning
+    // shopper, and doc 22's visit bucket had nothing stable to count against.
+    const monday = await vuidFor({ visitorId: 'vis-abc', sessionId: 's-monday' });
+    const friday = await vuidFor({ visitorId: 'vis-abc', sessionId: 's-friday' });
+    expect(monday).toBe(friday);
+    expect(monday).toMatch(/^[0-9a-f]{32}$/);
+  });
+
+  it('still separates different shoppers', async () => {
+    const a = await vuidFor({ visitorId: 'vis-abc', sessionId: 's-1' });
+    const b = await vuidFor({ visitorId: 'vis-xyz', sessionId: 's-1' });
+    expect(a).not.toBe(b);
+  });
+
+  it('falls back to the session when no stable id exists, rather than failing', async () => {
+    // A client that predates the stable id, or one with localStorage AND cookies
+    // blocked. Worse than a stable id, better than nothing, and never a throw.
+    const viaFallback = await vuidFor({ sessionId: 's-only' });
+    expect(viaFallback).toBe(await vuidFromSession('s-only'));
+    expect(viaFallback).toMatch(/^[0-9a-f]{32}$/);
+  });
+
+  it('treats an empty or whitespace visitor id as absent', async () => {
+    expect(await vuidFor({ visitorId: '', sessionId: 's-1' })).toBe(await vuidFrom('s-1'));
+    expect(await vuidFor({ visitorId: '   ', sessionId: 's-1' })).toBe(await vuidFrom('s-1'));
+    expect(await vuidFor({ visitorId: null, sessionId: 's-1' })).toBe(await vuidFrom('s-1'));
+  });
+
+  it('reports WHICH identity it used, so the fallback is observable', () => {
+    expect(identityKeyOf({ visitorId: 'vis-abc', sessionId: 's-1' })).toEqual({ key: 'vis-abc', stable: true });
+    expect(identityKeyOf({ sessionId: 's-1' })).toEqual({ key: 's-1', stable: false });
+  });
+
+  it('trims the stable id, so a stray space is not a different person', async () => {
+    expect(await vuidFor({ visitorId: ' vis-abc ', sessionId: 's-1' }))
+      .toBe(await vuidFor({ visitorId: 'vis-abc', sessionId: 's-2' }));
   });
 });
 

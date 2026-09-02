@@ -462,7 +462,10 @@ export class RealtimeSegmentEngine {
         const membershipChanged = !!reflex && (reflex.changes.entered.length > 0 || reflex.changes.exited.length > 0);
         ({ seed: odpSeed, seedAt: odpSeedAt } = await refreshOdpSeedIfDue(
           this.env,
-          currentSessionId,
+          // event.userId is the stable first-party visitor id the client mints
+          // and persists; the session id is only the fallback for a client that
+          // does not send one.
+          { visitorId: event.userId, sessionId: currentSessionId },
           odpRing,
           { seed: odpSeed, seedAt: odpSeedAt },
           nowMs,

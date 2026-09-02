@@ -118,8 +118,17 @@ export interface PipelineRecord {
   attributes: Record<string, any>;
   segments: string[];
   journeyStage: 'early' | 'mid' | 'late';
-  /** DO-held session id — the ODP vuid stays SHA-256(sessionId) until cutover (§8). */
+  /** DO-held session id. No longer what the ODP vuid derives from — see visitorId. */
   sessionId: string;
+  /**
+   * The stable first-party visitor id (`opt_visitor_id`), which is also the name
+   * this object is keyed on. Persisted for the same reason `surface` is: the
+   * alarm and snapshot paths run with no event to resolve it from, and the ODP
+   * vuid must not change just because a write happened on one of those paths.
+   * ABSENT on records written before the CW7b cutover; those fall back to the
+   * session id and keep exactly the identity they already had.
+   */
+  visitorId?: string;
   firstSeen: number;
   sessionCount: number;
   /** Demo surface this shopper object belongs to (@/demos/registry). ABSENT ⇒
@@ -434,13 +443,19 @@ export class ShopperReflex {
       attributes: {},
       segments: [],
       journeyStage: 'early',
-      sessionId: crypto.randomUUID(), // vuid = SHA-256(this) — session-derived until cutover (§8)
+      sessionId: crypto.randomUUID(),
       firstSeen: now,
       sessionCount: 0,
       // Only non-default surfaces are tagged, so a retail record's stored bytes
       // are exactly what they were before the split.
       ...(surface === DEFAULT_SURFACE ? {} : { surface }),
     };
+
+    // The stable id rides in on every event as `userId`. Recorded once and kept,
+    // so a later alarm or snapshot resolves the same vuid as a live event would.
+    if (!pipe.visitorId && typeof event.userId === 'string' && event.userId !== '') {
+      pipe.visitorId = event.userId;
+    }
 
     // 1. Behavioral counters — the SAME accrual the request path runs.
     const attributes = { ...pipe.attributes };
@@ -494,7 +509,7 @@ export class ShopperReflex {
       odpRing = updateOdpRing(odpRing, event, now);
       ({ seed: odpSeed, seedAt: odpSeedAt } = await refreshOdpSeedIfDue(
         this.env,
-        pipe.sessionId,
+        { visitorId: pipe.visitorId, sessionId: pipe.sessionId },
         odpRing,
         { seed: odpSeed, seedAt: odpSeedAt },
         now,
@@ -511,7 +526,7 @@ export class ShopperReflex {
           ...(mapped.action ? { action: mapped.action } : {}),
           ...(typeof mapped.data.product_id === 'string' ? { product_id: mapped.data.product_id } : {}),
         };
-        void forwardEventToOdp(this.env, event, pipe.sessionId, odpReceipt.receiptId, (receipt) =>
+        void forwardEventToOdp(this.env, event, { visitorId: pipe.visitorId, sessionId: pipe.sessionId }, odpReceipt.receiptId, (receipt) =>
           this.pushFrame({ type: 'odp_receipt', userId: aff.shopperId, data: receipt })
         );
       }
@@ -561,7 +576,7 @@ export class ShopperReflex {
       // onto the ODP profile (the memory carrying the edge's numbers).
       const affPayload = update.data.affinity;
       if (odpEnabled(this.env) && affPayload && membershipChanged) {
-        void upsertOdpProfile(this.env, pipe.sessionId, affPayload, journeyStage);
+        void upsertOdpProfile(this.env, { visitorId: pipe.visitorId, sessionId: pipe.sessionId }, affPayload, journeyStage);
       }
     }
 
@@ -746,7 +761,7 @@ export class ShopperReflex {
         if (odpEnabled(this.env)) {
           ({ seed: odpSeed, seedAt: odpSeedAt } = await refreshOdpSeedIfDue(
             this.env,
-            this.pipeline.sessionId,
+            { visitorId: this.pipeline?.visitorId, sessionId: this.pipeline?.sessionId ?? '' },
             this.affinity.odpRecentEvents,
             { seed: odpSeed, seedAt: odpSeedAt },
             now,

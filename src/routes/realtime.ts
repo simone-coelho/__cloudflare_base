@@ -139,14 +139,22 @@ realtimeRoutes.post('/action', async (c) => {
           ...(mapped.action ? { action: mapped.action } : {}),
           ...(typeof mapped.data.product_id === 'string' ? { product_id: mapped.data.product_id } : {}),
         };
-        c.executionCtx.waitUntil(forwardEventToOdp(c.env, actionEvent, result.sessionId, odpReceipt.receiptId));
+        c.executionCtx.waitUntil(forwardEventToOdp(
+          c.env, actionEvent,
+          { visitorId: actionEvent.userId, sessionId: result.sessionId },
+          odpReceipt.receiptId,
+        ));
       }
       // §4 score upsert: on membership changes, persist the reflex's live scores
       // onto the ODP profile (the memory carrying the edge's numbers).
       const aff = result.update?.data?.affinity;
       if (aff && Array.isArray(aff.changed) && aff.changed.length > 0) {
         c.executionCtx.waitUntil(
-          upsertOdpProfile(c.env, result.sessionId, aff, result.update?.data?.journeyStage)
+          upsertOdpProfile(
+            c.env,
+            { visitorId: actionEvent.userId, sessionId: result.sessionId },
+            aff, result.update?.data?.journeyStage,
+          )
         );
       }
     }
