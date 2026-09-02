@@ -272,10 +272,12 @@ Recording these now, because the governance rule says a clause is a row before i
 
 Everything above is executable except for two things only Simone can settle.
 
-1. ~~Which brand is the first tenant.~~ **Answered 2026-09-02: Coach.** The foundation is built against it
-   (`src/tenancy/tenant.ts`), and Coach being the existing key space is what lets the default tenant stay
-   unprefixed so nothing already stored is orphaned. Two customer-facing documents still say Kate Spade and
-   need correcting: `Tapestry-Implementation-Plan.md` (lines 11, 40, 99) and Doc 1 §17.
+1. ~~Which brand is the first tenant.~~ **Answered: Coach, at the customer's request.** Mandeep changed the
+   rules and asked for Coach first, having originally picked Kate Spade for lower business impact. The
+   foundation is built against it (`src/tenancy/tenant.ts`), and Coach being the existing key space is what
+   lets the default tenant stay unprefixed so nothing already stored is orphaned. Two customer-facing
+   documents still say Kate Spade and need updating to match his ask: `Tapestry-Implementation-Plan.md`
+   (lines 11, 40, 99) and Doc 1 §17.
 2. **Approval to start the build.** Ledger 19's standing guardrail says no build phase begins until the
    document set is approved. The document set has now been through v8. That guardrail is currently the only
    thing holding the queue.
