@@ -120,6 +120,23 @@ is exactly the rework the risk register warns about.
 
 ---
 
+## Compatibility with the outcome-learning design, settled 2026-09-02
+
+Doc 22 was written in parallel with CW0 and CW9 landing, so it specified versioned configuration four
+times without naming a mechanism. Reconciled rather than left to collide, and recorded as **§18 of doc 22**:
+
+- The config store is now **generic** (`src/config/versionedStore.ts`). A `DocumentKind` inherits
+  versioning, attribution, audit, rollback, caching and failure-safety, so the §13 catalog adds kinds
+  instead of a second store. Proven with a second kind that shares nothing with `ReflexConfig`.
+- `resolveReflexConfigRevision` exposes the **revision integer** doc 22 records as `versions.config`, so the
+  ledger writer never parses it back out of the display string.
+- Flagged for Phase 0: the receipt schema carries one `config_version` and needs the four-version tuple,
+  because once lift moves a score, config alone no longer identifies a decision.
+- Flagged for Phase 2: rollback rolls **forward**. An autonomy job that rewinds a counter loses the evidence
+  a person needs to promote or demote a slot.
+
+---
+
 ## The one item whose delay cannot be bought back
 
 Everything else on this list can be built late and still be built. **CW19, Phase 0 of the outcome-learning

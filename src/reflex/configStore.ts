@@ -40,6 +40,8 @@
 
 import { DEFAULT_REFLEX_CONFIG, type DimensionSpec, type ReflexConfig } from '@/reflex/core';
 import type { Env } from '@/types/env';
+import * as store from '@/config/versionedStore';
+import { deepFreeze, structuredCopy } from '@/config/versionedStore';
 
 /**
  * Config scope. Today this is the demo surface ('coach' | 'brighthour'). CW1
@@ -51,11 +53,9 @@ export type ConfigScope = string;
 
 export const DEFAULT_SCOPE: ConfigScope = 'coach';
 
-/** How long a resolved config is trusted inside one isolate before re-reading. */
-export const CACHE_TTL_MS = 30_000;
-
-/** Revisions kept in the browsable index. Every revision body is kept regardless. */
-export const INDEX_LIMIT = 50;
+/** Inherited from the generic store so there is one number, not two. */
+export const CACHE_TTL_MS = store.CACHE_TTL_MS;
+export const INDEX_LIMIT = store.INDEX_LIMIT;
 
 /** A stored config plus who changed it, when, and why. */
 export interface ConfigRevision {
@@ -81,12 +81,6 @@ export type ValidationResult =
 export type WriteResult =
   | { ok: true; revision: ConfigRevision }
   | { ok: false; errors: string[] };
-
-// ── Keys ─────────────────────────────────────────────────────────────────────
-
-const keyCurrent = (scope: ConfigScope) => `reflex:config:${scope}:current`;
-const keyRevision = (scope: ConfigScope, n: number) => `reflex:config:${scope}:rev:${n}`;
-const keyIndex = (scope: ConfigScope) => `reflex:config:${scope}:index`;
 
 // ── Validation ───────────────────────────────────────────────────────────────
 
@@ -257,18 +251,41 @@ export function stampVersion(baseVersion: string, revision: number): string {
   return `${baseVersion.replace(REVISION_SUFFIX, '')}+r${revision}`;
 }
 
-// ── Isolate cache ────────────────────────────────────────────────────────────
+// -- The reflex kind -------------------------------------------------------
+//
+// Everything below is a thin binding over @/config/versionedStore. Versioning,
+// attribution, the audit index, rollback, the isolate cache and the failure
+// posture are inherited; what is specific to ReflexConfig is the validator above,
+// the version stamp, and the dimension-aware merge.
+//
+// The generic store exists because doc 22 needs four more versioned documents
+// (lift, prior, policy, and the per-slot learning catalog in its section 13) and
+// says of all of them only that they are "versioned with change history" without
+// naming a mechanism. This is the mechanism. Phase 0 onwards should add a
+// DocumentKind rather than a second store.
 
-interface CacheEntry { at: number; revision: ConfigRevision | null }
-const isolateCache = new Map<ConfigScope, CacheEntry>();
+export const REFLEX_KIND: store.DocumentKind<ReflexConfig> = {
+  name: 'reflex',
+  validate(candidate) {
+    const r = validateReflexConfig(candidate);
+    return r.ok ? { ok: true, value: r.config } : { ok: false, errors: r.errors };
+  },
+  stamp: (value, revision) =>
+    deepFreeze({ ...structuredCopy(value), version: stampVersion(value.version, revision) }) as ReflexConfig,
+  versionOf: (value) => value.version,
+  applyPatch: (base, p) => applyPatch(base, (p ?? {}) as ReflexConfigPatch),
+};
 
 /** Drop cached configs. Called on every write; exported for tests. */
 export function invalidateConfigCache(scope?: ConfigScope): void {
-  if (scope === undefined) isolateCache.clear();
-  else isolateCache.delete(scope);
+  store.invalidateCache(REFLEX_KIND.name, scope);
 }
 
-// ── Read path ────────────────────────────────────────────────────────────────
+const asConfigRevision = (r: store.Revision<ReflexConfig> | null): ConfigRevision | null =>
+  r === null ? null : { revision: r.revision, config: r.value, actor: r.actor, note: r.note, at: r.at };
+
+const asWriteResult = (r: store.WriteResult<ReflexConfig>): WriteResult =>
+  r.ok ? { ok: true, revision: asConfigRevision(r.revision) as ConfigRevision } : r;
 
 /**
  * The stored revision for a scope, or null when nothing is stored or what is
@@ -277,22 +294,7 @@ export function invalidateConfigCache(scope?: ConfigScope): void {
 export async function readReflexConfigRevision(
   env: Env, scope: ConfigScope = DEFAULT_SCOPE, nowMs: number = Date.now(),
 ): Promise<ConfigRevision | null> {
-  const cached = isolateCache.get(scope);
-  if (cached && nowMs - cached.at < CACHE_TTL_MS) return cached.revision;
-
-  let revision: ConfigRevision | null = null;
-  try {
-    const raw = await env.CACHE.get(keyCurrent(scope), 'json');
-    revision = coerceRevision(raw, scope);
-  } catch (err) {
-    // A KV read failure must not become a decision failure. Do not cache it:
-    // the next call retries, and until then the compiled default serves.
-    console.warn(`[reflex-config] read failed for scope "${scope}", serving compiled default`, err);
-    return null;
-  }
-
-  isolateCache.set(scope, { at: nowMs, revision });
-  return revision;
+  return asConfigRevision(await store.readRevision(env, REFLEX_KIND, scope, nowMs));
 }
 
 /**
@@ -302,55 +304,21 @@ export async function readReflexConfigRevision(
 export async function readReflexConfig(
   env: Env, scope: ConfigScope = DEFAULT_SCOPE, nowMs: number = Date.now(),
 ): Promise<ReflexConfig> {
-  const revision = await readReflexConfigRevision(env, scope, nowMs);
-  return revision ? revision.config : DEFAULT_REFLEX_CONFIG;
+  return store.read(env, REFLEX_KIND, scope, DEFAULT_REFLEX_CONFIG, nowMs);
 }
 
-/** A specific historical revision, for diffing and rollback. */
+/** A specific historical revision, for diffing, replay and rollback. */
 export async function readReflexConfigVersion(
   env: Env, scope: ConfigScope, revision: number,
 ): Promise<ConfigRevision | null> {
-  try {
-    return coerceRevision(await env.CACHE.get(keyRevision(scope, revision), 'json'), scope);
-  } catch {
-    return null;
-  }
+  return asConfigRevision(await store.readVersion(env, REFLEX_KIND, scope, revision));
 }
 
-export async function readConfigIndex(env: Env, scope: ConfigScope = DEFAULT_SCOPE): Promise<ConfigIndexEntry[]> {
-  try {
-    const raw = await env.CACHE.get(keyIndex(scope), 'json');
-    return Array.isArray(raw) ? (raw as ConfigIndexEntry[]) : [];
-  } catch {
-    return [];
-  }
+export async function readConfigIndex(
+  env: Env, scope: ConfigScope = DEFAULT_SCOPE,
+): Promise<ConfigIndexEntry[]> {
+  return store.readIndex(env, REFLEX_KIND, scope);
 }
-
-/**
- * A stored envelope is untrusted input too: it may predate a validation rule, or
- * have been written by an older build. Re-validate on read, and refuse rather
- * than score with something we would not accept on write.
- */
-function coerceRevision(raw: unknown, scope: ConfigScope): ConfigRevision | null {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const env = raw as Record<string, unknown>;
-  const result = validateReflexConfig(env.config);
-  if (!result.ok) {
-    console.warn(
-      `[reflex-config] stored config for scope "${scope}" is invalid and was ignored: ${result.errors.join('; ')}`,
-    );
-    return null;
-  }
-  return {
-    revision: isFiniteNumber(env.revision) ? env.revision : 0,
-    config: result.config,
-    actor: typeof env.actor === 'string' ? env.actor : 'unknown',
-    note: typeof env.note === 'string' ? env.note : '',
-    at: isFiniteNumber(env.at) ? env.at : 0,
-  };
-}
-
-// ── Write path ───────────────────────────────────────────────────────────────
 
 export interface WriteMeta {
   actor: string;
@@ -358,52 +326,17 @@ export interface WriteMeta {
   nowMs?: number;
 }
 
-/**
- * Validate, version, store, audit. The immutable revision body is written BEFORE
- * the current pointer moves, so a failure between the two leaves the pointer on a
- * revision that is known to exist.
- */
+/** Validate, version, store, audit. */
 export async function writeReflexConfig(
   env: Env, scope: ConfigScope, candidate: unknown, meta: WriteMeta,
 ): Promise<WriteResult> {
-  const result = validateReflexConfig(candidate);
-  if (!result.ok) return result;
-
-  const nowMs = meta.nowMs ?? Date.now();
-  const previous = await readReflexConfigRevision(env, scope, nowMs);
-  const revisionNumber = (previous?.revision ?? 0) + 1;
-
-  const config = deepFreeze({
-    ...structuredCopy(result.config),
-    version: stampVersion(result.config.version, revisionNumber),
-  }) as ReflexConfig;
-
-  const revision: ConfigRevision = {
-    revision: revisionNumber,
-    config,
-    actor: meta.actor,
-    note: meta.note ?? '',
-    at: nowMs,
-  };
-
-  await env.CACHE.put(keyRevision(scope, revisionNumber), JSON.stringify(revision));
-  await env.CACHE.put(keyCurrent(scope), JSON.stringify(revision));
-
-  const index = await readConfigIndex(env, scope);
-  const entry: ConfigIndexEntry = {
-    revision: revisionNumber, version: config.version,
-    actor: revision.actor, note: revision.note, at: nowMs,
-  };
-  await env.CACHE.put(keyIndex(scope), JSON.stringify([entry, ...index].slice(0, INDEX_LIMIT)));
-
-  invalidateConfigCache(scope);
-  return { ok: true, revision };
+  return asWriteResult(await store.write(env, REFLEX_KIND, scope, candidate, meta));
 }
 
 /**
  * A partial tune: the shape the tuning surface posts when one slider moves.
  * Dimension patches merge BY KEY rather than replacing the array, so adjusting
- * one dimension's τ cannot silently drop the others.
+ * one dimension's tau cannot silently drop the others.
  */
 export interface ReflexConfigPatch {
   version?: string;
@@ -417,7 +350,15 @@ export interface ReflexConfigPatch {
   dimensions?: Array<Partial<DimensionSpec> & { key: string }>;
 }
 
-/** Apply a patch to a base config. Pure; the caller validates the result. */
+/**
+ * Apply a patch to a base config. Pure; the caller validates the result.
+ *
+ * Named fields rather than a blind deep merge, because `dimensions` is an array
+ * whose identity is a key, not a position: a generic merge would replace it
+ * wholesale and drop every dimension the patch did not mention. Unknown fields
+ * are carried through untouched by the copy, so a document that grows a field
+ * this build does not know about survives a round trip.
+ */
 export function applyPatch(base: ReflexConfig, patch: ReflexConfigPatch): ReflexConfig {
   const next = structuredCopy(base) as ReflexConfig;
 
@@ -441,38 +382,18 @@ export function applyPatch(base: ReflexConfig, patch: ReflexConfigPatch): Reflex
 export async function patchReflexConfig(
   env: Env, scope: ConfigScope, patch: ReflexConfigPatch, meta: WriteMeta,
 ): Promise<WriteResult> {
-  const current = await readReflexConfig(env, scope, meta.nowMs ?? Date.now());
-  return writeReflexConfig(env, scope, applyPatch(current, patch), meta);
+  return asWriteResult(
+    await store.patch(env, REFLEX_KIND, scope, DEFAULT_REFLEX_CONFIG, patch, meta),
+  );
 }
 
 /**
  * Roll back by writing the old body forward as a NEW revision. The counter never
- * rewinds, so the audit trail records that a rollback happened rather than
- * erasing the revisions it undid.
+ * rewinds, so the audit records that a rollback happened rather than erasing the
+ * revisions it undid.
  */
 export async function rollbackReflexConfig(
   env: Env, scope: ConfigScope, toRevision: number, meta: WriteMeta,
 ): Promise<WriteResult> {
-  const target = await readReflexConfigVersion(env, scope, toRevision);
-  if (!target) return { ok: false, errors: [`revision ${toRevision} not found for scope "${scope}"`] };
-  return writeReflexConfig(env, scope, target.config, {
-    ...meta,
-    note: meta.note ?? `rollback to revision ${toRevision}`,
-  });
-}
-
-// ── Small helpers ────────────────────────────────────────────────────────────
-
-function structuredCopy<T>(v: T): T {
-  return JSON.parse(JSON.stringify(v)) as T;
-}
-
-function deepFreeze<T>(v: T): T {
-  if (v && typeof v === 'object') {
-    Object.freeze(v);
-    for (const key of Object.keys(v as Record<string, unknown>)) {
-      deepFreeze((v as Record<string, unknown>)[key]);
-    }
-  }
-  return v;
+  return asWriteResult(await store.rollback(env, REFLEX_KIND, scope, toRevision, meta));
 }

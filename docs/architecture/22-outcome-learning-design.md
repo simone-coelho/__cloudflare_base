@@ -591,5 +591,106 @@ recovered.
 
 None of these blocks phase 0 or phase 1.
 
+---
+
+## 18 · What already exists, and what this design must use
+
+Added 2026-09-02, after CW0 and CW9 landed in parallel with this document being written. Nothing above
+changes; this section stops phases 0 to 3 rebuilding things that are already built and tested.
+
+This design says three times that configuration is versioned: **§13** ("every entry is versioned with
+change history and applies without a deployment"), **§12.2** ("each is a versioned configuration change"),
+and **§11** ("every applied or proposed change is a configuration version ... a rollback is a version
+pointer"). It never names a mechanism, because there was none when it was written. There is one now.
+
+### 18.1 Use the versioned document store, do not write a second one
+
+`src/config/versionedStore.ts` is a generic versioned-document store. A **`DocumentKind<T>`** supplies a
+name and a validator, optionally a stamp and a merge, and inherits: monotonic revisions, actor and note
+attribution, a browsable audit index, rollback, per-isolate caching with a TTL, re-validation on read, and
+the failure posture below. `src/reflex/configStore.ts` is the first kind and is a thin binding over it.
+
+Every group in the §13 catalog should be a kind, or a field inside one:
+
+| §13 group | Suggested kind |
+|---|---|
+| Reward, Attribution, Statistics, Pooling | `policy` |
+| Serving γ, Exploration, Autonomy, Item controls, per slot | `learn` |
+| Priors file and version | `prior` |
+| Holdout share, arms, sticky, salt | `learn` |
+
+`RESERVED_PREFIXES` in that file already claims `reflex:config:`, `learn:config:`, `lift:`, `prior:` and
+`policy:` so the §6.1 lift snapshots cannot collide with a config key by accident. Add to that list rather
+than inventing a prefix.
+
+**The failure posture is not optional and is inherited free.** A missing key, a KV outage, or a stored
+document that no longer validates all resolve to the caller's compiled fallback. A learning config that
+cannot be read must never take the decision path down; γ simply stays where the fallback puts it, which is
+0.
+
+### 18.2 `versions.config` is already an integer — do not parse it out of the string
+
+§3.1 records `config_v` and §12.1 records `versions: { config: 41, ... }`. Both are integers. This engine's
+`config.version` is a **string** (`reflex-demo-v1+r4`) because it is stamped into decision IDs and read by
+people in the explain record.
+
+Both are wanted, and both are available: call **`registry.resolveReflexConfigRevision(env, surface)`**,
+which returns `{ config, revision }`. Revision `0` means the compiled default, meaning nothing has been
+tuned for that scope yet.
+
+Never recover the integer by regex from the display string. That works until someone renames a config.
+
+### 18.3 The receipt schema needs the tuple, and today has one field
+
+`MRD_DECISION_COLUMNS` (`src/demos/meridian/receipts.ts`) carries a single `config_version`. That was
+sufficient while configuration was the only thing that could change a decision. **Once a lift snapshot
+influences the score, it is not:** the same config version can produce two different decisions because
+`lift_v` moved, and an explain record that claims otherwise is false.
+
+Phase 0 owns the new ledgers, so this is a note rather than a task: keep `config_version` as the human
+string in the explain record, and add `config_v`, `lift_v`, `prior_v`, `policy_v` as integers for the join.
+The replay in §12.3 depends on all four being recorded, not three.
+
+### 18.4 Rollback rolls forward. Nothing should rewind a counter
+
+§11 calls a rollback "a version pointer", and the store satisfies that: `:current` moves to a **new**
+revision whose body equals the old one, and the revision counter never decreases. The audit index therefore
+records that a rollback happened, alongside what it undid.
+
+This matters for the §11 autonomy job specifically. An `autonomous` slot that rewinds a pointer when a
+cycle goes badly loses the record of what it tried, which is exactly the evidence a person needs in order
+to promote or demote that slot. Write the reversal forward.
+
+### 18.5 Adding a field to the reflex config
+
+The reflex kind's `applyPatch` merges **named fields**, because `dimensions` is an array keyed by `key`
+rather than by position and a generic merge would replace it wholesale. Unknown fields survive a round trip
+untouched, so §11's `pinned` weight list can be stored today without a store change — but it cannot be
+*patched* until it is named in `ReflexConfigPatch`. Prefer a separate kind for anything per-slot; the
+reflex document is per-scope and is not the right shape for slot-keyed settings.
+
+### 18.6 The learning console rides the tuning surface, and must not re-implement validation
+
+`public/tuning.html` and `tuning.js` are the CW9 surface, and §12.2's console should extend them. What is
+worth reusing rather than rewriting:
+
+- **The page never judges legality itself.** It posts the proposed patch to `POST /config/reflex/validate`,
+  which runs the same validator the write path runs, so the form and the store cannot drift. A console that
+  re-implements bounds in JavaScript will disagree with the server the first time either changes.
+- **Errors are rewritten into the page's own words** and deduplicated. §13 splits ownership between data
+  science and marketing; a marketer setting the γ dial should not be shown a message naming `thetaOut`.
+- **Changes are counted the way the reader made them**, not the way the patch encodes them.
+- Read is open, write is authenticated and fails closed. Reading the dials should never require a token;
+  moving them always should.
+
+### 18.7 One thing this design should state that it currently leaves implied
+
+§10's holdout assignment has to exist **before the first decision is recorded**, not merely before the
+first report. It is the one parameter in the whole catalog whose default cannot be changed retroactively:
+traffic served without an arm cannot be assigned one afterwards. That is why Phase 0 carries it, and it is
+worth saying in §10 as well as in the phase table.
+
+---
+
 *Opened 2026-09-01. Companion to `18-content-affinity-engine.md` (the base scoring), `19` and `21` (the
 build plan), and section 09 of the Solution & Algorithm document, which this specifies.*

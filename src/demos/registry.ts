@@ -124,8 +124,35 @@ export async function reflexConfigFor(surface: DemoSurface): Promise<ReflexConfi
  * cost a read, and can never take a decision down.
  */
 export async function resolveReflexConfig(env: Env, surface: DemoSurface): Promise<ReflexConfig> {
+  return (await resolveReflexConfigRevision(env, surface)).config;
+}
+
+/** The tuning in force, WITH the revision integer that identifies it. */
+export interface ResolvedReflexConfig {
+  config: ReflexConfig;
+  /** 0 means the compiled default: nothing has been tuned for this scope yet. */
+  revision: number;
+}
+
+/**
+ * The same resolution as above, keeping the revision number.
+ *
+ * Doc 22 records `versions: { config, lift, prior, policy }` on every decision
+ * record, and its config_v is an INTEGER. This engine's config.version is a
+ * string ('reflex-demo-v1+r4') because it is stamped into decision IDs and read
+ * by people. Both are wanted: the string for the explain record a human reads,
+ * the integer for the join a warehouse query does.
+ *
+ * Exposing it here means the ledger writer never has to parse '+r4' back out of
+ * the string. A join key recovered by regex from a display string is the kind of
+ * thing that works until someone renames a config.
+ */
+export async function resolveReflexConfigRevision(
+  env: Env, surface: DemoSurface,
+): Promise<ResolvedReflexConfig> {
   const stored = await readReflexConfigRevision(env, surface);
-  return stored ? stored.config : reflexConfigFor(surface);
+  if (stored) return { config: stored.config, revision: stored.revision };
+  return { config: await reflexConfigFor(surface), revision: 0 };
 }
 
 /**

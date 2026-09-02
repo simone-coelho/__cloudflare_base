@@ -405,3 +405,27 @@ describe('resolveReflexConfig — the wiring, not just the store', () => {
     await expect(resolveReflexConfig(env, 'coach')).resolves.toBe(D);
   });
 });
+
+// ── The integer doc 22 records as versions.config ────────────────────────────
+
+describe('resolveReflexConfigRevision — the join key, not the display string', () => {
+  it('reports revision 0 for the compiled default, with the config by identity', async () => {
+    const { resolveReflexConfigRevision } = await import('@/demos/registry');
+    const { DEFAULT_REFLEX_CONFIG: D } = await import('@/reflex/core');
+    const r = await resolveReflexConfigRevision(env, 'coach');
+    expect(r.revision).toBe(0);
+    expect(r.config).toBe(D);
+  });
+
+  it('reports the integer and the string together, and they agree', async () => {
+    const { resolveReflexConfigRevision } = await import('@/demos/registry');
+    await writeReflexConfig(env, 'coach', sampleConfig(), { actor: 'a' });
+    await writeReflexConfig(env, 'coach', sampleConfig({ K: 2.2 }), { actor: 'a' });
+    const r = await resolveReflexConfigRevision(env, 'coach');
+    expect(r.revision).toBe(2);
+    expect(r.config.version).toBe('tuned-v1+r2');
+    // The ledger writer records the integer. Nothing should ever need to parse
+    // '+r2' back out of the display string to get it.
+    expect(r.config.version.endsWith(`+r${r.revision}`)).toBe(true);
+  });
+});
