@@ -709,8 +709,18 @@ not.** A shopper who fires twelve events on their first visit is bucketed "4 or 
 attributed to a cell she was never in, at the two levels that do the most pooling work. Nothing surfaces
 as an error; the statistics are simply learning the wrong thing, slowly.
 
-This makes **CW7** (visit boundaries, entry-channel classification, vuid cutover) a prerequisite for
-Phase 1, not an independent correctness item. It is also cheap: the ledger sizes it at 1.5 days.
+**Resolved 2026-09-02 (CW7a).** Both levels are now real: `src/services/visit.ts` holds the 30-minute idle
+boundary, the 1 / 2-3 / 4+ bucket, and the six-value channel table, wired through `SessionManager` and
+published as `visit_number`, `visit_bucket` and `entry_channel`. Phase 1 can pool on them.
+
+**One mapping needs this document to ratify it.** An untagged click from a social host is classed
+`referral`, not `organic`. In a six-value grouping "organic" conventionally means organic *search*, and
+there is no "organic social" bucket; classing it organic would pool untagged social alongside search,
+which are not comparable populations. If §5.4 wants a seventh value, say so and the table follows.
+
+**Still open (CW7b):** the vuid is `SHA-256(sessionId)`, so a cleared cookie or a new device is a new
+visitor. Visit counting is only as good as the identifier it hangs on, which bounds how far level 2
+actually reaches for the anonymous majority.
 
 Phase 0 is unaffected — it records the cell it is given, and a cell recorded with a wrong visit bucket can
 be recomputed from the ledger later. But Phase 1 must not publish a lift snapshot pooled on a bucket that
