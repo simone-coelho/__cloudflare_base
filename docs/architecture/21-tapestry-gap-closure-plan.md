@@ -99,7 +99,7 @@ is exactly the rework the risk register warns about.
 |---|---|---|---|
 | Regional trending: `RegionTrend` DO, KV publish, λ-blend | CW6 | 3 | Mandeep's stated non-negotiable for v1, and the single dimension with the least code against the highest priority. Zero lines exist. The geo-cohort module is a reusable ingredient, **not** a substitute |
 | ✅ Visit boundaries + entry channel | CW7a | 1 | **Done 2026-09-02.** `src/services/visit.ts` (pure), wired through SessionManager, published as `visit_number`, `visit_bucket`, `entry_channel`, and captured by the client. Levels 1 and 2 of doc 22's pooling ladder are now real. 34 tests |
-| vuid cutover — a visitor id that survives a cleared cookie | CW7b | 0.5 | Still open. `vuidFromSession` is SHA-256(sessionId), so a cleared cookie or a new device is a new visitor. Cross-visit memory is only as good as the id it hangs on, so this bounds how far CW7a's visit counting can actually reach |
+| ✅ vuid cutover | CW7b | 0.5 | **Done 2026-09-02.** The ODP vuid derives from the stable `opt_visitor_id` the client already persisted, not from the session. `OdpIdentity` replaced the bare `sessionId` parameter on four functions, which is how the compiler found all seven call sites. ⚠️ This orphans existing session-derived ODP profiles: the right trade before launch, the wrong one after |
 | Content telemetry, exposure-normalised | CW3 | 1.5 | Impression, click, dwell, video completion. Zero hits in the repo. Content-type affinity cannot be a learned dimension without it |
 | Purchase forwarding to ODP | — | 0.2 | The highest-weighted action in the engine falls through a `default: return null` |
 

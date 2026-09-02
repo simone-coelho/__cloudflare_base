@@ -718,9 +718,13 @@ published as `visit_number`, `visit_bucket` and `entry_channel`. Phase 1 can poo
 there is no "organic social" bucket; classing it organic would pool untagged social alongside search,
 which are not comparable populations. If §5.4 wants a seventh value, say so and the table follows.
 
-**Still open (CW7b):** the vuid is `SHA-256(sessionId)`, so a cleared cookie or a new device is a new
-visitor. Visit counting is only as good as the identifier it hangs on, which bounds how far level 2
-actually reaches for the anonymous majority.
+**Also resolved (CW7b).** The vuid was `SHA-256(sessionId)`, so a new session was a new person and level 2
+had nothing stable to count against. It now derives from the stable first-party `opt_visitor_id`, with the
+session id as a fallback for a client that cannot store one. `identityKeyOf()` reports which was used, so a
+decision record can carry whether the visit count behind its cell was anchored to a durable identity or to
+a single session. **Phase 0 should record that flag**: evidence pooled on a session-only identity is
+weaker than the same evidence pooled on a stable one, and the ledger is the only place that distinction
+can be preserved.
 
 Phase 0 is unaffected — it records the cell it is given, and a cell recorded with a wrong visit bucket can
 be recomputed from the ledger later. But Phase 1 must not publish a lift snapshot pooled on a bucket that
