@@ -27,7 +27,7 @@ import { z } from 'zod';
 import type { Env } from '@/types/env';
 import { makeDemoClock } from '@/demos/brighthour/demoClock';
 import { clockMultiplierOf, composePage, loadComposerCatalog } from '@/demos/brighthour/composer';
-import { reflexConfigFor } from '@/demos/registry';
+import { resolveReflexConfig } from '@/demos/registry';
 import {
   ApprovalError,
   clearOverride,
@@ -316,7 +316,7 @@ liveOpsRoutes.get('/occupants', async (c) => {
       nowMs,
       items,
       events,
-      reflexConfig: await reflexConfigFor(SURFACE),
+      reflexConfig: await resolveReflexConfig(c.env, SURFACE),
       epochMs,
       page: 'ops',
     });

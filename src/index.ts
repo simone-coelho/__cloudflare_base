@@ -18,6 +18,7 @@ import { healthRoutes } from '@/routes/health';
 import { optimizelyRoutes } from '@/routes/optimizely';
 import { cdpRoutes } from '@/routes/cdp';
 import { operatorRoutes } from '@/routes/operator';
+import { configRoutes } from '@/routes/config';
 import realtimeRoutes from '@/routes/realtime';
 import { aiRoutes } from '@/routes/ai';
 import { aiSceneRoutes } from '@/routes/aiScene';
@@ -71,6 +72,9 @@ app.route('/webhook', webhookRoutes);
 app.route('/optimizely', optimizelyRoutes);
 app.route('/cdp', cdpRoutes);
 app.route('/operator', operatorRoutes);
+// CW0 — versioned reflex config (scope appendix §1.4). Reads open, writes
+// authenticated and fail closed; the tuning UI is a client of these routes.
+app.route('/config', configRoutes);
 app.route('/realtime', realtimeRoutes);
 app.route('/meridian/api', meridianRoutes);
 app.route('/ai', aiRoutes);

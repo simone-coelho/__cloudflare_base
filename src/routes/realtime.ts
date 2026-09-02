@@ -3,7 +3,7 @@ import type { Env } from '@/types/env';
 import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegmentEngine';
 import { getConnectors } from '@/connectors';
 import { snapshot as reflexSnapshot } from '@/reflex/core';
-import { reflexConfigFor, resolveSurface } from '@/demos/registry';
+import { resolveReflexConfig, resolveSurface } from '@/demos/registry';
 import { forwardEventToOdp, mapActionToOdp, odpEnabled, upsertOdpProfile } from '@/services/odpLoop';
 import { CatalogService } from '@/services/CatalogService';
 import { z } from 'zod';
@@ -255,9 +255,11 @@ realtimeRoutes.get('/reflex', async (c) => {
     const { sessionData } = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
     // Surface-aware tuning (@/demos/registry): an explicit ?surface= wins, else
     // the session remembers which demo it belongs to, else DEFAULT_SURFACE.
-    // With both absent, reflexConfigFor('coach') returns DEFAULT_REFLEX_CONFIG
-    // BY IDENTITY — every pre-existing caller gets a byte-identical response.
-    const cfg = await reflexConfigFor(
+    // With both absent and nothing stored, this resolves to
+    // DEFAULT_REFLEX_CONFIG BY IDENTITY — every pre-existing caller gets a
+    // byte-identical response until someone tunes the scope.
+    const cfg = await resolveReflexConfig(
+      c.env,
       resolveSurface({ surface: c.req.query('surface') ?? sessionData.surface })
     );
     const now = Date.now();

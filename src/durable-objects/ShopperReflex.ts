@@ -87,7 +87,7 @@ import {
   DEFAULT_SURFACE,
   audienceKeyPrefixFor,
   catalogServiceFor,
-  reflexConfigFor,
+  resolveReflexConfig,
   resolveSurface,
   type DemoSurface,
 } from '@/demos/registry';
@@ -395,7 +395,7 @@ export class ShopperReflex {
       surface: event.surface ?? (event.data as Record<string, unknown> | undefined)?.surface as string | undefined,
     });
     const surfaceCatalog = await catalogFor(surface);
-    const cfg = await reflexConfigFor(surface);
+    const cfg = await resolveReflexConfig(this.env, surface);
 
     // Trust & abuse (§12): validate referenced products against the in-memory
     // catalog index — an unknown productId is dropped and counted, never scored.
@@ -597,7 +597,7 @@ export class ShopperReflex {
     const aff = this.affinity!;
     const pipe = this.pipeline!;
     const surface = this.surface();
-    const cfg = await reflexConfigFor(surface);
+    const cfg = await resolveReflexConfig(this.env, surface);
     const surfaceCatalog = await catalogFor(surface);
     const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
 
@@ -691,7 +691,7 @@ export class ShopperReflex {
       this.affinity.reflex,
       this.affinity.lastSeen,
       now,
-      await reflexConfigFor(this.surface()),
+      await resolveReflexConfig(this.env, this.surface()),
       this.retentionMs()
     );
     await this.state.storage.setAlarm(at);
@@ -703,7 +703,7 @@ export class ShopperReflex {
       if (!this.affinity) return; // already erased
       const now = Date.now();
       const surface = this.surface();
-      const cfg = await reflexConfigFor(surface);
+      const cfg = await resolveReflexConfig(this.env, surface);
 
       // Retention (§12): idle past N days with no live sockets → self-expire.
       if (now - this.affinity.lastSeen >= this.retentionMs() && this.state.getWebSockets().length === 0) {
@@ -786,7 +786,7 @@ export class ShopperReflex {
 
   private async handleSnapshot(): Promise<Response> {
     await this.load();
-    const cfg = await reflexConfigFor(this.surface());
+    const cfg = await resolveReflexConfig(this.env, this.surface());
     const now = Date.now();
     return json({
       ok: true,

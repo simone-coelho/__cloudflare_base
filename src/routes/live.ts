@@ -43,7 +43,7 @@ import type { Env } from '@/types/env';
 import { getConnectors } from '@/connectors';
 import { RealtimeSegmentEngine } from '@/services/RealtimeSegmentEngine';
 import { snapshot as reflexSnapshot } from '@/reflex/core';
-import { reflexConfigFor } from '@/demos/registry';
+import { resolveReflexConfig } from '@/demos/registry';
 import realtimeRoutes from '@/routes/realtime';
 import { makeDemoClock } from '@/demos/brighthour/demoClock';
 import {
@@ -251,7 +251,7 @@ async function readAffinity(env: Env, visitorId: string, realNowMs: number): Pro
   const { sessionId, sessionData } = await engine.getOrCreateSessionFromCookies(null, visitorId);
   if (!sessionData.reflex) return { sessionId, dims: {}, memberships: [] };
 
-  const cfg = await reflexConfigFor(SURFACE);
+  const cfg = await resolveReflexConfig(env, SURFACE);
   const snap = reflexSnapshot(sessionData.reflex, realNowMs, cfg);
   return { sessionId, dims: snap.dims, memberships: snap.audiences };
 }
@@ -376,7 +376,7 @@ liveRoutes.post('/page', async (c) => {
       events,
       scores: affinity.dims,
       memberships: affinity.memberships,
-      reflexConfig: await reflexConfigFor(SURFACE),
+      reflexConfig: await resolveReflexConfig(c.env, SURFACE),
       experimentIds: await getBhExperimentIds(c.env).catch(() => null),
       sessionMission: input.missionOverride,
       focusCategory: input.focusCategory ?? null,

@@ -20,6 +20,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { DEFAULT_REFLEX_CONFIG, type ReflexConfig } from '@/reflex/core';
+import { readReflexConfigRevision } from '@/reflex/configStore';
+import type { Env } from '@/types/env';
 import { CatalogService, type Product } from '@/services/CatalogService';
 
 export type DemoSurface = 'coach' | 'brighthour';
@@ -102,6 +104,28 @@ export async function reflexConfigFor(surface: DemoSurface): Promise<ReflexConfi
   const { BRIGHTHOUR_REFLEX_CONFIG } = await import('./brighthour/reflexConfig');
   _bhConfig = BRIGHTHOUR_REFLEX_CONFIG;
   return BRIGHTHOUR_REFLEX_CONFIG;
+}
+
+/**
+ * The tuning the engine actually scores with (CW0): the stored config for this
+ * surface when one has been written and still validates, otherwise the compiled
+ * default above.
+ *
+ * This is the seam that makes scope appendix §1.4 true — "weights, decay
+ * horizons and thresholds are versioned configuration, effective immediately
+ * with no deployment." reflexConfigFor() is deliberately left alone: it stays
+ * the compiled answer, returned BY IDENTITY, because it is this function's
+ * fallback and because callers without an Env (pure composition, tests) depend
+ * on that identity.
+ *
+ * The failure posture is the point. A missing key, a KV outage, or a stored
+ * config that no longer passes validation all resolve to exactly what
+ * reflexConfigFor would have returned, so wiring this into the decision path can
+ * cost a read, and can never take a decision down.
+ */
+export async function resolveReflexConfig(env: Env, surface: DemoSurface): Promise<ReflexConfig> {
+  const stored = await readReflexConfigRevision(env, surface);
+  return stored ? stored.config : reflexConfigFor(surface);
 }
 
 /**

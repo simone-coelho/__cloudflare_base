@@ -51,6 +51,7 @@ import {
   audienceKeyPrefixFor,
   catalogServiceFor,
   reflexConfigFor,
+  resolveReflexConfig,
   resolveSurface,
   type DemoSurface,
 } from '@/demos/registry';
@@ -284,7 +285,7 @@ export async function ensureAudiencesSeeded(
   if (surface === DEFAULT_SURFACE) await store.seed(SEED_AUDIENCES);
   const generated = generateAffinityAudiences(
     catalogService.getAllProducts() as unknown as Array<Record<string, unknown>>,
-    await reflexConfigFor(surface),
+    await resolveReflexConfig(env, surface),
     surface === DEFAULT_SURFACE
       ? DEFAULT_GENERATOR_CONFIG
       : { ...DEFAULT_GENERATOR_CONFIG, surface, keyPrefix: audienceKeyPrefixFor(surface) }
@@ -366,7 +367,7 @@ export class RealtimeSegmentEngine {
       // exact objects this method used before the multi-surface split.
       const surface = this.surfaceOf(event);
       const catalogService = await this.catalogFor(surface);
-      const reflexConfig = await reflexConfigFor(surface);
+      const reflexConfig = await resolveReflexConfig(this.env, surface);
       const audiencePrefix = audienceKeyPrefixFor(surface);
       await this.ensureSeeded(surface);
 
@@ -631,7 +632,7 @@ export class RealtimeSegmentEngine {
     if ((this.env.REFLEX_ENABLED ?? 'true') !== 'false' && sessionData.reflex) {
       Object.assign(
         attributes,
-        reflexAttributes(sessionData.reflex, Date.now(), await reflexConfigFor(surface))
+        reflexAttributes(sessionData.reflex, Date.now(), await resolveReflexConfig(this.env, surface))
       );
     }
 
