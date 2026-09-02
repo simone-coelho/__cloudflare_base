@@ -38,7 +38,7 @@ Ranked by exposure: how quickly a customer could discover the gap, and how much 
 | 7 | ~~**1.2** the human verbs: **rename, pin, prune**~~ | ✅ **CLOSED 2026-09-02.** `POST /operator/audiences/:key/{rename,pin,prune}` on top of `KvAudienceStore.rename()` / `.setPinned()` / `.archive()`. The key never moves on a rename; nothing sets `generatorHash` by hand, because `hashDef()` covers name and description so the edit itself tells regeneration a human owns it; prune archives rather than deletes so past decisions stay explainable. Authenticated, unlike the older operator routes | Nothing. 8 tests, verified live | | ✅ Done |
 | 8 | **1.3** content registered via **CMS/DAM API or JSON/CSV export**, with lifecycle windows | Schema and validation are real; the catalog is a bundled file; no ingest route; no render URL or publish/expire window on the record | An ingest endpoint and the two missing fields | | W2, already scheduled |
 | 9 | **1.11** sorting feeds **from Salesforce Commerce Cloud or any other source** | Per-segment sorting and intent ranking exist; no feed adapter or re-rank endpoint | An endpoint that accepts a candidate set and returns it ordered | | With the pilot's PLP work, if taken |
-| 10 | **2.3** delivered **API-first, decisions by content ID** | **Half closed 2026-09-02 (CW4):** a server-side decision service returns the §7 contract by content ID from `GET /v1/:tenant/decisions/snapshot`, tested and live on the dev server. **CW8 closed 2026-09-02:** the customer SDK consumes it (`src/sdk/`, built to `public/sdk/`). Remaining: a stored catalog per scope (CW2), SDK-key auth (CW10) | The two items named | | W4 |
+| 10 | **2.3** delivered **API-first, decisions by content ID** | **Half closed 2026-09-02 (CW4):** a server-side decision service returns the §7 contract by content ID from `GET /v1/:tenant/decisions/snapshot`, tested and live on the dev server. **CW8 and CW10 closed 2026-09-02:** the customer SDK consumes it and the surface is key-gated in staging. Remaining: a stored catalog per scope (CW2) | CW2 | | W4 |
 | 11 | ~~**"tested"** — the word covering all twelve~~ | ✅ **CLOSED 2026-09-02.** `npm test` runs 24 files / 477 cases in ~9s. The declared `vitest-environment-miniflare` was Miniflare v2 tooling, never installable against the wrangler 4 line this repo pins; nothing under test needs the Workers runtime, so the environment is `node`. Second cause: with no `exclude`, vitest collected `.claude/worktrees/` and reported 189 files / 3,701 cases with 20 failures from abandoned branches | CI wiring remains (`npm run ci` exists; no pipeline runs it) | | ✅ Done |
 | 12 | **No holdout mechanism exists** | **Assignment exists 2026-09-02 (CW4):** deterministic, sticky, per-brand salt, arm on every decision record (`src/content/holdout.ts`). Reporting against it needs the ledger (CW19) | The ledger and the report | | Before launch — traffic that ran without one cannot be re-run |
 
@@ -77,10 +77,11 @@ everywhere. Each has already caused, or will cause, a question we cannot answer 
 Found during the same audit. Not customer commitments, but they are the kind of thing a security review
 finds, and one is on the critical path to a security review we have already promised (D7).
 
-- `POST /realtime/action` — unauthenticated, accepts any `userId` and arbitrary event data.
-- `/cdp/*` — authentication optional on all but two routes; `identify` merges caller-supplied traits.
-- CORS reflects any origin with credentials.
-- Decision export endpoints are unauthenticated and demo-scoped.
+- ~~`POST /realtime/action` — unauthenticated~~ **CW10 (2026-09-02):** SDK-key gated when `AUTH_MODE=enforced` (staging); open on the demo worker by design.
+- `/cdp/*` — authentication optional on all but two routes; `identify` merges caller-supplied traits. Unchanged.
+- ~~CORS reflects any origin with credentials.~~ **CW10:** allow-list when `CORS_ORIGINS` is set or mode is enforced; reflect-any survives only on the open demo worker with nothing configured.
+- Decision export endpoints are unauthenticated and demo-scoped. Unchanged; Phase 0 owns the ledger export.
+- Operator writes: **CW10** requires a JWT when enforced; open on the demo worker so the console keeps working.
 
 ---
 

@@ -8,6 +8,7 @@ import type { Env } from '@/types/env';
 import { errorHandler } from '@/middleware/error';
 import { requestId } from '@/middleware/request-id';
 import { rateLimiter } from '@/middleware/rate-limiter';
+import { corsOrigin, sdkKey, operatorWrites } from '@/middleware/edgeAccess';
 
 import { authRoutes } from '@/routes/auth';
 import { apiRoutes } from '@/routes/api';
@@ -50,9 +51,11 @@ app.use('*', secureHeaders());
 app.use(
   '*',
   cors({
-    origin: (origin) => origin,
+    // CW10: policy-driven. Open mode with nothing configured reflects, as before;
+    // a configured allow-list or enforced mode answers only what is listed.
+    origin: corsOrigin,
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+    allowHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-SDK-Key'],
     exposeHeaders: ['X-Request-Id', 'X-Response-Time'],
     credentials: true,
     maxAge: 86400,
@@ -60,6 +63,12 @@ app.use(
 );
 
 app.use('/api/*', rateLimiter());
+// CW10 — the access gates. All three are pass-through while AUTH_MODE is
+// 'open' (the default), so the shared demo worker is unchanged; the staging
+// stamp sets 'enforced'. See src/middleware/edgeAccess.ts.
+app.use('/realtime/*', sdkKey());
+app.use('/v1/:tenant/*', sdkKey());
+app.use('/operator/*', operatorWrites());
 
 app.onError(errorHandler);
 

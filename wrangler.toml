@@ -3,11 +3,12 @@ main = "src/index.ts"
 compatibility_date = "2025-06-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Named environments inherit NOTHING from the top level in Wrangler: no
+# bindings, no vars. Production still declares only a name and is therefore not
+# deployable; scripts/deploy.sh refuses it. Staging is declared in full at the
+# bottom of this file (CW10).
 [env.production]
 name = "edge-platform-prod"
-
-[env.staging]
-name = "edge-platform-staging"
 
 # KV Namespaces
 [[kv_namespaces]]
@@ -156,3 +157,99 @@ not_found_handling = "single-page-application"
 port = 9100
 local_protocol = "http"
 ip = "localhost"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# STAGING — the customer-facing lower environment (CW10, plan 21 Lane B).
+#
+# Every binding is declared again here against staging's OWN resources, which
+# is the hard isolation from the demo worker that section 1.7 promises. Fill the
+# <staging-…> placeholders with scripts/provision-staging.sh, which creates the
+# resources, applies the D1 migrations, sets the secrets and seeds an operator
+# login. scripts/deploy.sh refuses `--env staging` while a placeholder remains.
+#
+# Secrets (never here): JWT_SECRET, SDK_KEYS, GEMINI_API_KEY, and optionally
+# ODP_PUBLIC_KEY, SHOT_TOKEN. Set them with `wrangler secret put NAME --env staging`.
+# ═════════════════════════════════════════════════════════════════════════════
+[env.staging]
+name = "edge-platform-staging"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+# Enforced: SDK keys on /realtime and /v1, JWT on operator writes, CORS allow-list only.
+AUTH_MODE = "enforced"
+# The customer's lower-environment origins, comma-separated (`*.example.com` allowed).
+# Empty means the worker answers only same-origin callers and the local dev server.
+CORS_ORIGINS = ""
+CONNECTOR_MODE = "mock"
+DECISION_SOURCE = "mock"
+ODP_API_HOST = "https://api.zaius.com"
+JWT_ISSUER = "edge-platform-staging"
+JWT_AUDIENCE = "edge-platform-api"
+OPTIMIZELY_SDK_KEY = "RLCQEiLW3ifgVH5fwuHoo"
+OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/RLCQEiLW3ifgVH5fwuHoo.json"
+REFLEX_HOST = "session"
+BRIGHTHOUR_CLOCK_MULTIPLIER = "1"
+
+[[env.staging.kv_namespaces]]
+binding = "CACHE"
+id = "<staging-cache-kv-id>"
+
+[[env.staging.kv_namespaces]]
+binding = "SESSIONS"
+id = "<staging-sessions-kv-id>"
+
+[[env.staging.r2_buckets]]
+binding = "STORAGE"
+bucket_name = "edge-platform-storage-staging"
+
+[[env.staging.queues.producers]]
+queue = "events-staging"
+binding = "EVENT_QUEUE"
+
+[[env.staging.queues.consumers]]
+queue = "events-staging"
+max_batch_size = 10
+max_batch_timeout = 2
+max_concurrency = 6
+max_retries = 2
+
+[env.staging.browser]
+binding = "BROWSER"
+
+[[env.staging.durable_objects.bindings]]
+name = "STATE_MANAGER"
+class_name = "StateManager"
+
+[[env.staging.durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
+[[env.staging.durable_objects.bindings]]
+name = "PERSONALIZATION_WEBSOCKET"
+class_name = "PersonalizationWebSocket"
+
+[[env.staging.durable_objects.bindings]]
+name = "OpalAgent"
+class_name = "OpalAgent"
+
+[[env.staging.durable_objects.bindings]]
+name = "SHOPPER_REFLEX"
+class_name = "ShopperReflex"
+
+[[env.staging.durable_objects.bindings]]
+name = "MERIDIAN_REFLEX"
+class_name = "MeridianReflex"
+
+[[env.staging.analytics_engine_datasets]]
+binding = "ANALYTICS"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "coach-demo-db-staging"
+database_id = "<staging-d1-id>"
+migrations_dir = "migrations"
+
+[env.staging.assets]
+directory = "public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"

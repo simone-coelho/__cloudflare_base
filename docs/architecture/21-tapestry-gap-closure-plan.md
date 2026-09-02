@@ -88,7 +88,7 @@ called from the content ranker, because that file is the other session's live CW
 | Server-side content ranker + page assembler | CW4 | ✅ 2026-09-02 | `src/content/` decides at the edge and returns the §7 contract plus §3.1 records. The composer moved into the engine (`src/reflex/contentCompose.ts`); Meridian re-exports it. 23 tests. Live at `GET /v1/:tenant/decisions/snapshot` on the dev server, serving compiled defaults until a catalog document is stored for the scope (CW2) |
 | Snapshot endpoint for first paint | CW4 | ✅ | The route above; `Cache-Control: no-store`, reads only, 400 on a bad tenant or missing visitor |
 | SDK extraction, one package two modules | CW8 | ✅ 2026-09-02 | `src/sdk/`: shared core (identity, entry signals, socket, fetch, beacon), emit (explicit API, declarative `data-op-*`, dataLayer adapter with GA4 defaults, automatic impressions and dwell), listen (snapshot hydration with a graceful-absence deadline, per-slot subscriptions, `content_decisions` frames). Built to `public/sdk/` as script and module. 22 tests plus a contract test that parses every SDK envelope through the server's own action schema. Ran end to end in Node against the dev server. **Open by decision:** the demo storefront still carries its own copy of this transport; cutting it over is a rehearsal-gated change |
-| Staging envs, SDK-key auth, operator auth, CORS allowlist | CW10 | 3 | The literal blocker to "consumable by their lower environments." Both env stanzas are empty; CORS reflects any origin with credentials; operator routes are mounted with no auth |
+| Staging envs, SDK-key auth, operator auth, CORS allowlist | CW10 | ✅ 2026-09-02 (code) | `[env.staging]` declared in full with its own resources; `src/middleware/edgeAccess.ts` gates the SDK surface by key, operator writes by JWT, and CORS by allow-list, all behind `AUTH_MODE`, which stays `open` on the demo worker and is `enforced` in staging. 8 tests; verified live on a local staging instance. **Human step remaining:** `scripts/provision-staging.sh` creates the account resources, sets the secrets and seeds the operator login; `CORS_ORIGINS` takes the customer's lower-environment origins when they are known |
 
 CW1 is the long pole and it is blocked on one answer: **which brand is the first tenant.** Scoping it wrong
 is exactly the rework the risk register warns about.
@@ -191,6 +191,23 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
 - **Two follow-ups this seam names.** The storefront cutover (the demo consuming the SDK rather than its
   own transport copy) is the step that makes "one truth" literal and it needs a Coach rehearsal first.
   SDK-key enforcement on the server is CW10; the SDK already sends the key.
+
+---
+
+## The CW10 seam (2026-09-02)
+
+- **One switch, not a fork.** `AUTH_MODE` is read per request. `open` is byte-for-byte today's worker,
+  verified live: CORS reflects, operator writes pass, the SDK surfaces answer without a key. `enforced`
+  is the staging stamp. The shared demo worker never changes behavior until someone sets the variable.
+- **CORS_ORIGINS is the exception to the switch.** Listing origins is itself the decision, so a
+  configured allow-list applies in either mode. Same-origin and the local dev server are always allowed.
+- **Keys are per tenant.** `SDK_KEYS` is a secret of the form `tenant:key[|key2],…`; a `*` tenant
+  accepts the key anywhere. `/v1/:tenant/*` checks the key against the path's tenant; `/realtime/*`,
+  which carries no tenant yet, accepts any registered key. CW1 binds tenant to key properly.
+- **Operator tokens come from `/auth/login`**, whose users live in KV; the provisioning script seeds
+  one. The config routes stay fail-closed regardless of mode, as CW0 built them.
+- **Production is still name-only** and `deploy.sh` still refuses it. Declaring it is the same work as
+  staging, gated on ledger B5 (production or lower environment).
 
 ---
 

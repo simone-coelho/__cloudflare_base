@@ -56,6 +56,17 @@ export interface Env {
   BRIGHTHOUR_EPOCH_MS?: string;
   BRIGHTHOUR_CLOCK_MULTIPLIER?: string;
 
+  // CW10 — access policy (src/middleware/edgeAccess.ts). 'open' (default) is
+  // today's behavior for the shared demo worker; 'enforced' is what the staging
+  // stamp sets: SDK keys on /realtime and /v1, JWT on operator writes, CORS
+  // answers only CORS_ORIGINS and the page's own origin.
+  AUTH_MODE?: 'open' | 'enforced';
+  // Comma-separated origins; `*.example.com` matches apex and subdomains. When
+  // set, the allow-list applies in either mode. Empty + enforced = same-origin only.
+  CORS_ORIGINS?: string;
+  // Secret. `tenant:key[|key2],tenant2:key3`; tenant `*` accepts the key anywhere.
+  SDK_KEYS?: string;
+
   // Connector layer — "real seams, mocked calls" (docs/architecture/05-demo-build-spec.md)
   CONNECTOR_MODE?: 'mock' | 'live';
   // Mode-B decision source, independent of CONNECTOR_MODE:
