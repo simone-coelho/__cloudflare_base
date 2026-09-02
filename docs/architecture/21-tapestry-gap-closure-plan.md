@@ -67,13 +67,15 @@ runs independently of the other three after the first item.
 | ✅ Get the test suite executing | — | 0.1 | **Done 2026-09-02.** 24 files, 477 cases, ~9s. Not a missing dependency: the declared package is Miniflare v2 tooling that never installed against wrangler 4, and vitest was also collecting `.claude/worktrees/` |
 | ✅ KV-versioned config store + read/write API | CW0 | 1.5 | **Done 2026-09-02.** Store, validation, versioning, audit, rollback, `/config` API, wired into every decision path via `registry.resolveReflexConfig`. Unblocked: CW5, CW9, CW11, T2, T7, M5, M6 |
 | ✅ Tuning surface a business user can operate | CW9 | 2 | **Done 2026-09-02.** `/tuning.html`, linked from the operator console. Every symbol named in plain words, every number shown as its consequence, actions grouped by behaviour rather than event name, validation delegated to the same validator the write path runs. Row 1 closes |
-| Decision + explain persistence at every grain | CW11 | 2.5 | **Next in Lane A.** The dropped-`sections` defect is fixed, so all three grains now persist — but only demo-scoped and unauthenticated. What remains is the customer-grain, authenticated surface |
+| Decision + explain persistence at every grain | → CW19 | — | The dropped-`sections` defect is fixed, so product, content and section receipts all persist. The customer-grain authenticated surface is **not a separate item any more**: Phase 0 in Lane D owns it, because the ledgers it writes are the same ledgers stage two learns from |
 | Season / promotion / margin as real weighted terms | — | 0.5 | §1.5 itemises them in the explain record; they do not exist as terms |
 | Rename / pin / prune endpoints | — | 0.5 | §1.2 promises the verbs; generation and pin-survival are real, the endpoints are not |
 
-**Lane A is three items down as of 2026-09-02** (harness, CW0, CW9), plus the live defect under row 5. The harness gated the evidentiary standard for everything else, and CW0 was the
-single highest-leverage item in the programme. Lane A continues at CW9; Lanes B, C and D are unblocked and
-unstarted.
+**Lane A is three items down as of 2026-09-02** (harness, CW0, CW9), plus the live defect under row 5.
+The harness gated the evidentiary standard for everything else, and CW0 was the single highest-leverage
+item in the programme. What is left in this lane is two half-day items.
+
+**The next thing to build is not in this lane.** See the sequencing note below.
 
 ### Lane B — The delivery surface
 *Closes: §2.3 API-first delivery, and the Kickoff + 45 integration kit.*
@@ -105,9 +107,9 @@ is exactly the rework the risk register warns about.
 
 | Item | CW | Days | Note |
 |---|---|---|---|
-| Holdout mechanism | — | 1 | No `holdout` anywhere in the repo. Traffic that runs without one cannot be re-run |
-| Priors import | CW11 | — | §1.8 promises it; nothing accepts an externally derived prior |
-| Authenticated export at customer grain | CW11 | — | Export exists demo-scoped and unauthenticated |
+| ~~Holdout mechanism~~ | → CW19 | — | Folded into Phase 0, where it belongs: assignment has to exist before the first decision is recorded, not after |
+| ~~Priors import~~ | → CW23 | — | Folded into Phase 3 |
+| ~~Authenticated export at customer grain~~ | → CW19 | — | Folded into Phase 0. The R2 partitions are the export |
 | Per-slot autonomous weight mixing | CW5 | 1.5 | §1.4's autonomy note in v8 now states this in writing. Slot strategies are hardcoded constants with no `mode` switch |
 | Stage-two design document | CW13 | ✅ | Written 2026-09-01 as `22-outcome-learning-design.md`. The build items below come from it |
 | **Phase 0 · Record**: decision + outcome ledgers (queues, R2 partitions, D1 recent index), holdout assignment | CW19 | 2.5 | The only phase whose delay costs data that cannot be recovered. Also closes ledger 20 row 5 (persistence at every grain) and the Snowflake outbound share, since the R2 partitions *are* the share |
@@ -115,6 +117,22 @@ is exactly the rework the risk register warns about.
 | **Phase 2 · Apply**: γ per slot, exploration policies, assisted autonomy job with bounds | CW21 | 2 | Defines T7 precisely: proposals with evidence, then autonomous within bounds |
 | Learning console: lift grid, policy comparison, version history, freeze / reset / reject, the dials | CW22 | 3 | The surface the data scientists and marketers will judge us on. Rides the tuning surface (CW9) |
 | **Phase 3 · Extend**: imported priors, external model hook (service / table / Workers AI), replay endpoint | CW23 | 2.5 | Priors import closes ledger 20 row 4; the hook is the "bring your own model" answer to Nitin |
+
+---
+
+## The one item whose delay cannot be bought back
+
+Everything else on this list can be built late and still be built. **CW19, Phase 0 of the outcome-learning
+design, cannot.** It writes the decision and outcome ledgers and assigns the holdout, and traffic that runs
+before it exists is traffic whose decisions and outcomes were never recorded. That data cannot be
+reconstructed afterwards at any price, which makes it the only genuinely irreversible deadline in the
+programme, ahead of tenancy and ahead of the integration kit.
+
+It also pays for three other rows on its own: ledger row 5 (persistence at every grain), row 12 (the
+holdout), and §1.12's Snowflake outbound share, since the R2 partitions it writes *are* the share.
+
+At 2.5 days, against a §2.4 roadmap we have now put in front of the customer in writing, it is the next
+thing to build.
 
 ---
 
