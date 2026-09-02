@@ -23,6 +23,7 @@ import { SEED_AUDIENCES } from '@/data/seed-audiences';
 import insightsData from '@/data/insights.json';
 import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWebSocket';
 import { z } from 'zod';
+import { jwt } from '@/middleware/auth';
 
 const operatorRoutes = new Hono<{ Bindings: Env }>();
 
@@ -384,6 +385,105 @@ operatorRoutes.get('/events/stats', async (c) => {
       error: 'Failed to read demo event stats',
       details: error instanceof Error ? error.message : 'Unknown error',
     }, 500);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// The three human verbs — scope appendix §1.2: "Your team renames, pins, or
+// prunes anything the engine proposes."
+//
+// The generator has always honoured the RESULT of these. audienceGenerator.ts
+// skips a pinned audience before it looks at anything else (:193), and skips one
+// whose stored content no longer hashes to the generator's own output (:197).
+// What was missing was any way to perform them: suggest and publish were the only
+// operator verbs, and they act on NEW audiences, not on the ones already live.
+//
+// AUTHENTICATED, unlike the routes above. These change who qualifies for what on
+// the live site, so they fail closed with no verifiable token. The older operator
+// routes are still open; CW10 owns bringing them to the same line, and a new write
+// surface should not inherit that gap just because it exists.
+// ---------------------------------------------------------------------------
+
+const renameSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(500).optional(),
+});
+const pinSchema = z.object({ pinned: z.boolean() });
+
+const audienceWrites = jwt({ required: true });
+
+/**
+ * Rename. The KEY is deliberately not changeable: it is load-bearing in cookies,
+ * stored decisions and ODP qualification, so a rename is a label change and never
+ * an identity change. Renaming also makes the def stop hashing to its recorded
+ * generatorHash, which is what tells regeneration a human owns it now.
+ */
+operatorRoutes.post('/audiences/:key/rename', audienceWrites, async (c) => {
+  try {
+    const key = c.req.param('key');
+    const { name, description } = renameSchema.parse(await c.req.json());
+    const updated = await new KvAudienceStore(c.env).rename(key, name, description);
+    if (!updated) return c.json({ error: `Audience '${key}' not found` }, 404);
+    return c.json({
+      success: true, audience: updated,
+      message: `Renamed to '${name}'. Regeneration will now leave this audience alone.`,
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return c.json({ error: 'Invalid rename request', details: error.issues }, 400);
+    }
+    console.error('Error renaming audience:', error);
+    return c.json({ error: 'Failed to rename audience' }, 500);
+  }
+});
+
+/** Pin or unpin. A pinned audience is never touched by regeneration, even when
+    its content still matches what the generator would produce. */
+operatorRoutes.post('/audiences/:key/pin', audienceWrites, async (c) => {
+  try {
+    const key = c.req.param('key');
+    const { pinned } = pinSchema.parse(await c.req.json());
+    const updated = await new KvAudienceStore(c.env).setPinned(key, pinned);
+    if (!updated) return c.json({ error: `Audience '${key}' not found` }, 404);
+    return c.json({
+      success: true, audience: updated,
+      message: pinned
+        ? 'Pinned. Regeneration will never modify or archive this audience.'
+        : 'Unpinned. Regeneration may modify this audience again.',
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return c.json({ error: 'Invalid pin request', details: error.issues }, 400);
+    }
+    console.error('Error pinning audience:', error);
+    return c.json({ error: 'Failed to pin audience' }, 500);
+  }
+});
+
+/**
+ * Prune. Archive rather than delete: the key stays resolvable, so a decision
+ * recorded weeks ago that names this audience can still be explained. Archived
+ * audiences drop straight out of qualification, because listPublished() filters
+ * on status.
+ */
+operatorRoutes.post('/audiences/:key/prune', audienceWrites, async (c) => {
+  try {
+    const key = c.req.param('key');
+    const store = new KvAudienceStore(c.env);
+    const existing = await store.get(key);
+    if (!existing) return c.json({ error: `Audience '${key}' not found` }, 404);
+    await store.archive(key);
+    return c.json({
+      success: true,
+      audience: { ...existing, status: 'archived' as const },
+      message: `Pruned '${existing.name}'. It no longer qualifies anyone; its key stays resolvable for past decisions.`,
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    console.error('Error pruning audience:', error);
+    return c.json({ error: 'Failed to prune audience' }, 500);
   }
 });
 

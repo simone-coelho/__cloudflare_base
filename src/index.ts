@@ -77,6 +77,9 @@ app.route('/operator', operatorRoutes);
 app.route('/config', configRoutes);
 app.route('/realtime', realtimeRoutes);
 app.route('/meridian/api', meridianRoutes);
+// CW4 — the content decision surface (scope appendix §2.3). Reads only; the
+// ledger writer (Phase 0) and SDK-key auth (CW10) attach here, not elsewhere.
+app.route('/v1', decisionRoutes);
 app.route('/ai', aiRoutes);
 app.route('/ai/scene', aiSceneRoutes);
 app.route('/__shot', shotRoutes);
@@ -129,6 +132,7 @@ app.notFound((c) => {
 });
 
 import { meridianRoutes } from '@/demos/meridian/routes';
+import { decisionRoutes } from '@/routes/decisions';
 import { MeridianReflex } from '@/demos/meridian/MeridianReflex';
 
 export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent, MeridianReflex };

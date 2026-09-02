@@ -46,6 +46,20 @@ function memStore(initial: AudienceDef[] = []) {
       const d = map.get(key);
       if (d) map.set(key, { ...d, status: 'archived' });
     },
+    async rename(key, name, description) {
+      const d = map.get(key);
+      if (!d) return null;
+      const next = { ...d, name, ...(description === undefined ? {} : { description }) };
+      map.set(key, next);
+      return next;
+    },
+    async setPinned(key, pinned) {
+      const d = map.get(key);
+      if (!d) return null;
+      const next = { ...d, pinned };
+      map.set(key, next);
+      return next;
+    },
   };
   return { store, map };
 }
@@ -192,5 +206,90 @@ describe('regenerateCatalogAudiences — a diff, never a clobber', () => {
     const summary = await regenerateCatalogAudiences(store, generated());
     expect(summary.archived).not.toContain('high_intent_tabby_browser');
     expect(map.get('high_intent_tabby_browser')!.status).toBe('published');
+  });
+});
+
+// ── The three human verbs (§1.2), performed through the store rather than by
+// mutating the map. The generator has always honoured the RESULT of a rename or
+// a pin; these prove the API produces exactly that state.
+describe('rename, pin and prune — §1.2 performed, not simulated', () => {
+  const generated = () => generateAffinityAudiences(CATALOG, CFG, { minProducts: 3 });
+
+  it('rename keeps the KEY and changes only the label', async () => {
+    const { store } = memStore();
+    await regenerateCatalogAudiences(store, generated());
+    const updated = await store.rename('line_tabby_affinity', 'Tabby Lovers (curated)');
+    expect(updated!.key).toBe('line_tabby_affinity');
+    expect(updated!.name).toBe('Tabby Lovers (curated)');
+  });
+
+  it('a renamed audience survives the next regeneration, with no flag to remember', async () => {
+    // The protection is a CONSEQUENCE of the edit: hashDef covers name, so a
+    // rename makes the stored def stop hashing to its recorded generatorHash,
+    // and the generator reads that as human ownership.
+    const { store, map } = memStore();
+    await regenerateCatalogAudiences(store, generated());
+    await store.rename('line_tabby_affinity', 'Tabby Lovers (curated)');
+
+    const summary = await regenerateCatalogAudiences(
+      store, generateAffinityAudiences(CATALOG, CFG, { minProducts: 3, thetaIn: 0.7 }),
+    );
+    expect(summary.skippedHumanEdited).toContain('line_tabby_affinity');
+    expect(map.get('line_tabby_affinity')!.name).toBe('Tabby Lovers (curated)');
+  });
+
+  it('rename also carries a new description when one is given, and leaves it alone when not', async () => {
+    const { store } = memStore();
+    await regenerateCatalogAudiences(store, generated());
+    const before = (await store.get('line_tabby_affinity'))!.description;
+
+    const kept = await store.rename('line_tabby_affinity', 'A');
+    expect(kept!.description).toBe(before);
+
+    const changed = await store.rename('line_tabby_affinity', 'B', 'shoppers who keep coming back to Tabby');
+    expect(changed!.description).toBe('shoppers who keep coming back to Tabby');
+  });
+
+  it('pin protects an audience even when its content STILL matches the generator', async () => {
+    // The case a hash can never catch: nothing was edited, the merchandiser
+    // simply wants this one kept. Pinned is checked before ownership for exactly
+    // this reason.
+    const { store, map } = memStore();
+    await regenerateCatalogAudiences(store, generated());
+    await store.setPinned('line_tabby_affinity', true);
+
+    const summary = await regenerateCatalogAudiences(store, generated());
+    expect(summary.skippedPinned).toContain('line_tabby_affinity');
+    expect(map.get('line_tabby_affinity')!.pinned).toBe(true);
+  });
+
+  it('unpinning hands the audience back to the generator', async () => {
+    const { store } = memStore();
+    await regenerateCatalogAudiences(store, generated());
+    await store.setPinned('line_tabby_affinity', true);
+    await store.setPinned('line_tabby_affinity', false);
+
+    const summary = await regenerateCatalogAudiences(
+      store, generateAffinityAudiences(CATALOG, CFG, { minProducts: 3, thetaIn: 0.7 }),
+    );
+    expect(summary.skippedPinned).not.toContain('line_tabby_affinity');
+  });
+
+  it('prune drops the audience out of qualification but keeps its key resolvable', async () => {
+    // Archive rather than delete, so a decision recorded weeks ago that names
+    // this audience can still be explained.
+    const { store } = memStore();
+    await regenerateCatalogAudiences(store, generated());
+    await store.archive('line_tabby_affinity');
+
+    const live = await store.listPublished();
+    expect(live.map((d) => d.key)).not.toContain('line_tabby_affinity');
+    expect((await store.get('line_tabby_affinity'))!.status).toBe('archived');
+  });
+
+  it('returns null rather than throwing for a key that does not exist', async () => {
+    const { store } = memStore();
+    expect(await store.rename('nope', 'x')).toBeNull();
+    expect(await store.setPinned('nope', true)).toBeNull();
   });
 });

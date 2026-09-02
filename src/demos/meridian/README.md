@@ -8,7 +8,7 @@ That rule exists because this surface will be presented by the CEO to thirty cus
 
 ## The one deliberate exception
 
-**`src/reflex/core.ts` is imported, not copied.**
+**`src/reflex/core.ts` and `src/reflex/contentCompose.ts` are imported, not copied.**
 
 It is pure math: no state, no I/O, no config of its own — `effectiveScore`, `affinityOf`, `apply`, `tick`, `snapshot`, `nextCrossing`. Forking it would mean standing on stage demonstrating a *copy* of the engine rather than the engine. The honesty of the whole session rests on the arithmetic being the real arithmetic.
 
@@ -17,6 +17,7 @@ Everything stateful, everything wired, and everything configured is forked.
 | | Decision |
 |---|---|
 | `src/reflex/core.ts` | **Import.** Pure, stateless, shared truth. |
+| `src/reflex/contentCompose.ts` | **Import.** The content ranking arithmetic, pure; the product decision service runs the same function. |
 | Everything else | **Fork.** Config, catalogs, composition, routes, storage, identity, ODP. |
 
 ---

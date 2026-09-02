@@ -21,6 +21,7 @@ const DIR = 'src/demos/meridian';
 const files = readdirSync(DIR).filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'));
 const sources = files.map((f) => ({ f, src: readFileSync(join(DIR, f), 'utf8') }));
 const all = sources.map((s) => s.src).join('\n');
+const PURE_ENGINE = new Set(['@/reflex/core', '@/reflex/contentCompose']);
 
 describe('isolation charter', () => {
   it('imports nothing outside itself except the shared reflex engine', () => {
@@ -28,7 +29,10 @@ describe('isolation charter', () => {
     for (const { f, src } of sources) {
       for (const m of src.matchAll(/from\s+'(@\/[^']+|\.\.\/[^']+)'/g)) {
         const spec = m[1]!;
-        const allowed = spec === '@/reflex/core'          // the one deliberate exception
+        // The deliberate exceptions, BY NAME: pure, stateless engine arithmetic.
+        // configStore and anything wired or stateful stays out — a prefix rule
+        // would let it in the day someone adds a file next to core.ts.
+        const allowed = PURE_ENGINE.has(spec)
           || spec.startsWith('@/types/');                 // ambient types only
         if (!allowed) offenders.push(`${f} → ${spec}`);
       }

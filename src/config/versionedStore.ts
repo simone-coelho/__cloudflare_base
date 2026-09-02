@@ -47,6 +47,8 @@ export const INDEX_LIMIT = 50;
  */
 export const RESERVED_PREFIXES = [
   'reflex:config:', 'learn:config:', 'lift:', 'prior:', 'policy:',
+  // CW4 (plan 21, the seam): the content catalog and per-page slot strategies.
+  'content:config:', 'slots:config:',
 ] as const;
 
 export type Scope = string;

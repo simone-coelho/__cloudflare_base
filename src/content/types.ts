@@ -1,0 +1,123 @@
+// src/content/types.ts
+// The product content decision service — the shapes. Doc 22 §3.1 (the decision
+// record) and §7 of the content affinity engine design (the delivery contract),
+// as TypeScript. The seam with Phase 0 is DecisionRecord: CW4 emits it, CW19
+// persists it, and neither side changes it without a row in plan 21 first.
+
+import type { ContentPieceLike, ContentDecision, SlotCandidate } from '@/reflex/contentCompose';
+
+/** A registered piece of the customer's content: their id, our id, its tags. */
+export interface ContentPiece extends ContentPieceLike {
+  lifecycle: { status: 'live' | 'draft' | 'expired' };
+}
+
+/** The `content` document kind: the catalog for a scope. */
+export interface ContentCatalog {
+  version?: string;
+  pieces: ContentPiece[];
+}
+
+/**
+ * One slot's strategy — Mandeep's word: a combination of dimensions and weights
+ * applied to a slot. `take` is how many pieces it holds; `pinnedPieceId` makes it
+ * non-personalizable (the merchandiser's piece, ranking never runs).
+ */
+export interface SlotStrategy {
+  slot: string;
+  take: number;
+  weights: Record<string, number>;
+  pinnedPieceId?: string;
+}
+
+/** The `slots` document kind: per page, the slots in page order. */
+export interface SlotCatalog {
+  version?: string;
+  pages: Record<string, SlotStrategy[]>;
+}
+
+export type Arm = 'personalized' | 'default' | 'no_learning';
+
+/** Doc 22 §10. Assignment is a hash, so it is sticky by construction. */
+export interface HoldoutConfig {
+  /** Fraction of visitors in the holdout, 0..1. */
+  share: number;
+  /** Rotated to reassign. Empty means "use the brand". */
+  salt: string;
+  /** The holdout arms; the share is split evenly across them. */
+  arms: Array<'default' | 'no_learning'>;
+}
+
+/**
+ * The `learn` document kind. Opened here with the holdout section only, because
+ * assignment must exist before the first decision is recorded (doc 22 §10).
+ * Phase 1 extends it in place with γ, exploration and autonomy per slot.
+ */
+export interface LearnConfig {
+  version?: string;
+  holdout: HoldoutConfig;
+}
+
+export type Authority = 'engine' | 'pin' | 'default';
+
+/** Doc 22 §5.4. Components not yet available are recorded as unknown, not guessed. */
+export interface Cell {
+  channel: string;
+  visit_bucket: '1' | '2-3' | '4+' | 'unknown';
+  region: string | null;
+  /** The leading interest above its entry threshold, as `dim:value`, or null. */
+  affinity: string | null;
+}
+
+/** Doc 22 §3.1 / §12.1: the four integers that identify what produced a decision. */
+export interface DecisionVersions {
+  config: number;
+  lift: number;
+  prior: number;
+  policy: number;
+}
+
+/** Doc 22 §3.1, one per served slot position. Emitted by CW4, persisted by CW19. */
+export interface DecisionRecord {
+  decision_id: string;
+  tenant: string;
+  brand: string;
+  visitor_id: string;
+  session_id: string | null;
+  ts: number;
+  page: string;
+  slot: string;
+  position: number;
+  item_id: string;
+  customer_item_id: string;
+  candidates: SlotCandidate[];
+  cell: Cell;
+  arm: Arm;
+  explored: false;
+  authority: Authority;
+  versions: DecisionVersions;
+  /** The human-readable label of the configuration revision (doc 22 §12.1). */
+  config_label: string;
+  explain: {
+    drivers: ContentDecision['explain']['drivers'];
+    note?: string;
+    score_base: number;
+    /** No lift snapshot is in force before Phase 1; recorded as null, never as 1. */
+    lift: null;
+  };
+}
+
+/** What the route returns: the contract the front end paints, and the records the ledger keeps. */
+export interface ContentDecisionSet {
+  tenant: string;
+  brand: string;
+  page: string;
+  visitor_id: string;
+  session_id: string | null;
+  ts: number;
+  arm: Arm;
+  cell: Cell;
+  versions: DecisionVersions;
+  config_label: string;
+  decisions: ContentDecision[];
+  records: DecisionRecord[];
+}

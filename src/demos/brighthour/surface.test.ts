@@ -158,6 +158,20 @@ function memStore(initial: AudienceDef[] = []) {
       const d = map.get(key);
       if (d) map.set(key, { ...d, status: 'archived' });
     },
+    async rename(key, name, description) {
+      const d = map.get(key);
+      if (!d) return null;
+      const next = { ...d, name, ...(description === undefined ? {} : { description }) };
+      map.set(key, next);
+      return next;
+    },
+    async setPinned(key, pinned) {
+      const d = map.get(key);
+      if (!d) return null;
+      const next = { ...d, pinned };
+      map.set(key, next);
+      return next;
+    },
   };
   return { store, map };
 }
