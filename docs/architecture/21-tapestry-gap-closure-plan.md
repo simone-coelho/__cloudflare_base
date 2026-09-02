@@ -66,12 +66,12 @@ runs independently of the other three after the first item.
 |---|---|---|---|
 | ✅ Get the test suite executing | — | 0.1 | **Done 2026-09-02.** 24 files, 477 cases, ~9s. Not a missing dependency: the declared package is Miniflare v2 tooling that never installed against wrangler 4, and vitest was also collecting `.claude/worktrees/` |
 | ✅ KV-versioned config store + read/write API | CW0 | 1.5 | **Done 2026-09-02.** Store, validation, versioning, audit, rollback, `/config` API, wired into every decision path via `registry.resolveReflexConfig`. Unblocked: CW5, CW9, CW11, T2, T7, M5, M6 |
-| Tuning surface a business user can operate | CW9 | 2 | **Next.** The store is in place and the API is its contract; this is the UI on top. The §3.2 acceptance definition says *weights live-tunable by your team*, and an authenticated HTTP call is not that |
-| Decision + explain persistence at every grain | CW11 | 2.5 | Product decisions persist for the Meridian demo only; content and section decisions are not persisted at all |
+| ✅ Tuning surface a business user can operate | CW9 | 2 | **Done 2026-09-02.** `/tuning.html`, linked from the operator console. Every symbol named in plain words, every number shown as its consequence, actions grouped by behaviour rather than event name, validation delegated to the same validator the write path runs. Row 1 closes |
+| Decision + explain persistence at every grain | CW11 | 2.5 | **Next in Lane A.** The dropped-`sections` defect is fixed, so all three grains now persist — but only demo-scoped and unauthenticated. What remains is the customer-grain, authenticated surface |
 | Season / promotion / margin as real weighted terms | — | 0.5 | §1.5 itemises them in the explain record; they do not exist as terms |
 | Rename / pin / prune endpoints | — | 0.5 | §1.2 promises the verbs; generation and pin-survival are real, the endpoints are not |
 
-**Both landed 2026-09-02.** The harness gated the evidentiary standard for everything else, and CW0 was the
+**Lane A is three items down as of 2026-09-02** (harness, CW0, CW9), plus the live defect under row 5. The harness gated the evidentiary standard for everything else, and CW0 was the
 single highest-leverage item in the programme. Lane A continues at CW9; Lanes B, C and D are unblocked and
 unstarted.
 

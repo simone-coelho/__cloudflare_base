@@ -29,11 +29,11 @@ Ranked by exposure: how quickly a customer could discover the gap, and how much 
 
 | # | Clause, as written to the customer | Status today | What has to exist | Owner | By |
 |---|---|---|---|---|---|
-| 1 | **1.4** "weights, decay horizons and thresholds are versioned configuration, **effective immediately with no deployment**" | **HALF CLOSED 2026-09-02 (CW0).** Store, validation, versioning, audit index, rollback and the `/config` read/write API are built, tested (39 cases) and wired into every decision path with an Env via `registry.resolveReflexConfig`. A write re-stamps `config.version` with its revision so explain records stay honest across a tune. **What remains is the surface a business user operates** — today tuning requires an authenticated HTTP call | The tuning UI (CW9), on top of what now exists | | Before acceptance — the acceptance bar depends on the UI half |
+| 1 | ~~**1.4** "weights, decay horizons and thresholds are versioned configuration, **effective immediately with no deployment**"~~ | ✅ **CLOSED 2026-09-02 (CW0 + CW9).** Store, validation, versioning, audit index and rollback behind `/config`, read per decision via `registry.resolveReflexConfig`, plus the surface a merchandiser operates at `/tuning.html` (linked from the operator console). A write re-stamps `config.version` with its revision so explain records stay honest across a tune. Every control names its symbol in plain words and shows the consequence: "interest halves about every 41.6 seconds". | Nothing. 39 store tests; UI verified cold at 1440×800 from screenshots per the standing acceptance rule | | ✅ Done |
 | 2 | **1.12** Snowflake outbound event-level share; historical ingest via CSV/S3/REST; **identity stitching** across anonymous and recognised sessions | No implementing code for any of the three | Scheduled outbound export; an ingest path with a documented key; identity resolution that survives a cleared cookie | | Sequence against the pilot's analysis needs |
 | 3 | **1.7** multi-brand provisioning with **hard data isolation** | No tenancy: shared bindings, no brand column on decision tables | Per-brand isolation at the binding and schema level, provable in a test | | Before the second brand, not after |
 | 4 | **1.8** data science surfaces: explain export, **decision/outcome egress**, **priors import**, **debug endpoints** | Export exists demo-scoped and unauthenticated; egress, priors import and debug endpoints absent | Authenticated export at customer grain; a priors ingest; a documented debug surface | | With the DS working sessions |
-| 5 | **1.6** explain records **persisted and exportable** | Records are produced and correct; persistence and export exist only inside demos, and **content and page-order decisions are not persisted at all** | Persistence for every decision grain — product, content, section — behind auth | | With the decision service |
+| 5 | **1.6** explain records **persisted and exportable** | **PARTIAL.** The live defect under this row is FIXED 2026-09-02: `POST /decisions` dropped `body.sections`, so page-ordering receipts never reached D1 even though the client always sent them. Product, content and section receipts now persist in one batch. Persistence and export remain demo-scoped and unauthenticated | Authenticated export at customer grain, on the Tapestry-facing engine rather than the demo | | With the decision service |
 | 6 | **1.5** season, promotion and margin as **tunable multipliers itemised in the explain record** | Gates and pins are real and explain-visible; multipliers do not exist as a term | The three multipliers as first-class weighted terms, each itemised | | With the tuning surface |
 | 7 | **1.2** the human verbs: **rename, pin, prune** | Generation, diff-regeneration and pin-survival are real; no API sets a pin, and there is no rename or prune endpoint | Operator routes for rename/pin/prune, with the pin field in the publish schema | | With the operator surface |
 | 8 | **1.3** content registered via **CMS/DAM API or JSON/CSV export**, with lifecycle windows | Schema and validation are real; the catalog is a bundled file; no ingest route; no render URL or publish/expire window on the record | An ingest endpoint and the two missing fields | | W2, already scheduled |
@@ -42,11 +42,13 @@ Ranked by exposure: how quickly a customer could discover the gap, and how much 
 | 11 | ~~**"tested"** — the word covering all twelve~~ | ✅ **CLOSED 2026-09-02.** `npm test` runs 24 files / 477 cases in ~9s. The declared `vitest-environment-miniflare` was Miniflare v2 tooling, never installable against the wrangler 4 line this repo pins; nothing under test needs the Workers runtime, so the environment is `node`. Second cause: with no `exclude`, vitest collected `.claude/worktrees/` and reported 189 files / 3,701 cases with 20 failures from abandoned branches | CI wiring remains (`npm run ci` exists; no pipeline runs it) | | ✅ Done |
 | 12 | **No holdout mechanism exists** | Measurement design is written into the customer obligations; nothing implements it | A holdout assignment and a way to report against it | | Before launch — traffic that ran without one cannot be re-run |
 
-### A live defect, found in the same audit
+### ~~A live defect, found in the same audit~~ — FIXED 2026-09-02
 
-`src/demos/meridian/routes.ts` builds the capture input **without `sections`**, so the page-ordering
-receipts the client posts are silently dropped and never persisted. It sits directly under clauses 5 and
-the Experience milestone. Fix it as a defect, not as a feature.
+`src/demos/meridian/routes.ts` built the capture input **without `sections`**, so the page-ordering
+receipts the client posts (meridian.js:3093) were silently dropped and never persisted; the same guard
+rejected a sections-only post with a 400. `capture()` and `captureLayout()` were already correct, which is
+why this read as a missing feature and was actually a dropped field. Normalization now lives in
+`receipts.captureInputFrom()` so it is assertable, with 9 tests.
 
 ---
 
