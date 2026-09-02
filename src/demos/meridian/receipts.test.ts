@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { capture, captureInputFrom, rowsForLayout, MRD_DECISION_COLUMNS } from './receipts';
+import type { SectionDecision, SectionStrategy } from './types';
 
 class FakeD1 {
   batched: unknown[][] = [];
@@ -20,15 +21,21 @@ class FakeD1 {
   }
 }
 
-const section = (name: string, rank: number, strategy = 'ranked') => ({
-  section: name, rank, strategy, score: 0.42,
-  explain: { drivers: [{ dim: 'line', value: 'drover', a: 0.7 }], confidence: 0.7, thetaOut: 0.45, configVersion: 'v1' },
+const section = (name: string, rank: number, strategy: SectionStrategy = 'affinity'): SectionDecision => ({
+  section: name, rank, templateRank: rank, strategy, score: 0.42,
+  explain: {
+    drivers: [{ dim: 'line', value: 'drover', a: 0.7, weight: 1 }],
+    lead: { shape: 'line', dim: 'line', value: 'drover' },
+    confidence: 0.7, thetaOut: 0.45,
+    movedBecause: `line-drover 0.70 >= thetaOut 0.45`,
+    configVersion: 'v1',
+  },
 });
 const decision = (slot: string, order: number) => ({
-  slot, order, itemId: `item-${order}`, strategy: 'ranked',
-  explain: { candidates: 12, drivers: [{ dim: 'line', value: 'drover', a: 0.7 }], configVersion: 'v1' },
+  slot, order, itemId: `item-${order}`, strategy: 'affinity',
+  explain: { candidates: 12, drivers: [{ dim: 'line', value: 'drover', a: 0.7, weight: 1 }], configVersion: 'v1' },
   rankScore: 0.5,
-});
+} as never);
 
 describe('captureInputFrom', () => {
   it('carries sections through — the field the route used to drop', () => {
