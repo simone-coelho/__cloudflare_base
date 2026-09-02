@@ -20,6 +20,7 @@ import { optimizelyRoutes } from '@/routes/optimizely';
 import { cdpRoutes } from '@/routes/cdp';
 import { operatorRoutes } from '@/routes/operator';
 import { configRoutes } from '@/routes/config';
+import { contentRoutes } from '@/routes/content';
 import realtimeRoutes from '@/routes/realtime';
 import { aiRoutes } from '@/routes/ai';
 import { aiSceneRoutes } from '@/routes/aiScene';
@@ -84,6 +85,9 @@ app.route('/operator', operatorRoutes);
 // CW0 — versioned reflex config (scope appendix §1.4). Reads open, writes
 // authenticated and fail closed; the tuning UI is a client of these routes.
 app.route('/config', configRoutes);
+// CW2 — the content catalog, slot strategies and learning settings: reads open,
+// writes authenticated, every write validated, versioned and attributed.
+app.route('/content', contentRoutes);
 app.route('/realtime', realtimeRoutes);
 app.route('/meridian/api', meridianRoutes);
 // CW4 — the content decision surface (scope appendix §2.3). Reads only; the

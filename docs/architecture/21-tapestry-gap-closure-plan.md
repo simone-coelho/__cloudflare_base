@@ -84,7 +84,7 @@ called from the content ranker, because that file is the other session's live CW
 | Item | CW | Days | Note |
 |---|---|---|---|
 | ◐ Multi-tenancy across KV / D1 / DO / queues / R2 | CW1 | 5 | **Foundation landed 2026-09-02**: tenant identity, key spacing, `TenantKV`, 17 isolation tests using pairs that cannot pass by accident. Remaining: the KV call sites (dozens, most using local key variables), D1 tenant columns, and DO naming. §1.7 claims hard data isolation on signature |
-| Content catalog store + import adapter | CW2 | 2.5 | §1.3's ingest endpoint; the catalog is a bundled file today |
+| Content catalog store + import adapter | CW2 | ✅ 2026-09-02 | `/content/{catalog,slots,learn}`: reads open, writes JWT, validated, versioned, rolled forward, same store as config. Import adapter takes a JSON or CSV export (replace or merge) and pulls a JSON URL as the CMS/DAM seam. Pieces carry the render URL and the publish/expire window §1.3 names, and the window gates eligibility at decision time. 15 tests. Live: the demo catalog imported through the seam into a scope, and the snapshot returned nine real decisions |
 | Server-side content ranker + page assembler | CW4 | ✅ 2026-09-02 | `src/content/` decides at the edge and returns the §7 contract plus §3.1 records. The composer moved into the engine (`src/reflex/contentCompose.ts`); Meridian re-exports it. 23 tests. Live at `GET /v1/:tenant/decisions/snapshot` on the dev server, serving compiled defaults until a catalog document is stored for the scope (CW2) |
 | Snapshot endpoint for first paint | CW4 | ✅ | The route above; `Cache-Control: no-store`, reads only, 400 on a bad tenant or missing visitor |
 | SDK extraction, one package two modules | CW8 | ✅ 2026-09-02 | `src/sdk/`: shared core (identity, entry signals, socket, fetch, beacon), emit (explicit API, declarative `data-op-*`, dataLayer adapter with GA4 defaults, automatic impressions and dwell), listen (snapshot hydration with a graceful-absence deadline, per-slot subscriptions, `content_decisions` frames). Built to `public/sdk/` as script and module. 22 tests plus a contract test that parses every SDK envelope through the server's own action schema. Ran end to end in Node against the dev server. **Open by decision:** the demo storefront still carries its own copy of this transport; cutting it over is a rehearsal-gated change |
@@ -208,6 +208,33 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
   one. The config routes stay fail-closed regardless of mode, as CW0 built them.
 - **Production is still name-only** and `deploy.sh` still refuses it. Declaring it is the same work as
   staging, gated on ledger B5 (production or lower environment).
+
+---
+
+## The CW2 seam (2026-09-02)
+
+- **Three documents, one store, one line.** The catalog, the per-page slot strategies and the learning
+  settings are written through `/content/:kind` exactly as the reflex config is written through
+  `/config`: reads open, writes fail closed on a JWT regardless of `AUTH_MODE`, every write validated as
+  a whole, versioned, attributed, and rolled forward. The tuning surface and the learning console
+  (CW22) are clients of these routes, never a second path into KV.
+- **The import adapter reshapes, the validator decides.** Any export shape the adapter recognises
+  (the demo catalog's, a CMS's, the CSV columns) becomes a candidate piece; nothing reaches the store
+  that `validateContentCatalog` would reject. A missing customer id falls back to the piece id on
+  purpose; a missing type, title or slot list cannot.
+- **The CMS/DAM seam is a URL the worker pulls**, http(s) only. Which URLs a tenant may name is a
+  policy for CW1 to bind to the tenant, like the SDK keys.
+- **The window is an eligibility gate.** Outside its publish window a live piece does not exist for the
+  decision, however well it would have scored. That is the §1.5 order, gates before scoring, applied to
+  lifecycle.
+- **A caveat the smoke test found, worth knowing before the acceptance run.** In the default
+  session-host mode a shopper's state rides the session cookie, so a decision request must carry it. A
+  browser does and the SDK does (`credentials: include`); a bare curl does not and sees a cold
+  shopper. The Durable Object host (`REFLEX_HOST = do`) keys state on the visitor id and is cookie-free.
+  The staging definition should pick one deliberately.
+- **`scripts/import-content.mjs`** is the manual adapter for the demo catalog: it pulls Meridian's
+  eighteen pieces through the seam into a scope and writes a slot document whose names and weights match
+  the catalog's vocabulary, so the full chain, SDK to decision, can be shown on the dev server today.
 
 ---
 

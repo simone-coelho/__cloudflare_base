@@ -46,6 +46,22 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     else status = p.lifecycle.status;
   }
   if (p.art !== undefined && p.art !== null && typeof p.art !== 'string') errors.push(`${at}.art: string or null`);
+  if (p.renderUrl !== undefined && !(isStr(p.renderUrl) && /^(https?:\/\/|\/)/i.test(p.renderUrl))) errors.push(`${at}.renderUrl: http(s) URL or site-relative path`);
+  if (p.excerpt !== undefined && typeof p.excerpt !== 'string') errors.push(`${at}.excerpt: string when present`);
+  let window: { from?: string; to?: string } | undefined;
+  if (p.window !== undefined) {
+    if (!isRecord(p.window)) errors.push(`${at}.window: object with from and/or to`);
+    else {
+      window = {};
+      for (const k of ['from', 'to'] as const) {
+        const v = p.window[k];
+        if (v === undefined) continue;
+        if (!isStr(v) || !Number.isFinite(Date.parse(v))) errors.push(`${at}.window.${k}: ISO 8601 date-time`);
+        else window[k] = v;
+      }
+      if (window.from && window.to && Date.parse(window.from) >= Date.parse(window.to)) errors.push(`${at}.window: from must precede to`);
+    }
+  }
   if (!isStr(id) || !isStr(cid) || !isStr(type) || !isStr(title) || !slotTypes) return null;
   return {
     id, customerContentId: cid, type, title, tags, slotTypes,
@@ -53,6 +69,9 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     ...(isStr(p.subtitle) ? { subtitle: p.subtitle } : {}),
     ...(p.art === undefined ? {} : { art: p.art as string | null }),
     ...(isStr(p.runtime) ? { runtime: p.runtime } : {}),
+    ...(isStr(p.renderUrl) ? { renderUrl: p.renderUrl } : {}),
+    ...(isStr(p.excerpt) ? { excerpt: p.excerpt } : {}),
+    ...(window && (window.from || window.to) ? { window } : {}),
   };
 }
 

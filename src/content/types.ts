@@ -9,6 +9,11 @@ import type { ContentPieceLike, ContentDecision, SlotCandidate } from '@/reflex/
 /** A registered piece of the customer's content: their id, our id, its tags. */
 export interface ContentPiece extends ContentPieceLike {
   lifecycle: { status: 'live' | 'draft' | 'expired' };
+  /** Where the customer's front end fetches the asset to paint. Theirs; echoed, never rewritten. */
+  renderUrl?: string;
+  /** Publish and expire, ISO 8601. Outside the window a live piece is not eligible. */
+  window?: { from?: string; to?: string };
+  excerpt?: string;
 }
 
 /** The `content` document kind: the catalog for a scope. */

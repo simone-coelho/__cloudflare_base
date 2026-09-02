@@ -9,6 +9,7 @@ import { composeContentDetailed, type ContentSlotSpec, type AffinityViewLike } f
 import type {
   Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, SlotStrategy,
 } from './types';
+import { isLiveAt } from './lifecycle';
 
 export interface DecideInput {
   tenant: string;
@@ -42,7 +43,10 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
     slot: s.slot, take: s.take, weights: s.weights,
     ...(s.pinnedPieceId ? { pinnedPieceId: s.pinnedPieceId } : {}),
   }));
-  const { decisions, candidates } = composeContentDetailed(i.pieces, affinity, specs, i.candidateLimit ?? 10);
+  // Eligibility before scoring: outside its publish window a piece does not exist
+  // for this decision, however well it would have scored.
+  const eligible = i.pieces.filter((p) => isLiveAt(p, i.nowMs));
+  const { decisions, candidates } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10);
 
   const positionIn = new Map<string, number>();
   const records: DecisionRecord[] = decisions.map((d) => {
