@@ -31,9 +31,12 @@ through which a data science team can watch it, steer it, and replace parts of i
    earlier and cached in the isolate. Learning runs beside the request path, never on it.
 2. **Every learned number is a count.** A lift is a ratio of two smoothed rates, each a ratio of two
    decayed counts. The explain record shows the counts. Anyone with the ledger recomputes the lift.
-3. **Everything is versioned and reversible.** Lift tables are immutable snapshots with version IDs.
-   Every decision records the config version, lift version, prior version, attribution policy version
-   and holdout arm it was made under. Rollback is pointing at a previous version.
+3. **Everything is versioned and reversible.** Every configuration group lives in one versioned document
+   store as its own document kind, and every version carries a human-readable label and a monotonic
+   revision number. Lift tables are immutable snapshots with version IDs. Every decision records the
+   config revision, lift version, prior version, attribution policy version and holdout arm it was made
+   under. A rollback is a new revision whose content equals an earlier one; no counter ever rewinds, so
+   the audit trail keeps what was undone.
 4. **Nothing changes until someone says so.** Learning runs first in shadow: computed, displayed, and
    weighted at zero. A single dial per slot raises its influence from zero to full.
 5. **Three kinds of state never mix.** Shopper state (personal, in the shopper's own object),
@@ -91,7 +94,7 @@ One per served decision. Written off the response path.
 | `arm` | `personalized`, `default`, or `no_learning` (section 10) |
 | `explored` | Whether this placement was an exploration pick (section 7) |
 | `authority` | `engine`, `pin`, `gate`, `default` |
-| `versions` | `config_v`, `lift_v`, `prior_v`, `policy_v` |
+| `versions` | `config_v`, `lift_v`, `prior_v`, `policy_v` as integers, plus the human-readable label of the configuration revision |
 | `explain` | Drivers, scores, the lift term with its counts |
 
 ### 3.2 Outcome records
@@ -377,7 +380,9 @@ lookup they computed offline, and a KV table has no latency cost at all.
 ## 10 · Holdout and measurement
 
 Without a holdout there is no incrementality number, and traffic that ran without one cannot be re-run.
-So the holdout is part of the design rather than a later study.
+So the holdout is part of the design rather than a later study, and **assignment exists before the first
+decision is recorded**, not merely before the first report. It is the one setting in the catalog that cannot
+be applied retroactively: traffic served without an arm can never be given one afterwards.
 
 | Setting | Meaning | Default |
 |---|---|---|
@@ -416,7 +421,9 @@ reversible, and pinnable. Here is what that means precisely.
 | `min_n` | Observations required before a cycle may act | 500 |
 
 Every applied or proposed change is a configuration version with the evidence attached, and a rollback is
-a version pointer. The recommendation is to launch every slot in `assisted` and let the team promote slots
+a new revision whose content equals an earlier one. The revision counter never rewinds, so the audit trail
+records that a reversal happened and what it undid; a job that rewound a counter would erase exactly the
+evidence a person needs to promote or demote the slot. The recommendation is to launch every slot in `assisted` and let the team promote slots
 to `autonomous` once they have watched the proposals for a few cycles. That is the order in which trust is
 earned, and it is the condition Tapestry set.
 
@@ -436,6 +443,7 @@ Every field below is present on every decision. Example, for the worked case in 
       "explored": false,
       "authority": "engine",
       "versions": { "config": 41, "lift": 1187, "prior": 3, "policy": 2 },
+      "config_label": "home-v3+r41",
       "drivers": [
         { "term": "affinity", "dimension": "occasion", "value": "evening", "a": 0.71, "w": 0.35, "contribution": 0.249 },
         { "term": "affinity", "dimension": "line", "value": "drover", "a": 0.58, "w": 0.30, "contribution": 0.174 },
@@ -485,8 +493,9 @@ The console's grids and the policy comparisons are downloadable as CSV.
 
 ## 13 · The configuration catalog
 
-Everything a person can change, who typically changes it, and the default. Every entry is versioned with
-change history and applies without a deployment.
+Everything a person can change, who typically changes it, and the default. Every entry lives in one
+versioned document store as part of a document kind, with change history, and applies without a
+deployment.
 
 | Group | Parameter | Owner | Default |
 |---|---|---|---|

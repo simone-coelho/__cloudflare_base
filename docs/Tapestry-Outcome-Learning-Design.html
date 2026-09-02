@@ -325,7 +325,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
   <ol>
     <li><strong>The decision path only reads.</strong> No learning happens while a decision is being made. The request path performs the same multiplication it performs today, with one additional term whose value was computed earlier and cached in the isolate. Learning runs beside the request path, never on it.</li>
     <li><strong>Every learned number is a count.</strong> A lift is a ratio of two smoothed rates, each a ratio of two decayed counts. The explain record shows the counts. Anyone with the ledger recomputes the lift.</li>
-    <li><strong>Everything is versioned and reversible.</strong> Lift tables are immutable snapshots with version IDs. Every decision records the config version, lift version, prior version, attribution policy version and holdout arm it was made under. Rollback is pointing at a previous version.</li>
+    <li><strong>Everything is versioned and reversible.</strong> Every configuration group lives in one versioned document store as its own document kind, and every version carries a human-readable label and a monotonic revision number. Lift tables are immutable snapshots with version IDs. Every decision records the config revision, lift version, prior version, attribution policy version and holdout arm it was made under. A rollback is a new revision whose content equals an earlier one; no counter ever rewinds, so the audit trail keeps what was undone.</li>
     <li><strong>Nothing changes until someone says so.</strong> Learning runs first in shadow: computed, displayed, and weighted at zero. A single dial per slot raises its influence from zero to full.</li>
     <li><strong>Three kinds of state never mix.</strong> Shopper state (personal, in the shopper’s own object), population statistics (aggregates, no identifiers), and configuration (versioned, in the registry).</li>
   </ol>
@@ -359,7 +359,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
       <tr><td class="m">arm</td><td><code>personalized</code>, <code>default</code>, or <code>no_learning</code> (section 10)</td></tr>
       <tr><td class="m">explored</td><td>Whether this placement was an exploration pick (section 7)</td></tr>
       <tr><td class="m">authority</td><td><code>engine</code>, <code>pin</code>, <code>gate</code>, <code>default</code></td></tr>
-      <tr><td class="m">versions</td><td><code>config_v</code>, <code>lift_v</code>, <code>prior_v</code>, <code>policy_v</code></td></tr>
+      <tr><td class="m">versions</td><td><code>config_v</code>, <code>lift_v</code>, <code>prior_v</code>, <code>policy_v</code> as integers, plus the human-readable label of the configuration revision</td></tr>
       <tr><td class="m">explain</td><td>Drivers, scores, the lift term with its counts</td></tr>
     </tbody>
   </table></div>
@@ -588,7 +588,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
 <!-- ================================================================ 10 -->
 <section id="s10">
   <h2><span class="n">10</span>Holdout and measurement</h2>
-  <p>Without a holdout there is no incrementality number, and traffic that ran without one cannot be re-run. So the holdout is part of the design rather than a later study.</p>
+  <p>Without a holdout there is no incrementality number, and traffic that ran without one cannot be re-run. So the holdout is part of the design rather than a later study, and <strong>assignment exists before the first decision is recorded</strong>, not merely before the first report. It is the one setting in the catalog that cannot be applied retroactively: traffic served without an arm can never be given one afterwards.</p>
   <div class="tw"><table>
     <thead><tr><th>Setting</th><th>Meaning</th><th>Default</th></tr></thead>
     <tbody>
@@ -624,7 +624,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
       <tr><td class="m">min_n</td><td>Observations required before a cycle may act</td><td class="m">500</td></tr>
     </tbody>
   </table></div>
-  <p>Every applied or proposed change is a configuration version with the evidence attached, and a rollback is a version pointer. The recommendation is to launch every slot in <code>assisted</code> and let the team promote slots to <code>autonomous</code> once they have watched the proposals for a few cycles. That is the order in which trust is earned, and it is the condition Tapestry set.</p>
+  <p>Every applied or proposed change is a configuration version with the evidence attached, and a rollback is a new revision whose content equals an earlier one. The revision counter never rewinds, so the audit trail records that a reversal happened and what it undid; a job that rewound a counter would erase exactly the evidence a person needs to promote or demote the slot. The recommendation is to launch every slot in <code>assisted</code> and let the team promote slots to <code>autonomous</code> once they have watched the proposals for a few cycles. That is the order in which trust is earned, and it is the condition Tapestry set.</p>
 </section>
 
 <!-- ================================================================ 12 -->
@@ -641,6 +641,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
   <span class="k">"explored"</span>: false,
   <span class="k">"authority"</span>: "engine",
   <span class="k">"versions"</span>: { "config": 41, "lift": 1187, "prior": 3, "policy": 2 },
+  <span class="k">"config_label"</span>: "home-v3+r41",
   <span class="k">"drivers"</span>: [
     { "term": "affinity", "dimension": "occasion", "value": "evening", "a": 0.71, "w": 0.35, "contribution": 0.249 },
     { "term": "affinity", "dimension": "line", "value": "drover", "a": 0.58, "w": 0.30, "contribution": 0.174 },
@@ -679,7 +680,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
 <!-- ================================================================ 13 -->
 <section id="s13">
   <h2><span class="n">13</span>The configuration catalog</h2>
-  <p>Everything a person can change, who typically changes it, and the default. Every entry is versioned with change history and applies without a deployment.</p>
+  <p>Everything a person can change, who typically changes it, and the default. Every entry lives in one versioned document store as part of a document kind, with change history, and applies without a deployment.</p>
   <div class="tw"><table>
     <thead><tr><th>Group</th><th>Parameter</th><th>Owner</th><th>Default</th></tr></thead>
     <tbody>
