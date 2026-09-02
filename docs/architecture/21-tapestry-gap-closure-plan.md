@@ -83,7 +83,7 @@ called from the content ranker, because that file is the other session's live CW
 
 | Item | CW | Days | Note |
 |---|---|---|---|
-| Multi-tenancy across KV / D1 / DO / queues / R2 | CW1 | 5 | §1.7 claims hard data isolation on signature. Nine `tenant` hits in the repo are all comments |
+| ◐ Multi-tenancy across KV / D1 / DO / queues / R2 | CW1 | 5 | **Foundation landed 2026-09-02**: tenant identity, key spacing, `TenantKV`, 17 isolation tests using pairs that cannot pass by accident. Remaining: the KV call sites (dozens, most using local key variables), D1 tenant columns, and DO naming. §1.7 claims hard data isolation on signature |
 | Content catalog store + import adapter | CW2 | 2.5 | §1.3's ingest endpoint; the catalog is a bundled file today |
 | Server-side content ranker + page assembler | CW4 | ✅ 2026-09-02 | `src/content/` decides at the edge and returns the §7 contract plus §3.1 records. The composer moved into the engine (`src/reflex/contentCompose.ts`); Meridian re-exports it. 23 tests. Live at `GET /v1/:tenant/decisions/snapshot` on the dev server, serving compiled defaults until a catalog document is stored for the scope (CW2) |
 | Snapshot endpoint for first paint | CW4 | ✅ | The route above; `Cache-Control: no-store`, reads only, 400 on a bad tenant or missing visitor |
@@ -272,8 +272,10 @@ Recording these now, because the governance rule says a clause is a row before i
 
 Everything above is executable except for two things only Simone can settle.
 
-1. **Which brand is the first tenant.** CW1 is five days and the first place the answer becomes structural.
-   Our documents say Kate Spade; the account team's framing says Coach; Nitin writes coach.com.
+1. ~~Which brand is the first tenant.~~ **Answered 2026-09-02: Coach.** The foundation is built against it
+   (`src/tenancy/tenant.ts`), and Coach being the existing key space is what lets the default tenant stay
+   unprefixed so nothing already stored is orphaned. Two customer-facing documents still say Kate Spade and
+   need correcting: `Tapestry-Implementation-Plan.md` (lines 11, 40, 99) and Doc 1 §17.
 2. **Approval to start the build.** Ledger 19's standing guardrail says no build phase begins until the
    document set is approved. The document set has now been through v8. That guardrail is currently the only
    thing holding the queue.
