@@ -93,6 +93,36 @@ export function rowsForLayout(input: CaptureLayoutInput): unknown[][] {
   return input.sections.map((s) => layoutRowFor(s, input, input.sections.length));
 }
 
+/**
+ * Normalize an untrusted POST /decisions body into a CaptureInput, or null when
+ * there is nothing to write.
+ *
+ * This exists as its own function because of the bug it fixes. The route used to
+ * build the input inline and never read `body.sections`, so every page-ordering
+ * receipt the client posted — and it has always posted them, meridian.js:3093 —
+ * was silently dropped. The guard also required `decisions` to be an array, so a
+ * sections-only post was rejected outright. Page order is half the Experience
+ * milestone, and its receipts were the half that never reached D1.
+ *
+ * Either list may be empty; both empty is the only failure. Pulling it out of the
+ * handler is what makes that assertable.
+ */
+export function captureInputFrom(body: unknown, vertical: Vertical, now: number): CaptureInput | null {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const visitorId = typeof b.visitorId === 'string' ? b.visitorId.trim() : '';
+  if (visitorId === '') return null;
+
+  const decisions = Array.isArray(b.decisions) ? (b.decisions as MeridianDecision[]) : [];
+  const sections = Array.isArray(b.sections) ? (b.sections as SectionDecision[]) : [];
+  if (decisions.length === 0 && sections.length === 0) return null;
+
+  return {
+    visitorId, vertical, decisions, sections, now,
+    arrivalSurface: typeof b.arrivalSurface === 'string' ? b.arrivalSurface : null,
+    demoRunId: typeof b.demoRunId === 'string' ? b.demoRunId : null,
+  };
+}
+
 export async function capture(db: D1Database, input: CaptureInput): Promise<number> {
   const rows = [
     ...input.decisions.map((d) => rowFor(d, input)),

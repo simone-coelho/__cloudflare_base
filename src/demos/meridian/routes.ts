@@ -22,7 +22,7 @@ import { funnel, parseCohort, defectCohortFor, defectDrilldownFor } from './funn
 import { concierge } from './concierge';
 import { search } from './search';
 import { propose, vocabularyFor, audienceKeyFor } from './opal';
-import { capture, exportRows, MRD_DECISION_COLUMNS } from './receipts';
+import { capture, captureInputFrom, exportRows, MRD_DECISION_COLUMNS } from './receipts';
 import { signalsFor, writeMoment } from './moment';
 import { contentFor } from './content';
 import { scenesFor } from './scenes';
@@ -280,16 +280,17 @@ meridian.get('/opal/vocabulary', (c) => {
  */
 meridian.post('/decisions', async (c) => {
   const body = await c.req.json().catch(() => null as any);
-  if (!body?.visitorId || !Array.isArray(body?.decisions)) {
-    return c.json({ ok: false, error: 'visitorId and decisions required' }, 400);
+  const input = captureInputFrom(body, verticalOf(body?.vertical), Date.now());
+  if (!input) {
+    return c.json({ ok: false, error: 'visitorId and at least one of decisions or sections required' }, 400);
   }
-  const input = {
-    visitorId: String(body.visitorId), vertical: verticalOf(body.vertical),
-    decisions: body.decisions, arrivalSurface: body.arrivalSurface ?? null,
-    demoRunId: body.demoRunId ?? null, now: Date.now(),
-  };
   c.executionCtx.waitUntil(capture(c.env.DB, input).catch(() => undefined));
-  return c.json({ ok: true, queued: input.decisions.length });
+  return c.json({
+    ok: true,
+    queued: input.decisions.length + (input.sections?.length ?? 0),
+    decisions: input.decisions.length,
+    sections: input.sections?.length ?? 0,
+  });
 });
 
 /** The rows. Hand them over; let them compute their own lift. */
