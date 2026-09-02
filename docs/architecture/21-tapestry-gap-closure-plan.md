@@ -68,12 +68,13 @@ runs independently of the other three after the first item.
 | ✅ KV-versioned config store + read/write API | CW0 | 1.5 | **Done 2026-09-02.** Store, validation, versioning, audit, rollback, `/config` API, wired into every decision path via `registry.resolveReflexConfig`. Unblocked: CW5, CW9, CW11, T2, T7, M5, M6 |
 | ✅ Tuning surface a business user can operate | CW9 | 2 | **Done 2026-09-02.** `/tuning.html`, linked from the operator console. Every symbol named in plain words, every number shown as its consequence, actions grouped by behaviour rather than event name, validation delegated to the same validator the write path runs. Row 1 closes |
 | Decision + explain persistence at every grain | → CW19 | — | The dropped-`sections` defect is fixed, so product, content and section receipts all persist. The customer-grain authenticated surface is **not a separate item any more**: Phase 0 in Lane D owns it, because the ledgers it writes are the same ledgers stage two learns from |
-| Season / promotion / margin as real weighted terms | — | 0.5 | §1.5 itemises them in the explain record; they do not exist as terms |
-| Rename / pin / prune endpoints | — | 0.5 | §1.2 promises the verbs; generation and pin-survival are real, the endpoints are not |
+| ◐ Season / promotion / margin as real weighted terms | — | 0.5 | **Built and tested 2026-09-02**, `src/reflex/merchandising.ts`. NOT wired: the scoring path is the parallel session's active CW4 file. One-line integration outstanding, then ledger row 6 closes |
+| ✅ Rename / pin / prune endpoints | — | 0.5 | **Done 2026-09-02.** Three authenticated operator routes; ledger row 7 closed |
 
 **Lane A is three items down as of 2026-09-02** (harness, CW0, CW9), plus the live defect under row 5.
 The harness gated the evidentiary standard for everything else, and CW0 was the single highest-leverage
-item in the programme. What is left in this lane is two half-day items.
+item in the programme. Lane A is now complete except for one line: the merchandising multipliers are built and tested but not yet
+called from the content ranker, because that file is the other session's live CW4 work.
 
 **The next thing to build is not in this lane.** See the sequencing note below.
 
