@@ -63,15 +63,16 @@ runs independently of the other three after the first item.
 
 | Item | CW | Days | Note |
 |---|---|---|---|
-| Get the test suite executing | — | 0.1 | One missing dev dependency. `vitest.config.ts` declares `environment: 'miniflare'` and the package is absent. ~430 test cases across 23 files cannot run |
-| KV-versioned config store + read/write API | CW0 | 1.5 | **The keystone.** Unblocks CW5, CW9, CW11, T2, T7, M5, M6 |
-| Tuning surface a business user can operate | CW9 | 2 | The acceptance definition in §3.2 says *weights live-tunable by your team*. Today `DEFAULT_REFLEX_CONFIG` is a compile-time constant |
+| ✅ Get the test suite executing | — | 0.1 | **Done 2026-09-02.** 24 files, 477 cases, ~9s. Not a missing dependency: the declared package is Miniflare v2 tooling that never installed against wrangler 4, and vitest was also collecting `.claude/worktrees/` |
+| ✅ KV-versioned config store + read/write API | CW0 | 1.5 | **Done 2026-09-02.** Store, validation, versioning, audit, rollback, `/config` API, wired into every decision path via `registry.resolveReflexConfig`. Unblocked: CW5, CW9, CW11, T2, T7, M5, M6 |
+| Tuning surface a business user can operate | CW9 | 2 | **Next.** The store is in place and the API is its contract; this is the UI on top. The §3.2 acceptance definition says *weights live-tunable by your team*, and an authenticated HTTP call is not that |
 | Decision + explain persistence at every grain | CW11 | 2.5 | Product decisions persist for the Meridian demo only; content and section decisions are not persisted at all |
 | Season / promotion / margin as real weighted terms | — | 0.5 | §1.5 itemises them in the explain record; they do not exist as terms |
 | Rename / pin / prune endpoints | — | 0.5 | §1.2 promises the verbs; generation and pin-survival are real, the endpoints are not |
 
-**Start here, today, in this order.** The harness is fifteen minutes and it gates the evidentiary standard
-for everything below it. CW0 is the single highest-leverage item in the entire programme.
+**Both landed 2026-09-02.** The harness gated the evidentiary standard for everything else, and CW0 was the
+single highest-leverage item in the programme. Lane A continues at CW9; Lanes B, C and D are unblocked and
+unstarted.
 
 ### Lane B — The delivery surface
 *Closes: §2.3 API-first delivery, and the Kickoff + 45 integration kit.*
