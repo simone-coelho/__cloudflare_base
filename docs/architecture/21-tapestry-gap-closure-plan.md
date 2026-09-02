@@ -87,7 +87,7 @@ called from the content ranker, because that file is the other session's live CW
 | Content catalog store + import adapter | CW2 | 2.5 | §1.3's ingest endpoint; the catalog is a bundled file today |
 | Server-side content ranker + page assembler | CW4 | ✅ 2026-09-02 | `src/content/` decides at the edge and returns the §7 contract plus §3.1 records. The composer moved into the engine (`src/reflex/contentCompose.ts`); Meridian re-exports it. 23 tests. Live at `GET /v1/:tenant/decisions/snapshot` on the dev server, serving compiled defaults until a catalog document is stored for the scope (CW2) |
 | Snapshot endpoint for first paint | CW4 | ✅ | The route above; `Cache-Control: no-store`, reads only, 400 on a bad tenant or missing visitor |
-| SDK extraction, one package two modules | CW8 | 2.5 | `storefront.js` is one 4,192-line class, unchanged in five weeks |
+| SDK extraction, one package two modules | CW8 | ✅ 2026-09-02 | `src/sdk/`: shared core (identity, entry signals, socket, fetch, beacon), emit (explicit API, declarative `data-op-*`, dataLayer adapter with GA4 defaults, automatic impressions and dwell), listen (snapshot hydration with a graceful-absence deadline, per-slot subscriptions, `content_decisions` frames). Built to `public/sdk/` as script and module. 22 tests plus a contract test that parses every SDK envelope through the server's own action schema. Ran end to end in Node against the dev server. **Open by decision:** the demo storefront still carries its own copy of this transport; cutting it over is a rehearsal-gated change |
 | Staging envs, SDK-key auth, operator auth, CORS allowlist | CW10 | 3 | The literal blocker to "consumable by their lower environments." Both env stanzas are empty; CORS reflects any origin with credentials; operator routes are mounted with no auth |
 
 CW1 is the long pole and it is blocked on one answer: **which brand is the first tenant.** Scoping it wrong
@@ -173,6 +173,24 @@ one object, so that object is specified here first.
 
 Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at the single seam in
 `src/index.ts`.
+
+---
+
+## The CW8 seam (2026-09-02)
+
+- **Identity is shared with the demo by default.** The SDK reads and writes the same `opt_visitor_id`
+  in localStorage and cookie, in the same format, so a visitor the storefront knows is the same visitor
+  to the SDK and to the shopper's own object.
+- **The wire is the server's, not the SDK's.** `src/sdk/wire.ts` is one table from SDK event to the type
+  `POST /realtime/action` accepts today. Content interactions and the conversion event travel as `custom`
+  with the real event named in the payload until CW3 makes them first-class; the contract test in
+  `src/routes/realtime.sdkContract.test.ts` fails the moment the two disagree.
+- **Everything DOM-shaped enters through `Host`.** `browserHost` binds the browser; `memoryHost` runs
+  the same code in Node. That is what makes the tests possible without a browser and what makes a native
+  client a port of one file.
+- **Two follow-ups this seam names.** The storefront cutover (the demo consuming the SDK rather than its
+  own transport copy) is the step that makes "one truth" literal and it needs a Coach rehearsal first.
+  SDK-key enforcement on the server is CW10; the SDK already sends the key.
 
 ---
 

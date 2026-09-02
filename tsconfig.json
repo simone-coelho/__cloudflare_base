@@ -31,5 +31,5 @@
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist", ".wrangler"]
+  "exclude": ["node_modules", "dist", ".wrangler", "src/sdk/host.ts", "src/sdk/browser.ts", "src/sdk/index.ts"]
 }

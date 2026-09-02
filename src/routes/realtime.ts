@@ -49,7 +49,7 @@ realtimeRoutes.get('/ws', async (c) => {
 // Retail event types ('product_view','add_to_cart','wishlist_add') are accepted
 // alongside the original B2B types so the Coach storefront and existing callers
 // share one ingestion path (REAL SEAMS, MOCKED CALLS — see docs/architecture/05-demo-build-spec.md §3).
-const actionEventSchema = z.object({
+export const actionEventSchema = z.object({
   type: z.enum([
     // existing (backward compatible)
     'email_open', 'form_submit', 'page_view', 'button_click', 'custom',
