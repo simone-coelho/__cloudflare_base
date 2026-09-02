@@ -2,6 +2,11 @@ import type { Env } from '@/types/env';
 import type { ReflexState } from '@/reflex/core';
 import { z } from 'zod';
 
+import {
+  classifyEntryChannel, isNewVisit, nextVisitCount,
+  type ChannelSignals, type EntryChannel,
+} from '@/services/visit';
+
 export interface SessionData {
   userId: string;
   anonymousId?: string;
@@ -22,7 +27,24 @@ export interface SessionData {
   metadata: {
     firstSeen: number;
     lastSeen: number;
+    /**
+     * Interactions, NOT visits. It increments on every createOrUpdateSession
+     * call, which is what it has always done; the name is misleading and the
+     * field is kept because it is persisted and read. For "how many times has
+     * this shopper been here", use visitCount.
+     */
     sessionCount: number;
+    /**
+     * Visits, counted on an idle-gap boundary (see @/services/visit). Optional
+     * because records written before this field existed must still parse:
+     * getSession() runs the schema and swallows a failure as null, so a required
+     * field here would silently wipe every live session on deploy.
+     */
+    visitCount?: number;
+    /** When the current visit began. */
+    lastVisitAt?: number;
+    /** How this visit was entered. Classified once per visit, then carried. */
+    entryChannel?: EntryChannel;
     engagementScore: number;
     lastSegmentUpdate: number;
     journeyStage?: 'early' | 'mid' | 'late';
@@ -72,6 +94,18 @@ const sessionDataSchema = z.object({
     firstSeen: z.number(),
     lastSeen: z.number(),
     sessionCount: z.number(),
+    // Optional, deliberately: see the note on the interface above. A required
+    // field would fail .parse() on every record written before this deploy, and
+    // getSession() turns a parse failure into null.
+    visitCount: z.number().optional(),
+    lastVisitAt: z.number().optional(),
+    // An enum, so the parsed type matches the interface, with .catch so an
+    // unrecognised stored value degrades to undefined instead of failing the
+    // parse and taking the whole session with it.
+    entryChannel: z
+      .enum(['direct', 'paid_social', 'paid_search', 'email', 'organic', 'referral'])
+      .optional()
+      .catch(undefined),
     engagementScore: z.number(),
     lastSegmentUpdate: z.number(),
     journeyStage: z.enum(['early', 'mid', 'late']).optional()
@@ -101,13 +135,34 @@ export class SessionManager {
   async createOrUpdateSession(
     sessionId: string,
     userId: string,
-    data: Partial<SessionData>
+    data: Partial<SessionData>,
+    /**
+     * How this request arrived: utm tags and referrer. Only consulted when this
+     * call opens a new visit, because entry is a property of the visit and not
+     * of every event inside it. Optional, so no existing call site changes.
+     */
+    entry?: ChannelSignals,
   ): Promise<SessionData> {
     try {
       // Get existing session data
       const existingSession = await this.getSession(sessionId);
       
       const now = Date.now();
+
+      // THE VISIT BOUNDARY. Read lastSeen from the STORED record, never from the
+      // incoming data: a caller that passes `metadata.lastSeen: Date.now()` would
+      // otherwise close the gap it is being measured against, and every event
+      // would look like a new visit.
+      const priorLastSeen = existingSession?.metadata.lastSeen;
+      const openingNewVisit = isNewVisit(priorLastSeen, now);
+      const visitCount = nextVisitCount(existingSession?.metadata.visitCount, priorLastSeen, now);
+      // A record written before visitCount existed resolves to visit 1. That
+      // under-counts a returning shopper once, which is honest; seeding from
+      // sessionCount would import its wrongness instead.
+      const entryChannel: EntryChannel = openingNewVisit && entry
+        ? classifyEntryChannel(entry)
+        : (existingSession?.metadata.entryChannel ?? (entry ? classifyEntryChannel(entry) : 'direct'));
+
       const sessionData: SessionData = {
         userId,
         anonymousId: data.anonymousId || existingSession?.anonymousId,
@@ -125,6 +180,9 @@ export class SessionManager {
           firstSeen: existingSession?.metadata.firstSeen || now,
           lastSeen: now,
           sessionCount: existingSession ? existingSession.metadata.sessionCount + 1 : 1,
+          visitCount,
+          lastVisitAt: openingNewVisit ? now : (existingSession?.metadata.lastVisitAt ?? now),
+          entryChannel,
           engagementScore: data.metadata?.engagementScore || existingSession?.metadata.engagementScore || 0,
           lastSegmentUpdate: data.segments ? now : existingSession?.metadata.lastSegmentUpdate || now,
           journeyStage: data.metadata?.journeyStage ?? existingSession?.metadata.journeyStage

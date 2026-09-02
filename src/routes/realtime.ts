@@ -64,6 +64,16 @@ const actionEventSchema = z.object({
   // the engine falls back to `source`, and then to the default surface (coach),
   // so every existing client is unaffected.
   surface: z.string().optional(),
+  // How the shopper arrived. Captured once per page load by the client and sent
+  // with every action, because the server cannot know in advance which event
+  // will be the one that opens a new visit. Optional, so every existing client
+  // is unaffected and simply resolves to `direct`.
+  entry: z.object({
+    utmMedium: z.string().optional(),
+    utmSource: z.string().optional(),
+    referrer: z.string().optional(),
+    siteHost: z.string().optional(),
+  }).optional(),
   timestamp: z.number().optional()
 });
 

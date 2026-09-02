@@ -261,6 +261,25 @@ class CoachStorefront {
         }
     }
 
+    /* How this page load arrived: the utm tags on the URL and the referrer.
+       Captured from the CURRENT document rather than remembered, and sent with
+       every action, because the client cannot know which event will be the one
+       that crosses a visit boundary — the server decides that, and it needs the
+       signals in hand when it does. Same-site referrers are passed through and
+       ignored server-side, so internal navigation never relabels a visit. */
+    entrySignals() {
+        if (this._entry) return this._entry;
+        let usp;
+        try { usp = new URLSearchParams(location.search); } catch (e) { usp = null; }
+        this._entry = {
+            utmMedium: (usp && usp.get('utm_medium')) || '',
+            utmSource: (usp && usp.get('utm_source')) || '',
+            referrer: (typeof document !== 'undefined' && document.referrer) || '',
+            siteHost: (typeof location !== 'undefined' && location.hostname) || '',
+        };
+        return this._entry;
+    }
+
     /* POST a shopper action; the response carries the personalization update. */
     async sendAction(type, payload, meta) {
         this.eventCount++;
@@ -278,6 +297,7 @@ class CoachStorefront {
                     sessionId: this.sessionId,
                     data: payload,
                     source: 'coach-storefront',
+                    entry: this.entrySignals(),  // how this arrival happened; the server uses it only on a visit boundary
                     timestamp: Date.now(),
                 }),
             });

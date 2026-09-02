@@ -17,6 +17,7 @@
 // (`new RealtimeSegmentEngine(env)`) keep working while the spec's two-arg form
 // (`new RealtimeSegmentEngine(env, getConnectors(env))`) is also supported.
 
+import { visitBucket, type ChannelSignals } from '@/services/visit';
 import type { Env } from '@/types/env';
 import { SessionManager, type SessionData } from './SessionManager';
 import { FeatureVariableManager, type FeatureVariableResult } from './FeatureVariableManager';
@@ -76,6 +77,13 @@ export interface ActionEvent {
   /** Demo surface this event belongs to. Absent ⇒ resolved from `source`, and
       absent there too ⇒ the default surface (coach). See @/demos/registry. */
   surface?: string;
+  /**
+   * How the shopper arrived: utm tags and referrer, captured once per page load
+   * by the client. Only consulted when an event opens a NEW visit, because entry
+   * is a property of the visit rather than of every event inside it. Absent on
+   * every pre-existing client, which resolves to `direct`.
+   */
+  entry?: ChannelSignals;
 }
 
 export interface UserProfile {
@@ -394,7 +402,7 @@ export class RealtimeSegmentEngine {
             personalizationEnabled: true,
             cookieConsent: true
           }
-        });
+        }, event.entry);
       }
 
       // 2. Apply this event's retail signals to a fresh attribute snapshot.
@@ -497,7 +505,7 @@ export class RealtimeSegmentEngine {
             engagementScore: newEngagementScore,
             journeyStage
           }
-        });
+        }, event.entry);
         return null;
       }
 
@@ -518,7 +526,7 @@ export class RealtimeSegmentEngine {
           lastSegmentUpdate: Date.now(),
           journeyStage
         }
-      });
+      }, event.entry);
 
       const updatedSessionData = await this.sessionManager.getSession(currentSessionId);
       if (!updatedSessionData) {
@@ -636,11 +644,21 @@ export class RealtimeSegmentEngine {
       );
     }
 
+    const visitNumber = sessionData.metadata.visitCount ?? 1;
     const userAttributes = {
       segments: sessionData.segments,
       ...attributes,
       engagement_score: sessionData.metadata.engagementScore,
+      // session_count is the INTERACTION count and always has been. It is kept
+      // because it is persisted and read elsewhere; it is not the visit number
+      // and must never be used as one.
       session_count: sessionData.metadata.sessionCount,
+      // The two dimensions Mandeep named, and levels 1 and 2 of doc 22's pooling
+      // ladder. visit_bucket is the cut the learning statistics pool on; the raw
+      // number rides along for anything that wants finer grain.
+      visit_number: visitNumber,
+      visit_bucket: visitBucket(visitNumber),
+      entry_channel: sessionData.metadata.entryChannel ?? 'direct',
       journey_stage: sessionData.metadata.journeyStage,
       days_since_first_seen: Math.floor((Date.now() - sessionData.metadata.firstSeen) / (24 * 60 * 60 * 1000)),
       tracking_consent: sessionData.preferences.trackingConsent,
