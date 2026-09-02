@@ -98,3 +98,5 @@ llm-models-keys.md
 *-keys.md
 *.key
 *.token
+# Agent worktrees are full repo copies; never track them (they also broke vitest collection)
+.claude/worktrees/
