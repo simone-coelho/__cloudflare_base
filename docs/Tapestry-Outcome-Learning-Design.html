@@ -803,19 +803,19 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
     RESP:{x:400,y:Y1,w:200,l:['Ordered decision set','with explain record']},
     SDK:{x:20,y:Y2,w:150,l:['Site SDK events']},
     EV:{x:200,y:Y2,w:150,l:['Events route']},
-    SR:{x:400,y:Y2,w:150,l:['Shopper object','state + recent decisions']},
+    SR:{x:400,y:Y2,w:150,l:['Shopper object','state and decisions']},
     QC:{x:600,y:Y2,w:150,l:['Queue: credits'],k:'new'},
-    LS:{x:790,y:Y2,w:150,l:['LearnStats object','per slot, decayed counts'],k:'new'},
+    LS:{x:790,y:Y2,w:150,l:['LearnStats object','decayed counts'],k:'new'},
     CRON:{x:20,y:Y3,w:150,l:['Cron','batch jobs']},
     QD:{x:200,y:Y3,w:150,l:['Queue: decisions'],k:'new'},
-    LED:{x:400,y:Y3,w:150,l:['Ledger writer','R2 partitions + D1 index'],k:'new'},
+    LED:{x:400,y:Y3,w:150,l:['Ledger writer','R2 + D1 index'],k:'new'},
     OUT:{x:600,y:Y3,w:200,l:['Warehouse share, exports,','replay, console']}
   };
   function cx(n){return N[n].x+N[n].w/2;} function top(n){return N[n].y;} function bot(n){return N[n].y+BH;}
   function lft(n){return N[n].x;} function rgt(n){return N[n].x+N[n].w;} function cy(n){return N[n].y+BH/2;}
-  function edge(pts,off,label,lx,ly){
+  function edge(pts,off,label,lx,ly,anchor){
     el('polyline',{points:pts.map(function(p){return p[0]+','+p[1];}).join(' '),'class':'edge'+(off?' off':''),'marker-end':'url(#ah)'});
-    if(label) el('text',{x:lx,y:ly,'class':'elbl'},label);
+    if(label){var a={x:lx,y:ly,'class':'elbl'};if(anchor)a['text-anchor']=anchor;el('text',a,label);}
   }
   // request path
   edge([[rgt('REQ'),cy('REQ')],[lft('DW'),cy('DW')]]);
@@ -823,13 +823,13 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
   edge([[cx('DW')-15,top('DW')],[cx('DW')-15,bot('CFG')]]);
   edge([[cx('DW')+15,top('DW')],[cx('DW')+15,92],[cx('LIFT'),92],[cx('LIFT'),bot('LIFT')]]);
   edge([[cx('DW'),bot('DW')],[cx('DW'),178],[cx('SR'),178],[cx('SR'),top('SR')]]);
-  edge([[lft('DW'),cy('DW')+12],[185,cy('DW')+12],[185,cy('QD')],[lft('QD'),cy('QD')]],true,'waitUntil',120,cy('DW')+60);
+  edge([[lft('DW'),cy('DW')+12],[185,cy('DW')+12],[185,cy('QD')],[lft('QD'),cy('QD')]],true,'waitUntil',180,cy('DW')+60,'end');
   // events and learning path
   edge([[rgt('SDK'),cy('SDK')],[lft('EV'),cy('EV')]]);
   edge([[rgt('EV'),cy('EV')],[lft('SR'),cy('SR')]]);
-  edge([[rgt('SR'),cy('SR')],[lft('QC'),cy('QC')]],true,'credited pairs',552,cy('SR')-8);
+  edge([[rgt('SR'),cy('SR')],[lft('QC'),cy('QC')]],true,'credited pairs',575,top('SR')-7,'middle');
   edge([[rgt('QC'),cy('QC')],[lft('LS'),cy('LS')]]);
-  edge([[cx('LS'),top('LS')],[cx('LS'),bot('KVL')]],false,'alarm, coalesced',cx('LS')+8,(top('LS')+bot('KVL'))/2+4);
+  edge([[cx('LS'),top('LS')],[cx('LS'),bot('KVL')]],false,'alarm, coalesced',cx('LS')-8,(top('LS')+bot('KVL'))/2+4,'end');
   edge([[lft('KVL'),cy('KVL')],[rgt('LIFT'),cy('LIFT')]]);
   // ledger path
   edge([[rgt('QD'),cy('QD')],[lft('LED'),cy('LED')]]);
