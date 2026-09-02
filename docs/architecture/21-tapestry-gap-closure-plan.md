@@ -84,8 +84,8 @@ item in the programme. What is left in this lane is two half-day items.
 |---|---|---|---|
 | Multi-tenancy across KV / D1 / DO / queues / R2 | CW1 | 5 | §1.7 claims hard data isolation on signature. Nine `tenant` hits in the repo are all comments |
 | Content catalog store + import adapter | CW2 | 2.5 | §1.3's ingest endpoint; the catalog is a bundled file today |
-| Server-side content ranker + page assembler | CW4 | 2.5 | The math is real and proven in Meridian, but it runs **in the browser**, ranking a full catalog shipped to the client. That is the opposite of decisions-by-ID over the wire |
-| Snapshot endpoint for first paint | CW4 | — | Included above; no flash of default content |
+| Server-side content ranker + page assembler | CW4 | ✅ 2026-09-02 | `src/content/` decides at the edge and returns the §7 contract plus §3.1 records. The composer moved into the engine (`src/reflex/contentCompose.ts`); Meridian re-exports it. 23 tests. Live at `GET /v1/:tenant/decisions/snapshot` on the dev server, serving compiled defaults until a catalog document is stored for the scope (CW2) |
+| Snapshot endpoint for first paint | CW4 | ✅ | The route above; `Cache-Control: no-store`, reads only, 400 on a bad tenant or missing visitor |
 | SDK extraction, one package two modules | CW8 | 2.5 | `storefront.js` is one 4,192-line class, unchanged in five weeks |
 | Staging envs, SDK-key auth, operator auth, CORS allowlist | CW10 | 3 | The literal blocker to "consumable by their lower environments." Both env stanzas are empty; CORS reflects any origin with credentials; operator routes are mounted with no auth |
 
@@ -138,6 +138,40 @@ times without naming a mechanism. Reconciled rather than left to collide, and re
 - Flagged for Phase 1, and it moves work: §5.4's pooling ladder needs **channel** and **visit bucket**, and
   neither is real. Visit bucket is the dangerous one because it exists and is wrong. CW7 is now a Phase 1
   prerequisite.
+
+---
+
+## The CW4 seam, written before the code (2026-09-02)
+
+CW4 is the server-side content decision service: the thing Section 2.3 of the appendix calls API-first
+delivery, and the reason the ledger in doc 22 has something worth recording. It meets Phase 0 at exactly
+one object, so that object is specified here first.
+
+- **CW4 emits, CW19 persists.** `src/content/decide.ts` produces one `DecisionRecord` per served slot,
+  field for field the §3.1 record in doc 22: ids, page, slot, position, item, the top-N candidates with
+  base scores, the context cell, the holdout arm, `explored`, `authority`, the four version integers plus
+  the human config label, and the explain. The route returns them beside the §7 delivery contract. Nothing
+  in CW4 writes them anywhere; the ledger writer is Phase 0's and consumes this shape unchanged.
+- **The composer moves into the engine.** The content ranking arithmetic that Meridian proved becomes
+  `src/reflex/contentCompose.ts`, pure and stateless, and Meridian re-exports it. The isolation charter's
+  allowlist widens from one pure module to two, by name, not by prefix: `configStore` stays out.
+- **Three document kinds, no second store.** `content` (the catalog, the thinnest form of CW2), `slots`
+  (per-page slot strategies: take, weights, pin), and `learn`, opened here with the holdout section only
+  because assignment has to exist before the first recorded decision. Phase 1 extends `learn` in place
+  with γ, exploration and autonomy per slot. Prefixes `content:config:` and `slots:config:` join the
+  reserved list; `learn:config:` was already reserved.
+- **The holdout arm is assigned at decision time**, deterministically from the visitor id and a per-brand
+  salt, so it is sticky by construction and needs no storage. A `default` arm renders every slot's default
+  and still emits records, with the arm on them.
+- **Honest cells.** Region comes from request geolocation; the affinity cell from the leading interest
+  above its entry threshold; channel and visit bucket are `unknown` until CW7 lands, and are recorded as
+  such rather than guessed.
+- **Two follow-ups this seam names rather than absorbs.** Meridian's `prefer` rule (a guide that completes
+  the item in the bag) is a function today and needs a data form before it can live in the `slots`
+  document. SDK-key authentication on the route is CW10.
+
+Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at the single seam in
+`src/index.ts`.
 
 ---
 

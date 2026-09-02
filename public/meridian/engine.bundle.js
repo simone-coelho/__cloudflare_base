@@ -1028,17 +1028,20 @@ function esc(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-// src/demos/meridian/contentCompose.ts
-function composeContent(pieces, affinity, slots) {
+// src/reflex/contentCompose.ts
+var round3 = (n) => Math.round(n * 1e3) / 1e3;
+function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10) {
   const live = pieces.filter((p) => (p.lifecycle?.status ?? "live") === "live");
   const used = /* @__PURE__ */ new Set();
   const out = [];
+  const candidates = {};
   let order = 0;
   for (const slot of slots) {
     if (slot.pinnedPieceId) {
       const p = live.find((x) => x.id === slot.pinnedPieceId);
       if (p) {
         used.add(p.id);
+        candidates[slot.slot] = [{ contentId: p.id, score: 0 }];
         out.push({
           contentId: p.id,
           customerContentId: p.customerContentId,
@@ -1073,6 +1076,7 @@ function composeContent(pieces, affinity, slots) {
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       return { p, score, drivers };
     }).sort((x, y) => y.score - x.score || x.p.id.localeCompare(y.p.id));
+    candidates[slot.slot] = scored.slice(0, Math.max(0, candidateLimit)).map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
     let taken = 0;
     for (const s of scored) {
       if (taken >= slot.take) break;
@@ -1084,14 +1088,17 @@ function composeContent(pieces, affinity, slots) {
         type: s.p.type,
         slot: slot.slot,
         order: order++,
-        score: Math.round(s.score * 1e3) / 1e3,
+        score: round3(s.score),
         strategy: cold ? "default" : "affinity",
         explain: { drivers: s.drivers.slice(0, 4), ...cold ? { note: "no signal yet \u2014 the slot default (catalogue order)" } : {} }
       });
       taken += 1;
     }
   }
-  return out;
+  return { decisions: out, candidates };
+}
+function composeContent(pieces, affinity, slots) {
+  return composeContentDetailed(pieces, affinity, slots).decisions;
 }
 export {
   DEMO_TAUS,
