@@ -25,6 +25,7 @@
 //     subset:["realtime"] silently returned nothing.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { actionOf } from '@/reflex/contentTelemetry';
 import { shopperObject } from '@/tenancy/objects';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import type { Env } from '@/types/env';
@@ -115,7 +116,7 @@ export function mapActionToOdp(
   event: ActionEvent
 ): { type: string; action?: string; data: Record<string, unknown> } | null {
   const data = event.data ?? {};
-  const action = String(data.action ?? data.eventName ?? event.type);
+  const action = actionOf(event);
   const productId: string | undefined = data.productId ?? data.product_id ?? data.sku;
   const product: Product | undefined = productId ? catalog().getProduct(String(productId)) : undefined;
 

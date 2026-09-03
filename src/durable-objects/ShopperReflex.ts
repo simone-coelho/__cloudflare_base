@@ -49,6 +49,7 @@
 // visitor id → a fresh object → a fresh sessionId → a fresh vuid.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { actionOf, contentTouches, isContentAction } from '@/reflex/contentTelemetry';
 import type { Env } from '@/types/env';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import type { PersonalizationUpdate } from './PersonalizationWebSocket';
@@ -472,12 +473,14 @@ export class ShopperReflex {
     const reflexOn = (this.env.REFLEX_ENABLED ?? 'true') !== 'false';
     let reflex: ReflexResult | null = null;
     if (reflexOn) {
-      const action = String(data.action ?? data.eventName ?? event.type);
+      const action = actionOf(event);
       reflex = applyReflex(
         aff.reflex,
         {
           action,
-          touches: product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : eventTouches,
+          touches: isContentAction(action)
+            ? contentTouches(data as Record<string, unknown>, cfg)
+            : product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : eventTouches,
         },
         now,
         cfg

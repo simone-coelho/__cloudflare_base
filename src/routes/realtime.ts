@@ -63,6 +63,9 @@ export const actionEventSchema = z.object({
     'email_open', 'form_submit', 'page_view', 'button_click', 'custom',
     // retail / Coach storefront signals
     'product_view', 'add_to_cart', 'wishlist_add',
+    // first-class since CW3. The SDK may still send these as custom + data.event;
+    // actionOf() reads both, so its wire table can flip whenever it likes.
+    'purchase', 'content_impression', 'content_click', 'content_dwell', 'video_complete',
   ]),
   userId: z.string(),
   anonymousId: z.string().optional(),

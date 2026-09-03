@@ -17,6 +17,7 @@
 // (`new RealtimeSegmentEngine(env)`) keep working while the spec's two-arg form
 // (`new RealtimeSegmentEngine(env, getConnectors(env))`) is also supported.
 
+import { actionOf, contentTouches, isContentAction } from '@/reflex/contentTelemetry';
 import { shopperObjectName } from '@/tenancy/objects';
 import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
@@ -72,7 +73,13 @@ export interface ActionEvent {
     // retail / Coach storefront signals (shared ingestion path with realtime.ts)
     | 'product_view'
     | 'add_to_cart'
-    | 'wishlist_add';
+    | 'wishlist_add'
+    // first-class since CW3; the SDK also sends them as custom + data.event
+    | 'purchase'
+    | 'content_impression'
+    | 'content_click'
+    | 'content_dwell'
+    | 'video_complete';
   userId: string;
   anonymousId?: string;
   data: Record<string, any>;
@@ -170,7 +177,7 @@ export function applyEventToAttributes(
 ): void {
   const data = event.data ?? {};
   // The retail action: explicit data.action wins, else the event type.
-  const action = String(data.action ?? data.eventName ?? event.type);
+  const action = actionOf(event);
 
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
   const inc = (key: string, by = 1) => {
@@ -437,14 +444,16 @@ export class RealtimeSegmentEngine {
         const data = event.data ?? {};
         const pid = data.productId ?? data.product_id ?? data.sku;
         const product = pid ? catalogService.getProduct(String(pid)) : undefined;
-        const action = String(data.action ?? data.eventName ?? event.type);
+        const action = actionOf(event);
         reflex = applyReflex(
           sessionData.reflex,
           {
             action,
             // A held product's attributes, or, where the scope allows it, the
             // event's own (CW24): a customer's site scores against their catalog.
-            touches: touchesForEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig),
+            touches: isContentAction(action)
+              ? contentTouches(data as Record<string, unknown>, reflexConfig)
+              : touchesForEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig),
           },
           nowMs,
           reflexConfig

@@ -168,6 +168,11 @@ export const DEFAULT_REFLEX_CONFIG: ReflexConfig = {
     // accumulate across human-paced browsing (~15s/view) and fade more slowly — the
     // per-dimension tuning §4 was designed for.
     { key: 'priceBand', source: 'price_usd', derive: 'band', cuts: [150, 400], labels: ['entry', 'core', 'elevated'], tauMs: 150_000 },
+    // CW3. The content type a shopper engages with (video, editorial, on-model,
+    // silo), read off content events. Mandeep named it by name: "content-type
+    // affinity learnable, e.g. video affinity". Sourced from the SDK's
+    // contentType attribute; the sanitizer admits it because this entry exists.
+    { key: 'contentType', source: 'contentType' },
   ],
   weights: {
     // Views build affinity 1:1; intent actions weigh heavier (doc 16 §4 table).
@@ -183,6 +188,13 @@ export const DEFAULT_REFLEX_CONFIG: ReflexConfig = {
     purchase: 5,
     checkout: 5,
     order_complete: 5,
+    // CW3: content interactions, on the same scale. Impression is ZERO by
+    // default: dense and involuntary, it must not read as interest. See
+    // contentTelemetry.ts for the reasoning behind each number.
+    content_impression: 0,
+    content_dwell: 0.5,
+    content_click: 1,
+    video_complete: 2,
     // Time-only re-evaluation (alarms / no-product events): no accumulation.
     tick: 0,
   },

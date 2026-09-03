@@ -133,14 +133,24 @@ describe('mapActionToOdp — purchases reach ODP (they used to fall through `def
     expect(m?.data.product_line).toBeTruthy();
   });
 
-  it('accepts the aliases the engine weights identically', () => {
-    for (const alias of ['checkout', 'order_complete']) {
-      expect(mapActionToOdp(ev(alias, { productId: 'COA-CH857' }))).toMatchObject({ action: 'purchase' });
-    }
+  it('accepts the aliases the engine weights identically, however they arrive', () => {
+    // The storefront names the action in data.action on a first-class type;
+    // the SDK rides the accepted `custom` type with the real event in data.event.
+    // Both conventions resolve through actionOf().
+    expect(mapActionToOdp(ev('purchase', { productId: 'COA-CH857', action: 'checkout' }))).toMatchObject({ action: 'purchase' });
+    expect(mapActionToOdp(ev('custom', { productId: 'COA-CH857', event: 'order_complete' }))).toMatchObject({ action: 'purchase' });
+  });
+
+  it('hears an SDK-shaped purchase: type custom, the real event in data.event', () => {
+    // This was the silent gap: every server resolver read data.action and
+    // data.eventName but never data.event, so an SDK purchase was 'custom',
+    // weighed zero, and never reached ODP.
+    const m = mapActionToOdp(ev('custom', { event: 'purchase', productId: 'COA-CH857', orderId: 'ord-9' }));
+    expect(m).toMatchObject({ type: 'product', action: 'purchase', data: { order_id: 'ord-9' } });
   });
 
   it('maps an order-level purchase when no single product is named', () => {
-    const m = mapActionToOdp(ev('order_complete', { order_id: 'ord-2', order_total: '199.50' }));
+    const m = mapActionToOdp(ev('custom', { event: 'order_complete', order_id: 'ord-2', order_total: '199.50' }));
     expect(m).toMatchObject({ type: 'order', action: 'purchase', data: { order_id: 'ord-2', total: 199.5 } });
   });
 
