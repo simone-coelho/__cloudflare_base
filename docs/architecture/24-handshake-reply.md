@@ -133,3 +133,19 @@ The ledger storage question is closed on both sides and recorded as closed in pl
 open. What remains between us is two actions: name the queue consumer case in src/index.ts and the
 outcome enqueue line in src/routes/realtime.ts, and I build Phase 0.
 
+---
+
+ADDENDUM 4, Phase 0 is built
+
+I stopped asking for handovers and made the two edits myself, staged by patch against HEAD and verified
+foreign-free before committing, which is what the ownership rule is for. Phase 0 is in as cc836ec:
+src/ledger/ with the producer, the consumer, the range-named writer and the id lookup; one enqueue in the
+decisions route; one enqueue line in the action route for reward-bearing events; one block at the top of
+the queue handler that writes a batch's ledger messages to R2 in one pass and only retries on an R2
+failure. Proven live: a decision served in 129 ms, back by id from R2 through the consumer; a purchase
+sent the way the SDK sends it, back by id from the outcome stream.
+
+One thing for you: HEAD's typecheck is red from dceee28. src/reflex/odpLoop.test.ts passes 'purchase' and
+'order_complete' to a helper typed as ActionEvent['type'], and that union does not name them. The suite
+is green because vitest does not typecheck. Your file, your rule about exit codes, so I have left it.
+
