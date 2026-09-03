@@ -90,8 +90,9 @@ called from the content ranker, because that file is the other session's live CW
 | SDK extraction, one package two modules | CW8 | ✅ 2026-09-02 | `src/sdk/`: shared core (identity, entry signals, socket, fetch, beacon), emit (explicit API, declarative `data-op-*`, dataLayer adapter with GA4 defaults, automatic impressions and dwell), listen (snapshot hydration with a graceful-absence deadline, per-slot subscriptions, `content_decisions` frames). Built to `public/sdk/` as script and module. 22 tests plus a contract test that parses every SDK envelope through the server's own action schema. Ran end to end in Node against the dev server. **Open by decision:** the demo storefront still carries its own copy of this transport; cutting it over is a rehearsal-gated change |
 | Staging envs, SDK-key auth, operator auth, CORS allowlist | CW10 | ✅ 2026-09-02 (code) | `[env.staging]` declared in full with its own resources; `src/middleware/edgeAccess.ts` gates the SDK surface by key, operator writes by JWT, and CORS by allow-list, all behind `AUTH_MODE`, which stays `open` on the demo worker and is `enforced` in staging. 8 tests; verified live on a local staging instance. **Human step remaining:** `scripts/provision-staging.sh` creates the account resources, sets the secrets and seeds the operator login; `CORS_ORIGINS` takes the customer's lower-environment origins when they are known |
 
-CW1 is the long pole and it is blocked on one answer: **which brand is the first tenant.** Scoping it wrong
-is exactly the rework the risk register warns about.
+CW1 is the long pole. It is **not blocked**: the launch brand is Coach, settled by the customer (ledger B3),
+and the tenancy foundation is already being built against it on the other track (`src/tenancy/`). Tenancy is
+exactly what makes the brand a string; a second brand is the provisioning exercise §1.7 promises.
 
 ### Lane C — Registry completeness
 *Closes: §1.1's dimension list and the acceptance bar's "chosen by the agreed dimension registry."*
@@ -306,9 +307,8 @@ Everything above is executable except for two things only Simone can settle.
    lets the default tenant stay unprefixed so nothing already stored is orphaned. Two customer-facing
    documents still say Kate Spade and need updating to match his ask: `Tapestry-Implementation-Plan.md`
    (lines 11, 40, 99) and Doc 1 §17.
-2. **Approval to start the build.** Ledger 19's standing guardrail says no build phase begins until the
-   document set is approved. The document set has now been through v8. That guardrail is currently the only
-   thing holding the queue.
+2. ~~Approval to start the build.~~ **Answered: the build started 2026-09-01** on both tracks, after the
+   document set went through v8. Nothing gates the queue now except the human steps named in each lane.
 
 Neither blocks Lane A's first two items. The test harness and the config store can start immediately and
 should.
