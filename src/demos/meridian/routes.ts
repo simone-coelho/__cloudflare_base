@@ -12,6 +12,7 @@
 // that are scoped Path=/ across this origin never take part.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { TenantVariables } from '@/tenancy/tenant';
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { itemsFor, blocksFor, catalogStats } from './catalog';
@@ -29,7 +30,7 @@ import { scenesFor } from './scenes';
 import { dispatch, status as fxStatus, type Flavour } from './experiment';
 import type { Vertical } from './types';
 
-const meridian = new Hono<{ Bindings: Env }>();
+const meridian = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
 const VERTICALS = new Set<Vertical>(['retail', 'financial']);
 function verticalOf(v: unknown): Vertical {
@@ -280,7 +281,7 @@ meridian.get('/opal/vocabulary', (c) => {
  */
 meridian.post('/decisions', async (c) => {
   const body = await c.req.json().catch(() => null as any);
-  const input = captureInputFrom(body, verticalOf(body?.vertical), Date.now());
+  const input = captureInputFrom(body, verticalOf(body?.vertical), Date.now(), c.get('tenant'));
   if (!input) {
     return c.json({ ok: false, error: 'visitorId and at least one of decisions or sections required' }, 400);
   }
@@ -296,7 +297,7 @@ meridian.post('/decisions', async (c) => {
 /** The rows. Hand them over; let them compute their own lift. */
 meridian.get('/decisions/export', async (c) => {
   try {
-    const out = await exportRows(c.env.DB, c.req.query('visitorId') ?? null, Number(c.req.query('limit') ?? 100));
+    const out = await exportRows(c.env.DB, c.req.query('visitorId') ?? null, Number(c.req.query('limit') ?? 100), c.get('tenant'));
     return c.json({ ok: true, ...out });
   } catch (e) {
     // D1 may be unbound on a given deployment. Say so rather than returning an

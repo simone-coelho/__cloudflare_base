@@ -17,6 +17,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { MeridianDecision, SectionDecision, Vertical } from './types';
+import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 
 /** Column order MUST match migrations/0007_meridian_decisions.sql exactly. */
 export const MRD_DECISION_COLUMNS = [
@@ -24,11 +25,18 @@ export const MRD_DECISION_COLUMNS = [
   'chosen_item', 'strategy', 'candidate_set', 'gates_failed', 'refused',
   'dimension_scores', 'rank_score', 'confidence', 'theta_out', 'config_version',
   'arrival_surface', 'demo_run_id',
+  // Appended last (migration 0009) so the eighteen columns above keep the order
+  // the writer has always used. Two brands' receipts in one table with no way
+  // to tell them apart after the fact is the leak this closes.
+  'tenant',
 ] as const;
 
 export interface CaptureInput {
   visitorId: string;
   vertical: Vertical;
+  /** The brand these receipts belong to. Absent means the default brand, which
+   *  is also what the column's SQL DEFAULT resolves to for an unconverted writer. */
+  tenant?: TenantId;
   decisions: MeridianDecision[];
   arrivalSurface?: string | null;
   demoRunId?: string | null;
@@ -44,6 +52,7 @@ export interface CaptureInput {
 export interface CaptureLayoutInput {
   visitorId: string;
   vertical: Vertical;
+  tenant?: TenantId;
   sections: SectionDecision[];
   arrivalSurface?: string | null;
   demoRunId?: string | null;
@@ -63,6 +72,7 @@ function rowFor(d: MeridianDecision, i: CaptureInput): unknown[] {
     JSON.stringify(drivers), Math.round(rankScore * 1e4) / 1e4,
     e.confidence ?? null, e.thetaOut ?? null, e.configVersion ?? 'unknown',
     i.arrivalSurface ?? null, i.demoRunId ?? null,
+    i.tenant ?? DEFAULT_TENANT,
   ];
 }
 
@@ -85,6 +95,7 @@ function layoutRowFor(s: SectionDecision, i: CaptureLayoutInput, candidates: num
     JSON.stringify(drivers), Math.round(s.score * 1e4) / 1e4,
     e.confidence ?? null, e.thetaOut ?? null, e.configVersion ?? 'unknown',
     i.arrivalSurface ?? null, i.demoRunId ?? null,
+    i.tenant ?? DEFAULT_TENANT,
   ];
 }
 
@@ -107,7 +118,9 @@ export function rowsForLayout(input: CaptureLayoutInput): unknown[][] {
  * Either list may be empty; both empty is the only failure. Pulling it out of the
  * handler is what makes that assertable.
  */
-export function captureInputFrom(body: unknown, vertical: Vertical, now: number): CaptureInput | null {
+export function captureInputFrom(
+  body: unknown, vertical: Vertical, now: number, tenant: TenantId = DEFAULT_TENANT,
+): CaptureInput | null {
   const b = (body ?? {}) as Record<string, unknown>;
   const visitorId = typeof b.visitorId === 'string' ? b.visitorId.trim() : '';
   if (visitorId === '') return null;
@@ -117,7 +130,7 @@ export function captureInputFrom(body: unknown, vertical: Vertical, now: number)
   if (decisions.length === 0 && sections.length === 0) return null;
 
   return {
-    visitorId, vertical, decisions, sections, now,
+    visitorId, vertical, tenant, decisions, sections, now,
     arrivalSurface: typeof b.arrivalSurface === 'string' ? b.arrivalSurface : null,
     demoRunId: typeof b.demoRunId === 'string' ? b.demoRunId : null,
   };
@@ -142,11 +155,19 @@ export function captureLayout(db: D1Database, input: CaptureLayoutInput): Promis
   return capture(db, { ...input, decisions: [] });
 }
 
-export async function exportRows(db: D1Database, visitorId: string | null, limit: number) {
+/**
+ * The rows for ONE brand. The tenant predicate is not optional: an export that
+ * could omit it is an export that leaks another brand's receipts the first time
+ * someone forgets, and the whole point of the column is that nobody has to
+ * remember.
+ */
+export async function exportRows(
+  db: D1Database, visitorId: string | null, limit: number, tenant: TenantId = DEFAULT_TENANT,
+) {
   const n = Math.max(1, Math.min(500, limit || 100));
   const q = visitorId
-    ? db.prepare(`SELECT * FROM mrd_decisions WHERE visitor_id = ? ORDER BY ts DESC, slot_id LIMIT ?`).bind(visitorId, n)
-    : db.prepare(`SELECT * FROM mrd_decisions ORDER BY ts DESC, slot_id LIMIT ?`).bind(n);
+    ? db.prepare(`SELECT * FROM mrd_decisions WHERE tenant = ? AND visitor_id = ? ORDER BY ts DESC, slot_id LIMIT ?`).bind(tenant, visitorId, n)
+    : db.prepare(`SELECT * FROM mrd_decisions WHERE tenant = ? ORDER BY ts DESC, slot_id LIMIT ?`).bind(tenant, n);
   const res = await q.all();
   return { columns: MRD_DECISION_COLUMNS, rows: res.results ?? [] };
 }

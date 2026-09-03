@@ -21,7 +21,16 @@ const DIR = 'src/demos/meridian';
 const files = readdirSync(DIR).filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'));
 const sources = files.map((f) => ({ f, src: readFileSync(join(DIR, f), 'utf8') }));
 const all = sources.map((s) => s.src).join('\n');
-const PURE_ENGINE = new Set(['@/reflex/core', '@/reflex/contentCompose']);
+const PURE_ENGINE = new Set([
+  '@/reflex/core',
+  '@/reflex/contentCompose',
+  // Tenant identity and key spacing: a constant and pure string functions, no
+  // module state, no bindings. Admitted BY NAME (CW1) because receipts must
+  // stamp DEFAULT_TENANT and duplicating that literal here is exactly the drift
+  // the d1 tests guard against. Nothing else under @/tenancy is admitted: the
+  // middleware and the D1 helpers are wired, and stay out.
+  '@/tenancy/tenant',
+]);
 
 describe('isolation charter', () => {
   it('imports nothing outside itself except the shared reflex engine', () => {
