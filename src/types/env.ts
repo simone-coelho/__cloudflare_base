@@ -19,6 +19,10 @@ export interface Env {
   MERIDIAN_REFLEX: DurableObjectNamespace;
   /** CW6 — one object per tenant and region: the population's decaying interest vector. Optional so tests and older stamps run without it. */
   REGION_TREND?: DurableObjectNamespace;
+  /** Phase 1 — the visitor's own ring of served decisions, with online attribution. */
+  DECISION_RING?: DurableObjectNamespace;
+  /** Phase 1 — one object per tenant, brand and slot: decayed counts, published as lift snapshots. */
+  LEARN_STATS?: DurableObjectNamespace;
   /** CW6 — tenants the hourly cron rolls region snapshots up for, comma-separated. */
   TREND_ROLLUP_TENANTS?: string;
   // Opal chat agent (SQLite-backed DO, wrangler migration v3) — reached via

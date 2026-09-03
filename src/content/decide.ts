@@ -5,11 +5,12 @@
 // the same input yields the same output, which is what makes replay (doc 22
 // §12.3) a proof rather than a hope.
 
-import { composeContentDetailed, type ContentSlotSpec, type AffinityViewLike } from '@/reflex/contentCompose';
+import { composeContentDetailed, type ContentSlotSpec, type AffinityViewLike, type ScoreAdjust } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, RegionalBlend, SlotStrategy,
+  Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, LiftApplied, RegionalBlend, SlotStrategy,
 } from './types';
 import { isLiveAt } from './lifecycle';
+import { liftFor, type LiftSnapshot } from '@/learn/stats';
 
 export interface DecideInput {
   tenant: string;
@@ -34,6 +35,11 @@ export interface DecideInput {
   configLabel: string;
   /** Top-N candidates recorded per slot (doc 22 §3.1). */
   candidateLimit?: number;
+  /**
+   * The learning layer (doc 22 §6): per slot, the lift snapshot in force and the
+   * trust dial. At γ = 0 the lift is computed, shown on the receipt, and ignored.
+   */
+  learning?: { snapshots: Record<string, LiftSnapshot | null>; gammaOf: (slot: string) => number } | null;
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
@@ -53,7 +59,23 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   // Eligibility before scoring: outside its publish window a piece does not exist
   // for this decision, however well it would have scored.
   const eligible = i.pieces.filter((p) => isLiveAt(p, i.nowMs));
-  const { decisions, candidates } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10);
+
+  // The learning layer: lift^γ on the base score, looked up at the finest level
+  // with enough evidence for this item in this cell. The base and the lift are
+  // both kept so the receipt shows the arithmetic, not only its result.
+  const baseOf = new Map<string, number>();
+  const liftOf = new Map<string, LiftApplied>();
+  const learning = i.arm === 'default' ? null : i.learning ?? null;
+  const adjust: ScoreAdjust | undefined = learning ? (p, slot, base) => {
+    const key = `${slot}:${p.id}`;
+    baseOf.set(key, base);
+    const look = liftFor(learning.snapshots[slot], p.id, i.cell);
+    if (!look) return base;
+    const gamma = learning.gammaOf(slot);
+    liftOf.set(key, { reward: look.reward, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma });
+    return base * Math.pow(look.lift, gamma);
+  } : undefined;
+  const { decisions, candidates } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust);
 
   const byId = new Map(i.pieces.map((p) => [p.id, p]));
   const specOf = new Map(specs.map((s) => [s.slot, s]));
@@ -81,6 +103,9 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
     const position = positionIn.get(d.slot) ?? 0;
     positionIn.set(d.slot, position + 1);
     const regional = regionalOf(d);
+    const key = `${d.slot}:${d.contentId}`;
+    const lift = liftOf.get(key) ?? null;
+    const scoreBase = baseOf.get(key) ?? d.score;
     return {
       // Tenant first, then time: the R2 partition (brand and hour) is derivable from the id alone,
       // so a support paste resolves without anyone having to remember which brand it came from.
@@ -89,8 +114,8 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
       page: i.page, slot: d.slot, position, item_id: d.contentId, customer_item_id: d.customerContentId,
       candidates: candidates[d.slot] ?? [],
       cell: i.cell, arm: i.arm, explored: false, authority: authorityOf(d.strategy),
-      versions: { ...i.versions }, config_label: i.configLabel,
-      explain: { drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: d.score, ...(regional ? { regional } : {}), lift: null },
+      versions: { ...i.versions, lift: learning?.snapshots[d.slot]?.version ?? 0 }, config_label: i.configLabel,
+      explain: { drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}), lift, score_final: d.score },
     };
   });
 

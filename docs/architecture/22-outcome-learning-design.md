@@ -179,10 +179,13 @@ looser policies are the natural first reporting overlays.
 
 Attribution runs in two places, deliberately.
 
-**Online, in the shopper's own object.** The object already holds this visitor's recent decisions and
-already receives their events. When an outcome arrives it applies the learning policy locally, emits the
-credited pair to the credits queue, and moves on. No global join, no cross-visitor read. This is what keeps
-the learning loop fresh to the minute (section 6.3).
+**Online, in the shopper's own object.** The object holds this visitor's recent decisions and receives
+their outcomes. When an outcome arrives it applies the learning policy locally, emits the credited pairs
+to each slot's statistics object, and moves on. No global join, no cross-visitor read. This is what keeps
+the learning loop fresh to the minute (section 6.3). *Implementation note (Phase 1, 2026-09-03): on the
+default session host there is no per-visitor object for state, so the ring and its attribution live in an
+object of their own, keyed per brand and visitor. One writer per visitor either way; the two merge when
+the Durable Object host carries every brand.*
 
 **Batch, over the ledger.** Reporting policies, recomputation after a policy change, long windows that
 outlive the object's retention, and the holdout report all run as scheduled jobs over R2 and D1.
@@ -203,7 +206,7 @@ Every learned quantity is indexed by a **key** k = (tenant, brand, slot, item, c
 | n_k | Decayed count of exposures: decisions that served this item in this slot to a shopper in this cell | Decision records |
 | s_k | Decayed count of credited successes for the reward type | Credited pairs from section 4 |
 | v_k | Decayed sum of outcome value, for value-based rewards | Credited pairs |
-| p₀ | Baseline rate for this slot and cell: the parent level's smoothed rate (section 5.4) | Computed |
+| p₀ | Baseline rate for this slot in this cell: the slot's smoothed rate at that level, itself shrunk toward its parent cell where sparse (section 5.4). The item's estimate is shrunk toward it; pooling upward is done by choosing the finest level with enough exposures, never by chaining an item's own estimates, which would count the same events twice | Computed |
 | n₀ | Prior strength: how many pseudo-observations the baseline is worth | Configuration, default 30 |
 | p̂_k | Smoothed rate for the key | Formula below |
 | lift_k | How much better or worse this item performs than its baseline | Formula below |

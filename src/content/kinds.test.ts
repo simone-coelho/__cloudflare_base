@@ -63,6 +63,17 @@ describe('document kinds', () => {
     if (!bad.ok) expect(bad.errors).toHaveLength(3);
   });
 
+  it('learn validates the policy, the estimator constants and the per-slot dials', () => {
+    expect(DEFAULT_LEARN.policy?.match).toBe('direct');
+    expect(DEFAULT_LEARN.stats?.n0).toBe(30);
+    const ok = validateLearnConfig({ holdout: { share: 0.1, arms: ['default'] }, policy: { scope: 'visitor', match: 'any', credit: 'first', windowsMs: { purchase: 1000 } }, stats: { n0: 10, tauLearnMs: 1000, liftMin: 0.8, liftMax: 1.5, nMin: 5 }, slots: { hero: { gamma: 0.5, reward: 'add_to_bag' } } });
+    expect(ok.ok).toBe(true);
+    if (ok.ok) expect(ok.value.slots?.hero).toEqual({ gamma: 0.5, reward: 'add_to_bag' });
+    const bad = validateLearnConfig({ holdout: { share: 0.1, arms: ['default'] }, policy: { scope: 'galaxy', match: 'direct', credit: 'last' }, stats: { n0: 0, tauLearnMs: 1, liftMin: 1.5, liftMax: 1, nMin: 0 }, slots: { 'bad slot!': {}, hero: { gamma: 2, reward: 'hugs' } } });
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.errors.length).toBeGreaterThanOrEqual(6);
+  });
+
   it('learn accepts only known arms and a share in range', () => {
     expect(validateLearnConfig({ holdout: { share: 0.1, arms: ['default', 'no_learning'] } }).ok).toBe(true);
     const bad = validateLearnConfig({ holdout: { share: 2, arms: ['default', 'default', 'x'] } });

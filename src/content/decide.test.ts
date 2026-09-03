@@ -104,3 +104,47 @@ describe('decideContent with a regional prior', () => {
     expect(out.records.every((r) => r.explain.regional === undefined)).toBe(true);
   });
 });
+
+// ── Phase 1: the lift through the trust dial ────────────────────────────────
+import { levelKeys } from '@/learn/stats';
+describe('decideContent with a lift snapshot', () => {
+  // A hero-eligible piece with a real base score (occasion:evening × 0.35 = 0.28), so a lift can lift it past `a` (0.455).
+  const withD = [...pieces, piece('d', { occasion: ['evening'] }, ['hero'])];
+  const snap = (lift: number) => ({
+    tenant: 'tapestry', brand: 'coach', slot: 'hero', reward: 'click' as const, version: 777, publishedAt: 777, events: 500,
+    n0: 30, nMin: 30, liftMin: 0.5, liftMax: 2,
+    items: { d: { '*': { level: 0 as const, key: '*', n: 200, s: 40, p0: 0.1, p_hat: 0.1 * lift, lift } } },
+    slotRates: { '*': { n: 2000, s: 200, rate: 0.1 } },
+  });
+  const cellKeys = levelKeys(base.cell);
+
+  it('at γ = 0 the lift is on the receipt and the ranking is untouched', () => {
+    const out = decideContent({ ...base, pieces: withD, learning: { snapshots: { hero: snap(2) }, gammaOf: () => 0 } });
+    const hero = out.records.find((r) => r.slot === 'hero')!;
+    expect(hero.item_id).toBe('a');                               // a still wins on base score
+    expect(hero.candidates.map((c) => c.contentId)).toEqual(['a', 'd', 'b']);
+    const dRow = out.records.find((r) => r.slot === 'hero');   // d was a candidate, not a decision
+    expect(dRow?.item_id).toBe('a');
+    expect(hero.versions.lift).toBe(777);
+    expect(hero.explain.lift).toBeNull();                          // nothing learned about a
+    expect(hero.explain.score_final).toBe(hero.explain.score_base);
+    expect(cellKeys[0]).toBe('*');
+  });
+
+  it('at γ = 1 a strong lift changes the decision, and the receipt shows the arithmetic', () => {
+    const out = decideContent({ ...base, pieces: withD, learning: { snapshots: { hero: snap(2) }, gammaOf: () => 1 } });
+    const hero = out.records.find((r) => r.slot === 'hero')!;
+    expect(hero.item_id).toBe('d');                               // 0.28 × 2 = 0.56 beats a's 0.455
+    expect(hero.explain.lift).toMatchObject({ reward: 'click', level: 0, level_words: 'everyone', n: 200, s: 40, p0: 0.1, n0: 30, lift: 2, gamma: 1 });
+    expect(hero.explain.score_base).toBeCloseTo(0.28, 3);
+    expect(hero.explain.score_final).toBeCloseTo(0.56, 3);
+    expect(hero.candidates[0]).toEqual({ contentId: 'd', score: 0.56 });
+  });
+
+  it('the holdout default arm and a missing snapshot both leave scores alone', () => {
+    const d = decideContent({ ...base, pieces: withD, arm: 'default', learning: { snapshots: { hero: snap(2) }, gammaOf: () => 1 } });
+    expect(d.records.find((r) => r.slot === 'hero')!.explain.lift).toBeNull();
+    const m = decideContent({ ...base, learning: { snapshots: {}, gammaOf: () => 1 } });
+    expect(m.records.find((r) => r.slot === 'hero')!.versions.lift).toBe(0);
+  });
+});

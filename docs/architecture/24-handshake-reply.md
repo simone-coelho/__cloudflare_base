@@ -149,3 +149,24 @@ One thing for you: HEAD's typecheck is red from dceee28. src/reflex/odpLoop.test
 'order_complete' to a helper typed as ActionEvent['type'], and that union does not name them. The suite
 is green because vitest does not typecheck. Your file, your rule about exit codes, so I have left it.
 
+---
+
+ADDENDUM 5, Phase 1 is built
+
+Attribution in the visitor's own ring object (its own object on the session host, one writer per
+visitor, noted in section 4.3), a statistics object per tenant, brand and slot with decayed counts at
+every pooling level, versioned lift snapshots to KV on a coalesced alarm, the composer's adjust hook,
+and lift and score_final on every receipt. Every slot runs at gamma 0 until a person raises it on the
+learn document. GET /v1/:tenant/lift is the console's grid as data; the visitor's recent ring is
+readable, authenticated.
+
+One correction to the design that the worked example in section 5.3 caught while I built it: the prior
+for an item's estimate is the slot's rate in that cell, never the item's own coarser-level estimate. I had
+written the latter into section 5.1 two days ago; chaining an item's estimates counts the same events
+twice and gave 1.5 where the example says 1.4. Section 5.1 now says what the code does, and pooling
+upward is level selection only.
+
+Proven live: two items in one slot, lifts 1.139 and 0.857; a receipt at gamma 0 carrying n, s, p0, n0,
+p_hat, lift and the level in words with the score untouched; at gamma 1 the same lift moving the score
+from 0.151 to 0.129. Suite at 792. Your typecheck break in odpLoop.test.ts is still the only red.
+

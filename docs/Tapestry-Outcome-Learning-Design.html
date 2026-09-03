@@ -440,7 +440,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
       <tr><td class="m">n<sub>k</sub></td><td>Decayed count of exposures: decisions that served this item in this slot to a shopper in this cell</td><td>Decision records</td></tr>
       <tr><td class="m">s<sub>k</sub></td><td>Decayed count of credited successes for the reward type</td><td>Credited pairs from section 4</td></tr>
       <tr><td class="m">v<sub>k</sub></td><td>Decayed sum of outcome value, for value-based rewards</td><td>Credited pairs</td></tr>
-      <tr><td class="m">p<sub>0</sub></td><td>Baseline rate for this slot and cell: the parent level’s smoothed rate (section 5.4)</td><td>Computed</td></tr>
+      <tr><td class="m">p<sub>0</sub></td><td>Baseline rate for this slot in this cell: the slot’s smoothed rate at that level, itself shrunk toward its parent cell where sparse (section 5.4). The item’s estimate is shrunk toward it; pooling upward is done by choosing the finest level with enough exposures, never by chaining an item’s own estimates, which would count the same events twice</td><td>Computed</td></tr>
       <tr><td class="m">n<sub>0</sub></td><td>Prior strength: how many pseudo-observations the baseline is worth</td><td>Configuration, default 30</td></tr>
       <tr><td class="m">p̂<sub>k</sub></td><td>Smoothed rate for the key</td><td>Formula below</td></tr>
       <tr><td class="m">lift<sub>k</sub></td><td>How much better or worse this item performs than its baseline</td><td>Formula below</td></tr>

@@ -161,10 +161,12 @@ import { decisionRoutes } from '@/routes/decisions';
 import { MeridianReflex } from '@/demos/meridian/MeridianReflex';
 
 import { RegionTrend } from '@/durable-objects/RegionTrend';
+import { DecisionRing } from '@/durable-objects/DecisionRing';
+import { LearnStats } from '@/durable-objects/LearnStats';
 import { rollupTenant } from '@/reflex/regionTrend';
 import { consumeLedger } from '@/ledger/consume';
 
-export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent, MeridianReflex, RegionTrend };
+export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent, MeridianReflex, RegionTrend, DecisionRing, LearnStats };
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

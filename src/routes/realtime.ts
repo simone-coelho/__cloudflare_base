@@ -13,6 +13,7 @@ import { resolveReflexConfig, resolveSurface } from '@/demos/registry';
 import { forwardEventToOdp, mapActionToOdp, odpEnabled, upsertOdpProfile } from '@/services/odpLoop';
 import { outcomeFromAction } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
+import { outcomeToLearning } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
 import { z } from 'zod';
 
@@ -116,7 +117,7 @@ realtimeRoutes.post('/action', async (c) => {
     try { c.executionCtx.waitUntil(capture); } catch { void capture; /* no execCtx (e.g. tests) */ }
     // Phase 0 (doc 22 §3.2): a reward-bearing action becomes an outcome record, after the response.
     const outcome = outcomeFromAction({ ...actionEvent, sessionId }, c.get('tenant'));
-    if (outcome) { const p = enqueueOutcome(c.env, outcome); try { c.executionCtx.waitUntil(p); } catch { void p; } }
+    if (outcome) { const p = Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]); try { c.executionCtx.waitUntil(p); } catch { void p; } }
 
     // ── Edge Affinity Reflex P2 (doc 16 §6): REFLEX_HOST='do' forwards to the
     // shopper's ShopperReflex DO, which runs the same pipeline IN-OBJECT (reflex →

@@ -17,6 +17,7 @@ import { findById, type R2Like } from '@/ledger/writer';
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
+import { liftKey, ringName } from '@/learn/fan';
 import { jwt } from '@/middleware/auth';
 
 export const decisionRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
@@ -39,6 +40,36 @@ decisionRoutes.get('/:tenant/trend', async (c) => {
   c.header('Cache-Control', 'no-store');
   if (!read) return c.json({ ok: true, tenant, region, level: null, snapshot: null });
   return c.json({ ok: true, tenant, region, asked: region, level: read.level, answered: read.region, snapshot: read.snapshot });
+});
+
+/**
+ * GET /v1/:tenant/lift?slot=hero[&brand=]
+ * The lift snapshot in force for a slot: every item's decayed counts, estimate and
+ * lift at every pooling level, and the slot's own rate per cell. Aggregates only,
+ * so it is open. This is the console's grid (doc 22 §12.2) as data.
+ */
+decisionRoutes.get('/:tenant/lift', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const slot = (c.req.query('slot') ?? '').trim();
+  if (!slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  const brand = (c.req.query('brand') ?? '').trim() || tenant;
+  let snapshot: unknown = null;
+  try { snapshot = await c.env.CACHE.get(liftKey(tenant, brand, slot), 'json'); } catch { snapshot = null; }
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, tenant, brand, slot, snapshot });
+});
+
+/** GET /v1/:tenant/visitors/:visitorId/recent: what this visitor was shown, from her own object. Authenticated. */
+decisionRoutes.get('/:tenant/visitors/:visitorId/recent', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  const visitorId = (c.req.param('visitorId') ?? '').trim();
+  if (!TENANT.test(tenant) || !visitorId || visitorId.startsWith(NAMESPACE_MARKER)) return c.json({ ok: false, error: 'bad tenant or visitor id' }, 400);
+  const ns = c.env.DECISION_RING;
+  if (!ns) return c.json({ ok: false, error: 'ring not bound' }, 503);
+  const res = await ns.get(ns.idFromName(ringName(tenant, visitorId))).fetch('https://learn/recent');
+  c.header('Cache-Control', 'no-store');
+  return c.json(await res.json());
 });
 
 /** POST /v1/:tenant/trend/rollup: what the hourly cron does, on demand. Authenticated. */
@@ -68,8 +99,9 @@ decisionRoutes.get('/:tenant/decisions/snapshot', async (c) => {
     tenant, brand, page, visitorId, channel, cf, cookieHeader: c.req.header('Cookie') ?? null,
     stateTenant: c.get('tenant'),
   });
-  // Phase 0: the ledger, after the response, never on it. A queue hiccup is invisible to the shopper.
-  try { c.executionCtx.waitUntil(enqueueDecisions(c.env, out.records)); } catch { void enqueueDecisions(c.env, out.records); }
+  // Phase 0 and Phase 1, after the response, never on it: the ledger, the visitor's ring, each slot's exposures.
+  const ledger = enqueueDecisions(c.env, out.records);
+  try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.afterResponse); } catch { void ledger; void out.afterResponse; }
   c.header('Cache-Control', 'no-store');
   return c.json({ ok: true, ...out });
 });

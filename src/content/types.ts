@@ -66,10 +66,42 @@ export interface RegionalConfig {
   minEvents: number;
 }
 
+/** Doc 22 §4: the learning policy's four axes and the per-reward windows. */
+export interface LearnPolicyConfig {
+  scope: 'session' | 'visitor';
+  match: 'direct' | 'any';
+  credit: 'last' | 'first';
+  windowsMs: Partial<Record<'click' | 'dwell' | 'video_complete' | 'wishlist' | 'add_to_bag' | 'purchase' | 'custom', number>>;
+}
+
+/** Doc 22 §5.1: the estimator's constants. */
+export interface LearnStatsConfig { n0: number; tauLearnMs: number; liftMin: number; liftMax: number; nMin: number }
+
+/** Doc 22 §6.2 and §13: the per-slot dials. γ defaults to 0, shadow mode. */
+export interface SlotDials { gamma?: number; reward?: 'click' | 'dwell' | 'video_complete' | 'wishlist' | 'add_to_bag' | 'purchase' | 'custom' }
+
 export interface LearnConfig {
   version?: string;
   holdout: HoldoutConfig;
   regional?: RegionalConfig;
+  policy?: LearnPolicyConfig;
+  stats?: LearnStatsConfig;
+  /** slot → dials. A slot absent here runs at γ = 0 on the click reward. */
+  slots?: Record<string, SlotDials>;
+}
+
+/** Doc 22 §12.1: what the learning layer contributed, on every receipt it touched. */
+export interface LiftApplied {
+  reward: string;
+  level: number;
+  level_words: string;
+  n: number;
+  s: number;
+  p0: number;
+  n0: number;
+  p_hat: number;
+  lift: number;
+  gamma: number;
 }
 
 /** What the population contributed to a decision set, so a reader can see the prior. */
@@ -135,8 +167,10 @@ export interface DecisionRecord {
     score_base: number;
     /** The population prior's share of the base score, when one applied. */
     regional?: RegionalBlend & { contribution: number };
-    /** No lift snapshot is in force before Phase 1; recorded as null, never as 1. */
-    lift: null;
+    /** The learned lift and the dial it was applied through; null when nothing has been learned for this item in this cell. */
+    lift: LiftApplied | null;
+    /** score_base × lift^γ. Equal to score_base while γ is 0. */
+    score_final: number;
   };
 }
 

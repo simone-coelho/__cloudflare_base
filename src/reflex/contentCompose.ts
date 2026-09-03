@@ -79,11 +79,19 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000;
  * The composer, with the candidate sets the ledger records. Decisions are
  * byte-for-byte what composeContent() returns; the candidates are additional.
  */
+/**
+ * An optional final adjustment per candidate, applied after the tag sum and
+ * before ranking. The learning layer uses it to multiply by lift^γ; the base
+ * score is handed back so the receipt can show both.
+ */
+export type ScoreAdjust = (piece: ContentPieceLike, slot: string, baseScore: number) => number;
+
 export function composeContentDetailed(
   pieces: readonly ContentPieceLike[],
   affinity: AffinityViewLike,
   slots: readonly ContentSlotSpec[],
   candidateLimit = 10,
+  adjust?: ScoreAdjust,
 ): ComposeContentResult {
   const live = pieces.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
   const used = new Set<string>();
@@ -120,6 +128,7 @@ export function composeContentDetailed(
         drivers.push({ dim: 'completes', value: slot.prefer.label, a: 1, weight: slot.prefer.bonus });
       }
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
+      if (adjust) { const adjusted = adjust(p, slot.slot, score); if (Number.isFinite(adjusted) && adjusted >= 0) score = adjusted; }
       return { p, score, drivers };
     }).sort((x, y) => y.score - x.score || x.p.id.localeCompare(y.p.id));
 

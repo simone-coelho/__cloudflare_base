@@ -84,6 +84,17 @@ class_name = "MeridianReflex"
 name = "REGION_TREND"
 class_name = "RegionTrend"
 
+# Phase 1 of the outcome-learning design (doc 22 §4 to §6): the visitor's ring
+# with online attribution, and one statistics object per tenant, brand and slot
+# that publishes lift snapshots to KV. The decision path reads KV, never these.
+[[durable_objects.bindings]]
+name = "DECISION_RING"
+class_name = "DecisionRing"
+
+[[durable_objects.bindings]]
+name = "LEARN_STATS"
+class_name = "LearnStats"
+
 [[migrations]]
 tag = "v1"
 new_classes = ["StateManager", "RateLimiter"]
@@ -112,6 +123,10 @@ new_sqlite_classes = ["MeridianReflex"]
 [[migrations]]
 tag = "v6"
 new_sqlite_classes = ["RegionTrend"]
+
+[[migrations]]
+tag = "v7"
+new_sqlite_classes = ["DecisionRing", "LearnStats"]
 
 # Analytics Engine
 [[analytics_engine_datasets]]
@@ -256,6 +271,14 @@ class_name = "MeridianReflex"
 [[env.staging.durable_objects.bindings]]
 name = "REGION_TREND"
 class_name = "RegionTrend"
+
+[[env.staging.durable_objects.bindings]]
+name = "DECISION_RING"
+class_name = "DecisionRing"
+
+[[env.staging.durable_objects.bindings]]
+name = "LEARN_STATS"
+class_name = "LearnStats"
 
 [[env.staging.analytics_engine_datasets]]
 binding = "ANALYTICS"

@@ -17,6 +17,8 @@ import { armFor } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { decideContent } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
+import { fanDecisions, liftKey, type SlotLearnConfig } from '@/learn/fan';
+import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import type { ContentDecisionSet } from './types';
 
 export interface ServeRequest {
@@ -33,6 +35,26 @@ export interface ServeRequest {
 }
 
 /** Where each input came from, so a reader can tell a tuned scope from a compiled default. */
+/** The lift snapshots the decision path reads: KV through a per-isolate cache, never the object. */
+const LIFT_TTL_MS = 60_000;
+const liftCache = new Map<string, { at: number; value: LiftSnapshot | null }>();
+export function invalidateLiftCache(): void { liftCache.clear(); }
+async function readLift(env: Pick<Env, 'CACHE'>, tenant: string, brand: string, slot: string, now: number): Promise<LiftSnapshot | null> {
+  const key = liftKey(tenant, brand, slot);
+  const hit = liftCache.get(key);
+  if (hit && now - hit.at < LIFT_TTL_MS) return hit.value;
+  let value: LiftSnapshot | null = null;
+  try { value = (await env.CACHE.get(key, 'json')) as LiftSnapshot | null; } catch { value = null; }
+  liftCache.set(key, { at: now, value });
+  return value;
+}
+
+/** What each slot learns against: its reward and the estimator's constants, from the learn document. */
+export function slotLearnConfigOf(learn: { stats?: SlotLearnConfig['stats']; slots?: Record<string, { reward?: SlotLearnConfig['reward'] }> }): (slot: string) => SlotLearnConfig {
+  const stats = learn.stats ?? DEFAULT_STATS;
+  return (slot) => ({ reward: learn.slots?.[slot]?.reward ?? 'click', stats });
+}
+
 export interface DecisionSources {
   catalog: { version: string | null; revision: number; pieces: number };
   slots: { version: string | null; revision: number; count: number };
@@ -81,7 +103,7 @@ async function readShopper(
 
 export async function serveContentDecisions(
   env: Env, r: ServeRequest,
-): Promise<ContentDecisionSet & { sources: DecisionSources }> {
+): Promise<ContentDecisionSet & { sources: DecisionSources; afterResponse: Promise<void> }> {
   const now = r.nowMs ?? Date.now();
   const scope = r.tenant;
   const brand = r.brand ?? r.tenant;
@@ -127,15 +149,26 @@ export async function serveContentDecisions(
   // What the state hung on: the DO host keys it on the durable visitor id, the
   // session host on the cookie, and a failed read on nothing at all.
   const identityAnchor = shopper.state === 'do' ? 'visitor' : shopper.state === 'session' ? 'session' : 'none';
+
+  // Phase 1: the lift snapshot per slot, and the trust dial. Shadow by default.
+  const snapshots: Record<string, LiftSnapshot | null> = {};
+  await Promise.all(slots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now); }));
+  const gammaOf = (slot: string) => learn.slots?.[slot]?.gamma ?? 0;
+
   const set = decideContent({
     tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: shopper.sessionId, identityAnchor, nowMs: now,
     pieces: catalog.pieces, slots, affinity, regional, cell, arm,
-    versions: { config: configRevision, lift: 0, prior: 0, policy: 0 },
+    versions: { config: configRevision, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },
     configLabel: cfg.version,
+    learning: { snapshots, gammaOf },
   });
+
+  // After the response: the visitor's ring and each slot's exposures. Never awaited here.
+  const afterResponse = fanDecisions(env, set, slotLearnConfigOf(learn));
 
   return {
     ...set,
+    afterResponse,
     sources: {
       catalog: { version: catalog.version ?? null, revision: catalogRev?.revision ?? 0, pieces: catalog.pieces.length },
       slots: { version: slotsDoc.version ?? null, revision: slotsRev?.revision ?? 0, count: slots.length },

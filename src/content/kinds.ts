@@ -185,6 +185,49 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
       if (typeof g.enabled === 'boolean' && isNum(g.kBlend) && isNum(g.minEvents)) regional = { enabled: g.enabled, kBlend: g.kBlend, minEvents: g.minEvents };
     }
   }
+  const REWARDS = new Set(['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom']);
+  let policy: LearnConfig['policy'];
+  if (candidate.policy !== undefined) {
+    const g = candidate.policy;
+    if (!isRecord(g)) errors.push('policy: object when present');
+    else {
+      if (g.scope !== 'session' && g.scope !== 'visitor') errors.push('policy.scope: session | visitor');
+      if (g.match !== 'direct' && g.match !== 'any') errors.push('policy.match: direct | any');
+      if (g.credit !== 'last' && g.credit !== 'first') errors.push('policy.credit: last | first');
+      const w: Record<string, number> = {};
+      if (g.windowsMs !== undefined) {
+        if (!isRecord(g.windowsMs)) errors.push('policy.windowsMs: object of reward → milliseconds');
+        else for (const [k, v] of Object.entries(g.windowsMs)) { if (!REWARDS.has(k) || !isNum(v) || v <= 0) errors.push(`policy.windowsMs.${k}: known reward and positive milliseconds`); else w[k] = v; }
+      }
+      if (!errors.some((e) => e.startsWith('policy'))) policy = { scope: g.scope as 'session' | 'visitor', match: g.match as 'direct' | 'any', credit: g.credit as 'last' | 'first', windowsMs: w };
+    }
+  }
+  let stats: LearnConfig['stats'];
+  if (candidate.stats !== undefined) {
+    const g = candidate.stats;
+    if (!isRecord(g)) errors.push('stats: object when present');
+    else {
+      if (!isNum(g.n0) || g.n0 <= 0) errors.push('stats.n0: positive number');
+      if (!isNum(g.tauLearnMs) || g.tauLearnMs <= 0) errors.push('stats.tauLearnMs: positive milliseconds');
+      if (!isNum(g.liftMin) || !isNum(g.liftMax) || g.liftMin <= 0 || g.liftMax < 1 || g.liftMin > 1 || g.liftMin >= g.liftMax) errors.push('stats.liftMin/liftMax: 0 < liftMin ≤ 1 ≤ liftMax');
+      if (!isNum(g.nMin) || !Number.isInteger(g.nMin) || g.nMin < 1) errors.push('stats.nMin: positive integer');
+      if (!errors.some((e) => e.startsWith('stats'))) stats = { n0: g.n0 as number, tauLearnMs: g.tauLearnMs as number, liftMin: g.liftMin as number, liftMax: g.liftMax as number, nMin: g.nMin as number };
+    }
+  }
+  let slots: LearnConfig['slots'];
+  if (candidate.slots !== undefined) {
+    if (!isRecord(candidate.slots)) errors.push('slots: object of slot → dials');
+    else {
+      slots = {};
+      for (const [slot, d] of Object.entries(candidate.slots)) {
+        if (!SLUG.test(slot) || !isRecord(d)) { errors.push(`slots.${slot}: slug → object`); continue; }
+        const dials: NonNullable<LearnConfig['slots']>[string] = {};
+        if (d.gamma !== undefined) { if (!isNum(d.gamma) || d.gamma < 0 || d.gamma > 1) errors.push(`slots.${slot}.gamma: number 0..1`); else dials.gamma = d.gamma; }
+        if (d.reward !== undefined) { if (!isStr(d.reward) || !REWARDS.has(d.reward)) errors.push(`slots.${slot}.reward: known reward`); else dials.reward = d.reward as NonNullable<typeof dials.reward>; }
+        slots[slot] = dials;
+      }
+    }
+  }
   if (errors.length) return { ok: false, errors };
   return {
     ok: true,
@@ -192,6 +235,9 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
       ...(isStr(candidate.version) ? { version: candidate.version } : {}),
       holdout: { share: h.share as number, salt: (h.salt as string | undefined) ?? '', arms: [...(arms as LearnConfig['holdout']['arms'])] },
       ...(regional ? { regional } : {}),
+      ...(policy ? { policy } : {}),
+      ...(stats ? { stats } : {}),
+      ...(slots ? { slots } : {}),
     },
   };
 }
@@ -201,6 +247,11 @@ export const DEFAULT_LEARN: LearnConfig = {
   version: 'learn-default',
   holdout: { share: 0.05, salt: '', arms: ['default'] },
   regional: { enabled: true, kBlend: 1, minEvents: 30 },
+  // Doc 22 §4.2's proposed default policy and §5.1's constants. Every slot runs at γ = 0 (shadow)
+  // on the click reward until a person raises the dial or names another reward.
+  policy: { scope: 'session', match: 'direct', credit: 'last', windowsMs: { click: 1_800_000, dwell: 1_800_000, video_complete: 1_800_000, wishlist: 21_600_000, add_to_bag: 21_600_000, purchase: 604_800_000, custom: 1_800_000 } },
+  stats: { n0: 30, tauLearnMs: 1_814_400_000, liftMin: 0.5, liftMax: 2, nMin: 30 },
+  slots: {},
 };
 
 export const LEARN_KIND: DocumentKind<LearnConfig> = {
