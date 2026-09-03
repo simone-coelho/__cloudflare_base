@@ -80,6 +80,17 @@ export function isValidTenantId(value: unknown): value is TenantId {
   return typeof value === 'string' && TENANT_RE.test(value);
 }
 
+/**
+ * The Hono context shape a route needs to read `c.get('tenant')`.
+ *
+ * Declared once so every route file names the same variable. A route that omits
+ * it does not fail loudly, it simply cannot see the tenant -- which is the same
+ * invisible-default hazard this whole module is written against.
+ */
+export interface TenantVariables {
+  tenant: TenantId;
+}
+
 export interface TenantSignals {
   /** An explicit choice: a route parameter, a body field, a job argument. */
   explicit?: string | null;

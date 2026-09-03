@@ -36,7 +36,9 @@
 // clock-, session- and D1-shaped lives here, at the edge of it.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { TenantVariables } from '@/tenancy/tenant';
 import { shopperObject } from '@/tenancy/objects';
+import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -70,7 +72,7 @@ import {
   type DimensionScores,
 } from '@/demos/brighthour/composer';
 
-const liveRoutes = new Hono<{ Bindings: Env }>();
+const liveRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
 /** Every Bright Hour call is this surface, stamped server-side. Never inferred. */
 const SURFACE = 'brighthour';
@@ -236,9 +238,14 @@ interface AffinityRead {
  * `cookieHeader` is never passed: identity here is the Bright Hour visitorId,
  * so the coach session cookie can neither be read nor written on this path.
  */
-async function readAffinity(env: Env, visitorId: string, realNowMs: number): Promise<AffinityRead> {
+async function readAffinity(
+  env: Env, visitorId: string, realNowMs: number,
+  // Named rather than defaulted silently: an invisible default is the exact
+  // hazard @/tenancy is written against.
+  tenant: TenantId = DEFAULT_TENANT,
+): Promise<AffinityRead> {
   if ((env.REFLEX_HOST ?? 'session') === 'do') {
-    const stub = shopperObject(env.SHOPPER_REFLEX, visitorId);
+    const stub = shopperObject(env.SHOPPER_REFLEX, visitorId, tenant);
     const res = await stub.fetch('https://shopper-reflex/snapshot');
     const body = (await res.json()) as { affinity?: { dims?: DimensionScores; audiences?: string[] } };
     return {
@@ -367,7 +374,7 @@ liveRoutes.post('/page', async (c) => {
     // has already had accepted, so drain their queue (bounded) before reading.
     await settleVisitor(input.visitorId);
 
-    const affinity = await readAffinity(c.env, input.visitorId, realNowMs);
+    const affinity = await readAffinity(c.env, input.visitorId, realNowMs, c.get('tenant'));
     const sessionId = input.sessionId ?? affinity.sessionId;
 
     const page = composePage({

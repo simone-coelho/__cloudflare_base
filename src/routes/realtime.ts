@@ -1,3 +1,4 @@
+import type { TenantVariables } from '@/tenancy/tenant';
 import { shopperObject, shopperObjectName } from '@/tenancy/objects';
 import { DEFAULT_TENANT } from '@/tenancy/tenant';
 // Singleton objects: one per worker on purpose, never per brand.
@@ -13,7 +14,7 @@ import { forwardEventToOdp, mapActionToOdp, odpEnabled, upsertOdpProfile } from 
 import { CatalogService } from '@/services/CatalogService';
 import { z } from 'zod';
 
-const realtimeRoutes = new Hono<{ Bindings: Env }>();
+const realtimeRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
 // WebSocket upgrade endpoint
 realtimeRoutes.get('/ws', async (c) => {
@@ -34,12 +35,12 @@ realtimeRoutes.get('/ws', async (c) => {
     // (opt_visitor_id), so every tab/device lands on the same object. Default
     // 'session' keeps the original relay DO — byte-identical behavior.
     if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
-      const id = c.env.SHOPPER_REFLEX.idFromName(shopperObjectName(DEFAULT_TENANT, userId));
+      const id = c.env.SHOPPER_REFLEX.idFromName(shopperObjectName(c.get('tenant'), userId));
       return c.env.SHOPPER_REFLEX.get(id).fetch(c.req.raw);
     }
 
     // Get the Durable Object instance for this user
-    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(DEFAULT_TENANT, userId));
+    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(c.get('tenant'), userId));
     const durableObject = c.env.PERSONALIZATION_WEBSOCKET.get(id);
 
     // Forward the WebSocket upgrade request to the Durable Object
@@ -116,7 +117,7 @@ realtimeRoutes.post('/action', async (c) => {
     // ODP loop on this path (forward + seed + receipt over its own socket), so no
     // route-level ODP dispatch here. The D1 captureDemoEvent above ran either way.
     if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
-      const stub = shopperObject(c.env.SHOPPER_REFLEX, actionEvent.userId);
+      const stub = shopperObject(c.env.SHOPPER_REFLEX, actionEvent.userId, c.get('tenant'));
       const doRes = await stub.fetch('https://shopper-reflex/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,7 +131,7 @@ realtimeRoutes.post('/action', async (c) => {
     const cookieHeader = c.req.header('Cookie') ?? null;
 
     // Process the action event with enhanced session management
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
     let execCtx: { waitUntil(p: Promise<unknown>): void } | undefined;
     try { execCtx = c.executionCtx; } catch { execCtx = undefined; /* no execCtx (e.g. tests) */ }
     const result = await segmentEngine.processActionEventWithSession(actionEvent, cookieHeader, execCtx);
@@ -154,6 +155,8 @@ realtimeRoutes.post('/action', async (c) => {
           c.env, actionEvent,
           { visitorId: actionEvent.userId, sessionId: result.sessionId },
           odpReceipt.receiptId,
+          undefined,
+          c.get('tenant'),
         ));
       }
       // §4 score upsert: on membership changes, persist the reflex's live scores
@@ -221,7 +224,7 @@ realtimeRoutes.get('/personalization/:userId', async (c) => {
     }
 
     const cookieHeader = c.req.header('Cookie') ?? null;
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
     
     // Get or create session from cookies
     const { sessionId, sessionData, isNewSession } = await segmentEngine.getOrCreateSessionFromCookies(
@@ -275,12 +278,12 @@ realtimeRoutes.get('/reflex', async (c) => {
     // REFLEX_HOST='do' (doc 16 §6): the vector lives in the shopper's own
     // ShopperReflex DO — read the snapshot there (same response shape).
     if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
-      const stub = shopperObject(c.env.SHOPPER_REFLEX, userId);
+      const stub = shopperObject(c.env.SHOPPER_REFLEX, userId, c.get('tenant'));
       const doRes = await stub.fetch('https://shopper-reflex/snapshot');
       return c.json((await doRes.json()) as Record<string, unknown>, doRes.status as 200);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
     const { sessionData } = await segmentEngine.getOrCreateSessionFromCookies(cookieHeader, userId);
     // Surface-aware tuning (@/demos/registry): an explicit ?surface= wins, else
     // the session remembers which demo it belongs to, else DEFAULT_SURFACE.
@@ -364,7 +367,7 @@ realtimeRoutes.post('/session/:sessionId/preferences', async (c) => {
       return c.json({ error: 'Session ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
     const updatedSession = await segmentEngine.updateSessionPreferences(sessionId, preferences);
 
     if (!updatedSession) {
@@ -413,7 +416,7 @@ realtimeRoutes.get('/session/:sessionId/analytics', async (c) => {
       return c.json({ error: 'Session ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
     const analytics = await segmentEngine.getSessionAnalytics(sessionId);
 
     if (!analytics) {
@@ -444,7 +447,7 @@ realtimeRoutes.get('/segments/:userId', async (c) => {
       return c.json({ error: 'User ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
     const segments = await segmentEngine.getUserSegments(userId);
 
     return c.json({
@@ -478,7 +481,7 @@ realtimeRoutes.post('/segments/:userId', async (c) => {
       return c.json({ error: 'User ID is required' }, 400);
     }
 
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
     await segmentEngine.assignSegment(userId, segment, source);
 
     return c.json({
@@ -517,7 +520,7 @@ realtimeRoutes.get('/connections/:userId', async (c) => {
     }
 
     // Get the Durable Object instance for this user
-    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(DEFAULT_TENANT, userId));
+    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(c.get('tenant'), userId));
     const durableObject = c.env.PERSONALIZATION_WEBSOCKET.get(id);
     
     // Request connection info from the Durable Object
@@ -567,7 +570,7 @@ realtimeRoutes.get('/health', async (c) => {
     const wsHealthData = await wsHealth.json();
 
     // Test segment engine by creating a dummy instance
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
     const testProfile = await segmentEngine.getUserProfile('health-check-user');
     
     return c.json({
@@ -672,7 +675,7 @@ realtimeRoutes.post('/demo/trigger', async (c) => {
     }
 
     // Process the demo action event
-    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
+    const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
     const personalizationUpdate = await segmentEngine.processActionEvent(actionEvent);
 
     return c.json({

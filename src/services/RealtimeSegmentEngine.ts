@@ -18,7 +18,7 @@
 // (`new RealtimeSegmentEngine(env, getConnectors(env))`) is also supported.
 
 import { shopperObjectName } from '@/tenancy/objects';
-import { DEFAULT_TENANT } from '@/tenancy/tenant';
+import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import { visitBucket, type ChannelSignals } from '@/services/visit';
 import type { Env } from '@/types/env';
@@ -293,9 +293,10 @@ export function hasSegmentChanges(oldSegments: string[], newSegments: string[]):
 export async function ensureAudiencesSeeded(
   env: Env,
   catalogService: CatalogService,
-  surface: DemoSurface = DEFAULT_SURFACE
+  surface: DemoSurface = DEFAULT_SURFACE,
+  tenant: TenantId = DEFAULT_TENANT
 ): Promise<void> {
-  const store = new KvAudienceStore(env);
+  const store = new KvAudienceStore(env, tenant);
   if (surface === DEFAULT_SURFACE) await store.seed(SEED_AUDIENCES);
   const generated = generateAffinityAudiences(
     catalogService.getAllProducts() as unknown as Array<Record<string, unknown>>,
@@ -316,6 +317,7 @@ export async function ensureAudiencesSeeded(
 }
 
 export class RealtimeSegmentEngine {
+  readonly tenant: TenantId;
   /**
    * CW6: how background work outlives the response. The route hands in its
    * execution context per call; without one (tests), a promise is simply let go.
@@ -334,9 +336,12 @@ export class RealtimeSegmentEngine {
   constructor(
     env: Env,
     connectors?: Connectors,
-    options?: { domain?: string; secure?: boolean }
+    options?: { domain?: string; secure?: boolean; tenant?: TenantId }
   ) {
     this.env = env;
+    // The brand this engine decides for. Flows straight through to SessionManager
+    // via `options`; the audience store and the socket name need it explicitly.
+    this.tenant = options?.tenant ?? DEFAULT_TENANT;
     // Default to getConnectors(env) so existing single-arg route calls keep working
     // while the spec's two-arg `new RealtimeSegmentEngine(env, getConnectors(env))` is honored.
     this.connectors = connectors ?? getConnectors(env);
@@ -764,7 +769,7 @@ export class RealtimeSegmentEngine {
 
   private async broadcastUpdate(update: PersonalizationUpdate): Promise<void> {
     try {
-      const id = this.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(DEFAULT_TENANT, update.userId));
+      const id = this.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(this.tenant, update.userId));
       const websocketObject = this.env.PERSONALIZATION_WEBSOCKET.get(id);
 
       await websocketObject.fetch(new Request('http://fake/broadcast', {

@@ -14,8 +14,9 @@
 //   POST /audiences/publish  -> human-approved publish (createAudience) -> now live,
 //                               then we flash connected storefronts "new audience live".
 
+import type { TenantVariables } from '@/tenancy/tenant';
 import { shopperObjectName } from '@/tenancy/objects';
-import { DEFAULT_TENANT } from '@/tenancy/tenant';
+import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import type { AudienceCondition, AudienceDef, QualificationContext } from '@/connectors';
@@ -27,7 +28,7 @@ import type { PersonalizationUpdate } from '@/durable-objects/PersonalizationWeb
 import { z } from 'zod';
 import { jwt } from '@/middleware/auth';
 
-const operatorRoutes = new Hono<{ Bindings: Env }>();
+const operatorRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
 // ---------------------------------------------------------------------------
 // Idempotent boot seed. The Coach launch audiences (SEED_AUDIENCES) must be
@@ -35,8 +36,8 @@ const operatorRoutes = new Hono<{ Bindings: Env }>();
 // will NOT clobber audiences created live by Opal, so calling this at the start of
 // every handler is safe and keeps the operator console self-bootstrapping.
 // ---------------------------------------------------------------------------
-async function ensureSeeded(env: Env): Promise<void> {
-  await new KvAudienceStore(env).seed(SEED_AUDIENCES);
+async function ensureSeeded(env: Env, tenant: TenantId = DEFAULT_TENANT): Promise<void> {
+  await new KvAudienceStore(env, tenant).seed(SEED_AUDIENCES);
 }
 
 // ---------------------------------------------------------------------------
@@ -76,7 +77,7 @@ const publishSchema = z.object({
 // ---------------------------------------------------------------------------
 operatorRoutes.post('/audiences/suggest', async (c) => {
   try {
-    await ensureSeeded(c.env);
+    await ensureSeeded(c.env, c.get('tenant'));
     const body = await c.req.json();
     const { nlPrompt } = suggestSchema.parse(body);
 
@@ -110,7 +111,7 @@ operatorRoutes.post('/audiences/suggest', async (c) => {
 // ---------------------------------------------------------------------------
 operatorRoutes.post('/audiences/publish', async (c) => {
   try {
-    await ensureSeeded(c.env);
+    await ensureSeeded(c.env, c.get('tenant'));
     const body = await c.req.json();
     const { audience } = publishSchema.parse(body);
 
@@ -153,8 +154,8 @@ operatorRoutes.post('/audiences/publish', async (c) => {
 // ---------------------------------------------------------------------------
 operatorRoutes.get('/audiences', async (c) => {
   try {
-    await ensureSeeded(c.env);
-    const audiences = await new KvAudienceStore(c.env).listPublished();
+    await ensureSeeded(c.env, c.get('tenant'));
+    const audiences = await new KvAudienceStore(c.env, c.get('tenant')).listPublished();
 
     return c.json({
       success: true,
@@ -291,8 +292,11 @@ async function loadQualificationContext(env: Env, userId: string): Promise<Quali
 }
 
 /** Send one per-user PersonalizationUpdate through the user's DO /broadcast endpoint. */
-async function sendUpdate(env: Env, userId: string, update: PersonalizationUpdate): Promise<void> {
-  const id = env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(DEFAULT_TENANT, userId));
+async function sendUpdate(
+  env: Env, userId: string, update: PersonalizationUpdate,
+  tenant: TenantId = DEFAULT_TENANT,
+): Promise<void> {
+  const id = env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(tenant, userId));
   const stub = env.PERSONALIZATION_WEBSOCKET.get(id);
   await stub.fetch(
     new Request('http://do/broadcast', {
@@ -424,7 +428,7 @@ operatorRoutes.post('/audiences/:key/rename', audienceWrites, async (c) => {
   try {
     const key = c.req.param('key');
     const { name, description } = renameSchema.parse(await c.req.json());
-    const updated = await new KvAudienceStore(c.env).rename(key, name, description);
+    const updated = await new KvAudienceStore(c.env, c.get('tenant')).rename(key, name, description);
     if (!updated) return c.json({ error: `Audience '${key}' not found` }, 404);
     return c.json({
       success: true, audience: updated,
@@ -446,7 +450,7 @@ operatorRoutes.post('/audiences/:key/pin', audienceWrites, async (c) => {
   try {
     const key = c.req.param('key');
     const { pinned } = pinSchema.parse(await c.req.json());
-    const updated = await new KvAudienceStore(c.env).setPinned(key, pinned);
+    const updated = await new KvAudienceStore(c.env, c.get('tenant')).setPinned(key, pinned);
     if (!updated) return c.json({ error: `Audience '${key}' not found` }, 404);
     return c.json({
       success: true, audience: updated,
@@ -473,7 +477,7 @@ operatorRoutes.post('/audiences/:key/pin', audienceWrites, async (c) => {
 operatorRoutes.post('/audiences/:key/prune', audienceWrites, async (c) => {
   try {
     const key = c.req.param('key');
-    const store = new KvAudienceStore(c.env);
+    const store = new KvAudienceStore(c.env, c.get('tenant'));
     const existing = await store.get(key);
     if (!existing) return c.json({ error: `Audience '${key}' not found` }, 404);
     await store.archive(key);

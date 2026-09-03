@@ -26,6 +26,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { shopperObject } from '@/tenancy/objects';
+import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
 import type { Env } from '@/types/env';
 import { CatalogService, priceBandOf, type Product } from './CatalogService';
 import type { ActionEvent } from './RealtimeSegmentEngine';
@@ -236,7 +237,13 @@ export async function forwardEventToOdp(
   event: ActionEvent,
   identity: OdpIdentity,
   receiptId?: string,
-  pushReceipt?: (data: { receiptId: string; status: number; ts: number; source: string }) => void
+  pushReceipt?: (data: { receiptId: string; status: number; ts: number; source: string }) => void,
+  /**
+   * The brand whose socket receives the receipt. Two brands share a visitor id,
+   * so without this the receipt for one is pushed to a socket the other is also
+   * addressed by.
+   */
+  tenant: TenantId = DEFAULT_TENANT,
 ): Promise<void> {
   try {
     if (!odpEnabled(env)) return;
@@ -255,7 +262,7 @@ export async function forwardEventToOdp(
         if (pushReceipt) {
           pushReceipt(receipt);
         } else {
-          const stub = shopperObject(env.PERSONALIZATION_WEBSOCKET, event.userId);
+          const stub = shopperObject(env.PERSONALIZATION_WEBSOCKET, event.userId, tenant);
           await stub.fetch('https://internal/broadcast', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
