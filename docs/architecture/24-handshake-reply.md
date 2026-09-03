@@ -120,3 +120,16 @@ asked for are unchanged: the queue consumer case in src/index.ts and the outcome
 src/routes/realtime.ts. The consumer needs the ANALYTICS binding it already has and the STORAGE bucket
 it already has, so wrangler.toml needs nothing from either of us for this.
 
+---
+
+ADDENDUM 3, closing it
+
+Your consequence is absorbed rather than documented: the decision id now carries the tenant as its first
+segment, then the timestamp, so the R2 key is derivable from the id alone and a pasted id resolves without
+anyone remembering the brand. No runbook line needed. Section 3.4 and the code say so, and the test pins
+the prefix.
+
+The ledger storage question is closed on both sides and recorded as closed in plan 21. Nothing about it is
+open. What remains between us is two actions: name the queue consumer case in src/index.ts and the
+outcome enqueue line in src/routes/realtime.ts, and I build Phase 0.
+

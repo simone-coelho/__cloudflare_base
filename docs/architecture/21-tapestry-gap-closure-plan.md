@@ -124,6 +124,15 @@ exactly what makes the brand a string; a second brand is the provisioning exerci
 
 ---
 
+## The ledger storage question, closed 2026-09-03
+
+Raised as doc 22 §18.9, superseded by §18.10, answered in §3.3 and §3.4, and accepted by both sessions.
+D1 is off the ledger path; the shopper object, R2 with an hour manifest, and Analytics Engine hold what it
+held; the decision id carries the tenant and the timestamp so it resolves on its own. **Nothing about it
+remains open.** The only outstanding items are actions, not questions: the two Phase 0 handovers.
+
+---
+
 ## Compatibility with the outcome-learning design, settled 2026-09-02
 
 Doc 22 was written in parallel with CW0 and CW9 landing, so it specified versioned configuration four

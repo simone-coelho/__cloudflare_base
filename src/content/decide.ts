@@ -82,7 +82,9 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
     positionIn.set(d.slot, position + 1);
     const regional = regionalOf(d);
     return {
-      decision_id: `${i.nowMs.toString(36)}:${i.visitorId}:${i.page}:${d.slot}:${position}`,
+      // Tenant first, then time: the R2 partition (brand and hour) is derivable from the id alone,
+      // so a support paste resolves without anyone having to remember which brand it came from.
+      decision_id: `${i.tenant}:${i.nowMs.toString(36)}:${i.visitorId}:${i.page}:${d.slot}:${position}`,
       tenant: i.tenant, brand: i.brand, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
       page: i.page, slot: d.slot, position, item_id: d.contentId, customer_item_id: d.customerContentId,
       candidates: candidates[d.slot] ?? [],

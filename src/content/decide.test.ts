@@ -48,6 +48,8 @@ describe('decideContent', () => {
     const story = out.records.filter((r) => r.slot === 'story');
     expect(story.map((r) => r.position)).toEqual([0, 1]);
     expect(new Set(out.records.map((r) => r.decision_id)).size).toBe(4);
+    // The id resolves on its own: brand first, then the time the R2 hour prefix is derived from.
+    expect(hero.decision_id.startsWith(`tapestry:${base.nowMs.toString(36)}:`)).toBe(true);
   });
 
   it('the default arm serves the defaults, keeps the pin, and still records everything', () => {
