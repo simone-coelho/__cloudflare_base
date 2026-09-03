@@ -6,6 +6,7 @@ import {
   classifyEntryChannel, isNewVisit, nextVisitCount,
   type ChannelSignals, type EntryChannel,
 } from '@/services/visit';
+import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 
 export interface SessionData {
   userId: string;
@@ -119,12 +120,25 @@ const sessionDataSchema = z.object({
 
 export class SessionManager {
   private env: Env;
+  readonly tenant: TenantId;
   private sessionTTL: number = 30 * 24 * 60 * 60; // 30 days in seconds
   private cookieDomain: string;
   private isSecure: boolean;
 
-  constructor(env: Env, options?: { domain?: string; secure?: boolean }) {
+  /**
+   * Sessions scoped to one brand (CW1). A visitor on Kate Spade and a visitor on
+   * Coach who happen to share a session id are two different people, and without
+   * this they were one: `session:{id}` was a global key.
+   *
+   * The default tenant is unprefixed, so an existing `new SessionManager(env)`
+   * reads and writes exactly the keys it always did and no live session moves.
+   */
+  private readonly kv: KVLike;
+
+  constructor(env: Env, options?: { domain?: string; secure?: boolean; tenant?: TenantId }) {
     this.env = env;
+    this.tenant = options?.tenant ?? DEFAULT_TENANT;
+    this.kv = new TenantKV(env.SESSIONS as unknown as KVLike, this.tenant);
     this.cookieDomain = options?.domain || '';
     this.isSecure = options?.secure ?? true;
   }
@@ -198,14 +212,14 @@ export class SessionManager {
       const validatedData = sessionDataSchema.parse(sessionData);
 
       // Store session in KV
-      await this.env.SESSIONS.put(
+      await this.kv.put(
         `session:${sessionId}`,
         JSON.stringify(validatedData),
         { expirationTtl: this.sessionTTL }
       );
 
       // Also store by userId for quick lookup
-      await this.env.SESSIONS.put(
+      await this.kv.put(
         `user:${userId}`,
         sessionId,
         { expirationTtl: this.sessionTTL }
@@ -224,7 +238,7 @@ export class SessionManager {
    */
   async getSession(sessionId: string): Promise<SessionData | null> {
     try {
-      const sessionData = await this.env.SESSIONS.get(`session:${sessionId}`, 'json');
+      const sessionData = await this.kv.get(`session:${sessionId}`, 'json');
       if (!sessionData) {
         return null;
       }
@@ -241,7 +255,7 @@ export class SessionManager {
    */
   async getSessionByUserId(userId: string): Promise<SessionData | null> {
     try {
-      const sessionId = await this.env.SESSIONS.get(`user:${userId}`);
+      const sessionId = (await this.kv.get(`user:${userId}`)) as string | null;
       if (!sessionId) {
         return null;
       }
@@ -259,7 +273,7 @@ export class SessionManager {
    */
   async resolveSessionIdByUserId(userId: string): Promise<string | null> {
     try {
-      return await this.env.SESSIONS.get(`user:${userId}`);
+      return (await this.kv.get(`user:${userId}`)) as string | null;
     } catch (error) {
       console.error('Error resolving session id by user ID:', error);
       return null;
@@ -441,11 +455,11 @@ export class SessionManager {
       const sessionData = await this.getSession(sessionId);
       
       // Delete session data
-      await this.env.SESSIONS.delete(`session:${sessionId}`);
+      await this.kv.delete(`session:${sessionId}`);
       
       // Delete user ID mapping
       if (sessionData) {
-        await this.env.SESSIONS.delete(`user:${sessionData.userId}`);
+        await this.kv.delete(`user:${sessionData.userId}`);
       }
 
       return true;

@@ -6,6 +6,7 @@
 
 import type { Env } from '@/types/env';
 import type { AudienceDef } from './types';
+import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 
 export interface AudienceStore {
   listPublished(): Promise<AudienceDef[]>;
@@ -28,13 +29,28 @@ export interface AudienceStore {
 const PREFIX = 'audience:';
 
 export class KvAudienceStore implements AudienceStore {
-  constructor(private env: Env) {}
+  /**
+   * KV scoped to one brand (CW1). The default tenant's keys are unprefixed, so
+   * an existing `new KvAudienceStore(env)` reads and writes exactly the keys it
+   * always did; a second brand cannot see them and they cannot see it.
+   *
+   * NOT the same axis as the demo-surface prefix in @/demos/registry. That
+   * namespaces the audience KEY ('' for coach, 'bh_' for brighthour) to keep two
+   * demos apart inside one store; this namespaces the KV key to keep two
+   * customers apart. Surfaces are pseudo-tenants and should eventually become
+   * real ones, but converging them now would break both demos for no gain.
+   */
+  private readonly kv: KVLike;
+
+  constructor(private env: Env, readonly tenant: TenantId = DEFAULT_TENANT) {
+    this.kv = new TenantKV(env.CACHE as unknown as KVLike, tenant);
+  }
 
   async listPublished(): Promise<AudienceDef[]> {
-    const list = await this.env.CACHE.list({ prefix: PREFIX });
+    const list = await this.kv.list({ prefix: PREFIX });
     const defs: AudienceDef[] = [];
     for (const k of list.keys) {
-      const def = (await this.env.CACHE.get(k.name, 'json')) as AudienceDef | null;
+      const def = (await this.kv.get(k.name, 'json')) as AudienceDef | null;
       if (def && def.status === 'published') defs.push(def);
     }
     return defs;
@@ -42,18 +58,18 @@ export class KvAudienceStore implements AudienceStore {
 
   async publish(def: AudienceDef): Promise<void> {
     const published: AudienceDef = { ...def, status: 'published' };
-    await this.env.CACHE.put(PREFIX + def.key, JSON.stringify(published));
+    await this.kv.put(PREFIX + def.key, JSON.stringify(published));
   }
 
   async get(key: string): Promise<AudienceDef | null> {
-    return (await this.env.CACHE.get(PREFIX + key, 'json')) as AudienceDef | null;
+    return (await this.kv.get(PREFIX + key, 'json')) as AudienceDef | null;
   }
 
   async seed(defs: AudienceDef[]): Promise<void> {
     for (const def of defs) {
-      const existing = await this.env.CACHE.get(PREFIX + def.key);
+      const existing = await this.kv.get(PREFIX + def.key);
       if (!existing) {
-        await this.env.CACHE.put(PREFIX + def.key, JSON.stringify({ ...def, status: 'published' }));
+        await this.kv.put(PREFIX + def.key, JSON.stringify({ ...def, status: 'published' }));
       }
     }
   }
@@ -61,7 +77,7 @@ export class KvAudienceStore implements AudienceStore {
   async archive(key: string): Promise<void> {
     const def = await this.get(key);
     if (!def || def.status === 'archived') return;
-    await this.env.CACHE.put(PREFIX + key, JSON.stringify({ ...def, status: 'archived' }));
+    await this.kv.put(PREFIX + key, JSON.stringify({ ...def, status: 'archived' }));
   }
 
   /**
@@ -83,7 +99,7 @@ export class KvAudienceStore implements AudienceStore {
       name,
       ...(description === undefined ? {} : { description }),
     };
-    await this.env.CACHE.put(PREFIX + key, JSON.stringify(next));
+    await this.kv.put(PREFIX + key, JSON.stringify(next));
     return next;
   }
 
@@ -97,7 +113,7 @@ export class KvAudienceStore implements AudienceStore {
     const def = await this.get(key);
     if (!def) return null;
     const next: AudienceDef = { ...def, pinned };
-    await this.env.CACHE.put(PREFIX + key, JSON.stringify(next));
+    await this.kv.put(PREFIX + key, JSON.stringify(next));
     return next;
   }
 }
