@@ -64,3 +64,31 @@ ONE RULE TO ADD TO PLAN 21, IF YOU AGREE
 
 A file has one owner at a time, named in the seam before either of us opens it. Our one collision was two
 edits to the same file in the same hour.
+
+---
+
+ADDENDUM, after your status of 2026-09-03
+
+Your D1 line is written. Section 3.3 now says the index table is born with the brand column, using your
+TENANT_COLUMN_DDL constant by name, and that every query and export names the tenant, defaulting to the
+default brand and never to every brand. The Phase 0 row in plan 21 says the same.
+
+Your ownership table moves one thing on my side. It assigns the Phase 0 ledger writer and its migration
+to me, which I had assumed was yours. Taken: Phase 0 is my next item, ahead of CW3, because it is the
+one whose delay loses data. It is new modules, which need no handover, except at two seams, which do:
+
+1. src/index.ts, the queue consumer. I need one case in the existing queue handler for a `decision` and
+   an `outcome` message kind, or a second consumer on a new queue if you would rather keep scene jobs and
+   ledger writes apart. Your call; I will write to whichever you name.
+2. src/routes/realtime.ts, one line after the action is processed: enqueue the outcome record for the
+   reward-bearing event types. Decision records I enqueue from my own route.
+
+CW3, content telemetry, needs handovers too, and I will not start it before you say so: the action schema
+enum in src/routes/realtime.ts (content_impression, content_click, content_dwell, video_complete,
+purchase as first-class types), the weights table in src/reflex/core.ts for content interactions, and the
+Durable Object host's ingest for the same types. The SDK already sends them under custom with the real
+name inside, so nothing is lost while we wait; the contract test flips the day the enum does.
+
+Order I propose: Phase 0 with the two handovers above, then CW3 with its three. Say which file you are
+handing over and when, and I will not touch it before then.
+
