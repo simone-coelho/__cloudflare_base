@@ -693,6 +693,110 @@ worth reusing rather than rewriting:
 - Read is open, write is authenticated and fails closed. Reading the dials should never require a token;
   moving them always should.
 
+### 18.10 D1 is the wrong primitive for the decision path, not the wrong window
+
+Successor to §18.9. That section argued the D1 window was too large and you fixed it with a keys-only
+index, which was the right response to the argument as made. This section makes a stronger argument, and
+it comes from operational experience Simone has had with D1 under many concurrent writers: **D1 is the only
+single-writer component in the whole design, and it does not need to be on the decision path at all.**
+
+**The shape of the problem.** D1 is SQLite with one primary. Every insert, from every edge location,
+travels to that primary and serializes there. Cloudflare positions it for read-heavy, moderate-write
+workloads. The keys-only index still receives the *total decision rate* through that one primary, merely
+batched, and a Black Friday peak is ten to twenty times the daily average. Everything else in the design
+scales with the entity: Durable Objects per visitor, R2 append-only, KV, Queues, Analytics Engine. D1 is
+the one place the whole system funnels to a single location. If the peak is the scenario, the component
+that can fall over is the component to remove.
+
+**It is also already the pattern in the code.** `realtime.ts` writes a `demo_events` row on every shopper
+action from the request path, and `receipts.capture()` writes `mrd_decisions` per request in `waitUntil`.
+Both are demo paths, fine at demo volume, and both are exactly the shape that must not be inherited by
+Phase 0. The tenant column I added to `mrd_decisions` in migration 0009 is demo isolation and stands as
+that; it is not a template.
+
+**The test for removing it: every question D1 answered still needs a home.**
+
+| Question | Pace | Home | Why this primitive |
+|---|---|---|---|
+| Serve a decision | hot path | Shopper DO + KV snapshots | Unchanged. Never touched D1 |
+| "Why did this shopper see this?" | interactive | **Shopper DO**: her last 200 decisions with full explain records, which §3.3 already specifies | One writer per object, itself. A million visitors is a million objects |
+| Record every decision durably | off the response path | **Queue → consumer → R2**, append-only batches | Already the system of record and the Snowflake share. No write contention |
+| "Show me decision `d_…`" (replay, support, audit) | seconds, rare | **R2 GET with no index**: the consumer writes each batch as one object and the `decision_id` embeds that object's key | One fetch and a parse. This is what the D1 index was for, and it does not need one |
+| Live counters, grids, realized exploration share | dashboards | **Analytics Engine**, bound as `ANALYTICS` and already used by the pixel | Built for millions of fire-and-forget edge writers. SQL API. This is its design case |
+| Learning statistics per slot | continuous | LearnStats DO per tenant, brand and slot | Your design, unchanged |
+| Holdout report, policy comparison, measurement | batch | **Scheduled Worker over R2**, or Snowflake reading the same partitions | Ground truth is R2; the report is a job |
+| "Everything this visitor saw last month" | rare | A small long index **in the shopper DO**: `decision_id → R2 key`, ~80 bytes each, 90 days | Per-visitor lookup with no shared index |
+
+**The flow.**
+
+    decision served at the edge
+      ├─ Shopper DO      append the full record to the 200-deep ring;
+      │                  append (decision_id → R2 key) to the long index
+      ├─ Analytics Eng   writeDataPoint(tenant, slot, item, arm, explored, level)    fire-and-forget
+      └─ Queue           full record
+            └─ consumer  batch → R2  {tenant}/{date}/{hour}/{batch-id}.ndjson
+                         decision_id = {batch-id}:{seq}, so a point lookup is one GET
+
+    outcome arrives
+      ├─ Shopper DO      attribute against the ring → credited pairs → LearnStats DO → KV lift snapshot
+      ├─ Analytics Eng   writeDataPoint
+      └─ Queue → R2      outcome partitions
+
+    D1                   catalog, census, audience definitions, config audit.  Zero writes per decision.
+
+**Performance, stated plainly because it was the first question asked.** The shopper's path does not
+change. It reads her object and the KV snapshots, exactly as now, at 85 to 200 ms. The three writes above
+happen after the response through `waitUntil`: the DO append is local SQLite at about a millisecond, the
+Analytics Engine point is buffered by the runtime, the queue send is async. None of them delay the
+response. The result is the same latency for the shopper and one single-writer bottleneck removed from
+behind her.
+
+Analytics Engine and R2 are two destinations, not one reading the other. Analytics Engine holds a small
+point per decision and answers counts and rates. R2 holds the full record and answers replay and the
+warehouse. Nothing reads R2 through Analytics Engine.
+
+**Who reads what, and how fresh it is.**
+
+| Reader | Reads | Freshness | Speed |
+|---|---|---|---|
+| The shopper | Her DO + KV | Live | 85 to 200 ms, unchanged |
+| Console, "why did she see this" | Her DO | Live, written at decision time | ~50 ms |
+| Console, counts and grids | Analytics Engine | Seconds | Fast SQL |
+| Support and replay, one decision by id | R2, one GET | **Behind by the queue lag during a peak**, exact afterwards | ~100 to 300 ms |
+| Holdout report, Snowflake | R2 partitions | Batch, by design | Batch |
+
+The only row that lags is the one nobody waits on in real time. During a spike the queue fills faster than
+the consumer drains it, so R2 receives records later than they happened; Queues retain messages for days,
+so nothing is dropped, and it catches up after the peak. Your design already made this trade. The
+difference is that your consumer also wrote into one D1 primary, which is the piece that can actually back
+up under load.
+
+**Three things to write down so nobody trips on them.**
+
+1. **Analytics Engine samples at very high write rates.** Counts come back with a sample interval and are
+   estimates. Fine for dashboards; **never for the holdout report.** Measurement reads R2. Someone will
+   build the report on Analytics Engine unless §10 says not to.
+2. **One very hot slot is one LearnStats object.** `home.hero` receives every homepage outcome. At your own
+   peak arithmetic that is a few hundred a second, which a Durable Object handles; at an order of
+   magnitude more it is the next bottleneck, and the remedy is hash-sharding the object and merging at
+   publish. Your design, so flagged rather than solved.
+3. **Queue lag is ledger lag, not decision lag.** Worth one sentence in §3.3 so an operator reading a
+   backlog graph on Black Friday does not conclude the site is degraded.
+
+**What it changes for Phase 0.** The consumer writes R2 and Analytics Engine instead of R2 and D1. The
+`decision_id` embeds the R2 object key. The shopper DO keeps the long index. There is no schema, no
+pruning cron and no D1 migration for decisions, so this is less work than the keys-only design, not more.
+§3.3's D1 row and §14's "Recent index" row go; §14 gains an Analytics Engine row.
+
+**What stays in D1.** Reference data and low-volume operational tables: catalog, census, audience
+definitions, config audit, the operator console's own state. Read-heavy, moderate-write, which is what it
+is for.
+
+**What I am doing on my side regardless.** Fencing the `demo_events` per-action write behind a demo-only
+flag so it cannot be inherited, and recording in plan 21 that `capture()` is not Phase 0's template.
+
+**What I need from you:** a decision on §3.3 and §14. Everything above §18 is yours.
+
 ### 18.9 §3.3's D1 tier does not survive its own arithmetic at pilot volume
 
 This one challenges a number rather than reporting a gap, so the working is shown and the inputs are named.

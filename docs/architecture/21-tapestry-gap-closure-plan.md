@@ -138,7 +138,13 @@ times without naming a mechanism. Reconciled rather than left to collide, and re
   because once lift moves a score, config alone no longer identifies a decision.
 - Flagged for Phase 2: rollback rolls **forward**. An autonomy job that rewinds a counter loses the evidence
   a person needs to promote or demote a slot.
-- **Flagged for Phase 0, a sizing challenge:** doc 22 §18.9. §3.3's "D1 holds the last 30 days" breaks at
+- **Flagged for Phase 0, a primitive challenge:** doc 22 §18.10, superseding §18.9. D1 is the only
+  single-writer component in the design and does not need to be on the decision path at all. The design
+  without it is laid out question by question; the shopper's latency is unchanged, and the one thing that
+  lags under a peak is the archive nobody waits on. Awaiting his decision on §3.3 and §14.
+- **Mine, regardless of that decision:** fence the `demo_events` per-action D1 write in `realtime.ts`
+  behind a demo-only flag, and record that `receipts.capture()` is a demo path and not Phase 0's template.
+- ~~Flagged for Phase 0, a sizing challenge:~~ doc 22 §18.9, now superseded by §18.10. §3.3's "D1 holds the last 30 days" breaks at
   roughly 83,000 personalized page views a day on its own 10 GB figure; at 1M/day the ceiling is reached in
   ~30 hours. Recoverable (R2 holds everything, the index can be rebuilt) so it is a decision, not a
   deadline. **The D1 half of CW1 is paused** behind it: making a schema multi-brand before deciding whether
