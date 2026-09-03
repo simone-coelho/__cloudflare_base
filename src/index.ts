@@ -22,6 +22,7 @@ import { optimizelyRoutes } from '@/routes/optimizely';
 import { cdpRoutes } from '@/routes/cdp';
 import { operatorRoutes } from '@/routes/operator';
 import { configRoutes } from '@/routes/config';
+import { sortRoutes } from '@/routes/sort';
 import { contentRoutes } from '@/routes/content';
 import realtimeRoutes from '@/routes/realtime';
 import { aiRoutes } from '@/routes/ai';
@@ -92,6 +93,10 @@ app.route('/operator', operatorRoutes);
 // CW0 — versioned reflex config (scope appendix §1.4). Reads open, writes
 // authenticated and fail closed; the tuning UI is a client of these routes.
 app.route('/config', configRoutes);
+// §1.11 custom product sort: a candidate set in, the same ids out in a
+// per-shopper order. The commerce platform stays authoritative for everything
+// else. Ledger 20 row 9.
+app.route('/sort', sortRoutes);
 // CW2 — the content catalog, slot strategies and learning settings: reads open,
 // writes authenticated, every write validated, versioned and attributed.
 app.route('/content', contentRoutes);
