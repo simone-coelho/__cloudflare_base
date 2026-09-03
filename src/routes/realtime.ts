@@ -722,12 +722,34 @@ function captureCatalog(): CatalogService {
   return (_captureCatalog = _captureCatalog ?? new CatalogService());
 }
 
+/**
+ * Should this deployment write demo events to D1 at all?
+ *
+ * The write is a per-request insert into a single-primary SQLite from every edge
+ * location. Fine at demo volume; the wrong shape for a decision path at Black
+ * Friday volume, and the kind of thing that survives into production precisely
+ * because it works fine until then. So it is fenced here, at the single write
+ * path, and production is OFF by omission: nobody has to remember to disable it.
+ */
+export function demoEventCaptureEnabled(env: Pick<Env, 'DEMO_EVENT_CAPTURE' | 'ENVIRONMENT'>): boolean {
+  const flag = (env.DEMO_EVENT_CAPTURE ?? '').trim().toLowerCase();
+  if (flag === 'true') return true;
+  if (flag === 'false') return false;
+  // With no flag, capture only in an environment that has NAMED itself something
+  // other than production. A missing ENVIRONMENT is treated as production: the
+  // failure "demo reset shows nothing" is visible and fixable, and the failure
+  // "per-request D1 writes in production" is neither.
+  const environment = (env.ENVIRONMENT ?? '').trim().toLowerCase();
+  return environment !== '' && environment !== 'production';
+}
+
 async function captureDemoEvent(
   env: Env,
   event: ActionEvent,
   sessionId?: string
 ): Promise<void> {
   try {
+    if (!demoEventCaptureEnabled(env)) return;
     if (!env.DB) return; // D1 not bound (e.g. some test envs) — skip silently
     const d = event.data ?? {};
     const vuid = event.anonymousId ?? event.userId;

@@ -39,6 +39,20 @@ export interface Env {
    */
   TENANTS?: string;
 
+  /**
+   * Whether every shopper action is also written to D1 `demo_events`.
+   *
+   * That write exists for the demo's operator reset and for Opal's audience
+   * sizing. It is also a per-request write into a single-primary SQLite from
+   * every edge location, which is the exact pattern doc 22 §18.10 says must
+   * never be inherited by a production decision path.
+   *
+   * 'true' captures, 'false' does not. ABSENT captures only when ENVIRONMENT is
+   * not 'production', so the demo keeps working everywhere it works today and
+   * production is safe by omission rather than by someone remembering.
+   */
+  DEMO_EVENT_CAPTURE?: string;
+
   ENVIRONMENT: string;
   JWT_SECRET: string;
   JWT_ISSUER: string;
