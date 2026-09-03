@@ -484,3 +484,38 @@ describe('hosting invariant — the DO state equals a pure-core replay of the sa
     expect(rec.reflex).toEqual(s.state); // same math, same state — never a copy
   });
 });
+
+// ── CW24: a customer's product, scored against their attributes, per scope ───
+import { writeReflexConfig } from './configStore';
+import { invalidateCache } from '@/config/versionedStore';
+import { DEFAULT_REFLEX_CONFIG as BASE_CFG } from './core';
+
+describe('event-carried attributes (CW24)', () => {
+  const theirs = (userId: string) => new Request('https://do/ingest', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'product_view', userId, source: 'coach-storefront', timestamp: Date.now(),
+      data: { productId: 'their-sku-9', line: 'Drover', category: 'Outerwear', occasion: ['everyday'], price_usd: 420 } }),
+  });
+
+  it('is dropped as unknown while the scope is catalog-only, exactly as before', async () => {
+    invalidateCache();
+    const h = makeDO();
+    const res = await h.shopper.fetch(theirs('vis-CW24-A'));
+    expect(((await res.json()) as { dropped?: string }).dropped).toBe('unknown_product');
+  });
+
+  it('scores the event once the scope says event-when-unknown', async () => {
+    invalidateCache();
+    const h = makeDO();
+    const w = await writeReflexConfig(h.env, 'coach', { ...BASE_CFG, eventAttributes: 'event-when-unknown' }, { actor: 'test', note: 'cw24' });
+    expect(w.ok).toBe(true);
+    for (let i = 0; i < 3; i++) {
+      const res = await h.shopper.fetch(theirs('vis-CW24-B'));
+      expect(((await res.json()) as { dropped?: string }).dropped).toBeUndefined();
+    }
+    const snap = (await (await h.shopper.fetch(new Request('https://do/snapshot'))).json()) as { affinity: { dims: Record<string, Record<string, number>> } };
+    expect(snap.affinity.dims.line?.Drover).toBeGreaterThan(0);
+    expect(snap.affinity.dims.priceBand?.elevated).toBeGreaterThan(0);
+    invalidateCache();
+  });
+});

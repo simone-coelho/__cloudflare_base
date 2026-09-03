@@ -323,3 +323,31 @@ describe('property invariants (seeded fuzz — deterministic)', () => {
     expect(state.dims.line).toHaveProperty('D'); // the freshest always survives
   });
 });
+
+// ── CW24: a customer's product events, scored against the registry ───────────
+import { sanitizeEventAttributes, touchesForEvent } from './core';
+
+describe('touchesForEvent', () => {
+  const cfg = { ...DEFAULT_REFLEX_CONFIG };
+  const data = { productId: 'their-sku-1', line: ' Drover ', category: 'Outerwear', occasion: ['everyday', 'weekend'], price_usd: 420, colour: 'tan', evil: '<script>' };
+
+  it('a held product always wins over the event', () => {
+    const t = touchesForEvent(data, { line: 'Tabby', category: 'Handbags', price_usd: 350 }, { ...cfg, eventAttributes: 'event-when-unknown' });
+    expect(t.map((x) => `${x.dim}:${x.value}`)).toEqual(['line:Tabby', 'category:Handbags', 'priceBand:core']);
+  });
+
+  it('catalog-only, the default, scores nothing from an unknown product', () => {
+    expect(touchesForEvent(data, undefined, cfg)).toEqual([]);
+    expect(touchesForEvent(data, undefined, { ...cfg, eventAttributes: 'catalog-only' })).toEqual([]);
+  });
+
+  it('event-when-unknown scores only registry dimensions, trimmed, capped, band-derived', () => {
+    const t = touchesForEvent(data, undefined, { ...cfg, eventAttributes: 'event-when-unknown' });
+    expect(t.map((x) => `${x.dim}:${x.value}`)).toEqual(['line:Drover', 'category:Outerwear', 'occasion:everyday', 'occasion:weekend', 'priceBand:elevated']);
+    const s = sanitizeEventAttributes({ line: 'x'.repeat(200), occasion: Array.from({ length: 20 }, (_, i) => `o${i}`), price_usd: 'not a number', silhouette: '<b>' }, cfg);
+    expect((s.line as string).length).toBe(64);
+    expect((s.occasion as string[]).length).toBe(8);
+    expect(s.price_usd).toBeUndefined();
+    expect(s.silhouette).toBeUndefined();
+  });
+});

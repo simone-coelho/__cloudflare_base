@@ -211,6 +211,9 @@ export function validateReflexConfig(candidate: unknown): ValidationResult {
   checkNumber(errors, 'epsilon', c.epsilon, { min: 0, max: 1, exclusiveMin: true });
   checkNumber(errors, 'maxValuesPerDim', c.maxValuesPerDim, { min: 1, max: 1000, integer: true });
   checkHysteresis(errors, 'config', c.thetaIn, c.thetaOut);
+  if (c.eventAttributes !== undefined && c.eventAttributes !== 'catalog-only' && c.eventAttributes !== 'event-when-unknown') {
+    errors.push("eventAttributes must be 'catalog-only' or 'event-when-unknown'");
+  }
 
   if (!Array.isArray(c.dimensions)) {
     errors.push('dimensions must be an array');
@@ -346,6 +349,7 @@ export interface ReflexConfigPatch {
   thetaOut?: number;
   epsilon?: number;
   maxValuesPerDim?: number;
+  eventAttributes?: 'catalog-only' | 'event-when-unknown';
   weights?: Record<string, number>;
   dimensions?: Array<Partial<DimensionSpec> & { key: string }>;
 }
@@ -362,7 +366,7 @@ export interface ReflexConfigPatch {
 export function applyPatch(base: ReflexConfig, patch: ReflexConfigPatch): ReflexConfig {
   const next = structuredCopy(base) as ReflexConfig;
 
-  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim'] as const) {
+  for (const field of ['version', 'tauMs', 'K', 'thetaIn', 'thetaOut', 'epsilon', 'maxValuesPerDim', 'eventAttributes'] as const) {
     if (patch[field] !== undefined) (next as unknown as Record<string, unknown>)[field] = patch[field];
   }
   if (patch.weights) next.weights = { ...next.weights, ...patch.weights };

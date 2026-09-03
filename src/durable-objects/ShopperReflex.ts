@@ -56,6 +56,7 @@ import {
   attributesFrom as reflexAttributes,
   emptyState,
   extractTouches,
+  touchesForEvent,
   nextCrossing,
   snapshot as reflexSnapshot,
   tick as tickReflex,
@@ -411,7 +412,11 @@ export class ShopperReflex {
     const data = event.data ?? {};
     const pid = data.productId ?? data.product_id ?? data.sku;
     const product = pid != null ? surfaceCatalog.getProduct(String(pid)) : undefined;
-    if (pid != null && !product) {
+    // CW24: where the scope scores event-carried attributes, an unknown id with
+    // registry attributes on it is a customer's product, not an abuse attempt.
+    const eventTouches = !product && cfg.eventAttributes === 'event-when-unknown'
+      ? touchesForEvent(data as Record<string, unknown>, undefined, cfg) : [];
+    if (pid != null && !product && eventTouches.length === 0) {
       this.dropped.unknownProduct++;
       return {
         status: 200,
@@ -471,7 +476,7 @@ export class ShopperReflex {
         aff.reflex,
         {
           action,
-          touches: product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : [],
+          touches: product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : eventTouches,
         },
         now,
         cfg

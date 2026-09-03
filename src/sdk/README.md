@@ -49,10 +49,15 @@ your defaults stand. A late snapshot is still applied when it lands. The page ne
 **Explicit API**, for commerce. The conversion event is the one that outcome learning cannot do without.
 
 ```js
-client.emit.productView('SKU-123', { line: 'Drover', priceBand: 'core' });
+client.emit.productView('SKU-123', { line: 'Drover', category: 'Outerwear', occasion: ['everyday'], price_usd: 395 });
 client.emit.addToCart('SKU-123');
 client.emit.purchase({ orderId: 'A1B2', value: 395, currency: 'USD', items: [{ productId: 'SKU-123', quantity: 1, price: 395 }] });
 ```
+
+The attributes on a product event are the registry's source fields (by default `line`, `category`,
+`subcategory`, `silhouette`, `occasion`, `price_usd`). Where the scope is set to score event-carried
+attributes, they move affinity directly against your own catalog; a product the platform holds itself is
+scored from that copy instead.
 
 **Declarative**, for slot-level capture without code per slot:
 

@@ -61,6 +61,14 @@ export interface ReflexConfig {
   epsilon: number;
   /** Safety cap on distinct values tracked per dimension (evict weakest). */
   maxValuesPerDim: number;
+  /**
+   * Where a product event's touches come from when the product is not in a
+   * catalog this engine holds. `catalog-only` (the default, and the demo
+   * surfaces' posture) drops it. `event-when-unknown` scores the attributes the
+   * event itself carries, bounded to the registry's dimensions, which is what a
+   * customer's site needs: their events, their catalog, not a copy of it here.
+   */
+  eventAttributes?: 'catalog-only' | 'event-when-unknown';
 }
 
 /** Raw per-value accumulator — s is NEVER pre-decayed; t is the last touch. */
@@ -257,6 +265,57 @@ export function extractTouches(product: Record<string, unknown>, config: ReflexC
     }
   }
   return touches;
+}
+
+/** The most values a single multi-valued attribute may contribute from one event. */
+const MAX_EVENT_VALUES = 8;
+const MAX_EVENT_VALUE_LENGTH = 64;
+
+/**
+ * Only what the registry names, only in the shape it names. A string is
+ * trimmed and capped; an array is capped; a band source must already be
+ * numeric or numeric-looking. Nothing else on the event is looked at.
+ */
+export function sanitizeEventAttributes(data: Record<string, unknown>, config: ReflexConfig): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const clean = (v: unknown): string | null => {
+    if (typeof v !== 'string') return null;
+    const t = v.trim().slice(0, MAX_EVENT_VALUE_LENGTH);
+    return t && !/[\u0000-\u001f<>]/.test(t) ? t : null;
+  };
+  for (const spec of config.dimensions) {
+    const raw = data[spec.source];
+    if (raw === undefined || raw === null) continue;
+    if (spec.derive === 'band') {
+      const n = typeof raw === 'number' ? raw : Number(raw);
+      if (Number.isFinite(n)) out[spec.source] = n;
+      continue;
+    }
+    if (spec.multi && Array.isArray(raw)) {
+      const vals = raw.map(clean).filter((x): x is string => x !== null).slice(0, MAX_EVENT_VALUES);
+      if (vals.length) out[spec.source] = vals;
+      continue;
+    }
+    const one = clean(Array.isArray(raw) ? raw[0] : raw);
+    if (one !== null) out[spec.source] = one;
+  }
+  return out;
+}
+
+/**
+ * The touches a product event contributes. A product this engine holds always
+ * wins, because its attributes are ours to trust. Without one, the event's own
+ * attributes count only where the scope has said so, and only through the
+ * registry. Both hosts call this; neither decides it alone.
+ */
+export function touchesForEvent(
+  data: Record<string, unknown>,
+  product: Record<string, unknown> | undefined,
+  config: ReflexConfig,
+): Touch[] {
+  if (product) return extractTouches(product, config);
+  if (config.eventAttributes !== 'event-when-unknown') return [];
+  return extractTouches(sanitizeEventAttributes(data, config), config);
 }
 
 /**
