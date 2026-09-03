@@ -340,7 +340,7 @@ The other track reads it freely, and writes only by handing the file over in thi
 
 | Owner | Files |
 |---|---|
-| **Delivery ledger session** | `src/tenancy/*`, `src/config/versionedStore.ts`, `src/reflex/configStore.ts`, `src/reflex/merchandising.ts`, `src/services/visit.ts`, `src/services/SessionManager.ts`, `src/connectors/AudienceStore.ts`, `src/routes/config.ts`, `src/routes/operator.ts`, `src/demos/meridian/receipts.ts`, `public/tuning.*`, `migrations/0009_*` onward for tenancy |
+| **Delivery ledger session** | `src/tenancy/*`, `src/services/CDPService.ts`, `src/services/FeatureVariableManager.ts`, `src/services/experimentRun.ts`, `src/routes/cdp.ts`, `src/routes/experiment.ts`, `src/config/versionedStore.ts`, `src/reflex/configStore.ts`, `src/reflex/merchandising.ts`, `src/services/visit.ts`, `src/services/SessionManager.ts`, `src/connectors/AudienceStore.ts`, `src/routes/config.ts`, `src/routes/operator.ts`, `src/demos/meridian/receipts.ts`, `public/tuning.*`, `migrations/0009_*` onward for tenancy |
 | **Outcome-learning session** | `src/content/*`, `src/reflex/contentCompose.ts`, `src/routes/decisions.ts`, **`src/sdk/*`, `scripts/build-sdk.mjs`, `public/sdk/*`** (CW8, landed 2026-09-02), the RegionTrend object and its fan-in, `touchesForEvent` in `src/reflex/core.ts`, the Phase 0 ledger writer and its migration, doc 22 above §18 |
 | **Handover required before writing** | `src/index.ts`, `src/types/env.ts`, `src/routes/realtime.ts`, `src/services/RealtimeSegmentEngine.ts`, `src/services/odpLoop.ts`, `src/reflex/core.ts` outside `touchesForEvent`, `wrangler.toml` |
 
@@ -358,6 +358,7 @@ Each is one bounded edit. `wrangler.toml` needs nothing from either track for th
 |---|---|---|
 | Delivery ledger session | The **`purchase` / `checkout` / `order_complete` case** in `mapActionToOdp`, `src/services/odpLoop.ts`, and nothing else in that file | Landed 2026-09-03 |
 | Delivery ledger session | **CW3, five one-line edits:** the action-name resolver at `RealtimeSegmentEngine.ts` (two sites), `ShopperReflex.ts` (one), `odpLoop.ts` (one) becomes `actionOf(event)`; the `touches:` argument at the two reflex sites routes content actions through `contentTouches()`; `DEFAULT_REFLEX_CONFIG` in `core.ts` gains four content weights and a `contentType` dimension, outside `touchesForEvent`; `actionEventSchema` in `realtime.ts` names the four content types and `purchase`. Nothing else in any of those files | Landed 2026-09-03 |
+| Delivery ledger session | **CW1 close-out:** in `RealtimeSegmentEngine.ts`, the audience-regeneration `MARKER` read/write in `ensureAudiencesSeeded`, the `profile:` cache in `getUserProfile`, and `sessionIdForUser` go through `TenantKV`; in `realtime.ts`, the two `SESSIONS.delete` lines in the session-reset route go through `TenantKV`. Nothing else in either file. `CDPService.ts`, `FeatureVariableManager.ts`, `experimentRun.ts`, `routes/cdp.ts` and `routes/experiment.ts` are unowned and are taken into the delivery-ledger row by this edit | Landed 2026-09-03 |
 
 The third row is where the collision happened and where it will happen again if either of us is casual.
 Nothing there is edited without a line in this table changing first.
