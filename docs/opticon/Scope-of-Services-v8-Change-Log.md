@@ -44,6 +44,8 @@ read as future tense inside a present-tense section. It now describes the rankin
 tense and sends the commerce connection to the integration window in §3.1 against dependency D4, which
 already exists in the document as "Product feed access." No new milestone was needed.
 
+**Also filled (2026-09-02):** the "launch brand" field at the end of the appendix now reads *Coach*, as a tracked change, per Mandeep's decision.
+
 ## Two things worth a sentence in the covering note
 
 - **Third-party data was not in the original scope.** It is being added because it costs the engine

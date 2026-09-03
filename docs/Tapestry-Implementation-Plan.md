@@ -8,7 +8,7 @@
 
 ## 1. The one-paragraph plan
 
-Stand the platform up brand-by-brand, **Kate Spade first**: lock the dimension registry and content taxonomy with your data science team in the first working sessions; bring your content into the content catalog and calibrate tagging together; deliver the decision service, the SDK, and the tuning surface into a staging environment your teams can integrate against — **SDK and integration documentation in your developers' hands by mid-October, the full content-recommendations API accepted in your lower environments by end of October** — so integration work can start before your November code freeze; then integrate and test through your freeze window on your calendar, and launch on one page in January with a joint announcement. Every date past end-October is deliberately left open for you to shape in your response.
+Stand the platform up brand-by-brand, **Coach first**: lock the dimension registry and content taxonomy with your data science team in the first working sessions; bring your content into the content catalog and calibrate tagging together; deliver the decision service, the SDK, and the tuning surface into a staging environment your teams can integrate against — **SDK and integration documentation in your developers' hands by mid-October, the full content-recommendations API accepted in your lower environments by end of October** — so integration work can start before your November code freeze; then integrate and test through your freeze window on your calendar, and launch on one page in January with a joint announcement. Every date past end-October is deliberately left open for you to shape in your response.
 
 ## 2. What this builds on (why the sequence is short)
 
@@ -37,7 +37,7 @@ Working in spirit and in behavior from day one; tuning after launch sharpens it.
 | W4 | **Decision service** | Per-slot ranking over the catalog, page-level ordered decision payloads, first-paint snapshot endpoint, cross-slot dedupe, off-limits enforcement, default fallback |
 | W5 | **Dimension build-out** | Regional trending (population-level, aggregates only — no per-shopper location state), visit-number boundaries, entry-channel classification, content-type affinity |
 | W6 | **Strategies & tuning surface** | Per-slot strategy profiles (configured and autonomous modes) and the tuning UI: every weight, decay horizon, and threshold visible and editable by your team, versioned, effective immediately |
-| W7 | **Multi-brand provisioning** | Kate Spade as the pilot tenant — its own catalog, configuration, audiences, credentials — with hard data isolation between brands, so extending to Coach later is provisioning, not re-engineering |
+| W7 | **Multi-brand provisioning** | Coach as the launch tenant — its own catalog, configuration, audiences, credentials — with hard data isolation between brands, so extending to Kate Spade and the rest of the portfolio later is provisioning, not re-engineering |
 | W8 | **SDK & integration kit** | A small versioned client (connect / emit / listen + first-paint hydration), integration guide, payload schema reference — the artifact your developers integrate before the freeze |
 | W9 | **Staging environment & security** | The staging platform your lower environments consume: authenticated APIs (SDK keys for the client surface, operator auth for configuration), CORS allow-listing for your origins, deployment runbook |
 | W10 | **Transparency & data science surfaces** | Explain-record persistence and export, decision/outcome data egress, priors import (seed the model from your Snowflake-derived analyses), debug endpoints |
@@ -96,7 +96,7 @@ A short weekly checkpoint (30 minutes) from kickoff through M4; a live demonstra
 ## 10. Assumptions & open items
 
 - Kickoff within two weeks of this document; the §6 dependency dates hold.
-- Pilot brand is Kate Spade, pilot page is the homepage (both changeable in your response — the plan shape doesn't move).
+- Launch brand is Coach, launch page is the homepage (the page is changeable in your response — the plan shape doesn't move).
 - Our staging runs in our cloud account; your environments consume it over authenticated APIs. If your security or network teams require a custom domain or additional auth arrangements, we accommodate — flagged early via D5/D8 because they carry lead time.
 - M5's shape (what "integration complete" means inside your freeze process) and M6's launch date are yours to define in the response round — we have left them open on purpose.
 
