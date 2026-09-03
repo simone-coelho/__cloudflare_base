@@ -37,6 +37,44 @@ export const DEFAULT_TENANT: TenantId = 'coach';
 
 const TENANT_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
 
+/**
+ * The namespace marker. No pre-existing key or object name uses it, which is what
+ * makes the unprefixed default safe -- but only once nothing may address it
+ * directly. See assertLogicalKey below.
+ */
+export const NAMESPACE_MARKER = 't:';
+
+/**
+ * Thrown when a logical key tries to address a namespace directly.
+ *
+ * This is the hole the unprefixed default tenant would otherwise leave open. For
+ * the default tenant tenantKey() is the identity function, so a caller asking for
+ * `t:kate-spade:audience:x` would be handed exactly Kate Spade's physical key.
+ * A namespaced tenant cannot do this -- its own prefix is prepended and the
+ * result merely nests -- so the escape runs one way only: default into anyone.
+ *
+ * It is reachable from the wire. Visitor ids arrive as `userId` on every action
+ * and become Durable Object names and session keys, so this is user input, not
+ * an internal invariant.
+ *
+ * It throws rather than degrading. A key beginning with the marker is a bug or an
+ * attack; neither should be served, and no legitimate key starts with it. Routes
+ * should validate ids at the boundary so this never fires in practice, but the
+ * primitive is the layer that cannot be forgotten.
+ */
+export class TenantNamespaceError extends Error {
+  constructor(key: string) {
+    super(`Logical key "${key}" may not start with "${NAMESPACE_MARKER}": that addresses a tenant namespace directly`);
+    this.name = 'TenantNamespaceError';
+  }
+}
+
+/** Guard a caller-supplied logical key. Returns it unchanged when it is safe. */
+export function assertLogicalKey(key: string): string {
+  if (key.startsWith(NAMESPACE_MARKER)) throw new TenantNamespaceError(key);
+  return key;
+}
+
 /** A tenant id is part of a key, so it must not be able to escape its namespace. */
 export function isValidTenantId(value: unknown): value is TenantId {
   return typeof value === 'string' && TENANT_RE.test(value);
@@ -88,12 +126,13 @@ function normalize(v: string | null | undefined): string {
  * uses.
  */
 export function tenantKey(tenant: TenantId, key: string): string {
-  return tenant === DEFAULT_TENANT ? key : `t:${tenant}:${key}`;
+  assertLogicalKey(key);
+  return tenant === DEFAULT_TENANT ? key : `${NAMESPACE_MARKER}${tenant}:${key}`;
 }
 
 /** The prefix a tenant's keys carry. Empty for the default tenant. */
 export function tenantPrefix(tenant: TenantId): string {
-  return tenant === DEFAULT_TENANT ? '' : `t:${tenant}:`;
+  return tenant === DEFAULT_TENANT ? '' : `${NAMESPACE_MARKER}${tenant}:`;
 }
 
 /**
@@ -104,7 +143,7 @@ export function logicalKey(tenant: TenantId, physical: string): string | null {
   const prefix = tenantPrefix(tenant);
   if (prefix === '') {
     // The default tenant owns everything that is NOT namespaced to someone else.
-    return physical.startsWith('t:') ? null : physical;
+    return physical.startsWith(NAMESPACE_MARKER) ? null : physical;
   }
   return physical.startsWith(prefix) ? physical.slice(prefix.length) : null;
 }
@@ -140,15 +179,18 @@ export class TenantKV implements KVLike {
     return tenantKey(this.tenant, key);
   }
 
-  get(key: string, type?: string): Promise<unknown> {
+  // These are `async` so a rejected logical key REJECTS rather than throwing
+  // synchronously. Callers await them; a synchronous throw out of an awaited call
+  // skips their catch and surfaces somewhere unrelated.
+  async get(key: string, type?: string): Promise<unknown> {
     return this.kv.get(this.physical(key), type);
   }
 
-  put(key: string, value: string, options?: unknown): Promise<void> {
+  async put(key: string, value: string, options?: unknown): Promise<void> {
     return this.kv.put(this.physical(key), value, options);
   }
 
-  delete(key: string): Promise<void> {
+  async delete(key: string): Promise<void> {
     return this.kv.delete(this.physical(key));
   }
 

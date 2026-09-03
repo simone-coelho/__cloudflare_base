@@ -185,3 +185,38 @@ describe('adoption is safe one store at a time', () => {
     expect(await kv.get('audience:x')).toBeNull();
   });
 });
+
+describe('the namespace cannot be addressed directly', () => {
+  it('refuses a logical key that starts with the marker, on the DEFAULT tenant', async () => {
+    // The one-directional hole: for the default tenant tenantKey() is the
+    // identity function, so without this guard a Coach caller asking for
+    // `t:kate-spade:audience:x` is handed exactly Kate Spade's physical key.
+    expect(() => tenantKey(DEFAULT_TENANT, 't:kate-spade:audience:x')).toThrow(/may not start with/);
+  });
+
+  it('refuses it on a namespaced tenant too, so the rule is one rule', () => {
+    expect(() => tenantKey('kate-spade', 't:coach:audience:x')).toThrow(/may not start with/);
+  });
+
+  it('blocks it through the store, where user input actually arrives', async () => {
+    // Visitor ids come in as `userId` on every action and become object names
+    // and session keys. This is wire input, not an internal invariant.
+    const coach = new TenantKV(kv, DEFAULT_TENANT);
+    await new TenantKV(kv, 'kate-spade').put('audience:secret', 'kate');
+
+    await expect(coach.get('t:kate-spade:audience:secret')).rejects.toThrow(/may not start with/);
+    await expect(coach.put('t:kate-spade:audience:secret', 'stolen')).rejects.toThrow();
+    await expect(coach.delete('t:kate-spade:audience:secret')).rejects.toThrow();
+
+    // and the target is untouched
+    expect(await new TenantKV(kv, 'kate-spade').get('audience:secret')).toBe('kate');
+  });
+
+  it('still allows every ordinary key, including ones merely containing a colon', () => {
+    expect(() => tenantKey(DEFAULT_TENANT, 'audience:tabby')).not.toThrow();
+    expect(() => tenantKey(DEFAULT_TENANT, 'reflex:config:coach:current')).not.toThrow();
+    expect(() => tenantKey('kate-spade', 'session:abc')).not.toThrow();
+    // 'to:' and 'tt:' are not the marker
+    expect(() => tenantKey(DEFAULT_TENANT, 'to:x')).not.toThrow();
+  });
+});
