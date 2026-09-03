@@ -102,8 +102,11 @@ export async function serveContentDecisions(
   const arm = armFor(r.visitorId, { ...learn.holdout, salt: learn.holdout.salt || brand });
   const slots = slotsDoc.pages[r.page] ?? [];
 
+  // What the state hung on: the DO host keys it on the durable visitor id, the
+  // session host on the cookie, and a failed read on nothing at all.
+  const identityAnchor = shopper.state === 'do' ? 'visitor' : shopper.state === 'session' ? 'session' : 'none';
   const set = decideContent({
-    tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: shopper.sessionId, nowMs: now,
+    tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: shopper.sessionId, identityAnchor, nowMs: now,
     pieces: catalog.pieces, slots, affinity: shopper.affinity, cell, arm,
     versions: { config: configRevision, lift: 0, prior: 0, policy: 0 },
     configLabel: cfg.version,

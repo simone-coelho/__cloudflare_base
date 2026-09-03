@@ -64,6 +64,13 @@ export interface LearnConfig {
 
 export type Authority = 'engine' | 'pin' | 'default';
 
+/**
+ * What the shopper's state hung on when this decision was made. Evidence pooled
+ * on a session-only anchor is weaker than the same evidence on a durable id, and
+ * the ledger is the only place that distinction survives (doc 22 §3.1).
+ */
+export type IdentityAnchor = 'visitor' | 'session' | 'none';
+
 /** Doc 22 §5.4. Components not yet available are recorded as unknown, not guessed. */
 export interface Cell {
   channel: string;
@@ -88,6 +95,7 @@ export interface DecisionRecord {
   brand: string;
   visitor_id: string;
   session_id: string | null;
+  identity_anchor: IdentityAnchor;
   ts: number;
   page: string;
   slot: string;
@@ -118,6 +126,7 @@ export interface ContentDecisionSet {
   page: string;
   visitor_id: string;
   session_id: string | null;
+  identity_anchor: IdentityAnchor;
   ts: number;
   arm: Arm;
   cell: Cell;

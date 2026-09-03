@@ -22,7 +22,7 @@ const slots: SlotStrategy[] = [
   { slot: 'story', take: 2, weights: { occasion: 0.3, line: 0.25 } },
 ];
 const base: DecideInput = {
-  tenant: 'tapestry', brand: 'coach', page: 'home', visitorId: 'v1', sessionId: 's1', nowMs: 1_725_000_000_000,
+  tenant: 'tapestry', brand: 'coach', page: 'home', visitorId: 'v1', sessionId: 's1', identityAnchor: 'visitor', nowMs: 1_725_000_000_000,
   pieces, slots, affinity: { dims: { occasion: { evening: 0.8 }, line: { drover: 0.7 } } },
   cell: { channel: 'paid social', visit_bucket: '1', region: 'US-NY', affinity: 'occasion:evening' },
   arm: 'personalized', versions: { config: 41, lift: 0, prior: 0, policy: 0 }, configLabel: 'reflex-demo-v1+r41',
@@ -36,7 +36,7 @@ describe('decideContent', () => {
     const hero = out.records.find((r) => r.slot === 'hero')!;
     expect(hero).toMatchObject({
       tenant: 'tapestry', brand: 'coach', visitor_id: 'v1', session_id: 's1', ts: base.nowMs, page: 'home',
-      position: 0, item_id: 'a', customer_item_id: 'cms-a', arm: 'personalized', explored: false, authority: 'engine',
+      position: 0, item_id: 'a', customer_item_id: 'cms-a', identity_anchor: 'visitor', arm: 'personalized', explored: false, authority: 'engine',
       versions: { config: 41, lift: 0, prior: 0, policy: 0 }, config_label: 'reflex-demo-v1+r41',
     });
     expect(hero.cell).toEqual(base.cell);

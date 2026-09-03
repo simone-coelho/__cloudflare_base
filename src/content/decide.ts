@@ -7,7 +7,7 @@
 
 import { composeContentDetailed, type ContentSlotSpec, type AffinityViewLike } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, SlotStrategy,
+  Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, SlotStrategy,
 } from './types';
 import { isLiveAt } from './lifecycle';
 
@@ -17,6 +17,7 @@ export interface DecideInput {
   page: string;
   visitorId: string;
   sessionId: string | null;
+  identityAnchor: IdentityAnchor;
   nowMs: number;
   pieces: readonly ContentPiece[];
   slots: readonly SlotStrategy[];
@@ -54,7 +55,7 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
     positionIn.set(d.slot, position + 1);
     return {
       decision_id: `${i.nowMs.toString(36)}:${i.visitorId}:${i.page}:${d.slot}:${position}`,
-      tenant: i.tenant, brand: i.brand, visitor_id: i.visitorId, session_id: i.sessionId, ts: i.nowMs,
+      tenant: i.tenant, brand: i.brand, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
       page: i.page, slot: d.slot, position, item_id: d.contentId, customer_item_id: d.customerContentId,
       candidates: candidates[d.slot] ?? [],
       cell: i.cell, arm: i.arm, explored: false, authority: authorityOf(d.strategy),
@@ -64,7 +65,7 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   });
 
   return {
-    tenant: i.tenant, brand: i.brand, page: i.page, visitor_id: i.visitorId, session_id: i.sessionId, ts: i.nowMs,
+    tenant: i.tenant, brand: i.brand, page: i.page, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
     arm: i.arm, cell: i.cell, versions: { ...i.versions }, config_label: i.configLabel,
     decisions, records,
   };

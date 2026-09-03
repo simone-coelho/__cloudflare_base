@@ -86,6 +86,7 @@ One per served decision. Written off the response path.
 | `decision_id` | Unique, sortable by time |
 | `tenant`, `brand` | Isolation keys. Nothing pools across them unless configured |
 | `visitor_id`, `session_id` | Pseudonymous first-party identifiers |
+| `identity_anchor` | `visitor` when the shopper's state hung on the durable first-party id, `session` when only a session id was available, `none` when no state could be read. Evidence pooled on a session-only anchor is weaker; the ledger is the only place that distinction survives (added 2026-09-02, from CW7) |
 | `ts` | Server time at decision |
 | `page`, `slot`, `position` | Where the item was served, and at what rank inside the slot |
 | `item_id` | What was served |
@@ -240,7 +241,7 @@ A **cell** is the context a decision was made in. Its components, in the default
 
 | Component | Values | Source |
 |---|---|---|
-| Channel | Direct, paid social, paid search, email, organic, referral | Entry channel dimension |
+| Channel | Direct, paid social, paid search, email, organic, referral | Entry channel dimension. **Ratified 2026-09-02:** `organic` means organic *search*; an untagged click from a social host is `referral`, because pooling untagged social with search compares populations that are not comparable. Six values; no seventh |
 | Visit bucket | 1, 2 to 3, 4 or more | Visit number dimension |
 | Region | Country and region code | Request geolocation |
 | Affinity cell | The shopper's leading interest, if any dimension is above its entry threshold; otherwise `none` | The interest state |
