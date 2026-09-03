@@ -204,9 +204,11 @@ describe('the namespace cannot be addressed directly', () => {
     const coach = new TenantKV(kv, DEFAULT_TENANT);
     await new TenantKV(kv, 'kate-spade').put('audience:secret', 'kate');
 
-    await expect(coach.get('t:kate-spade:audience:secret')).rejects.toThrow(/may not start with/);
-    await expect(coach.put('t:kate-spade:audience:secret', 'stolen')).rejects.toThrow();
-    await expect(coach.delete('t:kate-spade:audience:secret')).rejects.toThrow();
+    // Synchronous, deliberately: the wrapper adds no microtask of its own, because
+    // live.ts's per-visitor ingestion chain is sensitive to exactly that.
+    expect(() => coach.get('t:kate-spade:audience:secret')).toThrow(/may not start with/);
+    expect(() => coach.put('t:kate-spade:audience:secret', 'stolen')).toThrow();
+    expect(() => coach.delete('t:kate-spade:audience:secret')).toThrow();
 
     // and the target is untouched
     expect(await new TenantKV(kv, 'kate-spade').get('audience:secret')).toBe('kate');

@@ -179,18 +179,27 @@ export class TenantKV implements KVLike {
     return tenantKey(this.tenant, key);
   }
 
-  // These are `async` so a rejected logical key REJECTS rather than throwing
-  // synchronously. Callers await them; a synchronous throw out of an awaited call
-  // skips their catch and surfaces somewhere unrelated.
-  async get(key: string, type?: string): Promise<unknown> {
+  // NOT `async`, deliberately. These return the underlying promise directly, so
+  // the wrapper adds no microtask of its own.
+  //
+  // This wraps every KV read on the decision path, and live.ts serializes
+  // ingestion per visitor on a promise chain. A wrapper that is transparent about
+  // keys should be transparent about timing too; adding two ticks to every read
+  // to get a tidier error surface is the wrong trade on a hot path.
+  //
+  // So assertLogicalKey throws SYNCHRONOUSLY here. Callers that treat these as
+  // ordinary awaited calls should know a malformed key surfaces at the call
+  // itself rather than in the await. That is acceptable because such a key is a
+  // bug or an attack, never a normal path.
+  get(key: string, type?: string): Promise<unknown> {
     return this.kv.get(this.physical(key), type);
   }
 
-  async put(key: string, value: string, options?: unknown): Promise<void> {
+  put(key: string, value: string, options?: unknown): Promise<void> {
     return this.kv.put(this.physical(key), value, options);
   }
 
-  async delete(key: string): Promise<void> {
+  delete(key: string): Promise<void> {
     return this.kv.delete(this.physical(key));
   }
 
