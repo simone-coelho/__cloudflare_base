@@ -357,6 +357,7 @@ Each is one bounded edit. `wrangler.toml` needs nothing from either track for th
 | Handed to | Exactly what | Until |
 |---|---|---|
 | Delivery ledger session | The **`purchase` / `checkout` / `order_complete` case** in `mapActionToOdp`, `src/services/odpLoop.ts`, and nothing else in that file | Landed 2026-09-03 |
+| Delivery ledger session | **CW3, five one-line edits:** the action-name resolver at `RealtimeSegmentEngine.ts` (two sites), `ShopperReflex.ts` (one), `odpLoop.ts` (one) becomes `actionOf(event)`; the `touches:` argument at the two reflex sites routes content actions through `contentTouches()`; `DEFAULT_REFLEX_CONFIG` in `core.ts` gains four content weights and a `contentType` dimension, outside `touchesForEvent`; `actionEventSchema` in `realtime.ts` names the four content types and `purchase`. Nothing else in any of those files | Landed 2026-09-03 |
 
 The third row is where the collision happened and where it will happen again if either of us is casual.
 Nothing there is edited without a line in this table changing first.
