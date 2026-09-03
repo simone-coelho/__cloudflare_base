@@ -119,6 +119,18 @@ export function mapActionToOdp(
   const productId: string | undefined = data.productId ?? data.product_id ?? data.sku;
   const product: Product | undefined = productId ? catalog().getProduct(String(productId)) : undefined;
 
+  // Whatever the checkout carried about the order itself. Only what was sent,
+  // coerced to the types ODP expects; nothing invented.
+  const orderFields = (d: Record<string, unknown>): Record<string, unknown> => {
+    const out: Record<string, unknown> = {};
+    const orderId = d.orderId ?? d.order_id;
+    if (typeof orderId === 'string' && orderId.trim()) out.order_id = orderId.trim();
+    const total = Number(d.total ?? d.order_total ?? d.revenue);
+    if (Number.isFinite(total) && total >= 0) out.total = total;
+    if (typeof d.currency === 'string' && d.currency.trim()) out.currency = d.currency.trim().toUpperCase();
+    return out;
+  };
+
   const productFields = (p: Product): Record<string, unknown> => ({
     product_id: p.id,
     // Flattened catalog attributes (spec §3/§4) so RTS can qualify without a join;
@@ -150,6 +162,24 @@ export function mapActionToOdp(
       return { type: 'product', action: 'save_for_later', data: productFields(product) };
     case 'page_view':
       return { type: 'pageview', data: { page: typeof data.path === 'string' ? data.path : '/' } };
+    case 'purchase':
+    case 'checkout':
+    case 'order_complete': {
+      // The highest-weighted action in the engine (core.ts weights: 5) fell
+      // through the default below and never reached ODP, so a shopper's
+      // purchases shaped the edge's affinity and ODP's memory of her was blind
+      // to them. Product-level when the event names one, so the RTS can qualify
+      // on the flattened fields like every other product action; order-level
+      // when it does not, because a checkout is an order before it is a product.
+      if (product) {
+        return {
+          type: 'product', action: 'purchase',
+          data: { ...productFields(product), ...orderFields(data) },
+        };
+      }
+      const order = orderFields(data);
+      return Object.keys(order).length ? { type: 'order', action: 'purchase', data: order } : null;
+    }
     default:
       return null; // internal signals (reflex_tick, xsurf_*, …) never leave the edge
   }

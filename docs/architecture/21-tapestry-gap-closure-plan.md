@@ -354,6 +354,10 @@ The other track reads it freely, and writes only by handing the file over in thi
 Each is one bounded edit. `wrangler.toml` needs nothing from either track for this: the consumer uses the
 `ANALYTICS` and `STORAGE` bindings it already has.
 
+| Handed to | Exactly what | Until |
+|---|---|---|
+| Delivery ledger session | The **`purchase` / `checkout` / `order_complete` case** in `mapActionToOdp`, `src/services/odpLoop.ts`, and nothing else in that file | Landed 2026-09-03 |
+
 The third row is where the collision happened and where it will happen again if either of us is casual.
 Nothing there is edited without a line in this table changing first.
 

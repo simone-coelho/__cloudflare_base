@@ -119,3 +119,40 @@ describe('mirrored audience list', () => {
     ]);
   });
 });
+
+describe('mapActionToOdp — purchases reach ODP (they used to fall through `default`)', () => {
+  it('maps a purchase with a product to a product-level purchase, RTS-qualifiable', () => {
+    // The highest-weighted action in the engine returned null here. The edge's
+    // affinity learned from purchases; ODP's memory of the shopper never did.
+    const m = mapActionToOdp(ev('purchase', { productId: 'COA-CH857', orderId: 'ord-1', total: 425, currency: 'usd' }));
+    expect(m).toMatchObject({
+      type: 'product', action: 'purchase',
+      data: { product_id: 'COA-CH857', order_id: 'ord-1', total: 425, currency: 'USD' },
+    });
+    // and the flattened catalog fields ride along, like every other product action
+    expect(m?.data.product_line).toBeTruthy();
+  });
+
+  it('accepts the aliases the engine weights identically', () => {
+    for (const alias of ['checkout', 'order_complete']) {
+      expect(mapActionToOdp(ev(alias, { productId: 'COA-CH857' }))).toMatchObject({ action: 'purchase' });
+    }
+  });
+
+  it('maps an order-level purchase when no single product is named', () => {
+    const m = mapActionToOdp(ev('order_complete', { order_id: 'ord-2', order_total: '199.50' }));
+    expect(m).toMatchObject({ type: 'order', action: 'purchase', data: { order_id: 'ord-2', total: 199.5 } });
+  });
+
+  it('sends only what the checkout carried, and drops what it cannot trust', () => {
+    const m = mapActionToOdp(ev('purchase', { productId: 'COA-CH857', total: 'not a number', orderId: '  ' }));
+    expect(m?.data).not.toHaveProperty('total');
+    expect(m?.data).not.toHaveProperty('order_id');
+  });
+
+  it('returns null for a purchase that names neither a known product nor an order', () => {
+    // Nothing to tell ODP, so nothing is sent. Silence beats an empty record.
+    expect(mapActionToOdp(ev('purchase', {}))).toBeNull();
+    expect(mapActionToOdp(ev('purchase', { productId: 'NOT-IN-CATALOG' }))).toBeNull();
+  });
+});
