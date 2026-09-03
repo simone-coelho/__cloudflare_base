@@ -117,8 +117,8 @@ subset that a reward definition names.
 | Tier | Holds | Why |
 |---|---|---|
 | **Shopper object** (Durable Object SQLite) | This visitor's last 200 decisions or 7 days, whichever is smaller | Online attribution needs the visitor's own recent decisions and nothing else |
-| **R2** | Every record, immutable, hourly NDJSON partitions per tenant | System of record. Cheap, unbounded, and it *is* the Snowflake share: the warehouse reads the partitions |
-| **D1** | Last 30 days, indexed by `decision_id` and `visitor_id` | Random access for the explain lookup, the console, and replay. Pruned by cron; stays well under the 10 GB ceiling |
+| **R2** | Every record, immutable, hourly NDJSON partitions per tenant | System of record. Cheap, unbounded, and it *is* the Snowflake share: the warehouse reads the partitions. Replay and the explain lookup for anything older than the D1 window read the partition the index points at |
+| **D1** | A **keys-only index**, no JSON: `decision_id`, `visitor_id`, `ts`, `page`, `slot`, `position`, `item_id`, `arm`, `identity_anchor`, and the R2 partition the full record lives in. **48 hours** for every decision; **30 days** for the holdout arms, which measurement depends on. Pruned by cron | Random access while the question is still being asked, and the pointer to the full record for everything older. **Corrected 2026-09-03 after §18.9:** a 30-day window of full rows broke at roughly 83,000 personalized page views a day, and the record in §3.1 is nearer 1.5 to 2 KB than the 500 bytes that arithmetic assumed, so it broke sooner. At about 80 bytes a row: 1 million page views a day × 8 slots × 48 hours is roughly 1.3 GB, plus about 1 GB for 30 days of holdout rows at a 5% share. A database per brand is a stamp-provisioning decision, not a schema one, and stays open |
 | **LearnStats object** (Durable Object SQLite) | Decayed counts per key (section 5) | The live aggregates, one object per tenant, brand and slot |
 
 ---

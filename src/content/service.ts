@@ -10,6 +10,8 @@ import { readReflexConfigRevision } from '@/reflex/configStore';
 import { DEFAULT_REFLEX_CONFIG, snapshot as reflexSnapshot, type AffinitySnapshot, type ReflexConfig } from '@/reflex/core';
 import { RealtimeSegmentEngine } from '@/services/RealtimeSegmentEngine';
 import { getConnectors } from '@/connectors';
+import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
+import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';
 import { armFor } from './holdout';
 import { cellFor, type CfLike } from './cell';
@@ -26,6 +28,8 @@ export interface ServeRequest {
   cf?: CfLike | null;
   channel?: string | null;
   nowMs?: number;
+  /** The brand whose shopper state this request reads, as the tenancy middleware resolved it. */
+  stateTenant?: TenantId;
 }
 
 /** Where each input came from, so a reader can tell a tuned scope from a compiled default. */
@@ -50,11 +54,12 @@ interface ShopperRead {
  * instrument shows. A read failure is a cold shopper, not an error.
  */
 async function readShopper(
-  env: Env, visitorId: string, cookieHeader: string | null, cfg: ReflexConfig, now: number,
+  env: Env, visitorId: string, cookieHeader: string | null, cfg: ReflexConfig, now: number, tenant: TenantId,
 ): Promise<ShopperRead> {
   if ((env.REFLEX_HOST ?? 'session') === 'do') {
     try {
-      const stub = env.SHOPPER_REFLEX.get(env.SHOPPER_REFLEX.idFromName(visitorId));
+      // The brand's object for this visitor; the default brand keeps the bare name.
+      const stub = shopperObject(env.SHOPPER_REFLEX, visitorId, tenant);
       const res = await stub.fetch('https://shopper-reflex/snapshot');
       const body = (await res.json()) as { affinity?: AffinitySnapshot | null };
       return { affinity: body.affinity ?? null, sessionId: null, isNewSession: null, state: 'do' };
@@ -63,7 +68,7 @@ async function readShopper(
     }
   }
   try {
-    const engine = new RealtimeSegmentEngine(env, getConnectors(env));
+    const engine = new RealtimeSegmentEngine(env, getConnectors(env), { tenant });
     const { sessionId, sessionData, isNewSession } = await engine.getOrCreateSessionFromCookies(cookieHeader, visitorId);
     return {
       affinity: sessionData.reflex ? reflexSnapshot(sessionData.reflex, now, cfg) : null,
@@ -93,7 +98,7 @@ export async function serveContentDecisions(
   const cfg = cfgRev?.config ?? DEFAULT_REFLEX_CONFIG;
   const configRevision = cfgRev?.revision ?? 0;
 
-  const shopper = await readShopper(env, r.visitorId, r.cookieHeader, cfg, now);
+  const shopper = await readShopper(env, r.visitorId, r.cookieHeader, cfg, now, r.stateTenant ?? DEFAULT_TENANT);
   const cell = cellFor({
     cf: r.cf, snap: shopper.affinity, cfg, channel: r.channel,
     // Only a session boundary the engine itself observed counts as evidence of

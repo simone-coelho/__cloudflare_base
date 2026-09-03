@@ -273,6 +273,18 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
 
 ---
 
+## Scope and tenant, one seam (2026-09-03)
+
+The content service reads its documents under a **scope** named in the path (`/v1/:tenant/...`) and
+reads shopper state for the **brand** the tenancy middleware resolved from host, header or explicit
+signal. They are two names on purpose until CW1 provisions tenants: the catalog can be imported under any
+slug today, while shopper objects and sessions are already namespaced per brand and the default brand
+keeps its bare keys. A visitor id beginning with the namespace marker is refused at the route, the same
+guard the tenancy module applies underneath. When a tenant is provisioned, the two names are the same
+string and the seam disappears without a code change.
+
+---
+
 ## The one item whose delay cannot be bought back
 
 Everything else on this list can be built late and still be built. **CW19, Phase 0 of the outcome-learning

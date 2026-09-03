@@ -11,10 +11,11 @@
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { serveContentDecisions } from '@/content/service';
+import { NAMESPACE_MARKER, type TenantVariables } from '@/tenancy/tenant';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
 import { jwt } from '@/middleware/auth';
 
-export const decisionRoutes = new Hono<{ Bindings: Env }>();
+export const decisionRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
 const TENANT = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 
@@ -48,13 +49,20 @@ decisionRoutes.get('/:tenant/decisions/snapshot', async (c) => {
   if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
   const visitorId = (c.req.query('visitorId') ?? '').trim().slice(0, 128);
   if (!visitorId) return c.json({ ok: false, error: 'visitorId required' }, 400);
+  // A visitor id is a Durable Object name and a session key. One that starts with
+  // the namespace marker would address another brand's namespace directly.
+  if (visitorId.startsWith(NAMESPACE_MARKER)) return c.json({ ok: false, error: 'visitorId may not start with the namespace marker' }, 400);
   const page = ((c.req.query('page') ?? 'home').trim() || 'home').slice(0, 64);
   const brand = (c.req.query('brand') ?? '').trim() || undefined;
   const channel = (c.req.query('channel') ?? '').trim() || null;
   const cf = ((c.req.raw as unknown as { cf?: unknown }).cf ?? null) as { country?: string; regionCode?: string } | null;
 
+  // Two names, on purpose, until CW1 provisions tenants: the path names the SCOPE
+  // the documents are read under; the tenancy middleware names the brand whose
+  // shopper state and session this request belongs to.
   const out = await serveContentDecisions(c.env, {
     tenant, brand, page, visitorId, channel, cf, cookieHeader: c.req.header('Cookie') ?? null,
+    stateTenant: c.get('tenant'),
   });
   c.header('Cache-Control', 'no-store');
   return c.json({ ok: true, ...out });
