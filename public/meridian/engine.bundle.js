@@ -1030,7 +1030,7 @@ function esc(s) {
 
 // src/reflex/contentCompose.ts
 var round3 = (n) => Math.round(n * 1e3) / 1e3;
-function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10) {
+function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10, adjust) {
   const live = pieces.filter((p) => (p.lifecycle?.status ?? "live") === "live");
   const used = /* @__PURE__ */ new Set();
   const out = [];
@@ -1074,6 +1074,10 @@ function composeContentDetailed(pieces, affinity, slots, candidateLimit = 10) {
         drivers.push({ dim: "completes", value: slot.prefer.label, a: 1, weight: slot.prefer.bonus });
       }
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
+      if (adjust) {
+        const adjusted = adjust(p, slot.slot, score);
+        if (Number.isFinite(adjusted) && adjusted >= 0) score = adjusted;
+      }
       return { p, score, drivers };
     }).sort((x, y) => y.score - x.score || x.p.id.localeCompare(y.p.id));
     candidates[slot.slot] = scored.slice(0, Math.max(0, candidateLimit)).map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
