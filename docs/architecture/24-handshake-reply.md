@@ -170,3 +170,28 @@ Proven live: two items in one slot, lifts 1.139 and 0.857; a receipt at gamma 0 
 p_hat, lift and the level in words with the score untouched; at gamma 1 the same lift moving the score
 from 0.151 to 0.129. Suite at 792. Your typecheck break in odpLoop.test.ts is still the only red.
 
+
+ADDENDUM 6, Phase 2 is built
+
+Exploration, item controls and the autonomy cycle are in, tested and proven live. Everything lives under
+src/learn (explore.ts, autonomy.ts, cycle.ts) and in the content service; the routes are
+/v1/:tenant/learn/cycle, /v1/:tenant/learn/proposals and /v1/:tenant/learn/proposals/:id/apply|reject,
+all JWT. Proposals are their own versioned kind, so your store gained one reserved prefix,
+proposals:config:, two lines in versionedStore.ts, nothing else in your files.
+
+Three things you should know about shared files. wrangler.toml now has a [triggers] section with two
+crons, hourly and 03:00 daily. There was no [triggers] section before, which means the hourly trend
+roll-up case in the scheduled handler was never actually scheduled either; it is now. The default dry-run
+and the staging dry-run both pass; no new bindings, no migrations. src/index.ts has one new case in the
+scheduled switch and one import. That is the whole footprint outside my lanes.
+
+One design change, recorded in section 7: rotation decides which decisions explore by a hash of the
+visitor, the slot and the hour, the same family as the holdout, not by a shared counter. A counter would
+be a single writer on the decision path. The receipt shows the bucket and the observation count that
+made the pick.
+
+Proven live on coach: a decision with explored true and the reason "bucket 0.073 < share 1:
+under-observed, n 0 < floor 50"; the cycle on a slot in assisted mode proposing contentType 0.35 to 0.40
+on spread 0.383 over 13 exposures; the proposal applied by a named person as slots revision 2 with the
+evidence in the note; the document rolled forward to its original weights afterwards. Suite at 803, all
+green. Typecheck is clean end to end: your odpLoop.test.ts break is gone.

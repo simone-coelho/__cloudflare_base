@@ -154,13 +154,15 @@ export async function serveContentDecisions(
   const snapshots: Record<string, LiftSnapshot | null> = {};
   await Promise.all(slots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now); }));
   const gammaOf = (slot: string) => learn.slots?.[slot]?.gamma ?? 0;
+  const exploreOf = (slot: string) => learn.slots?.[slot]?.exploration ?? null;
+  const controlOf = (slot: string, item: string) => learn.slots?.[slot]?.items?.[item] ?? null;
 
   const set = decideContent({
     tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: shopper.sessionId, identityAnchor, nowMs: now,
     pieces: catalog.pieces, slots, affinity, regional, cell, arm,
     versions: { config: configRevision, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },
     configLabel: cfg.version,
-    learning: { snapshots, gammaOf },
+    learning: { snapshots, gammaOf, exploreOf, controlOf },
   });
 
   // After the response: the visitor's ring and each slot's exposures. Never awaited here.

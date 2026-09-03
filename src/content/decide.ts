@@ -11,6 +11,8 @@ import type {
 } from './types';
 import { isLiveAt } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
+import { explorationPick, type ExploreConfig, type ExplorePick } from '@/learn/explore';
+import type { ItemControl } from './types';
 
 export interface DecideInput {
   tenant: string;
@@ -39,7 +41,14 @@ export interface DecideInput {
    * The learning layer (doc 22 §6): per slot, the lift snapshot in force and the
    * trust dial. At γ = 0 the lift is computed, shown on the receipt, and ignored.
    */
-  learning?: { snapshots: Record<string, LiftSnapshot | null>; gammaOf: (slot: string) => number } | null;
+  learning?: {
+    snapshots: Record<string, LiftSnapshot | null>;
+    gammaOf: (slot: string) => number;
+    /** Doc 22 §7, per slot; absent means off. */
+    exploreOf?: (slot: string) => ExploreConfig | null;
+    /** Doc 22 §12.2, per slot: a merchandiser's control over an item's learned lift. */
+    controlOf?: (slot: string, item: string) => ItemControl | null;
+  } | null;
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
@@ -69,13 +78,31 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   const adjust: ScoreAdjust | undefined = learning ? (p, slot, base) => {
     const key = `${slot}:${p.id}`;
     baseOf.set(key, base);
+    const control = learning.controlOf?.(slot, p.id) ?? null;
+    if (control) controlOf.set(key, control.mode);
+    if (control?.mode === 'reject') return base;                       // learned lift ignored for this item
     const look = liftFor(learning.snapshots[slot], p.id, i.cell);
-    if (!look) return base;
     const gamma = learning.gammaOf(slot);
+    if (control?.mode === 'freeze') {                                   // held at the value a person chose
+      liftOf.set(key, { reward: learning.snapshots[slot]?.reward ?? 'click', level: look?.level ?? 0, level_words: 'frozen by a merchandiser', n: look?.n ?? 0, s: look?.s ?? 0, p0: look?.p0 ?? 0, n0: look?.n0 ?? 0, p_hat: look?.p_hat ?? 0, lift: control.lift ?? 1, gamma });
+      return base * Math.pow(control.lift ?? 1, gamma);
+    }
+    if (!look) return base;
     liftOf.set(key, { reward: look.reward, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma });
     return base * Math.pow(look.lift, gamma);
   } : undefined;
-  const { decisions, candidates } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust);
+  const controlOf = new Map<string, 'reject' | 'freeze'>();
+  // Exploration (doc 22 §7): decided per slot from the ranked candidates, deterministic in its inputs.
+  const explored = new Map<string, ExplorePick>();
+  const explore = learning?.exploreOf ? (slot: string, ranked: ReadonlyArray<{ id: string; score: number }>) => {
+    const cfg = learning.exploreOf!(slot);
+    if (!cfg) return null;
+    const pick = explorationPick({ visitorId: i.visitorId, slot, nowMs: i.nowMs, ranked, snapshot: learning.snapshots[slot], cfg });
+    if (!pick) return null;
+    explored.set(slot, pick);
+    return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
+  } : undefined;
+  const { decisions, candidates } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore);
 
   const byId = new Map(i.pieces.map((p) => [p.id, p]));
   const specOf = new Map(specs.map((s) => [s.slot, s]));
@@ -106,6 +133,9 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
     const key = `${d.slot}:${d.contentId}`;
     const lift = liftOf.get(key) ?? null;
     const scoreBase = baseOf.get(key) ?? d.score;
+    const pick = explored.get(d.slot);
+    const wasExplored = Boolean(pick && position === 0 && (pick.ranking ? pick.ranking[0] === d.contentId : pick.pieceId === d.contentId));
+    const control = controlOf.get(key);
     return {
       // Tenant first, then time: the R2 partition (brand and hour) is derivable from the id alone,
       // so a support paste resolves without anyone having to remember which brand it came from.
@@ -113,9 +143,13 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
       tenant: i.tenant, brand: i.brand, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
       page: i.page, slot: d.slot, position, item_id: d.contentId, customer_item_id: d.customerContentId,
       candidates: candidates[d.slot] ?? [],
-      cell: i.cell, arm: i.arm, explored: false, authority: authorityOf(d.strategy),
+      cell: i.cell, arm: i.arm, explored: wasExplored, authority: authorityOf(d.strategy),
       versions: { ...i.versions, lift: learning?.snapshots[d.slot]?.version ?? 0 }, config_label: i.configLabel,
-      explain: { drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}), lift, score_final: d.score },
+      explain: {
+        drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}), lift, score_final: d.score,
+        ...(wasExplored && pick ? { exploration: { mode: pick.mode, reason: pick.reason, bucket: pick.bucket, ...(pick.samples ? { sample: pick.samples[d.contentId] } : {}) } } : {}),
+        ...(control ? { control } : {}),
+      },
     };
   });
 

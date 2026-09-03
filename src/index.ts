@@ -165,6 +165,7 @@ import { DecisionRing } from '@/durable-objects/DecisionRing';
 import { LearnStats } from '@/durable-objects/LearnStats';
 import { rollupTenant } from '@/reflex/regionTrend';
 import { consumeLedger } from '@/ledger/consume';
+import { runCycle } from '@/learn/cycle';
 
 export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent, MeridianReflex, RegionTrend, DecisionRing, LearnStats };
 
@@ -181,6 +182,17 @@ export default {
       case '*/5 * * * *':
         console.log('Running 5-minute scheduled task');
         break;
+      case '0 3 * * *': {
+        // Doc 22 §11: the autonomy cycle, daily. Slots in configured mode are untouched.
+        const tenants = (env.TREND_ROLLUP_TENANTS ?? 'coach').split(',').map((t) => t.trim()).filter(Boolean);
+        for (const tenant of tenants) {
+          ctx.waitUntil(runCycle(env, tenant).then(
+            (r) => console.log(`autonomy cycle ${tenant}: ${r.filter((x) => x.action !== 'none').length} action(s) across ${r.length} slot(s)`),
+            (e) => console.error(`autonomy cycle ${tenant} failed`, e),
+          ));
+        }
+        break;
+      }
       case '0 * * * *': {
         // CW6: sum each tenant's published regions into its countries and into everyone.
         const tenants = (env.TREND_ROLLUP_TENANTS ?? 'coach').split(',').map((t) => t.trim()).filter(Boolean);

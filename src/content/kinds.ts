@@ -224,6 +224,29 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
         const dials: NonNullable<LearnConfig['slots']>[string] = {};
         if (d.gamma !== undefined) { if (!isNum(d.gamma) || d.gamma < 0 || d.gamma > 1) errors.push(`slots.${slot}.gamma: number 0..1`); else dials.gamma = d.gamma; }
         if (d.reward !== undefined) { if (!isStr(d.reward) || !REWARDS.has(d.reward)) errors.push(`slots.${slot}.reward: known reward`); else dials.reward = d.reward as NonNullable<typeof dials.reward>; }
+        if (d.exploration !== undefined) {
+          const e = d.exploration;
+          if (!isRecord(e) || !['rotation', 'thompson', 'epsilon', 'off'].includes(String(e.mode)) || !isNum(e.share) || e.share < 0 || e.share > 1 || !isNum(e.floor) || !Number.isInteger(e.floor) || e.floor < 0) errors.push(`slots.${slot}.exploration: mode rotation|thompson|epsilon|off, share 0..1, floor integer ≥ 0`);
+          else dials.exploration = { mode: e.mode as 'rotation' | 'thompson' | 'epsilon' | 'off', share: e.share, floor: e.floor };
+        }
+        if (d.autonomy !== undefined) {
+          const a = d.autonomy;
+          const okMode = isRecord(a) && ['configured', 'assisted', 'autonomous'].includes(String(a.mode));
+          const okNums = isRecord(a) && isNum(a.step) && a.step > 0 && a.step <= 1 && isNum(a.min) && isNum(a.max) && a.min >= 0 && a.max <= 1 && a.min < a.max && isNum(a.minN) && Number.isInteger(a.minN) && a.minN >= 1;
+          const okPinned = isRecord(a) && Array.isArray(a.pinned) && a.pinned.every(isStr);
+          if (!okMode || !okNums || !okPinned) errors.push(`slots.${slot}.autonomy: mode configured|assisted|autonomous, step (0,1], 0 ≤ min < max ≤ 1, pinned string[], minN ≥ 1`);
+          else dials.autonomy = { mode: a.mode as 'configured' | 'assisted' | 'autonomous', step: a.step as number, min: a.min as number, max: a.max as number, pinned: [...(a.pinned as string[])], minN: a.minN as number };
+        }
+        if (d.items !== undefined) {
+          if (!isRecord(d.items)) errors.push(`slots.${slot}.items: object of item → control`);
+          else {
+            dials.items = {};
+            for (const [item, ctl] of Object.entries(d.items)) {
+              if (!isRecord(ctl) || (ctl.mode !== 'reject' && ctl.mode !== 'freeze') || (ctl.mode === 'freeze' && (!isNum(ctl.lift) || ctl.lift <= 0))) { errors.push(`slots.${slot}.items.${item}: mode reject, or freeze with a positive lift`); continue; }
+              dials.items[item] = ctl.mode === 'freeze' ? { mode: 'freeze', lift: ctl.lift as number } : { mode: 'reject' };
+            }
+          }
+        }
         slots[slot] = dials;
       }
     }

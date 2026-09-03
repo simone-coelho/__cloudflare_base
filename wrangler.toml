@@ -198,6 +198,12 @@ ip = "localhost"
 # Secrets (never here): JWT_SECRET, SDK_KEYS, GEMINI_API_KEY, and optionally
 # ODP_PUBLIC_KEY, SHOT_TOKEN. Set them with `wrangler secret put NAME --env staging`.
 # ═════════════════════════════════════════════════════════════════════════════
+# Cron schedules (the scheduled handler in src/index.ts matches on the pattern):
+#   0 * * * *  regional trend roll-up, per tenant in TREND_ROLLUP_TENANTS (doc 22 §5.2)
+#   0 3 * * *  the learning cycle: proposals or bounded moves for slots in assisted / autonomous mode (doc 22 §7.3)
+[triggers]
+crons = ["0 * * * *", "0 3 * * *"]
+
 [env.staging]
 name = "edge-platform-staging"
 

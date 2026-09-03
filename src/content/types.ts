@@ -77,8 +77,21 @@ export interface LearnPolicyConfig {
 /** Doc 22 §5.1: the estimator's constants. */
 export interface LearnStatsConfig { n0: number; tauLearnMs: number; liftMin: number; liftMax: number; nMin: number }
 
+/** Doc 22 §7: how a slot explores. */
+export interface ExploreDials { mode: 'rotation' | 'thompson' | 'epsilon' | 'off'; share: number; floor: number }
+/** Doc 22 §11: whether and how a slot adjusts its own weights. */
+export interface AutonomyDials { mode: 'configured' | 'assisted' | 'autonomous'; step: number; min: number; max: number; pinned: string[]; minN: number }
+/** Doc 22 §12.2: a merchandiser's control over one item's learned lift. */
+export interface ItemControl { mode: 'reject' | 'freeze'; lift?: number }
+
 /** Doc 22 §6.2 and §13: the per-slot dials. γ defaults to 0, shadow mode. */
-export interface SlotDials { gamma?: number; reward?: 'click' | 'dwell' | 'video_complete' | 'wishlist' | 'add_to_bag' | 'purchase' | 'custom' }
+export interface SlotDials {
+  gamma?: number;
+  reward?: 'click' | 'dwell' | 'video_complete' | 'wishlist' | 'add_to_bag' | 'purchase' | 'custom';
+  exploration?: ExploreDials;
+  autonomy?: AutonomyDials;
+  items?: Record<string, ItemControl>;
+}
 
 export interface LearnConfig {
   version?: string;
@@ -156,7 +169,7 @@ export interface DecisionRecord {
   candidates: SlotCandidate[];
   cell: Cell;
   arm: Arm;
-  explored: false;
+  explored: boolean;
   authority: Authority;
   versions: DecisionVersions;
   /** The human-readable label of the configuration revision (doc 22 §12.1). */
@@ -171,6 +184,10 @@ export interface DecisionRecord {
     lift: LiftApplied | null;
     /** score_base × lift^γ. Equal to score_base while γ is 0. */
     score_final: number;
+    /** Why this placement was an exploration pick, when it was. */
+    exploration?: { mode: string; reason: string; bucket: number; sample?: number };
+    /** A merchandiser's control on this item's lift, when one applied. */
+    control?: 'reject' | 'freeze';
   };
 }
 

@@ -86,12 +86,20 @@ const round3 = (n: number) => Math.round(n * 1000) / 1000;
  */
 export type ScoreAdjust = (piece: ContentPieceLike, slot: string, baseScore: number) => number;
 
+/**
+ * An optional exploration hook, given the slot's ranked candidates after
+ * scoring and before the take. It may name one piece to serve first, or hand
+ * back a whole ranking. Returning null serves the ranking as scored.
+ */
+export type ExploreHook = (slot: string, ranked: ReadonlyArray<{ id: string; score: number }>) => { first?: string; ranking?: readonly string[] } | null;
+
 export function composeContentDetailed(
   pieces: readonly ContentPieceLike[],
   affinity: AffinityViewLike,
   slots: readonly ContentSlotSpec[],
   candidateLimit = 10,
   adjust?: ScoreAdjust,
+  explore?: ExploreHook,
 ): ComposeContentResult {
   const live = pieces.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
   const used = new Set<string>();
@@ -131,6 +139,17 @@ export function composeContentDetailed(
       if (adjust) { const adjusted = adjust(p, slot.slot, score); if (Number.isFinite(adjusted) && adjusted >= 0) score = adjusted; }
       return { p, score, drivers };
     }).sort((x, y) => y.score - x.score || x.p.id.localeCompare(y.p.id));
+
+    if (explore && scored.length > 1) {
+      const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));
+      if (pick?.ranking) {
+        const order = new Map(pick.ranking.map((id, i) => [id, i]));
+        scored.sort((x, y) => (order.get(x.p.id) ?? 1e9) - (order.get(y.p.id) ?? 1e9));
+      } else if (pick?.first) {
+        const i = scored.findIndex((s) => s.p.id === pick.first);
+        if (i > 0) scored.unshift(...scored.splice(i, 1));
+      }
+    }
 
     candidates[slot.slot] = scored.slice(0, Math.max(0, candidateLimit))
       .map((s) => ({ contentId: s.p.id, score: round3(s.score) }));

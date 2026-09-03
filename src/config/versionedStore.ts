@@ -49,6 +49,8 @@ export const RESERVED_PREFIXES = [
   'reflex:config:', 'learn:config:', 'lift:', 'prior:', 'policy:',
   // CW4 (plan 21, the seam): the content catalog and per-page slot strategies.
   'content:config:', 'slots:config:',
+  // Phase 2 (doc 22 §11): the autonomy cycle's proposals, with their evidence.
+  'proposals:config:',
 ] as const;
 
 export type Scope = string;

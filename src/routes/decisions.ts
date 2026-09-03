@@ -18,6 +18,9 @@ import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
 import { liftKey, ringName } from '@/learn/fan';
+import { decideProposal, EMPTY_PROPOSALS, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
+import { read } from '@/config/versionedStore';
+import type { AuthContext } from '@/middleware/auth';
 import { jwt } from '@/middleware/auth';
 
 export const decisionRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
@@ -70,6 +73,36 @@ decisionRoutes.get('/:tenant/visitors/:visitorId/recent', jwt({ required: true }
   const res = await ns.get(ns.idFromName(ringName(tenant, visitorId))).fetch('https://learn/recent');
   c.header('Cache-Control', 'no-store');
   return c.json(await res.json());
+});
+
+/**
+ * The autonomy cycle (doc 22 §11). POST /v1/:tenant/learn/cycle runs it for the
+ * scope now, as the daily cron does; GET /v1/:tenant/learn/proposals lists what
+ * it proposed with the evidence; POST .../proposals/:id/apply or /reject is a
+ * person's decision, applied as a new revision of the slots document with the
+ * evidence in its note. Every one of these leaves a trail. All authenticated.
+ */
+decisionRoutes.post('/:tenant/learn/cycle', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const actor = (c as unknown as { get: (k: 'auth') => AuthContext | undefined }).get('auth')?.user?.sub ?? 'operator';
+  const results = await runCycle(c.env, tenant, (c.req.query('brand') ?? '').trim() || tenant, Date.now(), actor);
+  return c.json({ ok: true, tenant, results });
+});
+decisionRoutes.get('/:tenant/learn/proposals', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const doc = await read<ProposalsDoc>(c.env, PROPOSALS_KIND, tenant, EMPTY_PROPOSALS);
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, tenant, proposals: doc.proposals });
+});
+decisionRoutes.post('/:tenant/learn/proposals/:id/:decision', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  const decision = c.req.param('decision');
+  if (!TENANT.test(tenant) || (decision !== 'apply' && decision !== 'reject')) return c.json({ ok: false, error: 'tenant slug and apply | reject' }, 400);
+  const actor = (c as unknown as { get: (k: 'auth') => AuthContext | undefined }).get('auth')?.user?.sub ?? 'operator';
+  const res = await decideProposal(c.env, tenant, c.req.param('id') ?? '', decision, actor);
+  return res.ok ? c.json(res) : c.json(res, 404);
 });
 
 /** POST /v1/:tenant/trend/rollup: what the hourly cron does, on demand. Authenticated. */

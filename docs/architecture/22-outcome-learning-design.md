@@ -346,11 +346,15 @@ merchandiser's curated ranking is diluted. Both the share and the mechanism are 
 | `floor` | Observations below which an item is considered under-observed | 50 |
 | `cooldown` | Minimum time between exploration picks of the same item for one visitor | Session |
 
-**Rotation** is deterministic: every k-th decision in the slot serves the eligible item with the fewest
-observations, where k = 1 / share. It is auditable by inspection and it is the default because it is the
-easiest to explain. **Thompson** samples each item's rate from its posterior and ranks by the sample; it
-explores more intelligently and its explain record shows the sampled value alongside the mean, so it is
-still readable. **Epsilon** is uniform random at the configured share.
+**Rotation** is deterministic: a share of the slot's decisions serves the eligible item with the fewest
+observations. Which decisions fall in that share is a hash of the visitor, the slot and the hour, the same
+way the holdout assigns arms, so the configured share is realized with no shared counter, which would be
+a single writer on the decision path (built 2026-09-03; an earlier draft said "every k-th decision"). The
+receipt shows the bucket and the observation count that made the pick. It is the default because it is
+the easiest to explain. **Thompson** samples each item's rate from its posterior and ranks by the sample;
+it explores more intelligently and its explain record shows the sampled value alongside the mean, so it
+is still readable; the sample is seeded from the decision's own coordinates, so a replay reproduces it.
+**Epsilon** is uniform random at the configured share, from the same bucket.
 
 Every exploration pick is flagged in the decision record. Exploration outcomes feed learning like any
 other, and the console reports them separately so the exploration share can be verified rather than
@@ -436,7 +440,7 @@ reversible, and pinnable. Here is what that means precisely.
 
 | Bound | Meaning | Default |
 |---|---|---|
-| `step` | Maximum change to any weight per cycle | 0.05 |
+| `step` | Maximum change to any weight per cycle. Weights are not renormalized afterwards: a slot ranks its own items against each other, so only the ratios between its weights matter | 0.05 |
 | `min`, `max` | Hard range per weight | 0.0, 1.0 |
 | `pinned` | Weights excluded from adjustment | none |
 | `cadence` | How often the job runs | daily |
