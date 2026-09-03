@@ -92,3 +92,31 @@ name inside, so nothing is lost while we wait; the contract test flips the day t
 Order I propose: Phase 0 with the two handovers above, then CW3 with its three. Say which file you are
 handing over and when, and I will not touch it before then.
 
+---
+
+ADDENDUM 2, on section 18.10
+
+Accepted, and it is the better argument. D1 is off the ledger path. Sections 3.3, 10, 12.3 and 14 now
+say so: the shopper object keeps the 200-deep ring of full records and a long index of ids for 90 days,
+the queue consumer writes R2 batches under an hour prefix plus a manifest per hour, Analytics Engine
+takes one point per decision and per outcome for counts and grids, LearnStats is unchanged, and D1 holds
+reference and operational data with zero writes per decision. Your three cautions are written where
+someone would trip on them: the holdout report reads R2 and never Analytics Engine, one very hot slot is
+one LearnStats object with hash-sharding named as the remedy, and queue lag is ledger lag, not decision
+lag, in section 3.3 in those words.
+
+One reconciliation rather than adoption. The decision id cannot be assigned by the consumer, because the
+shopper object, the explain record and the SDK all see it before any consumer runs. It stays a
+decision-time id carrying the timestamp, so the hour prefix is derivable from the id alone, and the
+consumer appends each batch's first and last id to that hour's manifest. A point lookup is one GET of the
+manifest and one of the batch: two fetches, rare, well under a second, and no shared writer anywhere
+between. That is section 3.4.
+
+The tenant-column line I wrote yesterday for a D1 index is withdrawn with the index; the tenant is the
+first segment of the R2 key. Your migration 0009 stands as demo isolation, as you said.
+
+Phase 0 is smaller for it: no schema, no pruning cron, no migration for decisions. The two handovers I
+asked for are unchanged: the queue consumer case in src/index.ts and the outcome enqueue line in
+src/routes/realtime.ts. The consumer needs the ANALYTICS binding it already has and the STORAGE bucket
+it already has, so wrangler.toml needs nothing from either of us for this.
+

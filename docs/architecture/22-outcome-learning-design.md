@@ -116,10 +116,25 @@ subset that a reward definition names.
 
 | Tier | Holds | Why |
 |---|---|---|
-| **Shopper object** (Durable Object SQLite) | This visitor's last 200 decisions or 7 days, whichever is smaller | Online attribution needs the visitor's own recent decisions and nothing else |
-| **R2** | Every record, immutable, hourly NDJSON partitions per tenant | System of record. Cheap, unbounded, and it *is* the Snowflake share: the warehouse reads the partitions. Replay and the explain lookup for anything older than the D1 window read the partition the index points at |
-| **D1** | A **keys-only index**, no JSON: `decision_id`, `visitor_id`, `ts`, `page`, `slot`, `position`, `item_id`, `arm`, `identity_anchor`, and the R2 partition the full record lives in. **48 hours** for every decision; **30 days** for the holdout arms, which measurement depends on. Pruned by cron. **Born with the brand column** (`tenant TEXT NOT NULL DEFAULT 'coach'`, the `TENANT_COLUMN_DDL` constant in `src/tenancy/d1.ts`), and every query and export names the tenant, defaulting to the default brand and never to every brand | Random access while the question is still being asked, and the pointer to the full record for everything older. **Corrected 2026-09-03 after §18.9:** a 30-day window of full rows broke at roughly 83,000 personalized page views a day, and the record in §3.1 is nearer 1.5 to 2 KB than the 500 bytes that arithmetic assumed, so it broke sooner. At about 80 bytes a row: 1 million page views a day × 8 slots × 48 hours is roughly 1.3 GB, plus about 1 GB for 30 days of holdout rows at a 5% share. A database per brand is a stamp-provisioning decision, not a schema one, and stays open |
+| **Shopper object** (Durable Object SQLite) | This visitor's last 200 decisions, full records with their explain, or 7 days, whichever is smaller | Online attribution needs the visitor's own recent decisions and nothing else, and "why did this shopper see this" is answered here, live, by the one writer that object has: itself |
+| **R2** | Every record, immutable, as consumer batches under `{tenant}/{date}/{hour}/{batch}.ndjson`, plus one small manifest per hour listing each batch's first and last id | System of record. Cheap, unbounded, and it *is* the Snowflake share: the warehouse reads the partitions. Replay and support read one manifest and one batch (section 3.4). **Queue lag is ledger lag, not decision lag**: during a peak the queue fills faster than the consumer drains it, R2 receives records later than they happened and is exact afterwards, and nobody waits on it in real time. An operator reading a backlog graph on the busiest day of the year should read it as the ledger catching up, not as the site degrading |
+| **Shopper object, the long index** (same object) | `decision_id` and `ts` for everything this visitor saw, about 80 bytes each, 90 days | "Everything she saw last month" without a shared index. The R2 object is derived from the id (section 3.4) |
+| **Analytics Engine** | One small point per decision and per outcome: tenant, slot, item, arm, explored, level | Counts, rates, grids and the realized exploration share, in seconds, from millions of fire-and-forget edge writers. **Sampled at very high write rates, so never the holdout report** |
+| **D1** | Reference and operational data only: catalog documents, census, audience definitions, the config audit, the console's own state | Read-heavy, moderate-write, which is what it is for. **Zero writes per decision.** Decided 2026-09-03 after section 18.10: D1 is the one single-writer component in the design and it does not belong on the ledger path at all |
 | **LearnStats object** (Durable Object SQLite) | Decayed counts per key (section 5) | The live aggregates, one object per tenant, brand and slot |
+
+### 3.4 The decision id, and a point lookup with no index
+
+The id exists at decision time, because the shopper object, the explain record and the SDK all see it
+before any consumer runs. It carries the timestamp, so the R2 partition it lands in is derivable from the
+id alone: the hour prefix. Inside the hour the consumer writes batches as it drains the queue and appends
+each batch's first and last id to that hour's manifest. A point lookup is therefore one GET of the
+manifest and one GET of the batch, for a support or replay question that is asked rarely and answered in
+well under a second. Nothing between the decision and that lookup is a shared writer.
+
+The three writes a decision causes all happen after the response, through `waitUntil`: an append to the
+shopper's own object, a point to Analytics Engine, and a message to the queue. The shopper's path is
+unchanged.
 
 ---
 
@@ -394,8 +409,9 @@ be applied retroactively: traffic served without an arm can never be given one a
 
 Assignment is a hash of the visitor ID, so it is deterministic, sticky, and needs no storage. The holdout
 arm's decisions are still recorded, with their arm, so the report is a join over the same ledger under the
-same attribution policies. Two rules are absolute: holdout outcomes never feed the statistics, and the arm
-is visible in every explain record.
+same attribution policies. Three rules are absolute: holdout outcomes never feed the statistics, the arm
+is visible in every explain record, and **the report reads R2, never Analytics Engine**, whose counts are
+sampled estimates at high write rates and are for dashboards only.
 
 The `no_learning` arm is the one a data scientist will ask for. It separates what stage one contributes
 from what stage two adds on top, which is the number that justifies stage two.
@@ -481,9 +497,10 @@ Per tenant, brand and slot:
 
 ### 12.3 Replay
 
-Given a `decision_id`, recompute the decision from the ledger and the recorded versions and compare it to
-what was served. Equality is the proof that the system is deterministic and that the explain record is the
-truth rather than a narrative about it.
+Given a `decision_id`, fetch the record (one manifest, one batch, section 3.4), recompute the decision from
+the ledger and the recorded versions, and compare it to what was served. Equality is the proof that the
+system is deterministic and that the explain record is the truth rather than a narrative about it. A replay
+asked during a peak may be behind by the queue lag; it is exact once the queue has drained.
 
 ### 12.4 Export
 
@@ -532,12 +549,12 @@ they want to protect from it. Both see the same explain record and the same grid
 | Decision worker | Worker, per-isolate cache | Reads only; no added I/O in steady state |
 | Shopper object | Durable Object with SQLite | Already holds the visitor's state; the cheapest possible attribution join is local to it |
 | Decision and credit queues | Queues, batched | Takes every write off the response path |
-| Ledger writer | Queue consumer Worker | Appends to R2, indexes into D1 |
-| System of record | R2, hourly NDJSON partitions | Immutable, unbounded, and it is the warehouse share |
-| Recent index | D1, 30-day window, cron-pruned | Random access for explain, console, replay |
-| LearnStats object | Durable Object with SQLite, alarms | One per tenant, brand and slot; keeps decayed counts; publishes on a coalescing alarm |
+| Ledger writer | Queue consumer Worker | Appends batches to R2 and the hour's manifest. Writes nothing to D1 |
+| System of record | R2, batches under an hour prefix, plus a manifest per hour | Immutable, unbounded, and it is the warehouse share; a point lookup is two GETs |
+| Live counters and grids | Analytics Engine, one point per decision and per outcome | Millions of fire-and-forget edge writers, SQL API. Sampled at high rates: dashboards, never measurement |
+| LearnStats object | Durable Object with SQLite, alarms | One per tenant, brand and slot; keeps decayed counts; publishes on a coalescing alarm. **One very hot slot is one object**: at an order of magnitude above the pilot's peak, hash-shard the object and merge at publish |
 | Lift snapshot | KV, versioned keys plus a version marker | Edge-cached reads, zero per-decision cost |
-| Batch jobs | Cron triggers | Reporting policies, recomputation, holdout report, autonomy cycles, D1 pruning |
+| Batch jobs | Cron triggers | Reporting policies, recomputation, the holdout report over R2, autonomy cycles |
 | External model | Service binding, KV table, or Workers AI | Bounded by a hard timeout, in parallel |
 
 ### 14.1 Sizing
@@ -548,7 +565,9 @@ they want to protect from it. Both see the same explain record and the same grid
 | LearnStats object | Items × populated cells. With 2,000 items and pooling levels only materialized where n > 0, tens of thousands of rows per slot. SQLite is comfortable at millions |
 | Lift snapshot | Tens to a few hundred kilobytes per slot per version |
 | R2 | Event-level; at a million decisions a day, low single-digit GB per month compressed |
-| D1 | Bounded by the 30-day window and pruning; well under the ceiling at that volume |
+| Shopper object, long index | About 80 bytes per decision seen, 90 days; a heavy visitor holds a few hundred kilobytes |
+| Analytics Engine | One small point per decision and outcome; no retention decision to make |
+| D1 | Reference and operational data only; zero writes per decision |
 
 ### 14.2 Latency budget, stated once
 
