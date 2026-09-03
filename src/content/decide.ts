@@ -7,7 +7,7 @@
 
 import { composeContentDetailed, type ContentSlotSpec, type AffinityViewLike } from '@/reflex/contentCompose';
 import type {
-  Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, SlotStrategy,
+  Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, RegionalBlend, SlotStrategy,
 } from './types';
 import { isLiveAt } from './lifecycle';
 
@@ -22,6 +22,12 @@ export interface DecideInput {
   pieces: readonly ContentPiece[];
   slots: readonly SlotStrategy[];
   affinity: AffinityViewLike | null;
+  /**
+   * The population prior already blended into `affinity` by the service, with
+   * the regional shares it used, so each decision can itemize what the region
+   * contributed. Null when no prior applied.
+   */
+  regional?: (RegionalBlend & { share: Readonly<Record<string, Readonly<Record<string, number>>>> }) | null;
   cell: Cell;
   arm: Arm;
   versions: DecisionVersions;
@@ -49,10 +55,32 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   const eligible = i.pieces.filter((p) => isLiveAt(p, i.nowMs));
   const { decisions, candidates } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10);
 
+  const byId = new Map(i.pieces.map((p) => [p.id, p]));
+  const specOf = new Map(specs.map((s) => [s.slot, s]));
+  // What the region contributed to this decision: Σ over the piece's tags of λ·share·w.
+  const regionalOf = (d: { contentId: string; slot: string }): (RegionalBlend & { contribution: number }) | null => {
+    const reg = i.regional; if (!reg || i.arm === 'default') return null;
+    const piece = byId.get(d.contentId), spec = specOf.get(d.slot);
+    if (!piece || !spec) return null;
+    let contribution = 0;
+    for (const [dim, values] of Object.entries(piece.tags)) {
+      const w = spec.weights[dim] ?? 0; if (!w) continue;
+      for (const v of values) contribution += reg.lambda * (reg.share[dim]?.[v] ?? 0) * w;
+    }
+    if (contribution <= 0) return null;
+    const { share: _share, ...summary } = reg;
+    return { ...summary, contribution: Math.round(contribution * 1000) / 1000 };
+  };
+  for (const d of decisions) {
+    const r = regionalOf(d);
+    if (r) d.explain.drivers.push({ dim: 'regional', value: r.region, a: r.lambda, weight: Math.round((r.contribution / (r.lambda || 1)) * 1000) / 1000 });
+  }
+
   const positionIn = new Map<string, number>();
   const records: DecisionRecord[] = decisions.map((d) => {
     const position = positionIn.get(d.slot) ?? 0;
     positionIn.set(d.slot, position + 1);
+    const regional = regionalOf(d);
     return {
       decision_id: `${i.nowMs.toString(36)}:${i.visitorId}:${i.page}:${d.slot}:${position}`,
       tenant: i.tenant, brand: i.brand, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
@@ -60,13 +88,14 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
       candidates: candidates[d.slot] ?? [],
       cell: i.cell, arm: i.arm, explored: false, authority: authorityOf(d.strategy),
       versions: { ...i.versions }, config_label: i.configLabel,
-      explain: { drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: d.score, lift: null },
+      explain: { drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: d.score, ...(regional ? { regional } : {}), lift: null },
     };
   });
 
   return {
     tenant: i.tenant, brand: i.brand, page: i.page, visitor_id: i.visitorId, session_id: i.sessionId, identity_anchor: i.identityAnchor, ts: i.nowMs,
     arm: i.arm, cell: i.cell, versions: { ...i.versions }, config_label: i.configLabel,
+    regional: i.regional && i.arm !== 'default' ? (({ share: _s, ...rest }) => rest)(i.regional) : null,
     decisions, records,
   };
 }

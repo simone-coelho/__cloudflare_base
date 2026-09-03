@@ -99,7 +99,7 @@ exactly what makes the brand a string; a second brand is the provisioning exerci
 
 | Item | CW | Days | Note |
 |---|---|---|---|
-| Regional trending: `RegionTrend` DO, KV publish, λ-blend | CW6 | 3 | Mandeep's stated non-negotiable for v1, and the single dimension with the least code against the highest priority. Zero lines exist. The geo-cohort module is a reusable ingredient, **not** a substitute |
+| Regional trending: `RegionTrend` DO, KV publish, λ-blend | CW6 | ✅ 2026-09-02 | Ledger 19's design, built: `RegionTrend` object per tenant and region on the personal vector's decay invariant (24h horizon, 32 values per dimension, ε-prune), fan-in from both scoring hosts off the response path, coalesced publish to KV, region → country → everyone rollup on the hourly cron, and the blend as a prior in the decision service: λ = K/(K + Σ personal), ã = (1−λ)·a + λ·share, itemized as a `regional` driver and on every record. Population aggregates only; no visitor id ever reaches the object. Settings on the `learn` document. 8 new tests. **Proven live:** thirty views from ten strangers published the region's vector, a brand-new visitor in that region was decided at λ = 1 with the Drover piece and the regional driver at the full score, and after three views of her own λ fell to 0.29 |
 | ✅ Visit boundaries + entry channel | CW7a | 1 | **Done 2026-09-02.** `src/services/visit.ts` (pure), wired through SessionManager, published as `visit_number`, `visit_bucket`, `entry_channel`, and captured by the client. Levels 1 and 2 of doc 22's pooling ladder are now real. 34 tests |
 | ✅ vuid cutover | CW7b | 0.5 | **Done 2026-09-02.** The ODP vuid derives from the stable `opt_visitor_id` the client already persisted, not from the session. `OdpIdentity` replaced the bare `sessionId` parameter on four functions, which is how the compiler found all seven call sites. ⚠️ This orphans existing session-derived ODP profiles: the right trade before launch, the wrong one after |
 | Content telemetry, exposure-normalised | CW3 | 1.5 | Impression, click, dwell, video completion. Zero hits in the repo. Content-type affinity cannot be a learned dimension without it |
@@ -237,6 +237,34 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
 - **`scripts/import-content.mjs`** is the manual adapter for the demo catalog: it pulls Meridian's
   eighteen pieces through the seam into a scope and writes a slot document whose names and weights match
   the catalog's vocabulary, so the full chain, SDK to decision, can be shown on the dev server today.
+
+---
+
+## The CW6 seam (2026-09-02)
+
+- **The population never learns a name.** `RegionTrend` holds `(R, t)` per dimension value and an
+  event count; no visitor id, session id or cookie reaches it. Its KV snapshot is what the decision path
+  reads, through a 60-second isolate cache; the object is never on the request path.
+- **Key layout.** Objects are named `{tenant}:{region}`; snapshots live at `trend:{tenant}:{region}`,
+  with `trend:{tenant}:{country}` and `trend:{tenant}:*` written by the rollup (hourly cron over
+  `TREND_ROLLUP_TENANTS`, or `POST /v1/:tenant/trend/rollup` on demand). `GET /v1/:tenant/trend` shows
+  which level answered and why, so the console can explain a prior the way it explains a decision.
+- **Fan-in survives the reply.** Both hosts register the region fetch with an execution context: the
+  route hands its own to the session engine per call, and the shopper object uses its state's
+  `waitUntil`. A fire-and-forget promise without one is dropped when the response goes out, which is
+  how the first live run published nothing. Two other defects the live run found and the unit tests had
+  not: the frame must carry the object's own name, since the object learns it from the first frame, and
+  publishing must not depend on an in-memory flag an eviction would lose.
+- **The blend is on the base score, as a prior, and it is itemized.** `λ = K/(K + Σ personal)`,
+  `ã = (1−λ)·a + λ·share`; every decision the region influenced carries a `regional` driver whose
+  `a × weight` is the region's share of the score, and the record carries the level, the event count and
+  the snapshot version behind it. The holdout's default arm gets no prior, since defaults are its point.
+- **Settings live on the `learn` document**: `regional.enabled`, `kBlend`, `minEvents` (the same
+  30-event gate the geo cold start uses). The personal decay constants are untouched; the population's
+  horizon is 24 hours by construction.
+- **One demo-only seam.** Fan-in keys on the reflex *surface* (`coach`), while the content service keys
+  on the *tenant*. They are the same string only when the catalog is imported under the surface's name,
+  which is what the live proof did. CW1's tenancy binds the two properly.
 
 ---
 

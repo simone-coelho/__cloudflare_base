@@ -14,6 +14,7 @@ import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, 
 import { armFor } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { decideContent } from './decide';
+import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
 import type { ContentDecisionSet } from './types';
 
 export interface ServeRequest {
@@ -102,12 +103,28 @@ export async function serveContentDecisions(
   const arm = armFor(r.visitorId, { ...learn.holdout, salt: learn.holdout.salt || brand });
   const slots = slotsDoc.pages[r.page] ?? [];
 
+  // CW6: the population prior. Read from KV through the isolate cache, never
+  // from the object; blended into a COPY of the affinity view. Off for the
+  // holdout's default arm, since defaults are the point of that arm.
+  const regionalCfg = learn.regional ?? { enabled: false, kBlend: 1, minEvents: 30 };
+  let affinity: { dims: Record<string, Record<string, number>> } | null = shopper.affinity;
+  let regional: Parameters<typeof decideContent>[0]['regional'] = null;
+  if (regionalCfg.enabled && arm !== 'default') {
+    const trend = await readTrend(env, scope, regionKeyOf(r.cf), regionalCfg.minEvents, now);
+    if (trend) {
+      const lambda = lambdaFor(shopper.affinity?.dims, regionalCfg.kBlend);
+      const blended = blendAffinity(shopper.affinity?.dims, trend.snapshot.share, lambda);
+      affinity = { dims: blended.dims };
+      regional = { region: trend.region, level: trend.level, lambda, version: trend.snapshot.version, events: trend.snapshot.events, share: trend.snapshot.share };
+    }
+  }
+
   // What the state hung on: the DO host keys it on the durable visitor id, the
   // session host on the cookie, and a failed read on nothing at all.
   const identityAnchor = shopper.state === 'do' ? 'visitor' : shopper.state === 'session' ? 'session' : 'none';
   const set = decideContent({
     tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: shopper.sessionId, identityAnchor, nowMs: now,
-    pieces: catalog.pieces, slots, affinity: shopper.affinity, cell, arm,
+    pieces: catalog.pieces, slots, affinity, regional, cell, arm,
     versions: { config: configRevision, lift: 0, prior: 0, policy: 0 },
     configLabel: cfg.version,
   });

@@ -80,3 +80,25 @@ describe('decideContent', () => {
     expect(out.records).toEqual([]);
   });
 });
+
+// ── CW6: the regional prior, itemized on the receipt ────────────────────────
+describe('decideContent with a regional prior', () => {
+  it('appends a regional driver and records what the region contributed', () => {
+    const out = decideContent({
+      ...base, affinity: { dims: { occasion: { evening: 0.62 }, line: { drover: 0.35 } } },
+      regional: { region: 'US-NY', level: 'region', lambda: 0.5, version: 7, events: 120, share: { line: { drover: 0.7 } } },
+    });
+    const hero = out.records.find((r) => r.slot === 'hero')!;
+    expect(out.regional).toEqual({ region: 'US-NY', level: 'region', lambda: 0.5, version: 7, events: 120 });
+    expect(hero.explain.regional).toEqual({ region: 'US-NY', level: 'region', lambda: 0.5, version: 7, events: 120, contribution: 0.088 }); // 0.5 × 0.7 × 0.25
+    const drv = hero.explain.drivers.find((d) => d.dim === 'regional')!;
+    expect(drv).toEqual({ dim: 'regional', value: 'US-NY', a: 0.5, weight: 0.176 });   // 0.088 / 0.5, rounded
+    expect(Math.round(drv.a * drv.weight * 1000) / 1000).toBe(0.088);
+  });
+
+  it('the holdout default arm gets no prior', () => {
+    const out = decideContent({ ...base, arm: 'default', regional: { region: 'US-NY', level: 'region', lambda: 1, version: 1, events: 50, share: { line: { drover: 1 } } } });
+    expect(out.regional).toBeNull();
+    expect(out.records.every((r) => r.explain.regional === undefined)).toBe(true);
+  });
+});

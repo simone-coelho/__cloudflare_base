@@ -55,6 +55,14 @@ describe('document kinds', () => {
     expect(v2.version).toBe('slots-default+r4');
   });
 
+  it('learn validates the regional section when present, and the default carries one', () => {
+    expect(DEFAULT_LEARN.regional).toEqual({ enabled: true, kBlend: 1, minEvents: 30 });
+    expect(validateLearnConfig({ holdout: { share: 0.1, arms: ['default'] }, regional: { enabled: false, kBlend: 2, minEvents: 10 } }).ok).toBe(true);
+    const bad = validateLearnConfig({ holdout: { share: 0.1, arms: ['default'] }, regional: { enabled: 'yes', kBlend: 0, minEvents: 0 } });
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.errors).toHaveLength(3);
+  });
+
   it('learn accepts only known arms and a share in range', () => {
     expect(validateLearnConfig({ holdout: { share: 0.1, arms: ['default', 'no_learning'] } }).ok).toBe(true);
     const bad = validateLearnConfig({ holdout: { share: 2, arms: ['default', 'default', 'x'] } });

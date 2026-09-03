@@ -57,9 +57,28 @@ export interface HoldoutConfig {
  * assignment must exist before the first decision is recorded (doc 22 §10).
  * Phase 1 extends it in place with γ, exploration and autonomy per slot.
  */
+/** Doc 22 §8 and ledger 19's regional-trending design: the population prior on the base score. */
+export interface RegionalConfig {
+  enabled: boolean;
+  /** λ = kBlend / (kBlend + Σ personal affinity). Larger keeps the population speaking longer. */
+  kBlend: number;
+  /** The finest level with at least this many events is used; the same gate as the geo cold start. */
+  minEvents: number;
+}
+
 export interface LearnConfig {
   version?: string;
   holdout: HoldoutConfig;
+  regional?: RegionalConfig;
+}
+
+/** What the population contributed to a decision set, so a reader can see the prior. */
+export interface RegionalBlend {
+  region: string;
+  level: 'region' | 'country' | 'global';
+  lambda: number;
+  version: number;
+  events: number;
 }
 
 export type Authority = 'engine' | 'pin' | 'default';
@@ -114,6 +133,8 @@ export interface DecisionRecord {
     drivers: ContentDecision['explain']['drivers'];
     note?: string;
     score_base: number;
+    /** The population prior's share of the base score, when one applied. */
+    regional?: RegionalBlend & { contribution: number };
     /** No lift snapshot is in force before Phase 1; recorded as null, never as 1. */
     lift: null;
   };
@@ -132,6 +153,8 @@ export interface ContentDecisionSet {
   cell: Cell;
   versions: DecisionVersions;
   config_label: string;
+  /** Null when no trend was published for the tenant, the shopper is in the holdout, or the blend is off. */
+  regional: RegionalBlend | null;
   decisions: ContentDecision[];
   records: DecisionRecord[];
 }

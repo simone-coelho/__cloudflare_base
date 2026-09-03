@@ -17,6 +17,10 @@ export interface Env {
   SHOPPER_REFLEX: DurableObjectNamespace;
   /** Meridian (Opticon) — its own reflex object, never the shared one. */
   MERIDIAN_REFLEX: DurableObjectNamespace;
+  /** CW6 — one object per tenant and region: the population's decaying interest vector. Optional so tests and older stamps run without it. */
+  REGION_TREND?: DurableObjectNamespace;
+  /** CW6 — tenants the hourly cron rolls region snapshots up for, comma-separated. */
+  TREND_ROLLUP_TENANTS?: string;
   // Opal chat agent (SQLite-backed DO, wrangler migration v3) — reached via
   // routeAgentRequest(/agents/*), not app routes; declared here for Env completeness.
   OpalAgent: DurableObjectNamespace;

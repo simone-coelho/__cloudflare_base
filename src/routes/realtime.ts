@@ -92,9 +92,13 @@ realtimeRoutes.post('/action', async (c) => {
     // 'add_to_cart','wishlist_add'); ActionEvent['type'] is widened to the same
     // union by the catalog-aware engine refactor (build-spec §2.1/§2.2). The
     // runtime values are always valid events, so this stays correct post-refactor.
+    const cfGeo = ((c.req.raw as unknown as { cf?: { country?: string; regionCode?: string } }).cf) ?? null;
     const actionEvent = {
       ...validatedEvent,
-      timestamp: validatedEvent.timestamp || Date.now()
+      timestamp: validatedEvent.timestamp || Date.now(),
+      // CW6: coarse request geolocation rides the event so the scoring host can
+      // fan the touches into the shopper's region. Aggregates only, never stored per person.
+      ...(cfGeo?.country ? { geo: { country: cfGeo.country, regionCode: cfGeo.regionCode ?? null } } : {}),
     } as ActionEvent;
 
     // Capture this demo-run event into D1 `demo_events` (source='demo'), kept
@@ -127,7 +131,9 @@ realtimeRoutes.post('/action', async (c) => {
 
     // Process the action event with enhanced session management
     const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env));
-    const result = await segmentEngine.processActionEventWithSession(actionEvent, cookieHeader);
+    let execCtx: { waitUntil(p: Promise<unknown>): void } | undefined;
+    try { execCtx = c.executionCtx; } catch { execCtx = undefined; /* no execCtx (e.g. tests) */ }
+    const result = await segmentEngine.processActionEventWithSession(actionEvent, cookieHeader, execCtx);
 
     // ODP loop (doc 16 §8): forward the behavioral event to ODP OFF the response
     // path — the shopper never waits on the memory; ODP down = zero impact.

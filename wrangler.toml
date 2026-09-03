@@ -77,6 +77,13 @@ class_name = "ShopperReflex"
 name = "MERIDIAN_REFLEX"
 class_name = "MeridianReflex"
 
+# CW6 — regional trending: one object per tenant and region holding the
+# population's decaying interest vector. No visitor ids, ever. Publishes a
+# snapshot to KV on a coalesced alarm; the decision path reads KV, never the object.
+[[durable_objects.bindings]]
+name = "REGION_TREND"
+class_name = "RegionTrend"
+
 [[migrations]]
 tag = "v1"
 new_classes = ["StateManager", "RateLimiter"]
@@ -101,6 +108,10 @@ new_sqlite_classes = ["ShopperReflex"]
 [[migrations]]
 tag = "v5"
 new_sqlite_classes = ["MeridianReflex"]
+
+[[migrations]]
+tag = "v6"
+new_sqlite_classes = ["RegionTrend"]
 
 # Analytics Engine
 [[analytics_engine_datasets]]
@@ -142,6 +153,8 @@ REFLEX_HOST = "session"
 # 1 = real time; e.g. 360 plays a 24h offer window in 4 minutes. Real ISO
 # timestamps are preserved everywhere — only the clock scales (house honesty rule).
 BRIGHTHOUR_CLOCK_MULTIPLIER = "1"
+# CW6: tenants whose region snapshots the hourly cron rolls up into country and everyone.
+TREND_ROLLUP_TENANTS = "coach"
 
 # Static assets configuration
 [assets]
@@ -239,6 +252,10 @@ class_name = "ShopperReflex"
 [[env.staging.durable_objects.bindings]]
 name = "MERIDIAN_REFLEX"
 class_name = "MeridianReflex"
+
+[[env.staging.durable_objects.bindings]]
+name = "REGION_TREND"
+class_name = "RegionTrend"
 
 [[env.staging.analytics_engine_datasets]]
 binding = "ANALYTICS"

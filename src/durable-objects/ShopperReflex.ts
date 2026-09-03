@@ -50,6 +50,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { Env } from '@/types/env';
+import { fanInRegionTrend } from '@/reflex/regionTrend';
 import type { PersonalizationUpdate } from './PersonalizationWebSocket';
 import {
   apply as applyReflex,
@@ -481,6 +482,14 @@ export class ShopperReflex {
         now,
         cfg
       );
+      // CW6: the same touches, fanned into the shopper's region as a population count.
+      // Registered with the object's own waitUntil so the call survives the reply.
+      const keepAlive = (p: Promise<unknown>) => { try { (this.state as unknown as { waitUntil?: (p: Promise<unknown>) => void }).waitUntil?.(p); } catch { /* older runtime */ } };
+      keepAlive(fanInRegionTrend(this.env, {
+        tenant: surface, geo: (event as { geo?: { country?: string | null; regionCode?: string | null } }).geo, now,
+        touches: product ? extractTouches(product as unknown as Record<string, unknown>, cfg) : eventTouches,
+        w: cfg.weights[action] ?? 0,
+      }));
     }
 
     // 3. Local qualification through the ODP seam (KvAudienceStore + evaluateCondition).

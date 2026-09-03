@@ -19,6 +19,7 @@
 
 import { shopperObjectName } from '@/tenancy/objects';
 import { DEFAULT_TENANT } from '@/tenancy/tenant';
+import { fanInRegionTrend } from '@/reflex/regionTrend';
 import { visitBucket, type ChannelSignals } from '@/services/visit';
 import type { Env } from '@/types/env';
 import { SessionManager, type SessionData } from './SessionManager';
@@ -87,6 +88,8 @@ export interface ActionEvent {
    * every pre-existing client, which resolves to `direct`.
    */
   entry?: ChannelSignals;
+  /** Coarse request geolocation, set by the route from request.cf. Population aggregates only (CW6). */
+  geo?: { country?: string | null; regionCode?: string | null };
 }
 
 export interface UserProfile {
@@ -313,6 +316,12 @@ export async function ensureAudiencesSeeded(
 }
 
 export class RealtimeSegmentEngine {
+  /**
+   * CW6: how background work outlives the response. The route hands in its
+   * execution context per call; without one (tests), a promise is simply let go.
+   */
+  private keepAlive?: (p: Promise<unknown>) => void;
+
   private env: Env;
   private connectors: Connectors;
   private sessionManager: SessionManager;
@@ -435,6 +444,12 @@ export class RealtimeSegmentEngine {
           nowMs,
           reflexConfig
         );
+        // CW6: the same touches, fanned into the shopper's region as a population count.
+        (this.keepAlive ?? ((p: Promise<unknown>) => { void p; }))(fanInRegionTrend(this.env, {
+          tenant: surface, geo: event.geo, now: nowMs,
+          touches: touchesForEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig),
+          w: reflexConfig.weights[action] ?? 0,
+        }));
       }
 
       // 3. Qualify segments through the ODP seam against the live context.
@@ -929,12 +944,14 @@ export class RealtimeSegmentEngine {
    */
   async processActionEventWithSession(
     event: ActionEvent,
-    cookieHeader: string | null
+    cookieHeader: string | null,
+    ctx?: { waitUntil(p: Promise<unknown>): void },
   ): Promise<{
     update: PersonalizationUpdate | null;
     sessionId: string;
     cookieHeaders: string[];
   }> {
+    this.keepAlive = ctx ? (p) => { try { ctx.waitUntil(p); } catch { /* no execution context */ } } : undefined;
     const { sessionId } = await this.getOrCreateSessionFromCookies(
       cookieHeader,
       event.userId

@@ -155,7 +155,10 @@ import { meridianRoutes } from '@/demos/meridian/routes';
 import { decisionRoutes } from '@/routes/decisions';
 import { MeridianReflex } from '@/demos/meridian/MeridianReflex';
 
-export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent, MeridianReflex };
+import { RegionTrend } from '@/durable-objects/RegionTrend';
+import { rollupTenant } from '@/reflex/regionTrend';
+
+export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent, MeridianReflex, RegionTrend };
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -170,9 +173,17 @@ export default {
       case '*/5 * * * *':
         console.log('Running 5-minute scheduled task');
         break;
-      case '0 * * * *':
-        console.log('Running hourly scheduled task');
+      case '0 * * * *': {
+        // CW6: sum each tenant's published regions into its countries and into everyone.
+        const tenants = (env.TREND_ROLLUP_TENANTS ?? 'coach').split(',').map((t) => t.trim()).filter(Boolean);
+        for (const tenant of tenants) {
+          ctx.waitUntil(rollupTenant(env, tenant).then(
+            (r) => console.log(`trend rollup ${tenant}: ${r.regions} regions → ${r.countries.length} countries + everyone`),
+            (e) => console.error(`trend rollup ${tenant} failed`, e),
+          ));
+        }
         break;
+      }
       default:
         console.log('Unknown scheduled event:', event.cron);
     }

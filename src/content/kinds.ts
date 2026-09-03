@@ -174,20 +174,33 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
   const arms = Array.isArray(h.arms) ? h.arms : null;
   if (!arms || !arms.every((a) => isStr(a) && ARMS.has(a))) errors.push('holdout.arms: array of default | no_learning');
   else if (new Set(arms).size !== arms.length) errors.push('holdout.arms: no duplicates');
+  let regional: LearnConfig['regional'];
+  if (candidate.regional !== undefined) {
+    const g = candidate.regional;
+    if (!isRecord(g)) errors.push('regional: object when present');
+    else {
+      if (typeof g.enabled !== 'boolean') errors.push('regional.enabled: boolean');
+      if (!isNum(g.kBlend) || g.kBlend <= 0 || g.kBlend > 100) errors.push('regional.kBlend: number in (0, 100]');
+      if (!isNum(g.minEvents) || !Number.isInteger(g.minEvents) || g.minEvents < 1) errors.push('regional.minEvents: positive integer');
+      if (typeof g.enabled === 'boolean' && isNum(g.kBlend) && isNum(g.minEvents)) regional = { enabled: g.enabled, kBlend: g.kBlend, minEvents: g.minEvents };
+    }
+  }
   if (errors.length) return { ok: false, errors };
   return {
     ok: true,
     value: {
       ...(isStr(candidate.version) ? { version: candidate.version } : {}),
       holdout: { share: h.share as number, salt: (h.salt as string | undefined) ?? '', arms: [...(arms as LearnConfig['holdout']['arms'])] },
+      ...(regional ? { regional } : {}),
     },
   };
 }
 
-/** Five percent, one default arm, salted by the brand at decision time. */
+/** Five percent, one default arm, salted by the brand at decision time; the regional prior on, gated at 30 events. */
 export const DEFAULT_LEARN: LearnConfig = {
   version: 'learn-default',
   holdout: { share: 0.05, salt: '', arms: ['default'] },
+  regional: { enabled: true, kBlend: 1, minEvents: 30 },
 };
 
 export const LEARN_KIND: DocumentKind<LearnConfig> = {

@@ -11,10 +11,37 @@
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { serveContentDecisions } from '@/content/service';
+import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
+import { jwt } from '@/middleware/auth';
 
 export const decisionRoutes = new Hono<{ Bindings: Env }>();
 
 const TENANT = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+
+/**
+ * GET /v1/:tenant/trend[?region=US-NY]
+ * The population prior in force for a region: which level answered (region,
+ * country, everyone), how much evidence it holds, and the shares themselves.
+ * Aggregates only, so it is open. Absent ?region=, the request's own geolocation.
+ */
+decisionRoutes.get('/:tenant/trend', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const cf = ((c.req.raw as unknown as { cf?: { country?: string; regionCode?: string } }).cf) ?? null;
+  const region = (c.req.query('region') ?? '').trim().toUpperCase() || regionKeyOf(cf);
+  const minEvents = Math.max(1, Number(c.req.query('minEvents') ?? 30) || 30);
+  const read = await readTrend(c.env, tenant, region, minEvents);
+  c.header('Cache-Control', 'no-store');
+  if (!read) return c.json({ ok: true, tenant, region, level: null, snapshot: null });
+  return c.json({ ok: true, tenant, region, asked: region, level: read.level, answered: read.region, snapshot: read.snapshot });
+});
+
+/** POST /v1/:tenant/trend/rollup: what the hourly cron does, on demand. Authenticated. */
+decisionRoutes.post('/:tenant/trend/rollup', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  return c.json({ ok: true, tenant, ...(await rollupTenant(c.env, tenant)) });
+});
 
 decisionRoutes.get('/:tenant/decisions/snapshot', async (c) => {
   const tenant = (c.req.param('tenant') ?? '').trim();
