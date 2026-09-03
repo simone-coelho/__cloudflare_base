@@ -1,3 +1,5 @@
+import { tenantMiddleware } from '@/tenancy/middleware';
+import type { TenantId } from '@/tenancy/tenant';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
@@ -42,7 +44,12 @@ import { PersonalizationWebSocket } from '@/durable-objects/PersonalizationWebSo
 import { ShopperReflex } from '@/durable-objects/ShopperReflex';
 import { OpalAgent } from '@/agents/OpalAgent';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: { tenant: TenantId } }>();
+
+// Which brand this request belongs to, resolved once. Every store and every
+// per-shopper object is already scoped; this is what reaches that scoping.
+// It runs first because everything after it may want to know.
+app.use('*', tenantMiddleware());
 
 app.use('*', timing());
 app.use('*', requestId());

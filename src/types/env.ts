@@ -26,6 +26,15 @@ export interface Env {
   // docs/architecture/10-d1-schema.md; binding declared in wrangler.toml.
   DB: D1Database;
 
+  /**
+   * Stamp tenancy (CW1). JSON:
+   *   { "provisioned": ["coach","kate-spade"],
+   *     "hosts": { "shop.katespade.com": "kate-spade" } }
+   * Absent or malformed means the default brand only, which is the safe reading
+   * of an unconfigured stamp rather than the permissive one.
+   */
+  TENANTS?: string;
+
   ENVIRONMENT: string;
   JWT_SECRET: string;
   JWT_ISSUER: string;

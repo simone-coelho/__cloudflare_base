@@ -89,6 +89,20 @@ export interface TenantSignals {
   host?: string | null;
   /** host -> tenant, supplied by stamp configuration. */
   hostMap?: Record<string, TenantId> | null;
+  /**
+   * The brands this stamp has actually provisioned.
+   *
+   * WITHOUT THIS, `X-Tenant` IS AN UNAUTHENTICATED BRAND SELECTOR. The header is
+   * caller-controlled, so anything that resolves a well-formed tenant id would
+   * let a caller name any namespace they like. On a stamp with one brand that
+   * merely reads empty; on a stamp with several it is a way to address a brand
+   * you were not served by.
+   *
+   * Absent means only the default tenant is provisioned, which is the safe
+   * reading of an unconfigured stamp: it serves Coach and no header can select
+   * anything else.
+   */
+  provisioned?: readonly TenantId[] | null;
 }
 
 /**
@@ -100,16 +114,25 @@ export interface TenantSignals {
  * another brand's data" and never a 500 on the decision path.
  */
 export function resolveTenant(signals: TenantSignals): TenantId {
+  // Absent list means "only the default is provisioned". An EMPTY list means the
+  // same, rather than "nothing is allowed", because a stamp that serves nobody is
+  // never what an operator meant to configure.
+  const allowed = new Set<TenantId>(
+    signals.provisioned && signals.provisioned.length > 0 ? signals.provisioned : [DEFAULT_TENANT],
+  );
+  allowed.add(DEFAULT_TENANT);
+  const ok = (t: string): t is TenantId => isValidTenantId(t) && allowed.has(t);
+
   const explicit = normalize(signals.explicit);
-  if (isValidTenantId(explicit)) return explicit;
+  if (ok(explicit)) return explicit;
 
   const header = normalize(signals.header);
-  if (isValidTenantId(header)) return header;
+  if (ok(header)) return header;
 
   const host = normalize(signals.host);
   if (host && signals.hostMap) {
-    const mapped = signals.hostMap[host];
-    if (isValidTenantId(mapped)) return mapped;
+    const mapped = normalize(signals.hostMap[host]);
+    if (ok(mapped)) return mapped;
   }
   return DEFAULT_TENANT;
 }
