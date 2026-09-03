@@ -138,10 +138,13 @@ times without naming a mechanism. Reconciled rather than left to collide, and re
   because once lift moves a score, config alone no longer identifies a decision.
 - Flagged for Phase 2: rollback rolls **forward**. An autonomy job that rewinds a counter loses the evidence
   a person needs to promote or demote a slot.
-- **Flagged for Phase 0, a primitive challenge:** doc 22 §18.10, superseding §18.9. D1 is the only
-  single-writer component in the design and does not need to be on the decision path at all. The design
-  without it is laid out question by question; the shopper's latency is unchanged, and the one thing that
-  lags under a peak is the archive nobody waits on. Awaiting his decision on §3.3 and §14.
+- ✅ **Resolved 2026-09-03:** doc 22 §18.10 accepted (doc 24 addendum 2). D1 is off the ledger path;
+  §§3.3, 10, 12.3 and 14 say so, and a new §3.4 carries his reconciliation: the decision id is assigned at
+  decision time and carries its timestamp, the hour prefix derives from the id, and the consumer writes a
+  per-hour manifest of batch id ranges. Point lookup is a manifest GET and a batch GET, no shared writer.
+  The tenant is the first segment of the R2 key, so **a decision id resolves only together with its
+  brand** — true for the console and replay, which are per-brand anyway; worth one line in the support
+  runbook. Phase 0 is smaller for it: no schema, no pruning cron, no decisions migration.
 - **Mine, regardless of that decision:** fence the `demo_events` per-action D1 write in `realtime.ts`
   behind a demo-only flag, and record that `receipts.capture()` is a demo path and not Phase 0's template.
 - ~~Flagged for Phase 0, a sizing challenge:~~ doc 22 §18.9, now superseded by §18.10. §3.3's "D1 holds the last 30 days" breaks at
@@ -331,6 +334,16 @@ The other track reads it freely, and writes only by handing the file over in thi
 | **Delivery ledger session** | `src/tenancy/*`, `src/config/versionedStore.ts`, `src/reflex/configStore.ts`, `src/reflex/merchandising.ts`, `src/services/visit.ts`, `src/services/SessionManager.ts`, `src/connectors/AudienceStore.ts`, `src/routes/config.ts`, `src/routes/operator.ts`, `src/demos/meridian/receipts.ts`, `public/tuning.*`, `migrations/0009_*` onward for tenancy |
 | **Outcome-learning session** | `src/content/*`, `src/reflex/contentCompose.ts`, `src/routes/decisions.ts`, the RegionTrend object and its fan-in, `touchesForEvent` in `src/reflex/core.ts`, the Phase 0 ledger writer and its migration, doc 22 above §18 |
 | **Handover required before writing** | `src/index.ts`, `src/types/env.ts`, `src/routes/realtime.ts`, `src/services/RealtimeSegmentEngine.ts`, `src/services/odpLoop.ts`, `src/reflex/core.ts` outside `touchesForEvent`, `wrangler.toml` |
+
+**Handovers granted 2026-09-03, for Phase 0**, at the outcome-learning session's request in doc 24 addendum 2:
+
+| Handed to | Exactly what | Until |
+|---|---|---|
+| Outcome-learning session | The **queue consumer case** in `src/index.ts` (the `queue()` export and its dispatch), and nothing else in that file | Phase 0 lands |
+| Outcome-learning session | The **outcome enqueue line** in `src/routes/realtime.ts`, adjacent to the existing `captureDemoEvent` call, and nothing else in that file | Phase 0 lands |
+
+Each is one bounded edit. `wrangler.toml` needs nothing from either track for this: the consumer uses the
+`ANALYTICS` and `STORAGE` bindings it already has.
 
 The third row is where the collision happened and where it will happen again if either of us is casual.
 Nothing there is edited without a line in this table changing first.
