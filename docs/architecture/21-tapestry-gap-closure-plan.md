@@ -341,7 +341,7 @@ The other track reads it freely, and writes only by handing the file over in thi
 | Owner | Files |
 |---|---|
 | **Delivery ledger session** | `src/tenancy/*`, `src/config/versionedStore.ts`, `src/reflex/configStore.ts`, `src/reflex/merchandising.ts`, `src/services/visit.ts`, `src/services/SessionManager.ts`, `src/connectors/AudienceStore.ts`, `src/routes/config.ts`, `src/routes/operator.ts`, `src/demos/meridian/receipts.ts`, `public/tuning.*`, `migrations/0009_*` onward for tenancy |
-| **Outcome-learning session** | `src/content/*`, `src/reflex/contentCompose.ts`, `src/routes/decisions.ts`, the RegionTrend object and its fan-in, `touchesForEvent` in `src/reflex/core.ts`, the Phase 0 ledger writer and its migration, doc 22 above §18 |
+| **Outcome-learning session** | `src/content/*`, `src/reflex/contentCompose.ts`, `src/routes/decisions.ts`, **`src/sdk/*`, `scripts/build-sdk.mjs`, `public/sdk/*`** (CW8, landed 2026-09-02), the RegionTrend object and its fan-in, `touchesForEvent` in `src/reflex/core.ts`, the Phase 0 ledger writer and its migration, doc 22 above §18 |
 | **Handover required before writing** | `src/index.ts`, `src/types/env.ts`, `src/routes/realtime.ts`, `src/services/RealtimeSegmentEngine.ts`, `src/services/odpLoop.ts`, `src/reflex/core.ts` outside `touchesForEvent`, `wrangler.toml` |
 
 **Handovers granted 2026-09-03, for Phase 0**, at the outcome-learning session's request in doc 24 addendum 2:
@@ -356,6 +356,13 @@ Each is one bounded edit. `wrangler.toml` needs nothing from either track for th
 
 The third row is where the collision happened and where it will happen again if either of us is casual.
 Nothing there is edited without a line in this table changing first.
+
+**And one rule added 2026-09-03 after the second collision, which was mine.** I started CW8 from memory
+of this plan and overwrote three files of the SDK the other session had already landed the day before.
+The Write tool reported "updated" rather than "created" and I did not read it. Nothing was lost, because
+his work was committed and mine never was. The rule: **before opening any work item, re-read this plan's
+lane tables from disk, not from memory.** The other track may have finished it while you were elsewhere,
+and a ✅ in a table you last read yesterday is the cheapest possible way to find out.
 
 Two more rules that came out of the same exchange, both his:
 
