@@ -314,6 +314,28 @@ customer watching.
 
 ---
 
+## File ownership, one owner at a time (agreed 2026-09-03)
+
+Proposed by the outcome-learning session after our one collision, which was two edits to the same file
+in the same hour. Adopted. **A file has one owner at a time, named here before either track opens it.**
+The other track reads it freely, and writes only by handing the file over in this table first.
+
+| Owner | Files |
+|---|---|
+| **Delivery ledger session** | `src/tenancy/*`, `src/config/versionedStore.ts`, `src/reflex/configStore.ts`, `src/reflex/merchandising.ts`, `src/services/visit.ts`, `src/services/SessionManager.ts`, `src/connectors/AudienceStore.ts`, `src/routes/config.ts`, `src/routes/operator.ts`, `src/demos/meridian/receipts.ts`, `public/tuning.*`, `migrations/0009_*` onward for tenancy |
+| **Outcome-learning session** | `src/content/*`, `src/reflex/contentCompose.ts`, `src/routes/decisions.ts`, the RegionTrend object and its fan-in, `touchesForEvent` in `src/reflex/core.ts`, the Phase 0 ledger writer and its migration, doc 22 above §18 |
+| **Handover required before writing** | `src/index.ts`, `src/types/env.ts`, `src/routes/realtime.ts`, `src/services/RealtimeSegmentEngine.ts`, `src/services/odpLoop.ts`, `src/reflex/core.ts` outside `touchesForEvent`, `wrangler.toml` |
+
+The third row is where the collision happened and where it will happen again if either of us is casual.
+Nothing there is edited without a line in this table changing first.
+
+Two more rules that came out of the same exchange, both his:
+
+- **Commit new modules before the code that imports them**, so a sweep by the other track can never leave
+  `HEAD` importing a file that does not exist.
+- **A `pkill` or `pgrep` pattern that appears in your own command line kills your own shell.** Find
+  listeners by socket.
+
 ## Cadence
 
 - **Weekly**, against the five deadline values, not against agent-day estimates. The question each week is
