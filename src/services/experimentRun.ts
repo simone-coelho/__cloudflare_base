@@ -6,6 +6,7 @@
  * route AND the Opal tool, so an experiment launched either way looks identical on the Engine
  * readout (and is fetchable at /experiment/:key/readout). Lift figures are representative (TDD §7).
  */
+import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import type { Env } from '@/types/env';
 import { launchExperiment, type LaunchExperimentInput, type ExperimentMetric } from '@/services/experimentFx';
 import { fxConfig, gateWrite } from '@/services/fxEnv';
@@ -74,49 +75,54 @@ function simulatedExp(input: LaunchExperimentInput, env: Env, readout: Experimen
   };
 }
 
-async function save(env: Env, exp: { experimentKey: string }): Promise<void> {
+async function save(env: Env, exp: { experimentKey: string }, tenant: TenantId = DEFAULT_TENANT): Promise<void> {
   if (!env.CACHE) return;
-  await env.CACHE.put(`exp:${exp.experimentKey}`, JSON.stringify(exp), { expirationTtl: 86400 });
+  await expStore(env, tenant).put(`exp:${exp.experimentKey}`, JSON.stringify(exp), { expirationTtl: 86400 });
   try {
-    const idx: string[] = JSON.parse((await env.CACHE.get('exp:index')) || '[]');
+    const idx: string[] = JSON.parse(((await expStore(env, tenant).get('exp:index')) as string | null) || '[]');
     if (!idx.includes(exp.experimentKey)) {
       idx.unshift(exp.experimentKey);
-      await env.CACHE.put('exp:index', JSON.stringify(idx.slice(0, 50)));
+      await expStore(env, tenant).put('exp:index', JSON.stringify(idx.slice(0, 50)));
     }
   } catch { /* index optional */ }
 }
 
-export async function getExperiment(env: Env, key: string): Promise<any | null> {
+/** The brand's experiment store (CW1). An experiment launched for one brand is not another's. */
+const expStore = (env: Env, tenant: TenantId) => new TenantKV(env.CACHE as unknown as KVLike, tenant);
+
+export async function getExperiment(env: Env, key: string, tenant: TenantId = DEFAULT_TENANT): Promise<any | null> {
   if (!env.CACHE) return null;
-  const raw = await env.CACHE.get(`exp:${key}`);
+  const raw = (await expStore(env, tenant).get(`exp:${key}`)) as string | null;
   return raw ? JSON.parse(raw) : null;
 }
 
-export async function listExperiments(env: Env): Promise<any[]> {
+export async function listExperiments(env: Env, tenant: TenantId = DEFAULT_TENANT): Promise<any[]> {
   if (!env.CACHE) return [];
-  const idx: string[] = JSON.parse((await env.CACHE.get('exp:index')) || '[]');
+  const idx: string[] = JSON.parse(((await expStore(env, tenant).get('exp:index')) as string | null) || '[]');
   const out: any[] = [];
-  for (const k of idx) { const e = await getExperiment(env, k); if (e) out.push(e); }
+  // The brand travels into the body lookup too. Reading the index under one
+  // namespace and the bodies under another is the half-converted leak.
+  for (const k of idx) { const e = await getExperiment(env, k, tenant); if (e) out.push(e); }
   return out;
 }
 
 /** Launch (gate → real FX, or simulate on gate-off/throw) → persist → return the experiment. */
-export async function runLaunch(env: Env, input: LaunchExperimentInput): Promise<any> {
+export async function runLaunch(env: Env, input: LaunchExperimentInput, tenant: TenantId = DEFAULT_TENANT): Promise<any> {
   const readout = buildReadout(input);
   const gate = gateWrite(env);
   if (!gate.enabled) {
     const exp = simulatedExp(input, env, readout, 'stubbed', gate.reason);
-    await save(env, exp);
+    await save(env, exp, tenant);
     return exp;
   }
   try {
     const r = await launchExperiment(fxConfig(env), input);
     const exp = { ...r, readout };
-    await save(env, exp);
+    await save(env, exp, tenant);
     return exp;
   } catch (e) {
     const exp = simulatedExp(input, env, readout, 'simulated', e instanceof Error ? e.message : String(e));
-    await save(env, exp);
+    await save(env, exp, tenant);
     return exp;
   }
 }

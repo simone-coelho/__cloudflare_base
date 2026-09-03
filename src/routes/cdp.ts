@@ -1,10 +1,11 @@
+import { DEFAULT_TENANT, type TenantVariables } from '@/tenancy/tenant';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Env } from '@/types/env';
 import { CDPService } from '@/services/CDPService';
 import { jwt } from '@/middleware/auth';
 
-const cdp = new Hono<{ Bindings: Env }>();
+const cdp = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
 const ProfileRequestSchema = z.object({
   userId: z.string().optional(),
@@ -36,7 +37,7 @@ cdp.post('/profile', async (c) => {
       return c.json({ error: 'At least one identifier required' }, 400);
     }
 
-    const cdpService = new CDPService(c.env);
+    const cdpService = new CDPService(c.env, c.get('tenant') ?? DEFAULT_TENANT);
     const profile = await cdpService.getProfile({ userId, email, anonymousId });
 
     return c.json(profile);
@@ -51,7 +52,7 @@ cdp.post('/segments', async (c) => {
     const body = await c.req.json();
     const { userId, traits = {} } = SegmentRequestSchema.parse(body);
 
-    const cdpService = new CDPService(c.env);
+    const cdpService = new CDPService(c.env, c.get('tenant') ?? DEFAULT_TENANT);
     const segments = await cdpService.getSegments(userId, traits);
 
     return c.json({ userId, segments });
@@ -70,7 +71,7 @@ cdp.post('/identify', async (c) => {
       return c.json({ error: 'userId or anonymousId required' }, 400);
     }
 
-    const cdpService = new CDPService(c.env);
+    const cdpService = new CDPService(c.env, c.get('tenant') ?? DEFAULT_TENANT);
     await cdpService.identify({ userId, anonymousId, traits });
 
     return c.json({ success: true, timestamp: Date.now() });
@@ -90,7 +91,7 @@ cdp.post('/track', async (c) => {
       return c.json({ error: 'userId or anonymousId required' }, 400);
     }
 
-    const cdpService = new CDPService(c.env);
+    const cdpService = new CDPService(c.env, c.get('tenant') ?? DEFAULT_TENANT);
     await cdpService.track({
       userId,
       anonymousId,
@@ -111,7 +112,7 @@ cdp.post('/forward/:destination', async (c) => {
     const destination = c.req.param('destination');
     const body = await c.req.json();
 
-    const cdpService = new CDPService(c.env);
+    const cdpService = new CDPService(c.env, c.get('tenant') ?? DEFAULT_TENANT);
     const result = await cdpService.forward(destination, body);
 
     return c.json(result);
@@ -123,7 +124,7 @@ cdp.post('/forward/:destination', async (c) => {
 
 cdp.get('/destinations', jwt(), async (c) => {
   try {
-    const cdpService = new CDPService(c.env);
+    const cdpService = new CDPService(c.env, c.get('tenant') ?? DEFAULT_TENANT);
     const destinations = await cdpService.getDestinations();
 
     return c.json({ destinations });
@@ -142,7 +143,7 @@ cdp.post('/destinations', jwt({ roles: ['admin'] }), async (c) => {
       return c.json({ error: 'Missing required fields' }, 400);
     }
 
-    const cdpService = new CDPService(c.env);
+    const cdpService = new CDPService(c.env, c.get('tenant') ?? DEFAULT_TENANT);
     const destination = await cdpService.createDestination({ 
       name, 
       type, 

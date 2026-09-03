@@ -16,7 +16,7 @@
 
 import type { TenantVariables } from '@/tenancy/tenant';
 import { shopperObjectName } from '@/tenancy/objects';
-import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
+import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import type { AudienceCondition, AudienceDef, QualificationContext } from '@/connectors';
@@ -126,7 +126,7 @@ operatorRoutes.post('/audiences/publish', async (c) => {
     // users who already qualify for the brand-new audience (so the matching module
     // can pop), falling back to every connected shopper when we can't cheaply
     // resolve a per-user QualificationContext (it's a global merchandising notice).
-    const notified = await broadcastAudiencePublished(c.env, { ...def, audienceId });
+    const notified = await broadcastAudiencePublished(c.env, { ...def, audienceId }, c.get('tenant'));
 
     return c.json({
       success: true,
@@ -208,7 +208,9 @@ operatorRoutes.get('/insights', async (c) => {
 // audience — or all connected users if none can be resolved/qualified — so the
 // "new audience live" flash reaches active storefront sessions.
 // ---------------------------------------------------------------------------
-async function broadcastAudiencePublished(env: Env, def: AudienceDef): Promise<number> {
+async function broadcastAudiencePublished(
+  env: Env, def: AudienceDef, tenant: TenantId = DEFAULT_TENANT,
+): Promise<number> {
   try {
     const connectedUsers = await getConnectedUsers(env);
     if (connectedUsers.length === 0) return 0;
@@ -219,7 +221,7 @@ async function broadcastAudiencePublished(env: Env, def: AudienceDef): Promise<n
     const connectors = getConnectors(env);
     const targets: string[] = [];
     for (const userId of connectedUsers) {
-      const ctx = await loadQualificationContext(env, userId);
+      const ctx = await loadQualificationContext(env, userId, tenant);
       try {
         if (evaluateCondition(def.conditions, ctx.attributes)) targets.push(userId);
       } catch {
@@ -241,7 +243,7 @@ async function broadcastAudiencePublished(env: Env, def: AudienceDef): Promise<n
             source: 'operator',
             audienceWentLive: { key: def.key, name: def.name },
           },
-        })
+        }, tenant)
       )
     );
 
@@ -273,9 +275,11 @@ async function getConnectedUsers(env: Env): Promise<string[]> {
  * UserProfile written by RealtimeSegmentEngine (profile:<userId>). Falls back to
  * an empty cold-start context so qualification still runs deterministically.
  */
-async function loadQualificationContext(env: Env, userId: string): Promise<QualificationContext> {
+async function loadQualificationContext(
+  env: Env, userId: string, tenant: TenantId = DEFAULT_TENANT,
+): Promise<QualificationContext> {
   try {
-    const profile = (await env.CACHE.get(`profile:${userId}`, 'json')) as
+    const profile = (await new TenantKV(env.CACHE as unknown as KVLike, tenant).get(`profile:${userId}`, 'json')) as
       | { segments?: string[]; attributes?: Record<string, any> }
       | null;
     if (profile) {

@@ -164,3 +164,49 @@ describe('an unconverted caller still works, because CW1 lands store by store', 
     expect(new SessionManager(env).tenant).toBe(DEFAULT_TENANT);
   });
 });
+
+// -- CW1 close-out: the stores converted last -------------------------------
+
+describe('profiles are isolated per brand', () => {
+  it('the same userId identified on two brands is two profiles', async () => {
+    const { CDPService } = await import('@/services/CDPService');
+    const coach = new CDPService(env, DEFAULT_TENANT);
+    const ks = new CDPService(env, 'kate-spade');
+
+    await coach.identify({ userId: 'u1', traits: { favourite: 'Tabby' } });
+    await ks.identify({ userId: 'u1', traits: { favourite: 'Spade Flower' } });
+
+    expect((await coach.getProfile({ userId: 'u1' }))?.traits?.favourite).toBe('Tabby');
+    expect((await ks.getProfile({ userId: 'u1' }))?.traits?.favourite).toBe('Spade Flower');
+  });
+
+  it('writes the DEFAULT tenant to the key it always used, and namespaces the other', async () => {
+    const { CDPService } = await import('@/services/CDPService');
+    await new CDPService(env, DEFAULT_TENANT).identify({ userId: 'u1', traits: {} });
+    await new CDPService(env, 'kate-spade').identify({ userId: 'u1', traits: {} });
+    const keys = [...cache.store.keys()].sort();
+    expect(keys).toContain('profile:user:u1');
+    expect(keys).toContain('t:kate-spade:profile:user:u1');
+  });
+
+  it('a profile built without a tenant is the default brand, so nothing existing moves', async () => {
+    const { CDPService } = await import('@/services/CDPService');
+    expect(new CDPService(env).tenant).toBe(DEFAULT_TENANT);
+  });
+});
+
+describe('experiments are isolated per brand', () => {
+  it('an experiment launched on one brand is not listed on another', async () => {
+    const { getExperiment, listExperiments } = await import('@/services/experimentRun');
+    // Write one directly under each brand's namespace, the way runLaunch's save() does.
+    cache.store.set('exp:coach-only', JSON.stringify({ experimentKey: 'coach-only' }));
+    cache.store.set('exp:index', JSON.stringify(['coach-only']));
+    cache.store.set('t:kate-spade:exp:spade-only', JSON.stringify({ experimentKey: 'spade-only' }));
+    cache.store.set('t:kate-spade:exp:index', JSON.stringify(['spade-only']));
+
+    expect((await listExperiments(env, DEFAULT_TENANT)).map((e) => e.experimentKey)).toEqual(['coach-only']);
+    expect((await listExperiments(env, 'kate-spade')).map((e) => e.experimentKey)).toEqual(['spade-only']);
+    expect(await getExperiment(env, 'spade-only', DEFAULT_TENANT)).toBeNull();
+    expect(await getExperiment(env, 'coach-only', 'kate-spade')).toBeNull();
+  });
+});

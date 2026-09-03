@@ -1,3 +1,4 @@
+import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import type { Env } from '@/types/env';
 import { OptimizelyService } from './OptimizelyService';
 import type { SessionData } from './SessionManager';
@@ -39,8 +40,12 @@ export class FeatureVariableManager {
   private cache: Map<string, FeatureVariableResult> = new Map();
   private cacheTTL: number = 5 * 60 * 1000; // 5 minutes
 
-  constructor(env: Env) {
+  /** KV scoped to one brand (CW1): an override set by one brand's merchandiser is not another's. */
+  private readonly kv: KVLike;
+
+  constructor(env: Env, readonly tenant: TenantId = DEFAULT_TENANT) {
     this.env = env;
+    this.kv = new TenantKV(env.CACHE as unknown as KVLike, tenant);
     this.optimizelyService = new OptimizelyService(env);
   }
 
@@ -156,7 +161,7 @@ export class FeatureVariableManager {
       Math.max(0, override.expiresAt - Date.now()) / 1000 : 
       24 * 60 * 60; // 24 hours default
 
-    await this.env.CACHE.put(key, JSON.stringify(data), { expirationTtl: ttl });
+    await this.kv.put(key, JSON.stringify(data), { expirationTtl: ttl });
     
     // Clear relevant cache entries
     this.clearUserCache(override.userId);
@@ -171,7 +176,7 @@ export class FeatureVariableManager {
     variableKey: string
   ): Promise<void> {
     const key = `override:${userId}:${featureKey}:${variableKey}`;
-    await this.env.CACHE.delete(key);
+    await this.kv.delete(key);
     this.clearUserCache(userId);
   }
 
@@ -184,10 +189,10 @@ export class FeatureVariableManager {
     try {
       // List all override keys for this user (limited KV list operation)
       const prefix = `override:${userId}:`;
-      const list = await this.env.CACHE.list({ prefix });
+      const list = await this.kv.list({ prefix });
       
       for (const key of list.keys) {
-        const data = await this.env.CACHE.get(key.name, 'json') as FeatureVariableOverride;
+        const data = await this.kv.get(key.name, 'json') as FeatureVariableOverride;
         if (data && (!data.expiresAt || data.expiresAt > Date.now())) {
           overrides.push(data);
         }
@@ -404,7 +409,7 @@ export class FeatureVariableManager {
       const configs = this.getFeatureConfigurations();
       
       // Count active overrides (simplified)
-      const overridesList = await this.env.CACHE.list({ prefix: 'override:' });
+      const overridesList = await this.kv.list({ prefix: 'override:' });
       
       return {
         totalFeatures: configs.length,

@@ -1,6 +1,6 @@
 import type { TenantVariables } from '@/tenancy/tenant';
 import { shopperObject, shopperObjectName } from '@/tenancy/objects';
-import { DEFAULT_TENANT } from '@/tenancy/tenant';
+import { DEFAULT_TENANT, TenantKV, type KVLike } from '@/tenancy/tenant';
 // Singleton objects: one per worker on purpose, never per brand.
 const SINGLETON_ADMIN = 'admin';
 const SINGLETON_HEALTH = 'health-check';
@@ -346,8 +346,10 @@ realtimeRoutes.post('/session/reset', async (c) => {
   // Best-effort KV hygiene (TTL would reap these anyway).
   const sid = cookies['opt_session_id'];
   const uid = cookies['opt_user_id'];
-  try { if (sid) await c.env.SESSIONS.delete(`session:${sid}`); } catch { /* best-effort */ }
-  try { if (uid) await c.env.SESSIONS.delete(`user:${uid}`); } catch { /* best-effort */ }
+  // Scoped to the brand, or a reset on one brand would reach into another's session store.
+  const sessions = new TenantKV(c.env.SESSIONS as unknown as KVLike, c.get('tenant') ?? DEFAULT_TENANT);
+  try { if (sid) await sessions.delete(`session:${sid}`); } catch { /* best-effort */ }
+  try { if (uid) await sessions.delete(`user:${uid}`); } catch { /* best-effort */ }
   // Expire every opt_* cookie the SessionManager sets (superset — extras are harmless).
   const names = [
     'opt_session_id', 'opt_user_id', 'opt_anonymous_id', 'opt_segments',

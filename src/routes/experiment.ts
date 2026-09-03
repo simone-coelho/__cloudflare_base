@@ -12,18 +12,19 @@
  * emit (non-overlapping with Revenue Radar's checkout_* set): experiment_launched ·
  * variation_assigned · experiment_view · conversion · mab_reallocation · cmab_decision.
  */
+import { DEFAULT_TENANT, type TenantVariables } from '@/tenancy/tenant';
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { runLaunch, normalizeInput, getExperiment, listExperiments } from '@/services/experimentRun';
 import { applyScenario, SCENARIOS } from '@/services/experimentScenarios';
 import { decideCmab, cmabMatrix, type CmabContext } from '@/services/cmab';
 
-const experiment = new Hono<{ Bindings: Env }>();
+const experiment = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
 // ── POST /experiment/launch — the ONE seam Revenue Radar calls ────────────────
 experiment.post('/launch', async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const exp = await runLaunch(c.env, normalizeInput(applyScenario(body)));
+  const exp = await runLaunch(c.env, normalizeInput(applyScenario(body)), c.get('tenant') ?? DEFAULT_TENANT);
   return c.json(exp);
 });
 
@@ -51,10 +52,10 @@ experiment.get('/scenarios', (c) => c.json({
 
 // ── readout + list ────────────────────────────────────────────────────────────
 experiment.get('/:key/readout', async (c) => {
-  const exp = await getExperiment(c.env, c.req.param('key'));
+  const exp = await getExperiment(c.env, c.req.param('key'), c.get('tenant') ?? DEFAULT_TENANT);
   if (!exp) return c.json({ error: 'experiment not found', key: c.req.param('key') }, 404);
   return c.json(exp);
 });
-experiment.get('/', async (c) => c.json({ experiments: await listExperiments(c.env) }));
+experiment.get('/', async (c) => c.json({ experiments: await listExperiments(c.env, c.get('tenant') ?? DEFAULT_TENANT) }));
 
 export { experiment as experimentRoutes };

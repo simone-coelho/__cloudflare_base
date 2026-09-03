@@ -19,7 +19,7 @@
 
 import { actionOf, contentTouches, isContentAction } from '@/reflex/contentTelemetry';
 import { shopperObjectName } from '@/tenancy/objects';
-import { DEFAULT_TENANT, type TenantId } from '@/tenancy/tenant';
+import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import { visitBucket, type ChannelSignals } from '@/services/visit';
 import type { Env } from '@/types/env';
@@ -314,9 +314,9 @@ export async function ensureAudiencesSeeded(
   );
   const setHash = generated.map((d) => `${d.key}:${d.generatorHash}`).join('|');
   const MARKER = audgenMarkerFor(surface);
-  if ((await env.CACHE.get(MARKER)) === setHash) return;
+  if ((await new TenantKV(env.CACHE as unknown as KVLike, tenant).get(MARKER)) === setHash) return;
   const s = await regenerateCatalogAudiences(store, generated, surface);
-  await env.CACHE.put(MARKER, setHash);
+  await new TenantKV(env.CACHE as unknown as KVLike, tenant).put(MARKER, setHash);
   console.log(
     `[reflex] catalog audiences regenerated: +${s.published.length} ~${s.updated.length} −${s.archived.length}` +
       ` (skipped: ${s.skippedHumanEdited.length} human-edited, ${s.skippedPinned.length} pinned)`
@@ -325,6 +325,8 @@ export async function ensureAudiencesSeeded(
 
 export class RealtimeSegmentEngine {
   readonly tenant: TenantId;
+  private readonly cache: KVLike;
+  private readonly sessions: KVLike;
   /**
    * CW6: how background work outlives the response. The route hands in its
    * execution context per call; without one (tests), a promise is simply let go.
@@ -353,7 +355,11 @@ export class RealtimeSegmentEngine {
     // while the spec's two-arg `new RealtimeSegmentEngine(env, getConnectors(env))` is honored.
     this.connectors = connectors ?? getConnectors(env);
     this.sessionManager = new SessionManager(env, options);
-    this.featureVariableManager = new FeatureVariableManager(env);
+    this.featureVariableManager = new FeatureVariableManager(env, this.tenant);
+    // The two raw stores this class still touched directly, now scoped like
+    // everything that goes through SessionManager and the audience store.
+    this.cache = new TenantKV(env.CACHE as unknown as KVLike, this.tenant);
+    this.sessions = new TenantKV(env.SESSIONS as unknown as KVLike, this.tenant);
     this.catalogService = new CatalogService();
   }
 
@@ -609,7 +615,7 @@ export class RealtimeSegmentEngine {
 
   async getUserProfile(userId: string): Promise<UserProfile> {
     const cacheKey = `profile:${userId}`;
-    const cached = await this.env.CACHE.get(cacheKey, 'json') as UserProfile;
+    const cached = await this.cache.get(cacheKey, 'json') as UserProfile;
 
     if (cached) {
       return cached;
@@ -635,7 +641,7 @@ export class RealtimeSegmentEngine {
 
   async saveUserProfile(profile: UserProfile): Promise<void> {
     const cacheKey = `profile:${profile.userId}`;
-    await this.env.CACHE.put(cacheKey, JSON.stringify(profile), {
+    await this.cache.put(cacheKey, JSON.stringify(profile), {
       expirationTtl: 7 * 24 * 60 * 60 // 7 days
     });
   }
@@ -848,7 +854,7 @@ export class RealtimeSegmentEngine {
 
   /** Resolve the active sessionId for a user (used by manual segment assignment). */
   private async sessionIdForUser(userId: string): Promise<string> {
-    const sid = await this.env.SESSIONS.get(`user:${userId}`);
+    const sid = (await this.sessions.get(`user:${userId}`)) as string | null;
     return sid ?? this.sessionManager.generateSessionId();
   }
 

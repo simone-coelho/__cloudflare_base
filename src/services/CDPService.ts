@@ -1,3 +1,4 @@
+import { DEFAULT_TENANT, TenantKV, type KVLike, type TenantId } from '@/tenancy/tenant';
 import type { Env } from '@/types/env';
 
 export interface ProfileData {
@@ -44,8 +45,12 @@ export class CDPService {
   private env: Env;
   private destinations: CDPDestination[] = [];
 
-  constructor(env: Env) {
+  /** KV scoped to one brand (CW1). Profiles are the most per-brand data there is. */
+  private readonly kv: KVLike;
+
+  constructor(env: Env, readonly tenant: TenantId = DEFAULT_TENANT) {
     this.env = env;
+    this.kv = new TenantKV(env.CACHE as unknown as KVLike, tenant);
     this.loadDestinations();
   }
 
@@ -120,7 +125,7 @@ export class CDPService {
         throw new Error('At least one identifier is required');
       }
 
-      const profile = await this.env.CACHE.get(profileKey, 'json') as ProfileData;
+      const profile = await this.kv.get(profileKey, 'json') as ProfileData;
       
       if (!profile) {
         return null;
@@ -150,7 +155,7 @@ export class CDPService {
         ? `profile:user:${userId}` 
         : `profile:anon:${anonymousId}`;
 
-      const existingProfile = await this.env.CACHE.get(profileKey, 'json') as ProfileData || {};
+      const existingProfile = await this.kv.get(profileKey, 'json') as ProfileData || {};
 
       const updatedProfile: ProfileData = {
         ...existingProfile,
@@ -165,11 +170,11 @@ export class CDPService {
         sessionCount: (existingProfile.sessionCount || 0) + 1,
       };
 
-      await this.env.CACHE.put(profileKey, JSON.stringify(updatedProfile));
+      await this.kv.put(profileKey, JSON.stringify(updatedProfile));
 
       if (userId && anonymousId && userId !== anonymousId) {
         const anonKey = `profile:anon:${anonymousId}`;
-        const anonProfile = await this.env.CACHE.get(anonKey, 'json') as ProfileData;
+        const anonProfile = await this.kv.get(anonKey, 'json') as ProfileData;
         
         if (anonProfile) {
           const mergedProfile: ProfileData = {
@@ -185,8 +190,8 @@ export class CDPService {
             sessionCount: (updatedProfile.sessionCount || 0) + (anonProfile.sessionCount || 0),
           };
           
-          await this.env.CACHE.put(profileKey, JSON.stringify(mergedProfile));
-          await this.env.CACHE.delete(anonKey);
+          await this.kv.put(profileKey, JSON.stringify(mergedProfile));
+          await this.kv.delete(anonKey);
         }
       }
 
@@ -266,7 +271,7 @@ export class CDPService {
       }
 
       const profileKey = `profile:user:${userId}`;
-      const profile = await this.env.CACHE.get(profileKey, 'json') as ProfileData;
+      const profile = await this.kv.get(profileKey, 'json') as ProfileData;
       
       if (profile) {
         const daysSinceFirstSeen = Math.floor(
@@ -376,7 +381,7 @@ export class CDPService {
   private async saveDestinations(): Promise<void> {
     try {
       const key = 'cdp-destinations';
-      await this.env.CACHE.put(key, JSON.stringify(this.destinations));
+      await this.kv.put(key, JSON.stringify(this.destinations));
     } catch (error) {
       console.error('Failed to save CDP destinations:', error);
     }
