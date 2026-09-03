@@ -693,6 +693,69 @@ worth reusing rather than rewriting:
 - Read is open, write is authenticated and fails closed. Reading the dials should never require a token;
   moving them always should.
 
+### 18.9 §3.3's D1 tier does not survive its own arithmetic at pilot volume
+
+This one challenges a number rather than reporting a gap, so the working is shown and the inputs are named.
+If an input is wrong the conclusion changes, and I would rather be corrected than agreed with.
+
+**The claim.** §3.3 tiers storage as: shopper object holds this visitor's recent decisions, **R2 holds every
+record** as hourly NDJSON partitions and is the Snowflake share, and **D1 holds the last 30 days** indexed
+by `decision_id` and `visitor_id` for the explain lookup, the console and replay, "pruned by cron; stays
+well under the 10 GB ceiling."
+
+The R2 tier is right and is not in question. The D1 window is the part that does not hold.
+
+**The arithmetic.** Using `MRD_DECISION_COLUMNS` as the row shape, since it is the only decision row that
+exists today: eighteen columns, three of them JSON blobs (`dimension_scores`, `gates_failed`, `refused`).
+Call it 500 bytes, which is conservative for a row carrying drivers and a candidate set.
+
+| Step | Value |
+|---|---|
+| Ceiling (§3.3's own figure) | 10 GB |
+| ÷ 30 days | ~333 MB per day |
+| ÷ 500 bytes per row | **~666,000 decision rows per day** |
+| ÷ 8 slots on a personalized homepage | **~83,000 personalized page views per day** |
+
+83,000 page views a day is the break-even. Above that the 30-day window does not fit. I do not know
+Coach's actual traffic and will not invent it, but for a brand of that size this looks one to two orders
+of magnitude short. At 1 million personalized page views a day the entire 10 GB is consumed in about
+**thirty hours**, not thirty days.
+
+**Three inputs to correct if I have them wrong:** the bytes per row, the number of personalized slots per
+page, and whether every slot decision is recorded or only the ones a reward can attach to. The last one
+matters most: if only reward-bearing slots are indexed, the divisor drops sharply.
+
+**What it does NOT break.** Two mitigations are real and worth stating so this is not read as more urgent
+than it is:
+
+- The ledger writer is a queue consumer, off the response path. A full D1 stops receipts being indexed;
+  it does not stop decisions being served. Degraded, not down.
+- **Unlike the holdout, a D1 index is recoverable.** R2 holds every record, so the index can be rebuilt
+  from the partitions at any time. Getting this wrong costs a backfill, not the data. That is the opposite
+  of §10's holdout assignment, which cannot be reconstructed at any price, and it is why §18.7 flags that
+  one as the true hard deadline and this one as a sizing decision.
+
+**Options, in the order I would consider them.** Not a prescription; the choice depends on what the
+console and replay actually need.
+
+1. **Index a sample.** One decision in N, plus every decision in the holdout arms, which are the ones the
+   measurement depends on. Replay of an unsampled decision reads its partition from R2.
+2. **Shorten the window.** 48 hours of random access covers "why did this shopper see this" while the
+   question is still being asked; older lookups go to R2.
+3. **Index keys only.** `decision_id`, `visitor_id`, `ts`, `slot`, `item`, `arm` — no JSON blobs. That is
+   maybe 80 bytes rather than 500, which moves the break-even by roughly 6x on its own and keeps random
+   access for the fields the console filters on.
+4. **Shard D1 per brand.** This one interacts with tenancy: a database per brand is a binding-per-brand
+   decision made at stamp provisioning, which is a different answer from a tenant column on shared tables.
+   It buys headroom and hard isolation together, at the cost of cross-brand queries.
+
+Option 3 combined with 1 is where I would start, but §3.3 is yours.
+
+**What I have paused because of this.** I was about to add tenant columns to the D1 decision tables as part
+of CW1. Making a schema multi-brand before deciding whether it should hold that data at all is the wrong
+order, so the D1 half of CW1 is on hold pending this. Nothing is blocked: those tables currently hold demo
+and reference data, and two brands cannot collide in them until a second brand exists.
+
 ### 18.8 The default pooling ladder depends on two dimensions that are not built
 
 §5.4's default cell is `channel, visit bucket, region, affinity`, and the ladder pools upward from the
