@@ -128,9 +128,10 @@ subset that a reward definition names.
 The id exists at decision time, because the shopper object, the explain record and the SDK all see it
 before any consumer runs. It carries the tenant and the timestamp, in that order, so the R2 partition it
 lands in is derivable from the id alone: the brand and the hour prefix. A pasted id resolves without anyone
-remembering which brand it came from. Inside the hour the consumer writes batches as it drains the queue and appends
-each batch's first and last id to that hour's manifest. A point lookup is therefore one GET of the
-manifest and one GET of the batch, for a support or replay question that is asked rarely and answered in
+remembering which brand it came from. Inside the hour the consumer writes batches as it drains the queue, and each batch
+object is named by the id range it holds, which makes the batch its own manifest entry, written atomically
+with it, so two consumers draining the same hour never race on a shared file. A point lookup is therefore
+one listing of the hour and one GET of the batch whose range contains the id, for a support or replay question that is asked rarely and answered in
 well under a second. Nothing between the decision and that lookup is a shared writer.
 
 The three writes a decision causes all happen after the response, through `waitUntil`: an append to the

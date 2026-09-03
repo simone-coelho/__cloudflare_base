@@ -12,6 +12,10 @@ import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { serveContentDecisions } from '@/content/service';
 import { NAMESPACE_MARKER, type TenantVariables } from '@/tenancy/tenant';
+import { enqueueDecisions } from '@/ledger/enqueue';
+import { findById, type R2Like } from '@/ledger/writer';
+import type { DecisionRecord } from '@/content/types';
+import type { OutcomeRecord } from '@/ledger/records';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
 import { jwt } from '@/middleware/auth';
 
@@ -64,6 +68,25 @@ decisionRoutes.get('/:tenant/decisions/snapshot', async (c) => {
     tenant, brand, page, visitorId, channel, cf, cookieHeader: c.req.header('Cookie') ?? null,
     stateTenant: c.get('tenant'),
   });
+  // Phase 0: the ledger, after the response, never on it. A queue hiccup is invisible to the shopper.
+  try { c.executionCtx.waitUntil(enqueueDecisions(c.env, out.records)); } catch { void enqueueDecisions(c.env, out.records); }
   c.header('Cache-Control', 'no-store');
   return c.json({ ok: true, ...out });
+});
+
+/**
+ * GET /v1/:tenant/ledger/:id[?stream=outcome]
+ * One record by id, straight from R2 with no index (doc 22 §3.4): the id names
+ * the brand and the hour, the batch objects are named by the id range they hold.
+ * Authenticated, because a record carries a visitor id. Behind by the queue lag
+ * during a peak; exact afterwards.
+ */
+decisionRoutes.get('/:tenant/ledger/:id', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  const id = (c.req.param('id') ?? '').trim();
+  if (!TENANT.test(tenant) || !id.startsWith(`${tenant}:`)) return c.json({ ok: false, error: 'id must belong to the tenant in the path' }, 400);
+  const stream = c.req.query('stream') === 'outcome' ? 'outcome' : 'decision';
+  const found = await findById<DecisionRecord | OutcomeRecord>(c.env.STORAGE as unknown as R2Like, id, stream);
+  c.header('Cache-Control', 'no-store');
+  return found ? c.json({ ok: true, stream, key: found.key, record: found.record }) : c.json({ ok: false, error: 'not found, or not yet written by the consumer' }, 404);
 });

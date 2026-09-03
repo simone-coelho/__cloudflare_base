@@ -162,6 +162,7 @@ import { MeridianReflex } from '@/demos/meridian/MeridianReflex';
 
 import { RegionTrend } from '@/durable-objects/RegionTrend';
 import { rollupTenant } from '@/reflex/regionTrend';
+import { consumeLedger } from '@/ledger/consume';
 
 export { StateManager, RateLimiter, PersonalizationWebSocket, ShopperReflex, OpalAgent, MeridianReflex, RegionTrend };
 
@@ -194,7 +195,19 @@ export default {
     }
   },
   queue: async (batch: MessageBatch, env: Env, ctx: ExecutionContext) => {
+    // Phase 0 of the outcome-learning design: every ledger message in the batch is
+    // written to R2 in one pass, as range-named objects under the brand and hour.
+    // Only an R2 failure retries; anything the writer cannot place is acknowledged
+    // and counted, so a poison message can never stall the ledger behind it.
+    const ledger = batch.messages.filter((m) => (m.body as { kind?: unknown } | null)?.kind === 'ledger');
+    if (ledger.length) {
+      const res = await consumeLedger(env, ledger.map((m) => m.body));
+      if (res.ok) { for (const m of ledger) m.ack(); }
+      else { console.error(`ledger batch failed: ${res.error}`); for (const m of ledger) m.retry(); }
+      if (res.skipped) console.warn(`ledger: ${res.skipped} unplaceable message(s) acknowledged and dropped`);
+    }
     for (const message of batch.messages) {
+      if ((message.body as { kind?: unknown } | null)?.kind === 'ledger') continue;
       try {
         const event = message.body as any;
         if (event && event.kind === 'scene') {
