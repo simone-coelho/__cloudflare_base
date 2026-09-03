@@ -36,6 +36,7 @@
 // clock-, session- and D1-shaped lives here, at the edge of it.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { shopperObject } from '@/tenancy/objects';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -237,7 +238,7 @@ interface AffinityRead {
  */
 async function readAffinity(env: Env, visitorId: string, realNowMs: number): Promise<AffinityRead> {
   if ((env.REFLEX_HOST ?? 'session') === 'do') {
-    const stub = env.SHOPPER_REFLEX.get(env.SHOPPER_REFLEX.idFromName(visitorId));
+    const stub = shopperObject(env.SHOPPER_REFLEX, visitorId);
     const res = await stub.fetch('https://shopper-reflex/snapshot');
     const body = (await res.json()) as { affinity?: { dims?: DimensionScores; audiences?: string[] } };
     return {

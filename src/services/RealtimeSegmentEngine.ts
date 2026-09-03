@@ -17,6 +17,8 @@
 // (`new RealtimeSegmentEngine(env)`) keep working while the spec's two-arg form
 // (`new RealtimeSegmentEngine(env, getConnectors(env))`) is also supported.
 
+import { shopperObjectName } from '@/tenancy/objects';
+import { DEFAULT_TENANT } from '@/tenancy/tenant';
 import { visitBucket, type ChannelSignals } from '@/services/visit';
 import type { Env } from '@/types/env';
 import { SessionManager, type SessionData } from './SessionManager';
@@ -37,6 +39,7 @@ import {
   apply as applyReflex,
   attributesFrom as reflexAttributes,
   extractTouches,
+  touchesForEvent,
   snapshot as reflexSnapshot,
   type ReflexResult,
 } from '@/reflex/core';
@@ -425,9 +428,9 @@ export class RealtimeSegmentEngine {
           sessionData.reflex,
           {
             action,
-            touches: product
-              ? extractTouches(product as unknown as Record<string, unknown>, reflexConfig)
-              : [],
+            // A held product's attributes, or, where the scope allows it, the
+            // event's own (CW24): a customer's site scores against their catalog.
+            touches: touchesForEvent(data as Record<string, unknown>, product as unknown as Record<string, unknown> | undefined, reflexConfig),
           },
           nowMs,
           reflexConfig
@@ -746,7 +749,7 @@ export class RealtimeSegmentEngine {
 
   private async broadcastUpdate(update: PersonalizationUpdate): Promise<void> {
     try {
-      const id = this.env.PERSONALIZATION_WEBSOCKET.idFromName(update.userId);
+      const id = this.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(DEFAULT_TENANT, update.userId));
       const websocketObject = this.env.PERSONALIZATION_WEBSOCKET.get(id);
 
       await websocketObject.fetch(new Request('http://fake/broadcast', {

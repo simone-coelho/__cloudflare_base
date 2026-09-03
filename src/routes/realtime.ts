@@ -1,3 +1,8 @@
+import { shopperObject, shopperObjectName } from '@/tenancy/objects';
+import { DEFAULT_TENANT } from '@/tenancy/tenant';
+// Singleton objects: one per worker on purpose, never per brand.
+const SINGLETON_ADMIN = 'admin';
+const SINGLETON_HEALTH = 'health-check';
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { RealtimeSegmentEngine, type ActionEvent } from '@/services/RealtimeSegmentEngine';
@@ -29,12 +34,12 @@ realtimeRoutes.get('/ws', async (c) => {
     // (opt_visitor_id), so every tab/device lands on the same object. Default
     // 'session' keeps the original relay DO — byte-identical behavior.
     if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
-      const id = c.env.SHOPPER_REFLEX.idFromName(userId);
+      const id = c.env.SHOPPER_REFLEX.idFromName(shopperObjectName(DEFAULT_TENANT, userId));
       return c.env.SHOPPER_REFLEX.get(id).fetch(c.req.raw);
     }
 
     // Get the Durable Object instance for this user
-    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(userId);
+    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(DEFAULT_TENANT, userId));
     const durableObject = c.env.PERSONALIZATION_WEBSOCKET.get(id);
 
     // Forward the WebSocket upgrade request to the Durable Object
@@ -107,7 +112,7 @@ realtimeRoutes.post('/action', async (c) => {
     // ODP loop on this path (forward + seed + receipt over its own socket), so no
     // route-level ODP dispatch here. The D1 captureDemoEvent above ran either way.
     if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
-      const stub = c.env.SHOPPER_REFLEX.get(c.env.SHOPPER_REFLEX.idFromName(actionEvent.userId));
+      const stub = shopperObject(c.env.SHOPPER_REFLEX, actionEvent.userId);
       const doRes = await stub.fetch('https://shopper-reflex/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -264,7 +269,7 @@ realtimeRoutes.get('/reflex', async (c) => {
     // REFLEX_HOST='do' (doc 16 §6): the vector lives in the shopper's own
     // ShopperReflex DO — read the snapshot there (same response shape).
     if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
-      const stub = c.env.SHOPPER_REFLEX.get(c.env.SHOPPER_REFLEX.idFromName(userId));
+      const stub = shopperObject(c.env.SHOPPER_REFLEX, userId);
       const doRes = await stub.fetch('https://shopper-reflex/snapshot');
       return c.json((await doRes.json()) as Record<string, unknown>, doRes.status as 200);
     }
@@ -506,7 +511,7 @@ realtimeRoutes.get('/connections/:userId', async (c) => {
     }
 
     // Get the Durable Object instance for this user
-    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(userId);
+    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(DEFAULT_TENANT, userId));
     const durableObject = c.env.PERSONALIZATION_WEBSOCKET.get(id);
     
     // Request connection info from the Durable Object
@@ -528,7 +533,7 @@ realtimeRoutes.get('/connections/:userId', async (c) => {
 realtimeRoutes.get('/connections', async (c) => {
   try {
     // Create a temporary ID to get any instance of the Durable Object
-    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName('admin');
+    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(SINGLETON_ADMIN);
     const durableObject = c.env.PERSONALIZATION_WEBSOCKET.get(id);
     
     // Request all connections info from the Durable Object
@@ -550,7 +555,7 @@ realtimeRoutes.get('/connections', async (c) => {
 realtimeRoutes.get('/health', async (c) => {
   try {
     // Test WebSocket Durable Object health
-    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName('health-check');
+    const id = c.env.PERSONALIZATION_WEBSOCKET.idFromName(SINGLETON_HEALTH);
     const durableObject = c.env.PERSONALIZATION_WEBSOCKET.get(id);
     const wsHealth = await durableObject.fetch(new Request('http://fake/health'));
     const wsHealthData = await wsHealth.json();

@@ -14,6 +14,8 @@
 //   POST /audiences/publish  -> human-approved publish (createAudience) -> now live,
 //                               then we flash connected storefronts "new audience live".
 
+import { shopperObjectName } from '@/tenancy/objects';
+import { DEFAULT_TENANT } from '@/tenancy/tenant';
 import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import type { AudienceCondition, AudienceDef, QualificationContext } from '@/connectors';
@@ -290,7 +292,7 @@ async function loadQualificationContext(env: Env, userId: string): Promise<Quali
 
 /** Send one per-user PersonalizationUpdate through the user's DO /broadcast endpoint. */
 async function sendUpdate(env: Env, userId: string, update: PersonalizationUpdate): Promise<void> {
-  const id = env.PERSONALIZATION_WEBSOCKET.idFromName(userId);
+  const id = env.PERSONALIZATION_WEBSOCKET.idFromName(shopperObjectName(DEFAULT_TENANT, userId));
   const stub = env.PERSONALIZATION_WEBSOCKET.get(id);
   await stub.fetch(
     new Request('http://do/broadcast', {

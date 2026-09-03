@@ -25,6 +25,7 @@
 //     subset:["realtime"] silently returned nothing.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { shopperObject } from '@/tenancy/objects';
 import type { Env } from '@/types/env';
 import { CatalogService, priceBandOf, type Product } from './CatalogService';
 import type { ActionEvent } from './RealtimeSegmentEngine';
@@ -254,7 +255,7 @@ export async function forwardEventToOdp(
         if (pushReceipt) {
           pushReceipt(receipt);
         } else {
-          const stub = env.PERSONALIZATION_WEBSOCKET.get(env.PERSONALIZATION_WEBSOCKET.idFromName(event.userId));
+          const stub = shopperObject(env.PERSONALIZATION_WEBSOCKET, event.userId);
           await stub.fetch('https://internal/broadcast', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
