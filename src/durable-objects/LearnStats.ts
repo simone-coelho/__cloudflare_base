@@ -53,7 +53,7 @@ export class LearnStats {
         return json({ ok: true });
       }
       case '/snapshot': {
-        const out = await this.serialize(async () => { const d = this.data ?? (await this.loadIfAny()); return d ? buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, await this.priorsFor(d)) : null; });
+        const out = await this.serialize(async () => { const d = this.data ?? (await this.loadIfAny()); return d ? buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, await this.priorsFor(d), d.config.objective ?? 'unit') : null; });
         return json({ ok: true, snapshot: out });
       }
       case '/publish': { await this.serialize(() => this.publish()); return json({ ok: true }); }
@@ -102,7 +102,7 @@ export class LearnStats {
   private async publish(): Promise<void> {
     const d = await this.loadIfAny();
     if (!d || d.stats.events === 0) return;
-    const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, await this.priorsFor(d));
+    const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, await this.priorsFor(d), d.config.objective ?? 'unit');
     const body = JSON.stringify(snap);
     try { await this.env.CACHE.put(liftKey(d.tenant, d.brand, d.slot), body); } catch { /* try again on the next alarm */ }
     // Phase 3 (doc 22 §12.3): the archive a replay reads. Best effort; KV is what serves.

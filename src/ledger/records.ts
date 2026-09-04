@@ -23,6 +23,8 @@ export interface OutcomeRecord {
   slot: string | null;
   value: number | null;
   currency: string | null;
+  /** CW27: the outcome's margin when the feed gives one (`data.margin`, or the items' margins summed); null otherwise. */
+  margin: number | null;
   arm: string | null;
 }
 
@@ -89,6 +91,21 @@ export function rewardOf(action: ActionLike): { type: RewardType; event: string 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() && Number.isFinite(Number(v)) ? Number(v) : null);
 
+/** The margin the feed gave, if any: `data.margin`, else the items' margins (× quantity) summed. */
+function marginOf(d: Record<string, unknown>): number | null {
+  const direct = num(d.margin);
+  if (direct !== null) return direct;
+  if (!Array.isArray(d.items)) return null;
+  let sum = 0, any = false;
+  for (const it of d.items as unknown[]) {
+    if (!it || typeof it !== 'object') continue;
+    const m = num((it as Record<string, unknown>).margin);
+    if (m === null) continue;
+    any = true; sum += m * (num((it as Record<string, unknown>).quantity) ?? 1);
+  }
+  return any ? Math.round(sum * 100) / 100 : null;
+}
+
 /** Build the §3.2 record from a wire action, or null when the action is not a reward. */
 export function outcomeFromAction(action: ActionLike, tenant: string, brand = tenant, arm: string | null = null): OutcomeRecord | null {
   const reward = rewardOf(action);
@@ -107,6 +124,7 @@ export function outcomeFromAction(action: ActionLike, tenant: string, brand = te
     slot: str(d.slot),
     value: num(d.value) ?? num(d.price) ?? null,
     currency: str(d.currency),
+    margin: marginOf(d),
     arm,
   };
 }

@@ -30,7 +30,7 @@ export const ringEntryOf = (r: DecisionRecord): RingEntry =>
   ({ id: r.decision_id, ts: r.ts, page: r.page, slot: r.slot, item: r.item_id, session_id: r.session_id, arm: r.arm, cell: r.cell });
 
 /** The slot's configuration the statistics object publishes against. */
-export interface SlotLearnConfig { reward: RewardType; stats: StatsConfig }
+export interface SlotLearnConfig { reward: RewardType; stats: StatsConfig; /** CW27: absent means unit. */ objective?: 'unit' | 'revenue' | 'margin' }
 
 /** After a decision set is served: the ring gets the full records, each slot's object gets its exposures. */
 export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS'>, set: { tenant: string; brand: string; visitor_id: string; records: DecisionRecord[] }, slotConfig: (slot: string) => SlotLearnConfig): Promise<void> {

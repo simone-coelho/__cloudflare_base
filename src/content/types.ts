@@ -91,9 +91,14 @@ export interface AutonomyDials { mode: 'configured' | 'assisted' | 'autonomous';
 export interface ItemControl { mode: 'reject' | 'freeze'; lift?: number }
 
 /** Doc 22 §6.2 and §13: the per-slot dials. γ defaults to 0, shadow mode. */
+/** Doc 22 §13, CW27: what a success is worth. `unit` counts it; `revenue` weighs it by the outcome's value; `margin` by its margin, or its value when the feed gives no margin. */
+export type Objective = 'unit' | 'revenue' | 'margin';
+
 export interface SlotDials {
   gamma?: number;
   reward?: 'click' | 'dwell' | 'video_complete' | 'wishlist' | 'add_to_bag' | 'purchase' | 'custom';
+  /** CW27: the objective the slot learns against. Absent means `unit`. */
+  objective?: Objective;
   exploration?: ExploreDials;
   autonomy?: AutonomyDials;
   items?: Record<string, ItemControl>;
@@ -116,6 +121,8 @@ export interface LearnConfig {
 /** Doc 22 §12.1: what the learning layer contributed, on every receipt it touched. */
 export interface LiftApplied {
   reward: string;
+  /** CW27: what a success was worth when the counts were built. */
+  objective?: Objective;
   level: number;
   level_words: string;
   n: number;

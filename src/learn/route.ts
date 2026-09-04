@@ -21,7 +21,7 @@ export function policyOf(learn: LearnConfig): AttributionPolicy {
 export function slotConfigsOf(learn: LearnConfig): Record<string, SlotLearnConfig> {
   const stats = learn.stats ?? DEFAULT_STATS;
   const out: Record<string, SlotLearnConfig> = {};
-  for (const [slot, d] of Object.entries(learn.slots ?? {})) out[slot] = { reward: d.reward ?? 'click', stats };
+  for (const [slot, d] of Object.entries(learn.slots ?? {})) out[slot] = { reward: d.reward ?? 'click', stats, objective: d.objective ?? 'unit' };
   return out;
 }
 

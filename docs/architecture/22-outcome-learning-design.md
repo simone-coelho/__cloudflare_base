@@ -622,6 +622,21 @@ deployment.
 | Item controls | freeze, reset, reject per item | Marketing | none |
 | Isolation | Cross-brand pooling | Leadership | off |
 
+Built 2026-09-04, the first row. The reward row's "unit, revenue, margin" is now a per-slot dial named
+`objective` in the learn document, next to the reward and the trust dial. `unit` is the default and is
+what everything above describes: every credited outcome counts one. `revenue` weighs each credit by the
+outcome's `value`, the order or line total the outcome event carried, so a purchase of 400 counts four
+hundred times a purchase of 1, and a click, which carries no value, counts nothing. `margin` weighs by the
+outcome's `margin`, which the outcome event gives either as one number or as `margin` on each item, summed
+over quantity; when the event carries no margin the value is used in its place, so a feed that has not yet
+been taught margin degrades to revenue rather than to silence. The validator refuses `revenue` and `margin`
+on a slot whose reward is `click`, because a click has no value to weigh. The weighing happens in one place,
+`creditWeight` in `src/learn/policy.ts`, and is applied at the moment the credit is written, so the
+success counter `s` in §5.1 becomes a sum of weights and every formula downstream (p̂, lift, the pooling
+ladder, the intervals) is unchanged. The snapshot, the receipt's lift block and the day report carry the
+objective so a reader knows what the numbers are in; the console's grid header says "weighed by revenue"
+or "weighed by margin" when the slot is not on `unit`. Three tests in `src/learn/objective.test.ts`.
+
 The split is deliberate. The data science team owns the estimator and the policies. The marketing team
 owns what each slot is optimizing for, how much to trust the learning, how much to explore, and any item
 they want to protect from it. Both see the same explain record and the same grid.

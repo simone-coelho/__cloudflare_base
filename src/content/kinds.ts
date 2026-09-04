@@ -261,6 +261,11 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
         const dials: NonNullable<LearnConfig['slots']>[string] = {};
         if (d.gamma !== undefined) { if (!isNum(d.gamma) || d.gamma < 0 || d.gamma > 1) errors.push(`slots.${slot}.gamma: number 0..1`); else dials.gamma = d.gamma; }
         if (d.reward !== undefined) { if (!isStr(d.reward) || !REWARDS.has(d.reward)) errors.push(`slots.${slot}.reward: known reward`); else dials.reward = d.reward as NonNullable<typeof dials.reward>; }
+        if (d.objective !== undefined) {
+          if (!isStr(d.objective) || !['unit', 'revenue', 'margin'].includes(d.objective)) errors.push(`slots.${slot}.objective: unit | revenue | margin`);
+          else if (d.objective !== 'unit' && !['purchase', 'add_to_bag'].includes((dials.reward ?? d.reward ?? 'click') as string)) errors.push(`slots.${slot}.objective: ${d.objective} needs a reward that carries a value (purchase or add_to_bag)`);
+          else dials.objective = d.objective as 'unit' | 'revenue' | 'margin';
+        }
         if (d.exploration !== undefined) {
           const e = d.exploration;
           if (!isRecord(e) || !['rotation', 'thompson', 'epsilon', 'off'].includes(String(e.mode)) || !isNum(e.share) || e.share < 0 || e.share > 1 || !isNum(e.floor) || !Number.isInteger(e.floor) || e.floor < 0) errors.push(`slots.${slot}.exploration: mode rotation|thompson|epsilon|off, share 0..1, floor integer ≥ 0`);

@@ -81,7 +81,10 @@ export interface LevelStat {
 }
 export interface ItemStats { levels: LevelStat[] }
 export interface LiftSnapshot {
-  tenant: string; brand: string; slot: string; reward: RewardType; version: number; publishedAt: number; events: number;
+  tenant: string; brand: string; slot: string; reward: RewardType;
+  /** CW27: what a success was worth when these counts were built. Absent on snapshots from before. */
+  objective?: 'unit' | 'revenue' | 'margin';
+  version: number; publishedAt: number; events: number;
   n0: number; nMin: number; liftMin: number; liftMax: number;
   /** Doc 22 §8: the prior document's revision this snapshot was built with; 0 or absent when none. */
   priorVersion?: number;
@@ -100,7 +103,7 @@ export interface LiftSnapshot {
  * an item's events at a fine level are the same events at every coarser one,
  * and shrinking toward yourself is not shrinkage. §5.3's example is exact.
  */
-export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: string; slot: string }, reward: RewardType, now: number, cfg: StatsConfig, priors?: { version: number; index: PriorIndex } | null): LiftSnapshot {
+export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: string; slot: string }, reward: RewardType, now: number, cfg: StatsConfig, priors?: { version: number; index: PriorIndex } | null, objective: 'unit' | 'revenue' | 'margin' = 'unit'): LiftSnapshot {
   const tau = cfg.tauLearnMs;
   // The slot's rate per level key, shrunk toward the parent key's rate; the root shrinks toward itself.
   const slotRates: LiftSnapshot['slotRates'] = {};
@@ -153,7 +156,7 @@ export function buildSnapshot(st: StatsState, ids: { tenant: string; brand: stri
     }
     items[item] = out;
   }
-  return { ...ids, reward, version: now, publishedAt: now, events: st.events, n0: cfg.n0, nMin: cfg.nMin, liftMin: cfg.liftMin, liftMax: cfg.liftMax, priorVersion: priors?.version ?? 0, items, slotRates };
+  return { ...ids, reward, objective, version: now, publishedAt: now, events: st.events, n0: cfg.n0, nMin: cfg.nMin, liftMin: cfg.liftMin, liftMax: cfg.liftMax, priorVersion: priors?.version ?? 0, items, slotRates };
 }
 
 export function depth(key: string): number { return key === '*' ? 0 : key.split('|').length; }
@@ -163,7 +166,7 @@ export function parentKey(key: string): string | null {
   return parts.length === 1 ? '*' : parts.slice(0, -1).join('|');
 }
 
-export interface LiftLookup { level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; n0: number; prior?: { p: number; n: number } }
+export interface LiftLookup { level: Level; level_words: string; n: number; s: number; p0: number; p_hat: number; lift: number; version: number; reward: RewardType; objective: 'unit' | 'revenue' | 'margin'; n0: number; prior?: { p: number; n: number } }
 
 /** The finest level with enough exposures for this item in this cell, or null when nothing has been learned yet. */
 export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cell: Cell): LiftLookup | null {
@@ -175,7 +178,7 @@ export function liftFor(snap: LiftSnapshot | null | undefined, item: string, cel
     const st = byKey[keys[i]!];
     // A level with an imported prior counts the prior's strength toward the threshold (doc 22 §8).
     if (st && st.n + (st.prior?.n ?? 0) >= snap.nMin) {
-      return { level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, n0: st.n0 ?? snap.n0, ...(st.prior ? { prior: st.prior } : {}) };
+      return { level: st.level, level_words: LEVEL_WORDS[st.level], n: st.n, s: st.s, p0: st.p0, p_hat: st.p_hat, lift: st.lift, version: snap.version, reward: snap.reward, objective: snap.objective ?? 'unit', n0: st.n0 ?? snap.n0, ...(st.prior ? { prior: st.prior } : {}) };
     }
   }
   return null;

@@ -53,6 +53,18 @@ export interface Credit {
 }
 
 /**
+ * CW27 (doc 22 §13): what a credit is worth under the slot's objective. `unit` counts the success;
+ * `revenue` weighs it by the outcome's value; `margin` by its margin, or its value when the feed gave
+ * none. An outcome with nothing to weigh under a value objective is worth nothing, and the credit is
+ * dropped rather than counted as one: a click cannot outrank a purchase on a slot that learns revenue.
+ */
+export function creditWeight(objective: 'unit' | 'revenue' | 'margin' | undefined, outcome: Pick<OutcomeRecord, 'value' | 'margin'>): number {
+  if (!objective || objective === 'unit') return 1;
+  const v = objective === 'margin' ? (outcome.margin ?? outcome.value) : outcome.value;
+  return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0;
+}
+
+/**
  * Apply the learning policy to one outcome against the visitor's ring. Pure.
  * Eligible decisions are those in scope, inside the reward's window, before the
  * outcome; `match` narrows them to the served item; `credit` picks who is paid.

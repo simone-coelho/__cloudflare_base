@@ -8,7 +8,7 @@
 import type { Env } from '@/types/env';
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
-import { attribute, type AttributionPolicy, type RingEntry } from '@/learn/policy';
+import { attribute, creditWeight, type AttributionPolicy, type RingEntry } from '@/learn/policy';
 import { ringEntryOf, statsName, type SlotLearnConfig } from '@/learn/fan';
 
 const RING_MAX = 200;
@@ -86,7 +86,10 @@ export class DecisionRing {
     const ns = this.env.LEARN_STATS;
     if (ns) {
       for (const [slot, list] of bySlot) {
-        const body = JSON.stringify({ tenant, brand, slot, config: slotConfig[slot], credits: list });
+        // CW27: the credit is worth what the slot's objective says; a worthless credit is not sent.
+        const weighed = list.map((c) => ({ ...c, weight: creditWeight(slotConfig[slot]?.objective, outcome) })).filter((c) => c.weight > 0);
+        if (weighed.length === 0) continue;
+        const body = JSON.stringify({ tenant, brand, slot, config: slotConfig[slot], credits: weighed });
         const p = ns.get(ns.idFromName(statsName(tenant, brand, slot))).fetch('https://learn/credits', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }).then(() => undefined, () => undefined);
         try { (this.state as unknown as { waitUntil?: (p: Promise<unknown>) => void }).waitUntil?.(p); } catch { /* older runtime */ }
       }

@@ -56,7 +56,7 @@ async function readLift(env: Pick<Env, 'CACHE'>, tenant: string, brand: string, 
 /** What each slot learns against: its reward and the estimator's constants, from the learn document. */
 export function slotLearnConfigOf(learn: { stats?: SlotLearnConfig['stats']; slots?: Record<string, { reward?: SlotLearnConfig['reward'] }> }): (slot: string) => SlotLearnConfig {
   const stats = learn.stats ?? DEFAULT_STATS;
-  return (slot) => ({ reward: learn.slots?.[slot]?.reward ?? 'click', stats });
+  return (slot) => ({ reward: learn.slots?.[slot]?.reward ?? 'click', stats, objective: (learn.slots?.[slot] as { objective?: 'unit' | 'revenue' | 'margin' } | undefined)?.objective ?? 'unit' });
 }
 
 export interface DecisionSources {

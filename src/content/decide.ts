@@ -117,7 +117,7 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
       return base * Math.pow(control.lift ?? 1, gamma);
     }
     if (!look) return base;
-    liftOf.set(key, { reward: look.reward, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, ...(look.prior ? { prior: look.prior } : {}) });
+    liftOf.set(key, { reward: look.reward, objective: look.objective, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, ...(look.prior ? { prior: look.prior } : {}) });
     return base * Math.pow(look.lift, gamma);
   } : undefined;
   const controlOf = new Map<string, 'reject' | 'freeze'>();

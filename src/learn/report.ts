@@ -11,7 +11,7 @@
 import type { DecisionRecord, LearnConfig } from '@/content/types';
 import type { OutcomeRecord, RewardType } from '@/ledger/records';
 import type { R2Like } from '@/ledger/writer';
-import { attribute, DEFAULT_POLICY, type AttributionPolicy, type RingEntry } from './policy';
+import { attribute, creditWeight, DEFAULT_POLICY, type AttributionPolicy, type RingEntry } from './policy';
 import { ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, recordExposure, recordSuccess, type LiftSnapshot, type StatsConfig } from './stats';
 import { policyOf, slotConfigsOf } from './route';
@@ -108,13 +108,13 @@ export function buildReport(i: ReportInput): DayReport {
         const d = i.decisions.find((x) => x.decision_id === c.decision_id);
         const arm = d?.arm ?? 'personalized';
         armCredits.set(`${c.slot}|${arm}`, (armCredits.get(`${c.slot}|${arm}`) ?? 0) + 1);
-        if (arm === 'personalized') recordSuccess(stateOf(c.slot), c.item, c.cell, c.reward as RewardType, c.ts, c.weight, statsCfg);
+        if (arm === 'personalized') { const w = creditWeight(slotCfg[c.slot]?.objective, o); if (w > 0) recordSuccess(stateOf(c.slot), c.item, c.cell, c.reward as RewardType, c.ts, w, statsCfg); }
       }
     }
     policies.push({ name: p.name, policy: { scope: p.scope, match: p.match, credit: p.credit, windowsMs: p.windowsMs }, role, credits });
     for (const slot of slots) {
       const st = states.get(slot) ?? emptyStats();
-      (grids[slot] ??= {})[p.name] = buildSnapshot(st, { tenant: i.tenant, brand: i.brand, slot }, slotCfg[slot]?.reward ?? 'click', i.now, statsCfg);
+      (grids[slot] ??= {})[p.name] = buildSnapshot(st, { tenant: i.tenant, brand: i.brand, slot }, slotCfg[slot]?.reward ?? 'click', i.now, statsCfg, null, slotCfg[slot]?.objective ?? 'unit');
     }
     // §10: the arms, under the learning policy only.
     if (role === 'learning') {
