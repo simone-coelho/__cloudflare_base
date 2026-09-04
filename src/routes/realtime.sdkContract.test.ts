@@ -22,9 +22,12 @@ describe('SDK ↔ /realtime/action contract', () => {
     }
   });
 
-  it('events the server does not yet name first-class keep their real name in the payload', () => {
-    const env = core.envelope('content_impression', { contentId: 'c1', slot: 'hero' });
-    expect(env.type).toBe('custom');
-    expect(env.data).toMatchObject({ event: 'content_impression', contentId: 'c1', slot: 'hero' });
+  it('the conversion event and the content interactions travel under their own names, with no alias in the payload', () => {
+    for (const type of ['purchase', 'content_impression', 'content_click', 'content_dwell', 'video_complete'] as const) {
+      const env = core.envelope(type, { contentId: 'c1', slot: 'hero' });
+      expect(env.type).toBe(type);
+      expect(env.data).not.toHaveProperty('event');
+      expect(env.data).toMatchObject({ contentId: 'c1', slot: 'hero' });
+    }
   });
 });

@@ -83,12 +83,12 @@ describe('listen', () => {
     await vi.runAllTimersAsync();
     const posted = () => calls.filter((c) => c.init?.method === 'POST').map((c) => JSON.parse(c.init!.body!));
     expect(posted()).toHaveLength(1);
-    expect(posted()[0]).toMatchObject({ type: 'custom', data: { event: 'content_impression', contentId: 'c1', slot: 'hero', customerContentId: 'CMS-1', contentType: 'on-model' } });
+    expect(posted()[0]).toMatchObject({ type: 'content_impression', data: { contentId: 'c1', slot: 'hero', customerContentId: 'CMS-1', contentType: 'on-model' } });
     const t0 = host.now();
     host.now = () => t0; visible!(true);
     host.now = () => t0 + 2500; visible!(false);
     await vi.runAllTimersAsync();
-    expect(posted()[1]).toMatchObject({ type: 'custom', data: { event: 'content_dwell', contentId: 'c1', ms: 2500 } });
+    expect(posted()[1]).toMatchObject({ type: 'content_dwell', data: { contentId: 'c1', ms: 2500 } });
   });
 
   it('listen-only mode sends nothing from rendered()', async () => {

@@ -1,11 +1,13 @@
 // src/sdk/wire.ts
 // What goes on the wire. The server's action schema (src/routes/realtime.ts,
-// actionEventSchema) accepts a fixed set of types today. Events the design
-// promises but the server does not yet name — content interactions and the
-// conversion event — ride the accepted `custom` type with the real event named
-// in `data.event`, so nothing is dropped and nothing is misdescribed. When the
-// server learns a type (CW3 for content telemetry), its row here changes and
-// nothing else does. A contract test parses every row through the real schema.
+// actionEventSchema) names every event the SDK sends, and each row here is that
+// name. The table exists for the day an event reaches the SDK before the server
+// names it: such a row rides the accepted `custom` type with the real event in
+// `data.event` (the `event` field below), so nothing is dropped and nothing is
+// misdescribed, and when the server learns the type only its row changes.
+// Content interactions and the conversion event travelled that way until CW3
+// (2026-09-03) made them first-class on both sides. A contract test parses every
+// row through the real schema.
 
 import type { SdkEventType } from './types';
 
@@ -20,12 +22,12 @@ export const WIRE: Record<SdkEventType, WireMapping> = {
   form_submit: { type: 'form_submit' },
   button_click: { type: 'button_click' },
   custom: { type: 'custom' },
-  // Not yet first-class server-side; named honestly inside the payload.
-  purchase: { type: 'custom', event: 'purchase' },
-  content_impression: { type: 'custom', event: 'content_impression' },
-  content_click: { type: 'custom', event: 'content_click' },
-  content_dwell: { type: 'custom', event: 'content_dwell' },
-  video_complete: { type: 'custom', event: 'video_complete' },
+  // First-class since CW3: the conversion event and the four content interactions.
+  purchase: { type: 'purchase' },
+  content_impression: { type: 'content_impression' },
+  content_click: { type: 'content_click' },
+  content_dwell: { type: 'content_dwell' },
+  video_complete: { type: 'video_complete' },
 };
 
 /** The wire type and the payload, with the real event name kept where it is not the type. */

@@ -53,12 +53,12 @@ var WIRE = {
   form_submit: { type: "form_submit" },
   button_click: { type: "button_click" },
   custom: { type: "custom" },
-  // Not yet first-class server-side; named honestly inside the payload.
-  purchase: { type: "custom", event: "purchase" },
-  content_impression: { type: "custom", event: "content_impression" },
-  content_click: { type: "custom", event: "content_click" },
-  content_dwell: { type: "custom", event: "content_dwell" },
-  video_complete: { type: "custom", event: "video_complete" }
+  // First-class since CW3: the conversion event and the four content interactions.
+  purchase: { type: "purchase" },
+  content_impression: { type: "content_impression" },
+  content_click: { type: "content_click" },
+  content_dwell: { type: "content_dwell" },
+  video_complete: { type: "video_complete" }
 };
 function toWire(type, data) {
   const m = WIRE[type] ?? WIRE.custom;

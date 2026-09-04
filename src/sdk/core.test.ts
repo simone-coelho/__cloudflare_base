@@ -47,7 +47,7 @@ describe('core', () => {
     const core = createCore({ tenant: 'coach' }, host);
     await core.send('purchase', { orderId: 'o1', value: 10 }, { beacon: true });
     expect(beacons).toHaveLength(1);
-    expect(JSON.parse(beacons[0]!.body)).toMatchObject({ type: 'custom', data: { event: 'purchase', orderId: 'o1' } });
+    expect(JSON.parse(beacons[0]!.body)).toMatchObject({ type: 'purchase', data: { orderId: 'o1' } });
     expect(calls).toHaveLength(0);
   });
 

@@ -91,8 +91,8 @@ that pipeline.
 
 Every event is one JSON envelope to `POST /realtime/action`: `type`, the visitor id, the session id, the
 payload, the source, the entry signals captured once per page load, and a timestamp. Event types the
-platform does not yet name first-class (content interactions, the conversion) travel as `custom` with the
-real event named in the payload; the mapping is one table in `wire.ts`, and a contract test parses every
+platform does not name first-class would travel as `custom` with the real event named in the payload, and
+none do today: content interactions and the conversion event have been first-class since CW3; the mapping is one table in `wire.ts`, and a contract test parses every
 row through the server's own validator.
 
 Decisions arrive from `GET /v1/{tenant}/decisions/snapshot` at first paint and as `content_decisions`

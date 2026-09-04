@@ -26,7 +26,7 @@ describe('emit', () => {
     await emit.custom('newsletter_open', { campaign: 'fall' });
     expect(posted().map((p) => [p.type, p.data.event ?? null])).toEqual([
       ['product_view', null], ['add_to_cart', null], ['wishlist_add', null],
-      ['custom', 'purchase'], ['custom', 'content_click'], ['custom', 'video_complete'], ['custom', 'newsletter_open'],
+      ['purchase', null], ['content_click', null], ['video_complete', null], ['custom', 'newsletter_open'],
     ]);
     expect(posted()[3]!.data).toMatchObject({ orderId: 'o-9', value: 395 });
   });
@@ -41,7 +41,7 @@ describe('emit', () => {
     await vi.waitFor(() => expect(posted()).toHaveLength(3));
     expect(posted()[0]).toMatchObject({ type: 'product_view', data: { productId: 'SKU-7', name: 'Tote', price: 295 } });
     expect(posted()[1]).toMatchObject({ type: 'add_to_cart', data: { productId: 'SKU-7' } });
-    expect(posted()[2]).toMatchObject({ type: 'custom', data: { event: 'purchase', orderId: 'T1', value: 295, items: [{ productId: 'SKU-7', quantity: 1, price: 295 }] } });
+    expect(posted()[2]).toMatchObject({ type: 'purchase', data: { orderId: 'T1', value: 295, items: [{ productId: 'SKU-7', quantity: 1, price: 295 }] } });
     detach();
     layer.push({ event: 'view_item', ecommerce: { items: [{ item_id: 'SKU-8' }] } });
     await new Promise((r) => setTimeout(r, 0));
@@ -73,7 +73,7 @@ describe('emit', () => {
     listeners.get('btn:click')!({});
     await vi.waitFor(() => expect(posted()).toHaveLength(4));
     expect(posted().map((p) => [p.type, p.data.event ?? null])).toEqual([
-      ['custom', 'content_impression'], ['custom', 'content_dwell'], ['custom', 'content_click'], ['add_to_cart', null],
+      ['content_impression', null], ['content_dwell', null], ['content_click', null], ['add_to_cart', null],
     ]);
     expect(posted()[1]!.data).toMatchObject({ contentId: 'c1', slot: 'story', contentType: 'editorial', ms: 1800 });
     expect(posted()[3]!.data).toEqual({ productId: 'SKU-3' });
