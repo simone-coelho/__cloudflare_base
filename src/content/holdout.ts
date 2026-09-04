@@ -13,9 +13,25 @@ export function fnv1a(s: string): number {
   return h >>> 0;
 }
 
+/**
+ * The finalizer murmur3 ends with: every input bit reaches every output bit. FNV-1a alone leaves ids
+ * that differ only in their last character a fixed distance apart, so a customer whose visitor ids are
+ * sequential (account numbers, a commerce customer list) would get a holdout that is a block sample,
+ * not a random one (found 2026-09-04; 180 of 200 blocks of ten consecutive ids on one arm, 0 after).
+ */
+export function mix32(h: number): number {
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+/** A well-mixed 32-bit hash of a string: FNV-1a with the finalizer. The same everywhere a bucket is drawn. */
+export const hash32 = (s: string): number => mix32(fnv1a(s));
+
 /** A visitor's position in [0, 1), stable for a given salt. */
 export function bucketOf(visitorId: string, salt: string): number {
-  return fnv1a(`${salt}:${visitorId}`) / 4294967296;
+  return hash32(`${salt}:${visitorId}`) / 4294967296;
 }
 
 export function armFor(visitorId: string, h: HoldoutConfig): Arm {

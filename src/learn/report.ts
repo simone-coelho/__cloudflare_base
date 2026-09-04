@@ -15,6 +15,7 @@ import { attribute, DEFAULT_POLICY, type AttributionPolicy, type RingEntry } fro
 import { ringEntryOf } from './fan';
 import { buildSnapshot, DEFAULT_STATS, emptyStats, recordExposure, recordSuccess, type LiftSnapshot, type StatsConfig } from './stats';
 import { policyOf, slotConfigsOf } from './route';
+import { compareArms, type ArmComparison } from '@/measure/holdout';
 
 export interface ReportPolicy extends AttributionPolicy { name: string }
 
@@ -47,6 +48,8 @@ export interface DayReport {
   exploration: ExploreRow[];
   /** slot → arms compared under the learning policy. */
   holdout: Record<string, ArmRow[]>;
+  /** slot → each holdout arm against the personalized arm: intervals, verdict, decisions still needed, and the sentence (doc 22 §10). */
+  holdoutComparison: Record<string, ArmComparison[]>;
 }
 
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
@@ -83,13 +86,15 @@ export function buildReport(i: ReportInput): DayReport {
   const policies: DayReport['policies'] = [];
   const grids: DayReport['grids'] = {};
   const holdout: DayReport['holdout'] = {};
+  const holdoutComparison: DayReport['holdoutComparison'] = {};
 
   const all: Array<{ p: ReportPolicy; role: 'learning' | 'reporting' }> = [{ p: i.learning, role: 'learning' }, ...i.reporting.map((p) => ({ p, role: 'reporting' as const }))];
   for (const { p, role } of all) {
-    // Exposures: every decision on the personalized arm, as the fan-in records them.
+    // Exposures: the personalized arm's decisions only, as the fan-in records them (§10: holdout traffic
+    // never feeds the statistics; the arms are compared from the ledger below).
     const states = new Map<string, ReturnType<typeof emptyStats>>();
     const stateOf = (slot: string) => { let s = states.get(slot); if (!s) { s = emptyStats(); states.set(slot, s); } return s; };
-    for (const d of i.decisions) if (d.arm !== 'default') recordExposure(stateOf(d.slot), d.item_id, d.cell, d.ts, statsCfg);
+    for (const d of i.decisions) if (d.arm === 'personalized') recordExposure(stateOf(d.slot), d.item_id, d.cell, d.ts, statsCfg);
     // Credits under this policy, from every outcome against its visitor's ring.
     let credits = 0;
     const armCredits = new Map<string, number>();
@@ -101,9 +106,9 @@ export function buildReport(i: ReportInput): DayReport {
         if (c.reward !== reward) continue;                       // the slot learns against one reward
         credits += 1;
         const d = i.decisions.find((x) => x.decision_id === c.decision_id);
-        if (d?.arm === 'default') { armCredits.set(`${c.slot}|default`, (armCredits.get(`${c.slot}|default`) ?? 0) + 1); continue; }
-        armCredits.set(`${c.slot}|${d?.arm ?? 'personalized'}`, (armCredits.get(`${c.slot}|${d?.arm ?? 'personalized'}`) ?? 0) + 1);
-        recordSuccess(stateOf(c.slot), c.item, c.cell, c.reward as RewardType, c.ts, c.weight, statsCfg);
+        const arm = d?.arm ?? 'personalized';
+        armCredits.set(`${c.slot}|${arm}`, (armCredits.get(`${c.slot}|${arm}`) ?? 0) + 1);
+        if (arm === 'personalized') recordSuccess(stateOf(c.slot), c.item, c.cell, c.reward as RewardType, c.ts, c.weight, statsCfg);
       }
     }
     policies.push({ name: p.name, policy: { scope: p.scope, match: p.match, credit: p.credit, windowsMs: p.windowsMs }, role, credits });
@@ -120,6 +125,10 @@ export function buildReport(i: ReportInput): DayReport {
           const credited = armCredits.get(`${slot}|${arm}`) ?? 0;
           return { arm, decisions, credited, rate: decisions ? r3(credited / decisions) : 0 };
         });
+        // Each holdout arm against the personalized one, with the uncertainty a person needs to read the number.
+        const rows = holdout[slot]!;
+        const treated = rows.find((r) => r.arm === 'personalized');
+        holdoutComparison[slot] = treated ? rows.filter((r) => r.arm !== 'personalized').map((r) => compareArms({ arm: r.arm, n: r.decisions, s: r.credited }, { arm: 'personalized', n: treated.decisions, s: treated.credited })) : [];
       }
     }
   }
@@ -135,7 +144,7 @@ export function buildReport(i: ReportInput): DayReport {
   return {
     tenant: i.tenant, brand: i.brand, date: i.date, builtAt: i.now,
     counts: { decisions: i.decisions.length, outcomes: i.outcomes.length, visitors: rings.size, truncated: i.truncated },
-    policies, grids, exploration, holdout,
+    policies, grids, exploration, holdout, holdoutComparison,
   };
 }
 

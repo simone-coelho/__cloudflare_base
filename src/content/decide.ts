@@ -78,7 +78,9 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   // both kept so the receipt shows the arithmetic, not only its result.
   const baseOf = new Map<string, number>();
   const liftOf = new Map<string, LiftApplied>();
-  const learning = i.arm === 'default' ? null : i.learning ?? null;
+  // Doc 22 §10: `default` sees no personalization at all; `no_learning` is personalized with γ = 0 and
+  // no exploration, the arm that separates what stage one contributes from what stage two adds.
+  const learning = i.arm === 'default' ? null : i.arm === 'no_learning' && i.learning ? { ...i.learning, gammaOf: () => 0, exploreOf: undefined } : i.learning ?? null;
   // Phase 3 (doc 22 §9): their model's term, w_ext × score, added to the base
   // score before the lift and itemized like every other driver.
   const ext = i.arm === 'default' ? null : i.external ?? null;

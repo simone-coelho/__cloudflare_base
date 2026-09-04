@@ -176,6 +176,14 @@ stating plainly: **any number of policies can run over the same data at the same
 windows above. It is the most conservative choice, the hardest to game, and the easiest to explain. The
 looser policies are the natural first reporting overlays.
 
+*What "session" is, stated once (2026-09-04, after the holdout proof found that session scope credited
+nothing).* The session is the shopper's browsing session as the client keeps it: one id across page loads
+and tabs until thirty idle minutes, persisted by the SDK and sent on the snapshot request and on every
+event, so the decision record and the outcome record carry the same id and can be compared. It is not the
+server's session record, which lives thirty days and would make session scope mean visitor scope. A client
+that sends no session gets the server's on both records, so the comparison still holds; only the meaning
+narrows to what the server can see.
+
 ### 4.3 Online and batch
 
 Attribution runs in two places, deliberately.
@@ -450,6 +458,17 @@ sampled estimates at high write rates and are for dashboards only.
 
 The `no_learning` arm is the one a data scientist will ask for. It separates what stage one contributes
 from what stage two adds on top, which is the number that justifies stage two.
+
+Built and corrected 2026-09-04, after the holdout proof: the `no_learning` arm now runs at γ = 0 with no
+exploration whatever the slot's dials say, and its receipt shows the lift it ignored; only the
+personalized arm's exposures reach the statistics objects, and attribution credits only the personalized
+arm's decisions, so the absolute rule holds online as well as in the report. Assignment hashes with a
+finalizer (murmur3's), because FNV-1a alone left sequential visitor ids a fixed distance apart and a
+customer list of account numbers would have been a block sample; this reassigned every visitor once,
+the rotation `salt` already allows, and is right before launch. The day report compares each holdout arm
+against the personalized arm with a Wilson interval per arm, a Newcombe interval for the difference, a
+verdict, the decisions still needed to call a difference of the observed size, and the sentence a person
+reads; the console shows the sentence under the arm table.
 
 ---
 

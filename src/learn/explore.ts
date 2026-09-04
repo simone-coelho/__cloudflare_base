@@ -12,7 +12,7 @@
 // Thompson explores by ranking on a rate sampled from each item's evidence,
 // seeded from the same inputs, so the sample is recomputable.
 
-import { fnv1a } from '@/content/holdout';
+import { hash32 } from '@/content/holdout';
 import type { LiftSnapshot } from './stats';
 
 export type ExploreMode = 'rotation' | 'thompson' | 'epsilon' | 'off';
@@ -41,7 +41,7 @@ export interface ExplorePick {
 
 /** A deterministic unit interval from the decision's own coordinates. */
 export function bucketOf(visitorId: string, slot: string, hourKey: string): number {
-  return fnv1a(`explore:${visitorId}:${slot}:${hourKey}`) / 4294967296;
+  return hash32(`explore:${visitorId}:${slot}:${hourKey}`) / 4294967296;
 }
 export const hourKeyOf = (ms: number) => String(Math.floor(ms / 3_600_000));
 
@@ -86,7 +86,7 @@ export function explorationPick(
 
   if (cfg.mode === 'thompson') {
     // Every decision ranks on a sampled rate; the sample is the exploration.
-    const rng = mulberry32(fnv1a(`thompson:${visitorId}:${slot}:${hourKeyOf(nowMs)}`));
+    const rng = mulberry32(hash32(`thompson:${visitorId}:${slot}:${hourKeyOf(nowMs)}`));
     const samples: Record<string, number> = {};
     for (const r of ranked) {
       const st = snapshot?.items[r.id]?.['*'];

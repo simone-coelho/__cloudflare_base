@@ -136,13 +136,14 @@ decisionRoutes.get('/:tenant/decisions/snapshot', async (c) => {
   const page = ((c.req.query('page') ?? 'home').trim() || 'home').slice(0, 64);
   const brand = (c.req.query('brand') ?? '').trim() || undefined;
   const channel = (c.req.query('channel') ?? '').trim() || null;
+  const sessionId = (c.req.query('sessionId') ?? '').trim().slice(0, 64) || null;
   const cf = ((c.req.raw as unknown as { cf?: unknown }).cf ?? null) as { country?: string; regionCode?: string } | null;
 
   // Two names, on purpose, until CW1 provisions tenants: the path names the SCOPE
   // the documents are read under; the tenancy middleware names the brand whose
   // shopper state and session this request belongs to.
   const out = await serveContentDecisions(c.env, {
-    tenant, brand, page, visitorId, channel, cf, cookieHeader: c.req.header('Cookie') ?? null,
+    tenant, brand, page, visitorId, sessionId, channel, cf, cookieHeader: c.req.header('Cookie') ?? null,
     stateTenant: c.get('tenant'),
   });
   // Phase 0 and Phase 1, after the response, never on it: the ledger, the visitor's ring, each slot's exposures.

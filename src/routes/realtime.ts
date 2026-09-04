@@ -116,12 +116,14 @@ realtimeRoutes.post('/action', async (c) => {
     const capture = captureDemoEvent(c.env, actionEvent, sessionId);
     try { c.executionCtx.waitUntil(capture); } catch { void capture; /* no execCtx (e.g. tests) */ }
     // Phase 0 (doc 22 §3.2): a reward-bearing action becomes an outcome record, after the response.
-    // The outcome carries the SERVER's session, the one the engine resolves for this visitor, because that
-    // is the session the decision record carries. The client's own sessionId is a different notion, and
-    // while the outcome carried it the two never matched, so session-scope attribution credited nothing
-    // from a real client (found 2026-09-04 by the storefront rehearsal). Called once the host has answered.
+    // The outcome's session must be the session the decision record carries, or session-scope
+    // attribution compares two id spaces and credits nothing (found 2026-09-04). Both now prefer the
+    // client's browsing session, which the SDK persists with an idle rule and sends on the snapshot and
+    // on every event; a client that sends none gets the server's session on both. Called once the host
+    // has answered, so the server's session is known.
     const emitOutcome = (serverSessionId: unknown) => {
-      const outcome = outcomeFromAction({ ...actionEvent, sessionId: typeof serverSessionId === 'string' && serverSessionId ? serverSessionId : sessionId }, c.get('tenant'));
+      const server = typeof serverSessionId === 'string' && serverSessionId ? serverSessionId : undefined;
+      const outcome = outcomeFromAction({ ...actionEvent, sessionId: sessionId ?? server }, c.get('tenant'));
       if (outcome) { const p = Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]); try { c.executionCtx.waitUntil(p); } catch { void p; } }
     };
 

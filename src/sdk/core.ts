@@ -5,7 +5,7 @@
 // the socket URL, the welcome frame, the reconnect delay, the action envelope
 // and the POST-versus-push dedupe are its behavior, verbatim.
 
-import { DEFAULT_VISITOR_KEY, entrySignals, mintAnonId, mintSessionId, mintVisitorId, writeVisitorId } from './identity';
+import { currentSessionId, DEFAULT_VISITOR_KEY, entrySignals, mintAnonId, mintVisitorId, writeVisitorId } from './identity';
 import { toWire } from './wire';
 import type {
   ActionEnvelope, ClientConfig, CoreEvents, DecisionSet, EngineUpdate, EntrySignals, Host, Paths,
@@ -90,7 +90,9 @@ export function createCore(config: ClientConfig, host: Host): Core {
   const cfg = resolveConfig(config, host);
   let visitorId = mintVisitorId(host, cfg.visitorIdKey);
   const anonId = mintAnonId(host);
-  const sessionId = mintSessionId(host);
+  let sessionId = currentSessionId(host);
+  /** The session as of now: the same id until the shopper has been idle for thirty minutes, then a new one. */
+  const session = () => { sessionId = currentSessionId(host); return sessionId; };
   const entry = entrySignals(host);
 
   const listeners = new Map<string, Set<(...args: unknown[]) => void>>();
@@ -131,7 +133,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
       type: w.type,
       userId: visitorId,
       anonymousId: anonId,
-      sessionId,
+      sessionId: session(),
       data: w.data,
       source: cfg.source,
       ...(cfg.surface ? { surface: cfg.surface } : {}),
@@ -269,8 +271,9 @@ export function createCore(config: ClientConfig, host: Host): Core {
   }
 
   return {
-    config: cfg, host, anonId, sessionId, entry,
+    config: cfg, host, anonId, entry,
     get visitorId() { return visitorId; },
+    get sessionId() { return session(); },
     get socketStatus() { return status; },
     on, emit, envelope, send, url, headers, getJson, postJson, setVisitorId, connect, disconnect, applyIncoming,
   };

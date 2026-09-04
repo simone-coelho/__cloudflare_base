@@ -26,7 +26,7 @@ describe('listen', () => {
     listen.subscribe('rail', (d) => rail.push(d));
     listen.onDecisions((s) => sets.push(s?.arm ?? null));
     const set = await listen.hydrate({ page: 'home', channel: 'paid social' });
-    expect(calls[0]?.url).toBe(`https://shop.example/v1/coach/decisions/snapshot?page=home&visitorId=${encodeURIComponent(core.visitorId)}&brand=coach&channel=paid%20social`);
+    expect(calls[0]?.url).toBe(`https://shop.example/v1/coach/decisions/snapshot?page=home&visitorId=${encodeURIComponent(core.visitorId)}&sessionId=${encodeURIComponent(core.sessionId)}&brand=coach&channel=paid%20social`);
     expect(set?.decisions).toHaveLength(3);
     expect(hero).toEqual([['c1']]);
     expect(story).toEqual([['c3', 'c2']]);

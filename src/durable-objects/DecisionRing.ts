@@ -76,7 +76,9 @@ export class DecisionRing {
 
   private async outcome(tenant: string, brand: string, outcome: OutcomeRecord, policy: AttributionPolicy, slotConfig: Record<string, SlotLearnConfig>): Promise<number> {
     const d = await this.load();
-    const ring: RingEntry[] = d.ring.map(ringEntryOf);
+    // Doc 22 §10, absolute: a holdout arm's outcomes never feed the statistics. Attribution runs over
+    // the personalized arm's decisions only; the report attributes every arm from the ledger itself.
+    const ring: RingEntry[] = d.ring.map(ringEntryOf).filter((e) => e.arm === 'personalized');
     const credits = attribute(outcome, ring, policy);
     // Credits fan to each slot's statistics object, off this object's own path too.
     const bySlot = new Map<string, typeof credits>();

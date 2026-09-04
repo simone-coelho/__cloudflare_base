@@ -39,7 +39,9 @@ export async function fanDecisions(env: Pick<Env, 'DECISION_RING' | 'LEARN_STATS
     post(env.DECISION_RING, ringName(set.tenant, set.visitor_id), '/append', { tenant: set.tenant, visitorId: set.visitor_id, records: set.records }),
   ];
   const bySlot = new Map<string, DecisionRecord[]>();
-  for (const r of set.records) { if (r.arm === 'personalized' || r.arm === 'no_learning') bySlot.set(r.slot, [...(bySlot.get(r.slot) ?? []), r]); }
+  // Doc 22 §10, absolute: holdout traffic never feeds the statistics. Only the personalized arm's
+  // exposures count; the ring still keeps every arm's decisions, for the receipt and the report.
+  for (const r of set.records) { if (r.arm === 'personalized') bySlot.set(r.slot, [...(bySlot.get(r.slot) ?? []), r]); }
   for (const [slot, records] of bySlot) {
     jobs.push(post(env.LEARN_STATS, statsName(set.tenant, set.brand, slot), '/exposures', {
       tenant: set.tenant, brand: set.brand, slot, config: slotConfig(slot),

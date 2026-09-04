@@ -29,6 +29,8 @@ export interface ServeRequest {
   page: string;
   visitorId: string;
   cookieHeader: string | null;
+  /** The client's browsing session, when the SDK sends one: what the decision's session_id carries, so an outcome from the same client compares equal. */
+  sessionId?: string | null;
   cf?: CfLike | null;
   channel?: string | null;
   nowMs?: number;
@@ -183,7 +185,7 @@ export async function serveContentDecisions(
   const controlOf = (slot: string, item: string) => learn.slots?.[slot]?.items?.[item] ?? null;
 
   const set = decideContent({
-    tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: shopper.sessionId, identityAnchor, nowMs: now,
+    tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: r.sessionId || shopper.sessionId, identityAnchor, nowMs: now,
     pieces: catalog.pieces, slots, affinity, regional, cell, arm,
     versions: { config: configRevision, catalog: catalogRev?.revision ?? 0, slots: slotsRev?.revision ?? 0, learn: learnRev?.revision ?? 0, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },
     configLabel: cfg.version,

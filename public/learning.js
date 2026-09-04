@@ -291,6 +291,8 @@
     if (arms.length) {
       host.append(h('div', { class: 'subhead' }, 'The holdout arms, under the learning policy'));
       host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Arm'), h('th', { class: 'num' }, 'decisions'), h('th', { class: 'num' }, 'credited'), h('th', { class: 'num' }, 'rate'))), h('tbody', {}, ...arms.map((a) => h('tr', {}, h('td', {}, a.arm), h('td', { class: 'num' }, a.decisions), h('td', { class: 'num' }, a.credited), h('td', { class: 'num' }, a.rate))))));
+      // The number a person can read: each holdout arm against personalized, with its interval and what it would take to call it.
+      for (const cmp of ((R.holdoutComparison || {})[S.slot] || [])) host.append(h('div', { class: 'kv' }, h('span', { class: 'k' }, `${cmp.treatment.arm} vs ${cmp.control.arm}`), h('span', { class: 'v' }, cmp.words)));
     }
   }
   function reportCsv() {

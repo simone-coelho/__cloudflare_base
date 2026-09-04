@@ -43,7 +43,9 @@ describe('exploration', () => {
   });
 
   it('thompson: ranks on a seeded sample, flags only when the sample disagrees, and the sample is recomputable', () => {
-    const s = snap({ a: { n: 1000, s: 100, lift: 1 }, b: { n: 4, s: 3, lift: 1.5 }, c: { n: 1000, s: 50, lift: 0.5 } });
+    // a is tight at 0.3; b's posterior is wide around it, so the sample beats a about half the time;
+    // the old fixture (b at 3 of 4) beat a in effect always and only passed because the seeds were poorly mixed
+    const s = snap({ a: { n: 1000, s: 300, lift: 1 }, b: { n: 4, s: 1, lift: 1 }, c: { n: 1000, s: 50, lift: 0.5 } });
     const cfg = { mode: 'thompson' as const, share: 1, floor: 0 };
     let flagged = 0;
     for (let i = 0; i < 200; i++) {
@@ -51,7 +53,7 @@ describe('exploration', () => {
       if (p) { flagged++; expect(p.samples).toBeDefined(); expect(p.ranking![0]).toBe(p.pieceId); expect(explorationPick({ visitorId: `t${i}`, slot: 'hero', nowMs: T0, ranked, snapshot: s, cfg })).toEqual(p); }
     }
     expect(flagged).toBeGreaterThan(20);      // b's wide posterior wins often
-    expect(flagged).toBeLessThan(200);
+    expect(flagged).toBeLessThan(180);        // and not always
     const rng = () => 0.5;
     expect(betaSample(rng, 1, 1)).toBeGreaterThan(0);
   });

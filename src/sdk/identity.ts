@@ -35,8 +35,26 @@ export function mintAnonId(host: Host): string {
   return `v-${host.uuid().replace(/-/g, '').slice(0, 9).toUpperCase()}`;
 }
 
+/**
+ * The browsing session: one id across page loads and tabs until the shopper has been idle for
+ * `idleMs` (30 minutes by default, the convention analytics tools share). Kept in storage as
+ * `{ id, at }`; every event touches `at`. This is the session attribution's "session scope" means:
+ * the decision carries it and the outcome carries it, so the two can be compared.
+ */
+export const DEFAULT_SESSION_KEY = 'opt_session';
+export const DEFAULT_SESSION_IDLE_MS = 30 * 60 * 1000;
+
+export function currentSessionId(host: Host, key = DEFAULT_SESSION_KEY, idleMs = DEFAULT_SESSION_IDLE_MS): string {
+  const now = host.now();
+  let stored: { id?: unknown; at?: unknown } | null = null;
+  try { const raw = host.storage.get(key); stored = raw ? (JSON.parse(raw) as { id?: unknown; at?: unknown }) : null; } catch { stored = null; }
+  const id = stored && typeof stored.id === 'string' && typeof stored.at === 'number' && now - stored.at < idleMs ? stored.id : mintSessionId(host);
+  try { host.storage.set(key, JSON.stringify({ id, at: now })); } catch { /* storage may be unavailable: the id lives for this load */ }
+  return id;
+}
+
 export function mintSessionId(host: Host): string {
-  return `s-${host.now().toString(36).toUpperCase()}`;
+  return `s-${host.now().toString(36).toUpperCase()}${host.uuid().replace(/-/g, '').slice(0, 6).toUpperCase()}`;
 }
 
 /**

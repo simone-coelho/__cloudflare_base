@@ -36,8 +36,26 @@
   function mintAnonId(host) {
     return `v-${host.uuid().replace(/-/g, "").slice(0, 9).toUpperCase()}`;
   }
+  var DEFAULT_SESSION_KEY = "opt_session";
+  var DEFAULT_SESSION_IDLE_MS = 30 * 60 * 1e3;
+  function currentSessionId(host, key = DEFAULT_SESSION_KEY, idleMs = DEFAULT_SESSION_IDLE_MS) {
+    const now = host.now();
+    let stored = null;
+    try {
+      const raw = host.storage.get(key);
+      stored = raw ? JSON.parse(raw) : null;
+    } catch {
+      stored = null;
+    }
+    const id = stored && typeof stored.id === "string" && typeof stored.at === "number" && now - stored.at < idleMs ? stored.id : mintSessionId(host);
+    try {
+      host.storage.set(key, JSON.stringify({ id, at: now }));
+    } catch {
+    }
+    return id;
+  }
   function mintSessionId(host) {
-    return `s-${host.now().toString(36).toUpperCase()}`;
+    return `s-${host.now().toString(36).toUpperCase()}${host.uuid().replace(/-/g, "").slice(0, 6).toUpperCase()}`;
   }
   function entrySignals(host) {
     let utmMedium = "", utmSource = "";
@@ -102,7 +120,11 @@
     const cfg = resolveConfig(config, host);
     let visitorId = mintVisitorId(host, cfg.visitorIdKey);
     const anonId = mintAnonId(host);
-    const sessionId = mintSessionId(host);
+    let sessionId = currentSessionId(host);
+    const session = () => {
+      sessionId = currentSessionId(host);
+      return sessionId;
+    };
     const entry = entrySignals(host);
     const listeners = /* @__PURE__ */ new Map();
     function on(event, fn) {
@@ -143,7 +165,7 @@
         type: w.type,
         userId: visitorId,
         anonymousId: anonId,
-        sessionId,
+        sessionId: session(),
         data: w.data,
         source: cfg.source,
         ...cfg.surface ? { surface: cfg.surface } : {},
@@ -338,10 +360,12 @@
       config: cfg,
       host,
       anonId,
-      sessionId,
       entry,
       get visitorId() {
         return visitorId;
+      },
+      get sessionId() {
+        return session();
       },
       get socketStatus() {
         return status;
@@ -555,6 +579,7 @@
       const json = await core.getJson(core.config.paths.snapshot, {
         page: o.page,
         visitorId: core.visitorId,
+        sessionId: core.sessionId,
         brand: core.config.brand,
         channel: o.channel
       });
@@ -786,7 +811,9 @@
       get visitorId() {
         return core.visitorId;
       },
-      sessionId: core.sessionId,
+      get sessionId() {
+        return core.sessionId;
+      },
       core,
       emit,
       listen,

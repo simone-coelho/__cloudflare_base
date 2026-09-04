@@ -33,7 +33,7 @@ export function createClient(config: ClientConfig, host: Host = browserHost(), o
   const emit = createEmit(core, listen);
   const identity = createIdentity(core);
   return {
-    VERSION, get visitorId() { return core.visitorId; }, sessionId: core.sessionId, core, emit, listen,
+    VERSION, get visitorId() { return core.visitorId; }, get sessionId() { return core.sessionId; }, core, emit, listen,
     identify: (accountId, options) => identity.identify(accountId, options),
     logout: () => identity.logout(),
     connect: () => core.connect(),

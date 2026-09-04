@@ -36,3 +36,16 @@ describe('holdout assignment', () => {
     for (const id of ids.slice(0, 1000)) { const b = bucketOf(id, 'x'); expect(b).toBeGreaterThanOrEqual(0); expect(b).toBeLessThan(1); }
   });
 });
+
+describe('sequential visitor ids (R12-3)', () => {
+  it('blocks of consecutive ids scatter across the arms instead of landing together', () => {
+    const h = { share: 0.5, salt: 'coach', arms: ['default'] as Array<'default'> };
+    let sameArm = 0;
+    for (let b = 0; b < 200; b++) {
+      const arms = new Set(Array.from({ length: 10 }, (_, i) => armFor(`cust-${100000 + b * 10 + i}`, h)));
+      if (arms.size === 1) sameArm += 1;
+    }
+    // random assignment puts a block of ten on one arm about 0.4 times in 200; FNV-1a alone did it 180 times
+    expect(sameArm).toBeLessThan(6);
+  });
+});

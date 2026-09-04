@@ -72,7 +72,7 @@ export function createListen(core: Core, opts: ListenOptions = {}): Listen {
     let timedOut = false;
     const timer = host.setTimeout(() => { if (!settled) { timedOut = true; notifyAbsence(); } }, core.config.hydrateTimeoutMs);
     const json = (await core.getJson(core.config.paths.snapshot, {
-      page: o.page, visitorId: core.visitorId, brand: core.config.brand, channel: o.channel,
+      page: o.page, visitorId: core.visitorId, sessionId: core.sessionId, brand: core.config.brand, channel: o.channel,
     })) as { ok?: boolean; page?: string; arm?: string; versions?: Record<string, number>; config_label?: string; decisions?: unknown; ts?: number } | null;
     settled = true;
     host.clearTimeout(timer);
