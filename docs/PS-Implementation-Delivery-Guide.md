@@ -90,6 +90,8 @@ Nothing works without events. The engine scores what it receives; a silent site 
 
 **The event schema (what the tag plan must produce):** page/product views · product interactions (view/wishlist/add-to-cart with product attributes flattened) · content interactions (impression/click/dwell/video-completion with content tags) · purchase/conversion (order ID, items, value) · context (entry channel from UTM/referrer — captured automatically by the SDK core; coarse geo comes from the edge, zero client work).
 
+**Consent (CW31, 2026-09-04):** the site tells the engine the shopper's two switches, tracking and personalization, and the engine honours them: either off means the site's own defaults; tracking off means nothing is written, forwarded or learned from. On the session host the switches ride the preferences call (`POST /realtime/session/:sessionId/preferences`) and its cookies; on the object host the same call with the `userId` reaches the shopper's object, and an event may carry `data.consent: { tracking, personalization }`. Absent means consenting. Erasure is `POST /v1/:tenant/identity/erase` with the operator token: links, every profile, and the ledger rows, with a receipt that also says what it cannot reach (ODP's copy, erased through ODP's own API).
+
 **Method selection:** dataLayer adapter first wherever a tag layer exists; declarative attributes for slot-level capture; explicit API for commerce. The tag plan template (page types × events × method × owner × status) is filled in during P1 and executed in P4.
 
 **QA:** the event-validation debug overlay — PS enables it on the customer's staging site and watches events land, scores move, and decisions change, live. Tagging is DONE when the overlay shows the full schema flowing on every page type in the plan, not when the code is merged.
@@ -97,6 +99,32 @@ Nothing works without events. The engine scores what it receives; a silent site 
 ## 7. Content pipeline onboarding
 
 Per brand: content feed (their ID, type from the agreed taxonomy, render URL, tags, slot eligibility, lifecycle) via CMS/DAM API or JSON/CSV export → source adapter → **immutable snapshots** (build → validate → activate; requests never see a half-loaded catalog). Sparse metadata is expected: the enrichment pipeline proposes tags (design-time AI, never in the serving path) and **the customer approves them** — calibrated on an early ~100–500-asset sample during P3. Merchandiser controls carry over from day one: per-slot pinned overrides ("this campaign owns the hero during the promo window"), priority rules, exclusions, off-limits slots.
+
+### 7.1 Content metadata: the customer's fields to ours
+
+*Added 2026-09-04 (CW32). Tapestry's BTIE document (appendix A.3.6) names the metadata an ML-ranked content
+library needs. Every one of them has a home in our piece schema; most already existed under another name.
+The authoritative field list is `docs/kit/03-payload-schemas.md`, "The content piece". This page is the
+translation, so a content team tags once and correctly.*
+
+| Their field (A.3.6) | Ours | How it is used | Note |
+|---|---|---|---|
+| `style_cluster` (classic, contemporary, minimalist, maximalist) | a tag on a registry dimension, e.g. `tags: { styleWorld: ["minimalist"] }` | Scored against the shopper's affinity for that dimension, weighted per slot | The dimension's name is the brand's choice at registry time; `styleWorld` is what the demo uses |
+| `journey_stage_fit` (`[explore, consider]`, `[decide]`) | `journeyStageFit: ["exploring", "considering"]` | A slot's `stage` rule demotes a piece made for another stage and can bonus one made for the shopper's | Their words are accepted as written; `early` / `mid` / `late` also accepted. Absent fits every stage |
+| `occasion_tags` (work, evening, weekend, travel, special-event) | `tags: { occasion: [...] }` | A registry dimension like any other | Multi-valued |
+| `featured_product_ids` (`["SKU123", "SKU456"]`) | `featuredProductIds: ["SKU123", "SKU456"]` | Carried on the piece and the receipt, in the customer's product ids, validated, never rewritten | Links content to product decisions |
+| `price_tier` (entry, core, aspirational) | `tags: { priceBand: ["core"] }` | Scored against the shopper's price posture, the same dimension products carry | Our bands are `entry` / `core` / `elevated`; a brand may name its own cuts in the registry |
+| `content_format` (hero-image, carousel, video, editorial, lookbook) | `type`, and `tags: { contentType: [...] }` | The shopper's format affinity is learned from content events (`contentType` dimension) | `type` is the piece's kind; the tag is what affinity scores on |
+| `content_embedding` (64-dim vector) | not stored | An embedding model scores as the external model term (`learn.external`), with a latency budget, itemised on the receipt | We do not learn dense vectors; the profile is a readable vector over the registry. Their model plugs in |
+| `freshness_date` | `freshnessDate` (ISO 8601) | A slot's `freshness` rule gives a bonus that halves per half-life from this date | Absent: ages from `window.from` |
+| `min_impressions` (1000 hero, 500 modules) | the slot's exploration `floor` on the learn document | Under-observed pieces are rotated in until they have `floor` observations | Per slot, not per piece; the default is 50 |
+| *(implied by A.4)* inventory | `inStock` (`in_stock` / `ats` in a feed) | `false` removes the piece from every decision | Absent means in stock |
+| *(implied by A.3.5)* seen-before | nothing to tag | A slot's `fatigue` rule penalises what this shopper was served inside a window, from the ledger's ring | Automatic |
+
+What a content team therefore supplies per piece, beyond the required id, type, title, tags and slot types:
+`journeyStageFit`, `freshnessDate`, `featuredProductIds`, `inStock`, and the `merchandising` signals
+(`season`, `promotion`, `margin`, each 0 to 1) when the multipliers are on. Everything else is a slot
+setting a merchandiser makes once.
 
 ## 8. Customer prerequisites checklist (the qualification list)
 

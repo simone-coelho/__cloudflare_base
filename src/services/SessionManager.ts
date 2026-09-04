@@ -449,6 +449,20 @@ export class SessionManager {
   }
 
   /**
+   * CW28. Forget a browser entirely: its `user:` pointer, and its own record
+   * when the link remembered one (after a link the pointer names the person, so
+   * the browser's pre-link record is reachable only this way).
+   */
+  async forgetVisitor(userId: string, ownSessionId?: string | null): Promise<void> {
+    try {
+      if (ownSessionId) await this.kv.delete(`session:${ownSessionId}`);
+      await this.kv.delete(`user:${userId}`);
+    } catch (error) {
+      console.error('Error forgetting visitor:', error);
+    }
+  }
+
+  /**
    * Get session data by user ID
    */
   async getSessionByUserId(userId: string): Promise<SessionData | null> {

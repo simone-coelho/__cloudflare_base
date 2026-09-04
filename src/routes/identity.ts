@@ -8,6 +8,7 @@
 //   GET  /v1/:tenant/identity/visitor/:visitorId   which person, if any
 //   GET  /v1/:tenant/identity/shopper/:shopperId   which browsers, and the history applied
 //   POST /v1/:tenant/identity/events    historical rows, JSON or CSV
+//   POST /v1/:tenant/identity/erase     the right to be forgotten: links, profiles, ledger rows
 //
 // Mounted under /v1, so the site-key gate (CW10) covers everything here. The
 // link and detach are the SDK's calls and need only the site key, plus the
@@ -26,6 +27,8 @@ import { linkVisitor, validVisitorId } from '@/identity/link';
 import { IdentityStore } from '@/identity/store';
 import { isSalted, isShopperId, shopperIdFor } from '@/identity/shopperId';
 import { applyHistory, historyRowSchema, parseHistoryCsv, MAX_ROWS } from '@/identity/history';
+import { eraseSubject } from '@/identity/erase';
+import type { AuthContext } from '@/middleware/auth';
 
 export const identityRoutes = new Hono<{ Bindings: Env; Variables: TenantVariables }>();
 
@@ -163,3 +166,24 @@ identityRoutes.post('/:tenant/identity/events', jwt({ required: true }), async (
   return c.json({ ok: true, tenant, ...report });
 });
 
+/**
+ * CW28. Forget a person, or an unlinked browser: the link table, every
+ * profile, and the ledger rows (tombstoned at once, rewritten nightly by the
+ * ledger's job). Operator token. The receipt lists what was erased and what
+ * this cannot reach.
+ */
+identityRoutes.post('/:tenant/identity/erase', jwt({ required: true }), async (c) => {
+  const tenant = tenantOf(c);
+  if (!tenant) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  let body: { visitorId?: unknown; shopperId?: unknown } = {};
+  try { body = await c.req.json(); } catch { return c.json({ ok: false, error: 'invalid JSON body' }, 400); }
+  const visitorId = typeof body.visitorId === 'string' ? body.visitorId.trim() : '';
+  const shopperId = typeof body.shopperId === 'string' ? body.shopperId.trim() : '';
+  if (!visitorId && !shopperId) return c.json({ ok: false, error: 'visitorId or shopperId required' }, 400);
+  if (visitorId && !validVisitorId(visitorId)) return c.json({ ok: false, error: 'visitorId is not a visitor id' }, 400);
+  if (shopperId && !isShopperId(shopperId)) return c.json({ ok: false, error: 'shopperId is not a shopper id' }, 400);
+  const actor = (c as unknown as { get: (k: 'auth') => AuthContext | undefined }).get('auth')?.user?.sub ?? 'operator';
+  const receipt = await eraseSubject(c.env, tenant, { ...(visitorId ? { visitorId } : {}), ...(shopperId ? { shopperId } : {}) }, actor);
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, ...receipt });
+});

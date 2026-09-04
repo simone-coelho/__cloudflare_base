@@ -44,6 +44,7 @@ All under `/v1/:tenant/identity/`, so CW10's site-key gate covers them.
 | `POST resolve` `{ accountIds[] }` | operator token | Account ids → shopper ids, so the warehouse can join without holding the salt |
 | `GET visitor/:visitorId` | operator token | The link, if any, from the browser's end |
 | `GET shopper/:shopperId` | operator token | The browsers on the person and the history applied. The account id is not on it |
+| `POST erase` `{ visitorId \| shopperId }` | operator token | **CW28.** The right to be forgotten: the link table, every profile on either host (the person's session, each browser's pointer and its pre-link record, which the link remembers as `ownSessionId`), and the ledger rows through the ledger's tombstone (honoured at once, rewritten nightly). A linked visitor erases the whole person, because the browser's behaviour already folded in. The receipt lists every id erased and what this cannot reach: ODP's copy, erased through ODP's own API |
 | `POST events` (JSON `{ rows }` or `text/csv`) | operator token | Historical rows, ≤ 1000 per request. A row: `accountId \| shopperId \| visitorId`, `action`, `at` (ISO, ms, or unix seconds), and product attributes the registry reads (`line`, `category`, `price_usd`, …). Rows with no weight or no registry attribute are skipped and named by index; a malformed row fails the request. Reports per-shopper audiences after the batch |
 
 Live proof: `node scripts/identity-proof.mjs http://localhost:9100` — 28 checks, all real requests.

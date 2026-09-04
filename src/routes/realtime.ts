@@ -380,7 +380,9 @@ realtimeRoutes.post('/session/reset', async (c) => {
 const preferencesSchema = z.object({
   trackingConsent: z.boolean().optional(),
   personalizationEnabled: z.boolean().optional(),
-  cookieConsent: z.boolean().optional()
+  cookieConsent: z.boolean().optional(),
+  // CW31: on the object host the switches live on the shopper's object, which is named by the visitor id.
+  userId: z.string().trim().min(1).max(200).optional(),
 });
 
 realtimeRoutes.post('/session/:sessionId/preferences', async (c) => {
@@ -391,6 +393,15 @@ realtimeRoutes.post('/session/:sessionId/preferences', async (c) => {
 
     if (!sessionId) {
       return c.json({ error: 'Session ID is required' }, 400);
+    }
+
+    // CW31: the object host keeps the switches on the shopper's object; tell it, off the response path.
+    if ((c.env.REFLEX_HOST ?? 'session') === 'do' && preferences.userId) {
+      const told = shopperObject(c.env.SHOPPER_REFLEX, preferences.userId, c.get('tenant')).fetch('https://shopper-reflex/consent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tracking: preferences.trackingConsent, personalization: preferences.personalizationEnabled }),
+      }).catch(() => undefined);
+      try { c.executionCtx.waitUntil(told); } catch { void told; }
     }
 
     const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });

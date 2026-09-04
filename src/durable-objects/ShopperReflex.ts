@@ -202,6 +202,12 @@ export class ShopperReflex {
   private state: DurableObjectState;
   /** CW25. The NAME of the person's object this browser's object forwards to; undefined until read. */
   private forwardTo: string | null | undefined = undefined;
+  /**
+   * CW31. The shopper's two consent switches, stored under their own key so the
+   * instruction survives when nothing else may be written. Absent means
+   * consenting. undefined until read.
+   */
+  private consent: { tracking: boolean; personalization: boolean } | null | undefined = undefined;
   private env: Env;
 
   /** In-memory mirrors of storage; rehydrated from ctx.storage on wake. */
@@ -260,6 +266,15 @@ export class ShopperReflex {
     if (request.method === 'POST' && url.pathname === '/identity/import') {
       return this.handleImport(request);
     }
+    // CW31. The shopper's consent switches, as the site reports them. This is the
+    // one write that happens even when tracking is off: it is the instruction
+    // not to write, and it has to be remembered to be honoured.
+    if (request.method === 'POST' && url.pathname === '/consent') {
+      let body: { tracking?: unknown; personalization?: unknown } = {};
+      try { body = await request.json(); } catch { return json({ ok: false, error: 'invalid JSON body' }, 400); }
+      const consent = await this.setConsent(body);
+      return json({ ok: true, consent });
+    }
     if (request.method === 'POST' && url.pathname === '/identity/forward') {
       let body: { to?: unknown } = {};
       try { body = await request.json(); } catch { /* fallthrough */ }
@@ -287,6 +302,7 @@ export class ShopperReflex {
         this.affinity = null;
         this.pipeline = null;
         this.forwardTo = null;
+        this.consent = null;
         this.loaded = true;
       });
       return json({ ok: true });
@@ -460,6 +476,7 @@ export class ShopperReflex {
           dropped: 'unknown_product',
           sessionId: this.pipeline?.sessionId ?? null,
           cookiesUpdated: false,
+          consent: await this.consentNow(),
         },
         update: null,
       };
@@ -468,6 +485,16 @@ export class ShopperReflex {
     await this.load();
     await this.ensureSeeded(surface);
     const connectors = getConnectors(this.env); // fresh per run — mirrors the per-request triad
+
+    // CW31. An event may carry the switches (`data.consent`); a change is
+    // remembered before anything else happens. With tracking off, the pipeline
+    // still answers this request from the state it has, but nothing it computes
+    // is kept, forwarded or persisted: the object is restored to what it was.
+    const eventConsent = data.consent;
+    const consent = eventConsent && typeof eventConsent === 'object'
+      ? await this.setConsent(eventConsent as { tracking?: unknown; personalization?: unknown })
+      : await this.consentNow();
+    const before = consent.tracking ? null : { affinity: structuredClone(this.affinity), pipeline: structuredClone(this.pipeline) };
 
     const aff: AffinityRecord = this.affinity ?? {
       shopperId: event.userId,
@@ -575,9 +602,13 @@ export class ShopperReflex {
           ...(mapped.action ? { action: mapped.action } : {}),
           ...(typeof mapped.data.product_id === 'string' ? { product_id: mapped.data.product_id } : {}),
         };
-        void forwardEventToOdp(this.env, event, { visitorId: pipe.visitorId, sessionId: pipe.sessionId }, odpReceipt.receiptId, (receipt) =>
-          this.pushFrame({ type: 'odp_receipt', userId: aff.shopperId, data: receipt })
-        );
+        if (consent.tracking) {
+          void forwardEventToOdp(this.env, event, { visitorId: pipe.visitorId, sessionId: pipe.sessionId }, odpReceipt.receiptId, (receipt) =>
+            this.pushFrame({ type: 'odp_receipt', userId: aff.shopperId, data: receipt })
+          );
+        } else {
+          odpReceipt = undefined;   // nothing left the edge
+        }
       }
     }
 
@@ -624,14 +655,22 @@ export class ShopperReflex {
       // §4 score upsert: on membership changes, persist the reflex's live scores
       // onto the ODP profile (the memory carrying the edge's numbers).
       const affPayload = update.data.affinity;
-      if (odpEnabled(this.env) && affPayload && membershipChanged) {
+      if (consent.tracking && odpEnabled(this.env) && affPayload && membershipChanged) {
         void upsertOdpProfile(this.env, { visitorId: pipe.visitorId, sessionId: pipe.sessionId }, affPayload, journeyStage);
       }
     }
 
     // 8. Persist (single coalesced SQLite write, output-gated) + closed-form alarm.
-    await this.state.storage.put({ affinity: this.affinity, pipeline: this.pipeline });
-    await this.scheduleNextCrossing(now);
+    // CW31: with tracking off, nothing is written and the object forgets this
+    // request; the answer above was computed, not kept.
+    const sessionIdOut = this.pipeline.sessionId;
+    if (before) {
+      this.affinity = before.affinity;
+      this.pipeline = before.pipeline;
+    } else {
+      await this.state.storage.put({ affinity: this.affinity, pipeline: this.pipeline });
+      await this.scheduleNextCrossing(now);
+    }
 
     return {
       status: 200,
@@ -641,9 +680,10 @@ export class ShopperReflex {
           ? 'Action processed and personalization updated'
           : 'Action processed, no personalization changes needed',
         ...(update ? { update } : {}),
-        sessionId: this.pipeline.sessionId,
+        sessionId: sessionIdOut,
         cookiesUpdated: false, // identity is the stable visitor id — no session cookies on this host
         ...(odpReceipt ? { odp: odpReceipt } : {}),
+        consent,
       },
       update,
     };
@@ -877,12 +917,39 @@ export class ShopperReflex {
       // CW29: the stage this object last derived, so the content decision can
       // put it on the cell without recomputing from counters it does not hold.
       journeyStage: this.pipeline?.journeyStage ?? null,
+      // CW31: the switches the content decision and the outcome path honour.
+      consent: await this.consentNow(),
     });
   }
 
   // ── Plumbing ────────────────────────────────────────────────────────────────
 
   /** Rehydrate the in-memory mirrors from ctx.storage (one read for both keys). */
+  // ── CW31: consent ──────────────────────────────────────────────────────────
+
+  /** The stored switches, or consenting when nothing was ever said. */
+  private async consentNow(): Promise<{ tracking: boolean; personalization: boolean }> {
+    if (this.consent === undefined) {
+      const stored = (await this.state.storage.get('consent')) as { tracking?: unknown; personalization?: unknown } | undefined;
+      this.consent = stored ? { tracking: stored.tracking !== false, personalization: stored.personalization !== false } : null;
+    }
+    return this.consent ?? { tracking: true, personalization: true };
+  }
+
+  /** Merge what the site said into the stored switches. Only an explicit boolean changes a switch. */
+  private async setConsent(body: { tracking?: unknown; personalization?: unknown }): Promise<{ tracking: boolean; personalization: boolean }> {
+    const current = await this.consentNow();
+    const next = {
+      tracking: typeof body.tracking === 'boolean' ? body.tracking : current.tracking,
+      personalization: typeof body.personalization === 'boolean' ? body.personalization : current.personalization,
+    };
+    if (next.tracking !== current.tracking || next.personalization !== current.personalization || this.consent === null) {
+      this.consent = next;
+      await this.state.storage.put('consent', next);
+    }
+    return next;
+  }
+
   // ── CW25: identity ─────────────────────────────────────────────────────────
 
   private async forwardTarget(): Promise<string | null> {

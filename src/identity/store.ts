@@ -40,6 +40,12 @@ export interface VisitorLink {
   source: LinkSource;
   /** Earlier links this browser had, newest first. A shared computer leaves a trail here. */
   previous?: Array<{ shopperId: string; linkedAt: number; until: number }>;
+  /**
+   * CW28. The browser's own session record on the session host, which forwards
+   * to the person after the link and is reachable by nothing else. Remembered so
+   * an erasure can delete what the browser learned before it was anyone's.
+   */
+  ownSessionId?: string;
 }
 
 export interface ShopperRecord {
@@ -128,6 +134,38 @@ export class IdentityStore {
     const created: ShopperRecord = { shopperId, createdAt: now, salted, visitors: [] };
     await this.kv.put(this.skey(shopperId), JSON.stringify(created), { expirationTtl: LINK_TTL_S });
     return created;
+  }
+
+  /**
+   * CW28. Forget a person: every browser's link and the person's record. Returns
+   * the visitor ids that were linked, so the caller can erase each browser's
+   * profile and ledger rows too. Idempotent; a second call finds nothing.
+   */
+  async erase(shopperId: string): Promise<{ visitors: string[]; sessions: string[] }> {
+    const rec = await this.shopper(shopperId);
+    const visitors = rec ? rec.visitors.map((v) => v.visitorId) : [];
+    const sessions: string[] = [];
+    for (const v of visitors) {
+      const link = await this.visitorLink(v);
+      if (link?.ownSessionId) sessions.push(link.ownSessionId);
+      await this.kv.delete(this.vkey(v));
+    }
+    await this.kv.delete(this.skey(shopperId));
+    return { visitors, sessions };
+  }
+
+  /** CW28. Forget one browser's link only, when it was never anyone's or the person is being kept. */
+  async eraseVisitor(visitorId: string): Promise<{ ownSessionId: string | null }> {
+    const link = await this.visitorLink(visitorId);
+    await this.kv.delete(this.vkey(visitorId));
+    return { ownSessionId: link?.ownSessionId ?? null };
+  }
+
+  /** CW28. Remember where the browser's own record lives, once the link has forwarded it. */
+  async noteOwnSession(visitorId: string, sessionId: string): Promise<void> {
+    const link = await this.visitorLink(visitorId);
+    if (!link || link.ownSessionId === sessionId) return;
+    await this.kv.put(this.vkey(visitorId), JSON.stringify({ ...link, ownSessionId: sessionId }), { expirationTtl: LINK_TTL_S });
   }
 
   async noteHistory(shopperId: string, rows: number, latestAt: number, salted: boolean, now = Date.now()): Promise<void> {

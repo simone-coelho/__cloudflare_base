@@ -25,8 +25,17 @@ class FakeKV {
 const cfg = DEFAULT_REFLEX_CONFIG;
 const TABBY = audienceKey('line', 'Tabby');
 
+/** Enough of R2 for the ledger's tombstones: put, get, delete, list by prefix. */
+class FakeR2 {
+  store = new Map<string, string>();
+  async put(key: string, body: string) { this.store.set(key, body); }
+  async get(key: string) { const v = this.store.get(key); return v === undefined ? null : { text: async () => v }; }
+  async delete(key: string) { this.store.delete(key); }
+  async list(o: { prefix: string }) { return { objects: [...this.store.keys()].filter((k) => k.startsWith(o.prefix)).map((key) => ({ key })), truncated: false }; }
+}
+
 const mkEnv = (over: Record<string, unknown> = {}): Env => ({
-  CACHE: new FakeKV(), SESSIONS: new FakeKV(), ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock',
+  CACHE: new FakeKV(), SESSIONS: new FakeKV(), STORAGE: new FakeR2(), ENVIRONMENT: 'test', CONNECTOR_MODE: 'mock',
   JWT_SECRET: 's', JWT_ISSUER: 'i', JWT_AUDIENCE: 'a', ...over,
 } as unknown as Env);
 const token = () => new jose.SignJWT({ sub: 'ops' }).setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setIssuer('i').setAudience('a').setExpirationTime('5m').sign(new TextEncoder().encode('s'));
@@ -274,5 +283,63 @@ describe('historical rows', () => {
     expect((await call('/coach/identity/events', { method: 'POST', headers: auth, json: { rows: [] } })).status).toBe(400);
     const many = Array.from({ length: 1001 }, () => ({ accountId: 'a', action: 'purchase', at: 1 }));
     expect((await call('/coach/identity/events', { method: 'POST', headers: auth, json: { rows: many } })).status).toBe(413);
+  });
+});
+
+describe('erase: the right to be forgotten (CW28)', () => {
+  it('forgets a person: links, both browsers\u2019 profiles, the person\u2019s session, and a tombstone per id', async () => {
+    await seedDevice('vis-phone', 's-phone', ['Tabby']);
+    await seedDevice('vis-laptop', 's-laptop', ['Rogue']);
+    const a = await call('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-phone', accountId: 'acct-1001' } });
+    await call('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-laptop', accountId: 'acct-1001' } });
+    const sh = a.body.shopperId as string;
+
+    const r = await call('/coach/identity/erase', { method: 'POST', headers: auth, json: { visitorId: 'vis-phone' } });
+    expect(r.status).toBe(200);
+    expect(r.body.shopperId).toBe(sh);
+    expect([...r.body.erased].sort()).toEqual([sh, 'vis-laptop', 'vis-phone'].sort());
+    expect(r.body.links).toEqual({ visitors: 2, shopper: true });
+    expect(r.body.profiles.every((p: { result: string }) => p.result === 'erased' || p.result === 'absent')).toBe(true);
+    expect(r.body.ledger.map((l: { id: string; tombstone: string | null }) => [l.id, !!l.tombstone]).every(([, t]: [string, boolean]) => t)).toBe(true);
+    expect(r.body.notReached[0]).toMatch(/ODP/);
+    expect(r.body.actor).toBe('ops');
+
+    // Nothing resolves to the person any more, and the person's session is gone.
+    const sm = new SessionManager(env);
+    expect(await sm.resolveSessionIdByUserId(sh)).toBeNull();
+    expect(await sm.resolveSessionIdByUserId('vis-phone')).toBeNull();
+    // The browsers' own pre-link records, which only the link remembered, are gone too.
+    expect(await sm.readRaw('s-phone')).toBeNull();
+    expect(await sm.readRaw('s-laptop')).toBeNull();
+    expect((await call('/coach/identity/visitor/vis-laptop', { headers: auth })).body.shopperId).toBeNull();
+    expect((await call(`/coach/identity/shopper/${sh}`, { headers: auth })).status).toBe(404);
+    // The tombstones the ledger's readers honour at once.
+    const r2 = (env as unknown as { STORAGE: FakeR2 }).STORAGE;
+    expect([...r2.store.keys()].filter((k) => k.startsWith('erasures/coach/pending/'))).toHaveLength(3);
+  });
+
+  it('forgets an unlinked browser on its own', async () => {
+    await seedDevice('vis-alone', 's-alone', ['Tabby']);
+    const r = await call('/coach/identity/erase', { method: 'POST', headers: auth, json: { visitorId: 'vis-alone' } });
+    expect(r.body.shopperId).toBeNull();
+    expect(r.body.erased).toEqual(['vis-alone']);
+    expect(r.body.profiles[0]).toMatchObject({ id: 'vis-alone', host: 'session', result: 'erased' });
+  });
+
+  it('accepts a shopper id directly, and is idempotent', async () => {
+    await seedDevice('vis-phone', 's-phone', ['Tabby']);
+    const a = await call('/coach/identity/link', { method: 'POST', json: { visitorId: 'vis-phone', accountId: 'acct-1001' } });
+    const first = await call('/coach/identity/erase', { method: 'POST', headers: auth, json: { shopperId: a.body.shopperId } });
+    expect(first.body.links.visitors).toBe(1);
+    const again = await call('/coach/identity/erase', { method: 'POST', headers: auth, json: { shopperId: a.body.shopperId } });
+    expect(again.status).toBe(200);
+    expect(again.body.links.visitors).toBe(0);
+    expect(again.body.profiles[0].result).toBe('absent');
+  });
+
+  it('wants the operator token and a real id', async () => {
+    expect((await call('/coach/identity/erase', { method: 'POST', json: { visitorId: 'vis-1' } })).status).toBe(401);
+    expect((await call('/coach/identity/erase', { method: 'POST', headers: auth, json: {} })).status).toBe(400);
+    expect((await call('/coach/identity/erase', { method: 'POST', headers: auth, json: { shopperId: 'not-a-shopper' } })).status).toBe(400);
   });
 });

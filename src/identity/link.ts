@@ -80,7 +80,10 @@ export async function linkVisitor(
     return { ...base, sessionId: null, cookieHeaders: [], ...r };
   }
   const r = await linkOnSessionHost(env, tenant, input.visitorId, shopperId, outcome, now, input.cookieSessionId ?? null);
-  return { ...base, ...r };
+  // CW28: the browser's own record now forwards to the person and nothing else
+  // points at it; the link remembers it so an erasure can reach it.
+  if (r.ownSessionId) await store.noteOwnSession(input.visitorId, r.ownSessionId);
+  return { ...base, sessionId: r.sessionId, changes: r.changes, audiences: r.audiences, cookieHeaders: r.cookieHeaders };
 }
 
 // ── The session host ─────────────────────────────────────────────────────────
@@ -88,7 +91,7 @@ export async function linkVisitor(
 async function linkOnSessionHost(
   env: Env, tenant: TenantId, visitorId: string, shopperId: string, outcome: LinkOutcome, now: number,
   cookieSessionId: string | null,
-): Promise<Pick<LinkResult, 'sessionId' | 'changes' | 'audiences' | 'cookieHeaders'>> {
+): Promise<Pick<LinkResult, 'sessionId' | 'changes' | 'audiences' | 'cookieHeaders'> & { ownSessionId: string | null }> {
   const sm = new SessionManager(env, { tenant });
   const none: ReflexChanges = { entered: [], exited: [], explain: [] };
 
@@ -111,7 +114,7 @@ async function linkOnSessionHost(
     const sid = await sm.resolveSessionIdByUserId(shopperId);
     const data = sid ? await sm.readRaw(sid) : null;
     if (sid && data) {
-      return { sessionId: sid, changes: none, audiences: data.reflex?.audiences ?? [], cookieHeaders: sm.createCookieHeaders(sm.generateSessionCookies(data, sid)) };
+      return { sessionId: sid, changes: none, audiences: data.reflex?.audiences ?? [], cookieHeaders: sm.createCookieHeaders(sm.generateSessionCookies(data, sid)), ownSessionId: fromSessionId };
     }
     // The link exists but the person's session expired: make one from what the browser has.
   }
@@ -125,6 +128,7 @@ async function linkOnSessionHost(
     changes: absorbed.changes,
     audiences: absorbed.data.reflex?.audiences ?? [],
     cookieHeaders: sm.createCookieHeaders(sm.generateSessionCookies(absorbed.data, absorbed.sessionId)),
+    ownSessionId: fromSessionId && fromSessionId !== absorbed.sessionId ? fromSessionId : null,
   };
 }
 
