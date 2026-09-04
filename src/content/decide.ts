@@ -53,6 +53,8 @@ export interface DecideInput {
   } | null;
   /** Doc 22 §9: their model's answer for this page, or why there is none. Null when no model is configured. */
   external?: ExternalTerm | null;
+  /** CW30: slot → item → times served to this visitor inside the slot's fatigue window, from the ring. Null when not read. */
+  served?: Record<string, Record<string, number>> | null;
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
@@ -102,7 +104,23 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   const stageRules = new Map<string, StageRule>(i.slots.flatMap((s) => (s.stage && ((s.stage.outOfStage ?? 1) < 1 || (s.stage.inStage ?? 0) > 0) ? [[s.slot, s.stage] as const] : [])));
   const hasStage = visitorStage !== null && stageRules.size > 0;
   const stageOf = new Map<string, { visitor: StageWord; fit: StageWord[]; applied: number; inside: boolean }>();
-  const adjust: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage ? (p, slot, base0) => {
+  // CW30 (BTIE D2): freshness and fatigue. Recent content gets a bonus that halves every `halfLifeDays`
+  // from the piece's freshness date; content this visitor was already served gets a penalty that grows
+  // with the count in the ring up to `cap`. The engine's judgment, so not on the default arm; both
+  // itemised as the delta they caused. The served counts travel on the record's inputs for the replay.
+  const freshRules = new Map(i.slots.flatMap((s) => (s.freshness && s.freshness.weight > 0 ? [[s.slot, s.freshness] as const] : [])));
+  const fatigueRules = new Map(i.slots.flatMap((s) => (s.fatigue && s.fatigue.weight > 0 ? [[s.slot, s.fatigue] as const] : [])));
+  const hasFresh = i.arm !== 'default' && freshRules.size > 0;
+  const hasFatigue = i.arm !== 'default' && fatigueRules.size > 0 && Boolean(i.served);
+  const freshOf = new Map<string, { ageDays: number; decay: number; applied: number }>();
+  const fatigueOf = new Map<string, { served: number; windowHours: number; applied: number }>();
+  const dateOf = (p: ContentPiece): number | null => {
+    const v = p.freshnessDate ?? p.window?.from;
+    if (!v) return null;
+    const t = Date.parse(v);
+    return Number.isFinite(t) ? t : null;
+  };
+  const adjust: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage || hasFresh || hasFatigue ? (p, slot, base0) => {
     const key = `${slot}:${p.id}`;
     let base = base0;
     if (ext && ext.status === 'ok') {
@@ -117,6 +135,25 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
         if (inside) base += rule.inStage ?? 0; else base *= rule.outOfStage ?? 1;
         const applied = Math.round((base - before) * 1000) / 1000;
         if (applied !== 0 || (!inside && (rule.outOfStage ?? 1) < 1)) stageOf.set(key, { visitor: visitorStage!, fit, applied, inside });
+      }
+    }
+    if (hasFresh) {
+      const rule = freshRules.get(slot), at = dateOf(byId.get(p.id) ?? (p as ContentPiece));
+      if (rule && at !== null && i.nowMs >= at) {
+        const ageDays = (i.nowMs - at) / 86_400_000;
+        const decay = Math.pow(2, -ageDays / rule.halfLifeDays);
+        const applied = Math.round(rule.weight * decay * 1000) / 1000;
+        if (applied > 0) { base += applied; freshOf.set(key, { ageDays: Math.round(ageDays * 10) / 10, decay: Math.round(decay * 1000) / 1000, applied }); }
+      }
+    }
+    if (hasFatigue) {
+      const rule = fatigueRules.get(slot), served = i.served?.[slot]?.[p.id] ?? 0;
+      if (rule && served > 0) {
+        const penalty = rule.weight * Math.min(served, rule.cap) / rule.cap;
+        const after = Math.max(0, base - penalty);
+        const applied = Math.round((after - base) * 1000) / 1000;
+        base = after;
+        fatigueOf.set(key, { served, windowHours: rule.windowHours, applied });
       }
     }
     baseOf.set(key, base);
@@ -177,7 +214,13 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
     if (m) for (const md of m.drivers) d.explain.drivers.push({ dim: 'merchandising', value: md.term, a: md.value, weight: md.weight });
     const st = stageOf.get(`${d.slot}:${d.contentId}`);
     if (st) d.explain.drivers.push({ dim: 'stage', value: st.inside ? `fits ${st.visitor}` : `made for ${st.fit.join(' and ')}, shopper ${st.visitor}`, a: 1, weight: st.applied });
+    const fr = freshOf.get(`${d.slot}:${d.contentId}`);
+    if (fr) d.explain.drivers.push({ dim: 'freshness', value: `${fr.ageDays} days old`, a: fr.decay, weight: freshRules.get(d.slot)!.weight });
+    const fa = fatigueOf.get(`${d.slot}:${d.contentId}`);
+    if (fa) d.explain.drivers.push({ dim: 'fatigue', value: `served ${fa.served} time${fa.served === 1 ? '' : 's'} in ${fa.windowHours} h`, a: Math.round(Math.min(fa.served, fatigueRules.get(d.slot)!.cap) / fatigueRules.get(d.slot)!.cap * 1000) / 1000, weight: -fatigueRules.get(d.slot)!.weight });
   }
+  const freshSentence = (f: { ageDays: number; decay: number; applied: number }) => `${f.ageDays} days old, freshness at ${f.decay} of new: +${f.applied}`;
+  const fatigueSentence = (f: { served: number; windowHours: number; applied: number }) => `this shopper was served it ${f.served} time${f.served === 1 ? '' : 's'} in the last ${f.windowHours} hours: ${f.applied}`;
   const stageSentence = (st: { visitor: StageWord; fit: StageWord[]; applied: number; inside: boolean }) =>
     st.inside ? `made for a shopper who is ${st.visitor}: +${st.applied}` : `made for ${st.fit.join(' and ')}, and this shopper is ${st.visitor}: ${st.applied}`;
   const externalOf = (slot: string, key: string): { external?: DecisionRecord['explain']['external'] } => {
@@ -194,6 +237,7 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
     affinity: plain(affinity.dims) as DecisionInputs['affinity'],
     ...(i.regional && i.arm !== 'default' ? { regional_share: plain(i.regional.share) as NonNullable<DecisionInputs['regional_share']> } : {}),
     ...(ext?.status === 'ok' ? { external: { version: ext.version, scores: plain(ext.scores) } } : {}),
+    ...(hasFatigue && i.served ? { served: plain(i.served) } : {}),
   };
 
   const positionIn = new Map<string, number>();
@@ -223,6 +267,8 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
         ...externalOf(d.slot, key),
         ...(merchOf.has(key) ? { merchandising: (({ boost, clamped, drivers }) => ({ boost, clamped, drivers, sentence: merchandisingSentence(merchOf.get(key)!) }))(merchOf.get(key)!) } : {}),
         ...(stageOf.has(key) ? { stage: (({ visitor, fit, applied }) => ({ visitor, fit, applied, sentence: stageSentence(stageOf.get(key)!) }))(stageOf.get(key)!) } : {}),
+        ...(freshOf.has(key) ? { freshness: { ...freshOf.get(key)!, sentence: freshSentence(freshOf.get(key)!) } } : {}),
+        ...(fatigueOf.has(key) ? { fatigue: { ...fatigueOf.get(key)!, sentence: fatigueSentence(fatigueOf.get(key)!) } } : {}),
       },
       inputs,
     };

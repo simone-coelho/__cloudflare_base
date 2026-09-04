@@ -351,6 +351,24 @@ enqueued, LearnStats object updates its counts, alarm publishes a snapshot (up t
 refresh on their TTL (up to 60 seconds). **Learned lift is at most about two minutes behind reality**, and
 the decision latency does not change at all. Both intervals are configuration.
 
+### 6.4 Content freshness and fatigue
+
+Built 2026-09-04 (CW30, BTIE D2). Two terms on the base score, both dials on the slot, both itemised as
+the delta they caused, neither on the holdout's default arm because they are the engine's judgment.
+
+**Freshness** rewards recent content: `weight × 2^(−age / halfLifeDays)`, where the age counts from the
+piece's `freshnessDate` (A.3.6's `freshness_date`), or from `window.from` when there is none; a piece
+with neither gets no term. At a 7-day half-life a piece a day old gets about nine tenths of the weight,
+a month old about a twentieth. The receipt says "N days old, freshness at D of new: +applied".
+
+**Fatigue** penalises content this shopper was already served: `weight × min(served, cap) / cap`,
+where `served` is how many times the piece appears in the visitor's own ring inside the slot's window
+(hours). The ring is read on the decision path only when a slot on the page has the dial, in parallel
+with the lift reads and under a 60 ms budget; a slow or unbound ring means no penalty, never an error.
+The base cannot go below zero. The served counts are carried on the record's `inputs.served`, so a
+replay reproduces the penalty from the record rather than from a ring that has since moved on. The
+receipt says "this shopper was served it N times in the last H hours: −applied".
+
 ---
 
 ## 7 · Exploration
@@ -623,6 +641,8 @@ deployment.
 | Statistics | L_min, L_max lift clamp | Data science | 0.5, 2.0 |
 | Statistics | Pooling ladder order and n_min | Data science | channel, visit, stage, region, affinity; 30 |
 | Serving | Journey-stage rule per slot: outOfStage, inStage | Marketing | off |
+| Serving | Freshness per slot: weight, halfLifeDays | Marketing | off |
+| Serving | Fatigue per slot: weight, windowHours, cap | Marketing | off |
 | Statistics | Position bucketing on or off per slot | Data science | on for multi-item slots |
 | Statistics | Learn from pinned placements | Marketing | on |
 | Serving | γ trust dial per slot | Marketing | 0 |

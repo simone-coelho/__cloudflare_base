@@ -5,7 +5,7 @@
 // the decision path down (doc 22 §18.1's failure posture, inherited).
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
-import type { ContentCatalog, ContentPiece, LearnConfig, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import type { ContentCatalog, ContentPiece, FatigueRule, FreshnessRule, LearnConfig, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
@@ -89,11 +89,13 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     if (!raw || !raw.length || !words || words.some((w) => w === null)) errors.push(`${at}.journeyStageFit: non-empty array of exploring | considering | deciding (early | mid | late also accepted)`);
     else journeyStageFit = [...new Set(words as StageWord[])];
   }
+  if (p.freshnessDate !== undefined && !(isStr(p.freshnessDate) && Number.isFinite(Date.parse(p.freshnessDate)))) errors.push(`${at}.freshnessDate: ISO 8601 date-time`);
   if (!isStr(id) || !isStr(cid) || !isStr(type) || !isStr(title) || !slotTypes) return null;
   return {
     id, customerContentId: cid, type, title, tags, slotTypes,
     ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
     ...(journeyStageFit ? { journeyStageFit } : {}),
+    ...(isStr(p.freshnessDate) ? { freshnessDate: p.freshnessDate } : {}),
     lifecycle: { status: status as ContentPiece['lifecycle']['status'] },
     ...(isStr(p.subtitle) ? { subtitle: p.subtitle } : {}),
     ...(p.art === undefined ? {} : { art: p.art as string | null }),
@@ -168,8 +170,23 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
       }
     }
   }
+  let freshness: FreshnessRule | undefined;
+  if (s.freshness !== undefined) {
+    const f = s.freshness;
+    if (!isRecord(f) || !isNum(f.weight) || f.weight < 0 || f.weight > 1 || !isNum(f.halfLifeDays) || f.halfLifeDays <= 0) errors.push(`${at}.freshness: { weight 0..1, halfLifeDays > 0 }`);
+    else freshness = { weight: f.weight, halfLifeDays: f.halfLifeDays };
+  }
+  let fatigue: FatigueRule | undefined;
+  if (s.fatigue !== undefined) {
+    const f = s.fatigue;
+    if (!isRecord(f) || !isNum(f.weight) || f.weight < 0 || f.weight > 1 || !isNum(f.windowHours) || f.windowHours <= 0 || !isNum(f.cap) || !Number.isInteger(f.cap) || f.cap < 1) errors.push(`${at}.fatigue: { weight 0..1, windowHours > 0, cap integer ≥ 1 }`);
+    else fatigue = { weight: f.weight, windowHours: f.windowHours, cap: f.cap };
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
-  return { slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}), ...(stage && Object.keys(stage).length ? { stage } : {}) };
+  return {
+    slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
+    ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}),
+  };
 }
 
 export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCatalog> {

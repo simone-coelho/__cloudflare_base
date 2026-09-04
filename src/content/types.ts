@@ -18,6 +18,8 @@ export interface ContentPiece extends ContentPieceLike {
    * every stage. A slot with a `stage` rule demotes a piece outside the visitor's stage and can favour one inside it.
    */
   journeyStageFit?: StageWord[];
+  /** CW30 (BTIE A.3.6 `freshness_date`): when the piece became current, ISO 8601. The freshness term ages from it; absent, from `window.from`; neither, no term. */
+  freshnessDate?: string;
   /** Where the customer's front end fetches the asset to paint. Theirs; echoed, never rewritten. */
   renderUrl?: string;
   /** Publish and expire, ISO 8601. Outside the window a live piece is not eligible. */
@@ -49,7 +51,14 @@ export interface SlotStrategy {
    * names the visitor's stage. Off when the visitor's stage is unknown, and on the holdout's default arm.
    */
   stage?: StageRule;
+  /** CW30: a bonus for recent content, `weight × 2^(−age / halfLifeDays)`, ages from the piece's freshness date. */
+  freshness?: FreshnessRule;
+  /** CW30: a penalty for content this visitor was already served, `weight × min(served, cap) / cap` over the window, read from the visitor's ring. */
+  fatigue?: FatigueRule;
 }
+
+export interface FreshnessRule { weight: number; halfLifeDays: number }
+export interface FatigueRule { weight: number; windowHours: number; cap: number }
 
 /** BTIE's See / Think / Do: what a piece is tagged with and what the receipt says. */
 export type StageWord = 'exploring' | 'considering' | 'deciding';
@@ -217,6 +226,8 @@ export interface DecisionInputs {
   affinity: Record<string, Record<string, number>>;
   regional_share?: Record<string, Record<string, number>>;
   external?: { version: string; scores: Record<string, number> };
+  /** CW30: slot → item → times served to this visitor inside the slot's fatigue window, as read from the ring at decision time. */
+  served?: Record<string, Record<string, number>>;
 }
 
 /** Doc 22 §3.1, one per served slot position. Emitted by CW4, persisted by CW19. */
@@ -264,6 +275,10 @@ export interface DecisionRecord {
     merchandising?: { boost: number; clamped: boolean; drivers: MerchandisingDriver[]; sentence: string };
     /** CW29: the slot's stage rule on this piece, when it applied: the visitor's stage, the piece's fit, the delta it caused. */
     stage?: { visitor: StageWord; fit: StageWord[]; applied: number; sentence: string };
+    /** CW30: the freshness bonus, when the slot has the dial and the piece a date. */
+    freshness?: { ageDays: number; decay: number; applied: number; sentence: string };
+    /** CW30: the fatigue penalty, when the slot has the dial and the ring showed the piece served before. */
+    fatigue?: { served: number; windowHours: number; applied: number; sentence: string };
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;

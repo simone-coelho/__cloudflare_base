@@ -63,6 +63,9 @@ export function normalizePiece(raw: unknown): Record<string, unknown> | null {
     ...(str(raw.excerpt) ? { excerpt: str(raw.excerpt) } : {}),
     ...(str(raw.runtime) ? { runtime: str(raw.runtime) } : {}),
     ...(windowFrom || windowTo ? { window: { ...(windowFrom ? { from: windowFrom } : {}), ...(windowTo ? { to: windowTo } : {}) } } : {}),
+    // BTIE A.3.6 names (CW29, CW30): the stages a piece is made for, and when it became current.
+    ...(raw.journeyStageFit !== undefined || raw.journey_stage_fit !== undefined || raw.stageFit !== undefined ? { journeyStageFit: normalizeList(raw.journeyStageFit ?? raw.journey_stage_fit ?? raw.stageFit) } : {}),
+    ...(str(raw.freshnessDate) ?? str(raw.freshness_date) ?? str(raw.publishedAt) ? { freshnessDate: str(raw.freshnessDate) ?? str(raw.freshness_date) ?? str(raw.publishedAt) } : {}),
   };
 }
 
@@ -113,6 +116,7 @@ export function parseCsv(text: string): Record<string, string>[] {
 
 export const CSV_COLUMNS = [
   'id', 'customerContentId', 'type', 'title', 'subtitle', 'tags', 'slotTypes', 'status', 'art', 'renderUrl', 'excerpt', 'runtime', 'windowFrom', 'windowTo',
+  'journeyStageFit', 'freshnessDate',
 ] as const;
 
 // ── Assembly ────────────────────────────────────────────────────────────────

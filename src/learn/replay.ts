@@ -101,6 +101,7 @@ export async function replayDecision(env: Env, served: DecisionRecord, deps: Rep
       : extCfg && served.explain.external && 'status' in served.explain.external
         ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: (slot) => learn.slots?.[slot]?.external?.weight ?? 0, status: 'unavailable', reason: served.explain.external.reason }
         : null,
+    served: inputs.served ?? null,
   });
   void dials;
   const replayed = set.records.find((r) => r.slot === served.slot && r.position === served.position) ?? null;

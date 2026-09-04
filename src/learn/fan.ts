@@ -26,6 +26,38 @@ async function post(ns: NS, name: string, path: string, body: unknown): Promise<
   } catch { return null; }
 }
 
+/**
+ * CW30: the visitor's ring, read on the decision path under a time budget so
+ * the fatigue term can never extend a decision by more than `timeoutMs`. Null
+ * when the ring is unbound, slow or failing: no penalty, never an error.
+ */
+export async function readRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, visitorId: string, timeoutMs = 60): Promise<RingEntry[] | null> {
+  const ns = env.DECISION_RING;
+  if (!ns) return null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const read = ns.get(ns.idFromName(ringName(tenant, visitorId))).fetch('https://learn/recent').then(async (res) => {
+      const body = (await res.json()) as { ok?: boolean; ring?: RingEntry[] };
+      return body.ok && Array.isArray(body.ring) ? body.ring : null;
+    });
+    const late = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), timeoutMs); });
+    return await Promise.race([read, late]);
+  } catch { return null; } finally { if (timer !== undefined) clearTimeout(timer); }
+}
+
+/** CW30: slot → item → times served inside that slot's fatigue window, from the ring entries. */
+export function servedCounts(ring: readonly RingEntry[], slots: ReadonlyArray<{ slot: string; fatigue?: { weight: number; windowHours: number } }>, now: number): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {};
+  for (const s of slots) {
+    if (!s.fatigue || s.fatigue.weight <= 0) continue;
+    const since = now - s.fatigue.windowHours * 3_600_000;
+    const counts: Record<string, number> = {};
+    for (const e of ring) if (e.ts >= since && e.ts <= now) counts[e.item] = (counts[e.item] ?? 0) + 1;
+    if (Object.keys(counts).length) out[s.slot] = counts;
+  }
+  return out;
+}
+
 export const ringEntryOf = (r: DecisionRecord): RingEntry =>
   ({ id: r.decision_id, ts: r.ts, page: r.page, slot: r.slot, item: r.item_id, session_id: r.session_id, arm: r.arm, cell: r.cell });
 

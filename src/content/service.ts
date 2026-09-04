@@ -17,7 +17,7 @@ import { armFor } from './holdout';
 import { cellFor, type CfLike } from './cell';
 import { decideContent } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
-import { fanDecisions, liftKey, type SlotLearnConfig } from '@/learn/fan';
+import { fanDecisions, liftKey, readRing, servedCounts, type SlotLearnConfig } from '@/learn/fan';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
 import { scoreExternal, type ExternalResult } from '@/learn/external';
 import type { ExternalTerm } from './types';
@@ -179,7 +179,10 @@ export async function serveContentDecisions(
 
   // Phase 1: the lift snapshot per slot, and the trust dial. Shadow by default.
   const snapshots: Record<string, LiftSnapshot | null> = {};
-  const [extResult] = await Promise.all([extPromise, ...slots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now); })]);
+  // CW30: the visitor's ring, only when a slot on the page has a fatigue dial, never for the default arm, under a time budget.
+  const wantsRing = arm !== 'default' && slots.some((s) => (s.fatigue?.weight ?? 0) > 0);
+  const [extResult, ring] = await Promise.all([extPromise, wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...slots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now); })]);
+  const served = ring ? servedCounts(ring, slots, now) : null;
   const external: ExternalTerm | null = extCfg && extResult
     ? extResult.ok
       ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'ok', version: extResult.version, scores: extResult.scores }
@@ -196,6 +199,7 @@ export async function serveContentDecisions(
     configLabel: cfg.version,
     learning: { snapshots, gammaOf, exploreOf, controlOf },
     external,
+    served,
   });
 
   // After the response: the visitor's ring and each slot's exposures. Never awaited here.
