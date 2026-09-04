@@ -24,6 +24,7 @@ import { operatorRoutes } from '@/routes/operator';
 import { configRoutes } from '@/routes/config';
 import { sortRoutes } from '@/routes/sort';
 import { contentRoutes } from '@/routes/content';
+import { identityRoutes } from '@/routes/identity';
 import realtimeRoutes from '@/routes/realtime';
 import { aiRoutes } from '@/routes/ai';
 import { aiSceneRoutes } from '@/routes/aiScene';
@@ -105,6 +106,8 @@ app.route('/meridian/api', meridianRoutes);
 // CW4 — the content decision surface (scope appendix §2.3). Reads only; the
 // ledger writer (Phase 0) and SDK-key auth (CW10) attach here, not elsewhere.
 app.route('/v1', decisionRoutes);
+// CW25 — identity stitching (§1.12): link, detach, resolve, history. Same gate as /v1.
+app.route('/v1', identityRoutes);
 app.route('/ai', aiRoutes);
 app.route('/ai/scene', aiSceneRoutes);
 app.route('/__shot', shotRoutes);

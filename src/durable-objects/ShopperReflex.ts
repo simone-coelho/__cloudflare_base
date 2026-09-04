@@ -51,6 +51,7 @@
 
 import { actionOf, contentTouches, isContentAction } from '@/reflex/contentTelemetry';
 import type { Env } from '@/types/env';
+import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import type { PersonalizationUpdate } from './PersonalizationWebSocket';
 import {
@@ -199,6 +200,8 @@ async function catalogFor(surface: DemoSurface): Promise<CatalogService> {
 
 export class ShopperReflex {
   private state: DurableObjectState;
+  /** CW25. The NAME of the person's object this browser's object forwards to; undefined until read. */
+  private forwardTo: string | null | undefined = undefined;
   private env: Env;
 
   /** In-memory mirrors of storage; rehydrated from ctx.storage on wake. */
@@ -231,11 +234,39 @@ export class ShopperReflex {
       return this.handleUpgrade(url);
     }
 
+    // CW25. A browser that was recognised forwards to the person's object: the
+    // same ingest, the same snapshot, one hop. Nothing else is forwarded; the
+    // identity doors below act on THIS object by design.
+    if (url.pathname === '/ingest' || url.pathname === '/snapshot') {
+      const forwarded = await this.forwardIfLinked(request);
+      if (forwarded) return forwarded;
+    }
     if (request.method === 'POST' && url.pathname === '/ingest') {
       return this.handleIngest(request);
     }
     if (request.method === 'GET' && url.pathname === '/snapshot') {
       return this.handleSnapshot();
+    }
+    // CW25, the identity doors. `export` reads what this browser learned;
+    // `absorb` folds another object's export into this one, which then IS the
+    // person; `forward` leaves this object pointing at the person's.
+    if (request.method === 'GET' && url.pathname === '/identity/export') {
+      await this.load();
+      return json({ ok: true, affinity: this.affinity, pipeline: this.pipeline, forwardTo: await this.forwardTarget() });
+    }
+    if (request.method === 'POST' && url.pathname === '/identity/absorb') {
+      return this.handleAbsorb(request);
+    }
+    if (request.method === 'POST' && url.pathname === '/identity/import') {
+      return this.handleImport(request);
+    }
+    if (request.method === 'POST' && url.pathname === '/identity/forward') {
+      let body: { to?: unknown } = {};
+      try { body = await request.json(); } catch { /* fallthrough */ }
+      if (typeof body.to !== 'string' || body.to === '') return json({ ok: false, error: 'to required' }, 400);
+      await this.state.storage.put('forwardTo', body.to);
+      this.forwardTo = body.to;
+      return json({ ok: true, forwardTo: body.to });
     }
     if (request.method === 'GET' && url.pathname === '/health') {
       await this.load();
@@ -255,6 +286,7 @@ export class ShopperReflex {
         await this.state.storage.deleteAll();
         this.affinity = null;
         this.pipeline = null;
+        this.forwardTo = null;
         this.loaded = true;
       });
       return json({ ok: true });
@@ -848,6 +880,121 @@ export class ShopperReflex {
   // ── Plumbing ────────────────────────────────────────────────────────────────
 
   /** Rehydrate the in-memory mirrors from ctx.storage (one read for both keys). */
+  // ── CW25: identity ─────────────────────────────────────────────────────────
+
+  private async forwardTarget(): Promise<string | null> {
+    if (this.forwardTo === undefined) {
+      this.forwardTo = ((await this.state.storage.get('forwardTo')) as string | undefined) ?? null;
+    }
+    return this.forwardTo;
+  }
+
+  /**
+   * When this object forwards, hand the request to the person's object by its
+   * stored name. The name carries the brand prefix already, so no tenant needs
+   * to be known here. A socket upgrade is NOT forwarded: the client is told the
+   * id to reconnect under, and reconnects.
+   */
+  private async forwardIfLinked(request: Request): Promise<Response | null> {
+    const to = await this.forwardTarget();
+    if (!to) return null;
+    const stub = this.env.SHOPPER_REFLEX.get(this.env.SHOPPER_REFLEX.idFromName(to));
+    const res = await stub.fetch(request);
+    const body = await res.text();
+    const headers = new Headers(res.headers);
+    headers.set('X-Forwarded-Shopper', to);
+    return new Response(body, { status: res.status, headers });
+  }
+
+  /**
+   * Fold another object's export into this one. The reflex vectors merge on the
+   * decay invariant; counters add; first seen is the earliest. This object
+   * becomes the person: its shopper id is the canonical one from here on.
+   */
+  private async handleAbsorb(request: Request): Promise<Response> {
+    let body: { shopperId?: unknown; affinity?: AffinityRecord | null; pipeline?: PipelineRecord | null; now?: unknown } = {};
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'invalid JSON body' }, 400); }
+    if (typeof body.shopperId !== 'string' || body.shopperId === '') return json({ ok: false, error: 'shopperId required' }, 400);
+    const shopperId = body.shopperId;
+    const now = typeof body.now === 'number' ? body.now : Date.now();
+
+    return this.serialize(async () => {
+      await this.load();
+      const cfg = await resolveReflexConfig(this.env, this.surface());
+      const from = body.affinity ?? null;
+      const fromPipe = body.pipeline ?? null;
+      const merged = mergeReflexStates(this.affinity?.reflex, from?.reflex, now, cfg);
+
+      this.affinity = {
+        shopperId,
+        reflex: merged.state,
+        odpSeed: this.affinity?.odpSeed ?? from?.odpSeed ?? [],
+        odpSeedAt: this.affinity?.odpSeedAt ?? from?.odpSeedAt ?? 0,
+        odpRecentEvents: [...(from?.odpRecentEvents ?? []), ...(this.affinity?.odpRecentEvents ?? [])].slice(-10),
+        lastSeen: Math.max(this.affinity?.lastSeen ?? 0, from?.lastSeen ?? 0) || now,
+        configVersion: cfg.version,
+      };
+      const attributes: Record<string, any> = { ...(fromPipe?.attributes ?? {}), ...(this.pipeline?.attributes ?? {}) };
+      for (const k of Object.keys(RETAIL_SIGNAL_DEFAULTS)) {
+        const a = this.pipeline?.attributes?.[k]; const b = fromPipe?.attributes?.[k];
+        if (typeof a === 'number' && typeof b === 'number') attributes[k] = a + b;
+      }
+      this.pipeline = {
+        attributes,
+        segments: [...new Set([...(this.pipeline?.segments ?? []), ...(fromPipe?.segments ?? []), ...merged.state.audiences])].sort(),
+        journeyStage: this.pipeline?.journeyStage ?? fromPipe?.journeyStage ?? 'early',
+        sessionId: this.pipeline?.sessionId ?? fromPipe?.sessionId ?? crypto.randomUUID(),
+        visitorId: shopperId,
+        firstSeen: Math.min(this.pipeline?.firstSeen ?? now, fromPipe?.firstSeen ?? now),
+        sessionCount: (this.pipeline?.sessionCount ?? 0) + (fromPipe?.sessionCount ?? 0),
+        surface: this.pipeline?.surface ?? fromPipe?.surface,
+      };
+      await this.state.storage.put({ affinity: this.affinity, pipeline: this.pipeline });
+      await this.scheduleNextCrossing(now);
+      return json({ ok: true, shopperId, audiences: merged.state.audiences, changes: merged.changes });
+    });
+  }
+
+  /**
+   * Apply historical rows, each at its own time, then evaluate at now. Touches
+   * arrive already extracted by the route against the registry; this object
+   * only does the arithmetic, and touches nothing about visits or lastSeen.
+   */
+  private async handleImport(request: Request): Promise<Response> {
+    let body: { shopperId?: unknown; rows?: unknown; now?: unknown } = {};
+    try { body = await request.json(); } catch { return json({ ok: false, error: 'invalid JSON body' }, 400); }
+    const rows = Array.isArray(body.rows) ? body.rows as Array<{ action: string; at: number; touches: Array<{ dim: string; value: string }> }> : [];
+    const now = typeof body.now === 'number' ? body.now : Date.now();
+    return this.serialize(async () => {
+      await this.load();
+      const cfg = await resolveReflexConfig(this.env, this.surface());
+      let state = this.affinity?.reflex ?? null;
+      for (const r of rows) state = applyHistorical(state, { action: r.action, touches: r.touches }, r.at, cfg);
+      const evaluated = tickReflex(state, now, cfg);
+      const shopperId = typeof body.shopperId === 'string' && body.shopperId ? body.shopperId : (this.affinity?.shopperId ?? '');
+      this.affinity = {
+        shopperId,
+        reflex: evaluated.state,
+        odpSeed: this.affinity?.odpSeed ?? [],
+        odpSeedAt: this.affinity?.odpSeedAt ?? 0,
+        odpRecentEvents: this.affinity?.odpRecentEvents ?? [],
+        lastSeen: this.affinity?.lastSeen ?? 0,
+        configVersion: cfg.version,
+      };
+      if (!this.pipeline) {
+        this.pipeline = {
+          attributes: {}, segments: [...evaluated.state.audiences], journeyStage: 'early',
+          sessionId: crypto.randomUUID(), visitorId: shopperId, firstSeen: now, sessionCount: 0,
+        };
+      } else {
+        this.pipeline = { ...this.pipeline, segments: [...new Set([...this.pipeline.segments, ...evaluated.state.audiences])].sort() };
+      }
+      await this.state.storage.put({ affinity: this.affinity, pipeline: this.pipeline });
+      await this.scheduleNextCrossing(now);
+      return json({ ok: true, applied: rows.length, audiences: evaluated.state.audiences, changes: evaluated.changes });
+    });
+  }
+
   private async load(): Promise<void> {
     if (this.loaded) return;
     const stored = await this.state.storage.get(['affinity', 'pipeline']);

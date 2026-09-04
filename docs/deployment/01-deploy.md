@@ -63,6 +63,7 @@ with its own resources, before it is used.
 - Names (never commit values): `GEMINI_API_KEY` (required for AI surfaces), `ODP_PUBLIC_KEY` (enables the live ODP loop with `ODP_API_HOST`, which is a var), `OPTIMIZELY_API_TOKEN` + `OPTIMIZELY_WRITE_ENABLED` (FX writes), `OPTIMIZELY_WEBHOOK_SECRET` (datafile webhook HMAC), optional `GEMINI_MODEL`/`GEMINI_IMAGE_MODEL`, `SIGNAL_API_HOST/KEY`.
 - Plain vars in `[vars]`: `ENVIRONMENT`, `CONNECTOR_MODE`, `DECISION_SOURCE`, `ODP_API_HOST`, `OPTIMIZELY_SDK_KEY` (deliberately non-secret), JWT settings.
 - CW10 additions: `AUTH_MODE` (var: `open` | `enforced`), `CORS_ORIGINS` (var, comma-separated, `*.example.com` allowed), `SDK_KEYS` (**secret**, `tenant:key[|key2],tenant2:key3`; tenant `*` accepts the key anywhere).
+- CW25 additions (identity stitching, doc 25): `IDENTITY_SALT` (**secret**; salts the shopper id — set it wherever real accounts are linked), `IDENTITY_SECRETS` (**secret**, `tenant:secret[|previous],tenant2:secret`; when a tenant has one, a link must carry the site's signed assertion). Both optional; without them the demo links on the site key alone and every link record says `assurance: site`, `salted: false`.
 
 ## Database
 

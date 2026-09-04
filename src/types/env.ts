@@ -99,6 +99,10 @@ export interface Env {
   CORS_ORIGINS?: string;
   // Secret. `tenant:key[|key2],tenant2:key3`; tenant `*` accepts the key anywhere.
   SDK_KEYS?: string;
+  // CW25 — identity stitching. IDENTITY_SALT (secret) salts the shopper id; IDENTITY_SECRETS
+  // (secret, `tenant:secret[|previous],…`) makes a link require the site's signed assertion.
+  IDENTITY_SALT?: string;
+  IDENTITY_SECRETS?: string;
 
   // Connector layer — "real seams, mocked calls" (docs/architecture/05-demo-build-spec.md)
   CONNECTOR_MODE?: 'mock' | 'live';
