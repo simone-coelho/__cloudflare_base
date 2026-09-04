@@ -57,6 +57,15 @@
       keys: ['add_to_cart', 'cart_add'] },
     { id: 'buy', label: 'Bought', help: 'The strongest signal there is. Raising it makes a purchase dominate the profile for longer.',
       keys: ['purchase', 'checkout', 'order_complete'] },
+    // CW3's content actions. Four distinct actions, not aliases, so four rows.
+    { id: 'c_impression', label: 'Was shown a piece of content', help: 'A piece rendered in front of them. Dense and involuntary, so it ships at zero: being shown a video must not read as liking video.',
+      keys: ['content_impression'] },
+    { id: 'c_dwell', label: 'Lingered on a piece of content', help: 'They stayed on it. Sustained attention, but passive, so it counts for less than a click.',
+      keys: ['content_dwell'] },
+    { id: 'c_click', label: 'Clicked a piece of content', help: 'A deliberate act, like opening a product page.',
+      keys: ['content_click'] },
+    { id: 'c_video', label: 'Watched a video to the end', help: 'The strongest content signal there is: they stayed for all of it.',
+      keys: ['video_complete'] },
     { id: 'tick', label: 'Time passing, with no action', help: 'A re-check with no new behaviour. Keep this at zero: time should let interest fade, never build it.',
       keys: ['tick'] },
   ];
@@ -167,6 +176,11 @@
     for (const k of group.keys) if (k in S.draft.weights) S.draft.weights[k] = v;
   }
 
+  const INHERITED_NOTE = 'Inherited from the shipped defaults: this document does not mention it. ' +
+    'Save any value to make it the document\u2019s own; 0 switches the action off.';
+  const isInherited = (k) => Array.isArray(S.meta?.inherited) && S.meta.inherited.includes(k)
+    && S.draft.weights[k] === S.base.weights[k];
+
   function renderWeights() {
     const nodes = [];
     for (const g of GROUPS) {
@@ -177,6 +191,9 @@
       nodes.push(row({
         name: g.label,
         help: g.help,
+        // A weight this document never wrote down is filled from the shipped
+        // defaults at read time. Say so, and say how to make it the document's own.
+        derived: present.every((k) => isInherited(k)) ? INHERITED_NOTE : undefined,
         raw: present.join(', '),
         value: v === null ? '' : v,
         changed: v !== wasV,
@@ -191,6 +208,7 @@
       if (grouped.has(k)) continue;
       nodes.push(row({
         name: k, help: 'A custom action. Its weight works exactly like the ones above.',
+        derived: isInherited(k) ? INHERITED_NOTE : undefined,
         value: S.draft.weights[k], changed: S.draft.weights[k] !== S.base.weights[k],
         unit: 'points', key: `w:${k}`,
         onChange: (nv) => { S.draft.weights[k] = nv; },
@@ -573,6 +591,28 @@
       ok.className = 'msg ok';
       ok.textContent = flashText;
       host.appendChild(ok);
+    }
+    // Drift from the shipped defaults that the store will not fix on its own: a
+    // dimension the defaults have and this document lacks is never added silently.
+    const warnings = Array.isArray(S.meta?.warnings) ? S.meta.warnings : [];
+    if (warnings.length) {
+      const w = document.createElement('div');
+      w.className = 'msg warn';
+      const h = document.createElement('div');
+      h.textContent = warnings.length === 1
+        ? 'One thing the shipped defaults have that this document does not:'
+        : `${warnings.length} things the shipped defaults have that this document does not:`;
+      const ul = document.createElement('ul');
+      warnings.forEach((msg) => {
+        const li = document.createElement('li');
+        li.textContent = msg;
+        ul.appendChild(li);
+      });
+      const tail = document.createElement('div');
+      tail.style.marginTop = '6px';
+      tail.textContent = 'Nothing scores on a missing dimension here. Add it under Dimensions if this scope should learn it.';
+      w.append(h, ul, tail);
+      host.appendChild(w);
     }
     if (S.errors.length) {
       // Deduplicate AFTER humanizing. One behaviour group writes several aliases,

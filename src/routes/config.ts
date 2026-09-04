@@ -25,6 +25,8 @@ import {
   applyPatch,
   patchReflexConfig,
   readConfigIndex,
+  compiledDefaultFor,
+  configWarnings,
   readReflexConfig,
   readReflexConfigRevision,
   readReflexConfigVersion,
@@ -69,7 +71,12 @@ configRoutes.get('/reflex', async (c) => {
     actor: revision?.actor ?? null,
     note: revision?.note ?? null,
     at: revision?.at ?? null,
+    // The EFFECTIVE config: weights the stored document omits are filled from
+    // the compiled default and named in `inherited`; a dimension the default has
+    // and the document lacks is never added, only named in `warnings`.
     config,
+    inherited: revision?.inherited ?? [],
+    warnings: revision ? configWarnings(revision.config, await compiledDefaultFor(scope)) : [],
   });
 });
 
@@ -100,7 +107,7 @@ configRoutes.post('/reflex/validate', async (c) => {
     : (body as { config?: unknown }).config ?? body;
   const result = validateReflexConfig(candidate);
   return result.ok
-    ? c.json({ valid: true, config: result.config })
+    ? c.json({ valid: true, config: result.config, warnings: configWarnings(result.config, await compiledDefaultFor(scopeOf(c))) })
     : c.json({ valid: false, errors: result.errors }, 422);
 });
 
@@ -122,7 +129,8 @@ configRoutes.put('/reflex', async (c) => {
     note: typeof note === 'string' ? note.slice(0, 500) : '',
   });
   return result.ok
-    ? c.json({ ok: true, revision: result.revision.revision, version: result.revision.config.version, config: result.revision.config })
+    ? c.json({ ok: true, revision: result.revision.revision, version: result.revision.config.version, config: result.revision.config,
+               inherited: result.revision.inherited, warnings: configWarnings(result.revision.config, await compiledDefaultFor(scopeOf(c))) })
     : c.json({ ok: false, errors: result.errors }, 422);
 });
 
@@ -139,7 +147,8 @@ configRoutes.patch('/reflex', async (c) => {
     note: typeof note === 'string' ? note.slice(0, 500) : '',
   });
   return result.ok
-    ? c.json({ ok: true, revision: result.revision.revision, version: result.revision.config.version, config: result.revision.config })
+    ? c.json({ ok: true, revision: result.revision.revision, version: result.revision.config.version, config: result.revision.config,
+               inherited: result.revision.inherited, warnings: configWarnings(result.revision.config, await compiledDefaultFor(scopeOf(c))) })
     : c.json({ ok: false, errors: result.errors }, 422);
 });
 

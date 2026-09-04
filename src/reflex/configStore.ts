@@ -57,10 +57,19 @@ export const DEFAULT_SCOPE: ConfigScope = 'coach';
 export const CACHE_TTL_MS = store.CACHE_TTL_MS;
 export const INDEX_LIMIT = store.INDEX_LIMIT;
 
-/** A stored config plus who changed it, when, and why. */
+/**
+ * A stored config plus who changed it, when, and why.
+ *
+ * `config` is the EFFECTIVE config: the document as stored, with any weight the
+ * document does not mention filled from the compiled default for its scope (see
+ * inheritWeights). `inherited` names those weights, so a surface can show them
+ * and a reader can tell inherited from authored.
+ */
 export interface ConfigRevision {
   revision: number;
   config: ReflexConfig;
+  /** Weight keys the stored document does not mention, filled from the compiled default. */
+  inherited: string[];
   actor: string;
   note: string;
   at: number;
@@ -267,6 +276,65 @@ export function stampVersion(baseVersion: string, revision: number): string {
 // naming a mechanism. This is the mechanism. Phase 0 onwards should add a
 // DocumentKind rather than a second store.
 
+// ── Inheritance from the compiled default (2026-09-04) ───────────────────────
+//
+// A stored document is a snapshot of the defaults as they were the day it was
+// written. When the engine learns a new action (CW3 added four content events),
+// every document written before that day has no weight for it, and the engine
+// scores the action at zero there. Coach sat at revision 14 with `contentType`
+// absent and every content event weighing nothing until a person noticed.
+//
+// The rule, decided with the outcome-learning session (doc 24 addendum 7):
+//
+//   WEIGHTS: absent means INHERIT. A weight the document does not mention is
+//   filled from the compiled default for the scope, so a new action carries its
+//   default weight everywhere until a person tunes it. Explicit ZERO means OFF,
+//   and is kept. This is the only way to switch an action off; deleting the key
+//   is not, because a deleted key is indistinguishable from a key that did not
+//   exist yet.
+//
+//   DIMENSIONS: never added silently. A dimension changes what the registry
+//   admits and which audiences can exist; that is a person's decision. A
+//   dimension the default has and the document lacks is REPORTED, by GET,
+//   validate and every write, so the tuning page can show it.
+//
+// The fill is deterministic from (stored document, compiled default of the
+// build), so a replay on the same build reproduces the same effective config.
+// The stamped version still identifies the stored document.
+
+/** The compiled default a scope inherits from. Brighthour has its own; every other scope is the engine default. */
+export async function compiledDefaultFor(scope: ConfigScope): Promise<ReflexConfig> {
+  if (scope === 'brighthour') {
+    const { BRIGHTHOUR_REFLEX_CONFIG } = await import('@/demos/brighthour/reflexConfig');
+    return BRIGHTHOUR_REFLEX_CONFIG;
+  }
+  return DEFAULT_REFLEX_CONFIG;
+}
+
+/** Pure. The effective config and the names of the weights that were filled in. */
+export function inheritWeights(stored: ReflexConfig, defaults: ReflexConfig): { config: ReflexConfig; inherited: string[] } {
+  const inherited = Object.keys(defaults.weights).filter((k) => !(k in stored.weights)).sort();
+  if (inherited.length === 0) return { config: stored, inherited };
+  const weights: Record<string, number> = { ...stored.weights };
+  for (const k of inherited) weights[k] = defaults.weights[k];
+  return { config: deepFreeze({ ...structuredCopy(stored), weights }) as ReflexConfig, inherited };
+}
+
+/**
+ * Pure. What a person should be told about a document that is valid but has
+ * drifted from the compiled default. Never blocks a write.
+ */
+export function configWarnings(candidate: ReflexConfig, defaults: ReflexConfig): string[] {
+  const have = new Set(candidate.dimensions.map((d) => d.key));
+  const warnings: string[] = [];
+  for (const d of defaults.dimensions) {
+    if (!have.has(d.key)) {
+      warnings.push(`dimension '${d.key}' (source '${d.source}') is in the compiled default and not in this document; it is not added silently, and nothing scores on it here until a person adds it`);
+    }
+  }
+  return warnings;
+}
+
 export const REFLEX_KIND: store.DocumentKind<ReflexConfig> = {
   name: 'reflex',
   validate(candidate) {
@@ -284,20 +352,28 @@ export function invalidateConfigCache(scope?: ConfigScope): void {
   store.invalidateCache(REFLEX_KIND.name, scope);
 }
 
-const asConfigRevision = (r: store.Revision<ReflexConfig> | null): ConfigRevision | null =>
-  r === null ? null : { revision: r.revision, config: r.value, actor: r.actor, note: r.note, at: r.at };
+/** A stored revision as the effective config: weights the document omits filled from the scope's default. */
+const asConfigRevision = (r: store.Revision<ReflexConfig> | null, defaults: ReflexConfig): ConfigRevision | null => {
+  if (r === null) return null;
+  const { config, inherited } = inheritWeights(r.value, defaults);
+  return { revision: r.revision, config, inherited, actor: r.actor, note: r.note, at: r.at };
+};
 
-const asWriteResult = (r: store.WriteResult<ReflexConfig>): WriteResult =>
-  r.ok ? { ok: true, revision: asConfigRevision(r.revision) as ConfigRevision } : r;
+const asWriteResult = (r: store.WriteResult<ReflexConfig>, defaults: ReflexConfig): WriteResult =>
+  r.ok ? { ok: true, revision: asConfigRevision(r.revision, defaults) as ConfigRevision } : r;
 
 /**
  * The stored revision for a scope, or null when nothing is stored or what is
- * stored cannot be trusted. Never throws.
+ * stored cannot be trusted. Never throws. The config returned is the EFFECTIVE
+ * one (inheritWeights), for every reader: the decision path, the content
+ * service's direct read, and the routes.
  */
 export async function readReflexConfigRevision(
   env: Env, scope: ConfigScope = DEFAULT_SCOPE, nowMs: number = Date.now(),
 ): Promise<ConfigRevision | null> {
-  return asConfigRevision(await store.readRevision(env, REFLEX_KIND, scope, nowMs));
+  const stored = await store.readRevision(env, REFLEX_KIND, scope, nowMs);
+  if (stored === null) return null;
+  return asConfigRevision(stored, await compiledDefaultFor(scope));
 }
 
 /**
@@ -307,14 +383,14 @@ export async function readReflexConfigRevision(
 export async function readReflexConfig(
   env: Env, scope: ConfigScope = DEFAULT_SCOPE, nowMs: number = Date.now(),
 ): Promise<ReflexConfig> {
-  return store.read(env, REFLEX_KIND, scope, DEFAULT_REFLEX_CONFIG, nowMs);
+  return (await readReflexConfigRevision(env, scope, nowMs))?.config ?? DEFAULT_REFLEX_CONFIG;
 }
 
-/** A specific historical revision, for diffing, replay and rollback. */
+/** A specific historical revision, for diffing, replay and rollback. Effective, like the current one. */
 export async function readReflexConfigVersion(
   env: Env, scope: ConfigScope, revision: number,
 ): Promise<ConfigRevision | null> {
-  return asConfigRevision(await store.readVersion(env, REFLEX_KIND, scope, revision));
+  return asConfigRevision(await store.readVersion(env, REFLEX_KIND, scope, revision), await compiledDefaultFor(scope));
 }
 
 export async function readConfigIndex(
@@ -333,7 +409,7 @@ export interface WriteMeta {
 export async function writeReflexConfig(
   env: Env, scope: ConfigScope, candidate: unknown, meta: WriteMeta,
 ): Promise<WriteResult> {
-  return asWriteResult(await store.write(env, REFLEX_KIND, scope, candidate, meta));
+  return asWriteResult(await store.write(env, REFLEX_KIND, scope, candidate, meta), await compiledDefaultFor(scope));
 }
 
 /**
@@ -386,9 +462,10 @@ export function applyPatch(base: ReflexConfig, patch: ReflexConfigPatch): Reflex
 export async function patchReflexConfig(
   env: Env, scope: ConfigScope, patch: ReflexConfigPatch, meta: WriteMeta,
 ): Promise<WriteResult> {
-  return asWriteResult(
-    await store.patch(env, REFLEX_KIND, scope, DEFAULT_REFLEX_CONFIG, patch, meta),
-  );
+  // The base when nothing is stored yet is the SCOPE's compiled default, not the
+  // engine's: a first patch on brighthour starts from brighthour's weights.
+  const defaults = await compiledDefaultFor(scope);
+  return asWriteResult(await store.patch(env, REFLEX_KIND, scope, defaults, patch, meta), defaults);
 }
 
 /**
@@ -399,5 +476,5 @@ export async function patchReflexConfig(
 export async function rollbackReflexConfig(
   env: Env, scope: ConfigScope, toRevision: number, meta: WriteMeta,
 ): Promise<WriteResult> {
-  return asWriteResult(await store.rollback(env, REFLEX_KIND, scope, toRevision, meta));
+  return asWriteResult(await store.rollback(env, REFLEX_KIND, scope, toRevision, meta), await compiledDefaultFor(scope));
 }

@@ -429,3 +429,96 @@ describe('resolveReflexConfigRevision — the join key, not the display string',
     expect(r.config.version.endsWith(`+r${r.revision}`)).toBe(true);
   });
 });
+
+// ── Inheritance from the compiled default (2026-09-04) ───────────────────────
+//
+// The gap this closes: coach at revision 14 was written before CW3, so it had
+// no content weights and every content event scored zero there until a person
+// wrote revision 15 by hand. Absent means inherit; explicit zero means off;
+// dimensions are never added silently, only named.
+
+describe('inheritWeights: absent means inherit, zero means off', () => {
+  /** A document written before the content weights existed. */
+  function preContentConfig(): ReflexConfig {
+    const c = sampleConfig();
+    for (const k of ['content_impression', 'content_dwell', 'content_click', 'video_complete']) delete c.weights[k];
+    return c;
+  }
+
+  it('fills a weight the document does not mention from the compiled default, and names it', async () => {
+    const { inheritWeights, compiledDefaultFor } = await import('@/reflex/configStore');
+    const { config, inherited } = inheritWeights(preContentConfig(), await compiledDefaultFor('coach'));
+    expect(inherited).toEqual(['content_click', 'content_dwell', 'content_impression', 'video_complete']);
+    expect(config.weights.content_click).toBe(DEFAULT_REFLEX_CONFIG.weights.content_click);
+    expect(config.weights.video_complete).toBe(DEFAULT_REFLEX_CONFIG.weights.video_complete);
+  });
+
+  it('keeps an explicit zero: that is how an action is switched off', async () => {
+    const { inheritWeights } = await import('@/reflex/configStore');
+    const doc = preContentConfig();
+    doc.weights.content_click = 0;
+    const { config, inherited } = inheritWeights(doc, DEFAULT_REFLEX_CONFIG);
+    expect(config.weights.content_click).toBe(0);
+    expect(inherited).not.toContain('content_click');
+  });
+
+  it('keeps an authored value over the default, and a custom action the default lacks', async () => {
+    const { inheritWeights } = await import('@/reflex/configStore');
+    const doc = sampleConfig({ weights: { ...DEFAULT_REFLEX_CONFIG.weights, purchase: 9, try_on: 4 } });
+    const { config, inherited } = inheritWeights(doc, DEFAULT_REFLEX_CONFIG);
+    expect(config.weights.purchase).toBe(9);
+    expect(config.weights.try_on).toBe(4);
+    expect(inherited).toEqual([]);
+  });
+
+  it('returns the very same object when nothing is inherited, so identity comparisons still hold', async () => {
+    const { inheritWeights } = await import('@/reflex/configStore');
+    const doc = sampleConfig();
+    expect(inheritWeights(doc, DEFAULT_REFLEX_CONFIG).config).toBe(doc);
+  });
+
+  it('never adds a dimension; it names it in the warnings instead', async () => {
+    const { inheritWeights, configWarnings } = await import('@/reflex/configStore');
+    const doc = sampleConfig({ dimensions: DEFAULT_REFLEX_CONFIG.dimensions.filter((d) => d.key !== 'contentType') });
+    const { config } = inheritWeights(doc, DEFAULT_REFLEX_CONFIG);
+    expect(config.dimensions.some((d) => d.key === 'contentType')).toBe(false);
+    const warnings = configWarnings(config, DEFAULT_REFLEX_CONFIG);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatch(/dimension 'contentType' \(source 'contentType'\)/);
+    expect(configWarnings(sampleConfig(), DEFAULT_REFLEX_CONFIG)).toEqual([]);
+  });
+
+  it('reaches every reader: the stored revision, the plain read, a historical version, and the decision path', async () => {
+    const { resolveReflexConfig } = await import('@/demos/registry');
+    await writeReflexConfig(env, SCOPE, preContentConfig(), { actor: 'before-cw3' });
+    const rev = await readReflexConfigRevision(env, SCOPE);
+    expect(rev?.inherited).toContain('content_click');
+    expect(rev?.config.weights.content_click).toBe(1);
+    expect((await readReflexConfig(env, SCOPE)).weights.video_complete).toBe(2);
+    expect((await readReflexConfigVersion(env, SCOPE, 1))?.config.weights.content_dwell).toBe(0.5);
+    expect((await resolveReflexConfig(env, 'coach')).weights.content_click).toBe(1);
+    // The STORED document is untouched: the fill is a read-time rule, not a rewrite.
+    const key = [...kv.store.keys()].find((k) => k.includes('reflex') && k.includes('current'));
+    const raw = JSON.parse(kv.store.get(key!) as string) as { value: ReflexConfig };
+    expect(raw.value.weights.product_view).toBe(1);          // the stored document is real
+    expect('content_click' in raw.value.weights).toBe(false); // and was not rewritten
+  });
+
+  it('a patch that switches an inherited weight off stores the zero, and the read honours it', async () => {
+    await writeReflexConfig(env, SCOPE, preContentConfig(), { actor: 'before-cw3' });
+    const r = await patchReflexConfig(env, SCOPE, { weights: { content_click: 0 } }, { actor: 'merch' });
+    expect(r.ok).toBe(true);
+    const rev = await readReflexConfigRevision(env, SCOPE);
+    expect(rev?.config.weights.content_click).toBe(0);
+    expect(rev?.inherited).not.toContain('content_click');
+    expect(rev?.inherited).toContain('video_complete');
+  });
+
+  it('brighthour inherits from its own compiled default, not the engine’s', async () => {
+    const { compiledDefaultFor } = await import('@/reflex/configStore');
+    const bh = await compiledDefaultFor('brighthour');
+    expect(bh).not.toBe(DEFAULT_REFLEX_CONFIG);
+    expect(await compiledDefaultFor('coach')).toBe(DEFAULT_REFLEX_CONFIG);
+    expect(await compiledDefaultFor('kate-spade')).toBe(DEFAULT_REFLEX_CONFIG);
+  });
+});
