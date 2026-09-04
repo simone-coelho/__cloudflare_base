@@ -2,6 +2,7 @@
 
 **Status:** verified against code 2026-07-08 (every route confirmed mounted in `src/index.ts`). Supersedes the 2025 reference (preserved as [legacy-01-rest-endpoints-2025.md](./legacy-01-rest-endpoints-2025.md), which documented ~15 of the current ~75 endpoints and 3 endpoints that never existed).
 **Companion:** [02-websocket-protocol.md](./02-websocket-protocol.md).
+**Customer surface (2026-09-04):** the routes a customer integration uses, with exact request and response shapes, are in the integration kit, [docs/kit/02-api-reference.md](../kit/02-api-reference.md); this page stays the internal as-built inventory. Since 2026-07-08 the platform gained: the content documents (`/content/{catalog|slots|learn|priors}` with history, validate, rollback, import and pull), the decision service and the learning routes (`/v1/:tenant/decisions/snapshot`, `lift`, `lift/history`, `ledger/:id`, `ledger/batches`, `replay/:id`, `learn/report`, `learn/cycle`, `learn/proposals`, `learn/items/reset`, `models/reference`, `trend`, `visitors/:id/recent`), identity stitching (`/v1/:tenant/identity/*`), the versioned reflex configuration (`/config/reflex`), site-key and operator-token gates (`AUTH_MODE`), and the SDK at `/sdk/edge-personalization.js`. The kit documents all of them.
 
 ## Conventions
 

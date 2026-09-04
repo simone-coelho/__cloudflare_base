@@ -23,7 +23,7 @@ So the first act is not writing code. It is re-keying the work to the contract.
 | Deadline | What it covers | Why it is the hardest one |
 |---|---|---|
 | **Signature** | All twelve §1 capabilities. The section header reads *"Built, tested, and active on signature. This is what the platform does today."* | It has no project plan because it was never treated as a date. It could be days away, and it is the only deadline where the claim is present tense |
-| **Kickoff + 45** (~22 Oct) | Integration kit: SDK, integration guide, API reference, staging origins connected and verified | Risk 9 in ledger 19: their November code freeze. This, not acceptance, is the real external hard line |
+| **Kickoff + 45** (~22 Oct) | Integration kit: SDK, integration guide, API reference, staging origins connected and verified. **Kit written 2026-09-04, `docs/kit/`:** front page with what we need from them, integration guide, API reference, payload schemas, the staging connection document, and `scripts/verify-origin.sh`, the check both sides run; every shape executed against the code before it was written. Outstanding for the milestone: staging provisioned (human), their origins and keys registered, the check run from inside their network | Risk 9 in ledger 19: their November code freeze. This, not acceptance, is the real external hard line |
 | **Kickoff + 60** (~6 Nov) | Acceptance in their lower environment, scripted and repeatable | The first time an outsider runs our software against their expectations |
 | **Kickoff + 130** (~15 Jan 2027) | Content Personalization live in production | Contractual |
 | **Kickoff + 265** (~30 May 2027) | Experience Personalization live in production | Contractual |
