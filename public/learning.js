@@ -324,7 +324,9 @@
         h('div', { class: 'meta' }, `${r.actor || 'unknown'} · ${when(r.at)}`),
         r.note ? h('div', { class: 'note' }, r.note) : null,
         h('div', {}, !isCurrent ? h('button', { class: 'link', onclick: () => showDiff(r.revision) }, d ? 'Hide the diff' : 'Diff against the document in force') : null, ' ', !isCurrent ? h('button', { class: 'link', disabled: !canEdit(), title: canEdit() ? '' : 'Needs an operator token', onclick: () => rollback(r.revision) }, 'Roll back to this') : null),
-        d ? h('div', { class: 'diff' }, ...(d.length ? d.map((x) => h('div', {}, h('span', { class: 'del' }, `${x.path}: ${JSON.stringify(x.to)}`), ' → ', h('span', { class: 'add' }, JSON.stringify(x.from)))) : [h('div', {}, 'Identical content: this revision and the one in force say the same thing.')])) : null,
+        d ? h('div', { class: 'diff' },
+          h('div', { style: 'color:var(--ink-soft);margin-bottom:4px' }, `Compared with r${S.learnRevision}, the revision in force. Nothing changes until you roll back.`),
+          ...(d.length ? d.map((x) => h('div', {}, h('span', {}, `${x.path}: `), h('span', { class: 'del' }, `in force ${JSON.stringify(x.to)}`), ' · ', h('span', { class: 'add' }, `r${r.revision} ${JSON.stringify(x.from)}`))) : [h('div', {}, 'Identical content: this revision and the one in force say the same thing.')])) : null,
       ));
     }
     const vh = clear($('lift-history'));
