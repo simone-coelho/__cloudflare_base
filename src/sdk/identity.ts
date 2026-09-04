@@ -14,10 +14,20 @@ export function mintVisitorId(host: Host, key = DEFAULT_VISITOR_KEY): string {
   let id: string | null = null;
   try { id = host.storage.get(key); } catch { /* storage may be unavailable */ }
   if (!id) { try { id = host.cookie.get(key); } catch { /* cookies may be blocked */ } }
-  if (!id) id = `vis-${host.uuid()}`;
+  if (!id) id = freshVisitorId(host);
+  writeVisitorId(host, key, id);
+  return id;
+}
+
+/** A brand-new anonymous visitor id, the format the storefront mints. */
+export function freshVisitorId(host: Host): string {
+  return `vis-${host.uuid()}`;
+}
+
+/** Both stores, the same format: what identify() and logout() write when the id changes (CW25). */
+export function writeVisitorId(host: Host, key: string, id: string): void {
   try { host.storage.set(key, id); } catch { /* ignore */ }
   try { host.cookie.set(key, id, YEAR_SECONDS); } catch { /* ignore */ }
-  return id;
 }
 
 /** Per page load, for legacy capture paths that still key on it. */

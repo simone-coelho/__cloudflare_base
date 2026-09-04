@@ -96,7 +96,7 @@ One per served decision. Written off the response path.
 | `explored` | Whether this placement was an exploration pick (section 7) |
 | `authority` | `engine`, `pin`, `gate`, `default` |
 | `versions` | `config_v`, `lift_v`, `prior_v`, `policy_v` as integers, plus the human-readable label of the configuration revision. Since Phase 3 (2026-09-03) also the catalog, slots and learn document revisions, the three a replay needs; 0 means the compiled default |
-| `explain` | Drivers, scores, the lift term with its counts, their model's term when a slot weights one |
+| `explain` | Drivers, scores, the lift term with its counts, their model's term when a slot weights one, and the merchandising multipliers (season, promotion, margin) each as the score delta it caused, applied after affinity and the model and before the lift (2026-09-04, scope §1.5) |
 | `inputs` | Since Phase 3: the interest vector as scored (after any regional blend), the regional shares when a blend applied, and the model's scores when a term applied. About a kilobyte. This is what makes a replay exact rather than a re-estimate; the documents are named by revision instead of copied |
 
 ### 3.2 Outcome records

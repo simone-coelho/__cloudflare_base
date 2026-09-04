@@ -37,6 +37,9 @@ export interface Paths {
   reflex: string;
   /** Receives `{tenant}` substitution. */
   snapshot: string;
+  /** CW25: the identity stitching routes the client half calls. */
+  identityLink: string;
+  identityDetach: string;
 }
 
 /** A WebSocket-shaped thing. The browser's WebSocket satisfies it; tests fake it. */
@@ -160,4 +163,6 @@ export interface CoreEvents {
   audience: (audience: unknown) => void;
   socket: (status: SocketStatus) => void;
   sent: (envelope: ActionEnvelope, meta: { via: 'fetch' | 'beacon' | 'socket' }) => void;
+  /** CW25: the visitor id changed, because a person signed in (identified) or out (logout). */
+  identity: (change: { visitorId: string; previous: string; reason: 'identified' | 'logout' }) => void;
 }

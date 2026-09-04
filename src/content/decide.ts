@@ -12,6 +12,7 @@ import type {
 import { isLiveAt } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
 import { explorationPick, type ExploreConfig, type ExplorePick } from '@/learn/explore';
+import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
 import type { DecisionInputs, ExternalTerm, ItemControl } from './types';
 
 export interface DecideInput {
@@ -70,6 +71,7 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   // Eligibility before scoring: outside its publish window a piece does not exist
   // for this decision, however well it would have scored.
   const eligible = i.pieces.filter((p) => isLiveAt(p, i.nowMs));
+  const byId = new Map(i.pieces.map((p) => [p.id, p]));
 
   // The learning layer: lift^γ on the base score, looked up at the finest level
   // with enough evidence for this item in this cell. The base and the lift are
@@ -81,7 +83,15 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   // score before the lift and itemized like every other driver.
   const ext = i.arm === 'default' ? null : i.external ?? null;
   const extOf = new Map<string, { score: number; weight: number; contribution: number }>();
-  const adjust: ScoreAdjust | undefined = learning || ext ? (p, slot, base0) => {
+  // Scope §1.5 (ledger 20 row 6): season, promotion and margin as clamped multipliers on the
+  // merchandised base, after affinity and their model, before the lift. Item properties only, so
+  // they apply on every arm; each term is itemised as the delta it caused. The weights live on the
+  // slot strategy, the signals on the piece, so a replay reproduces them from the documents.
+  const merchWeights = new Map(i.slots.map((s) => [s.slot, s.merchandising ?? null]));
+  const hasMerch = [...merchWeights.values()].some((w) => w && (['season', 'promotion', 'margin'] as const).some((t) => (w[t] ?? 0) !== 0));
+  const merchDetailed = merchandisingAdjustDetailed<ContentPiece>({ weightsForSlot: (slot) => merchWeights.get(slot) ?? null, signalsOf: (p) => p.merchandising ?? null });
+  const merchOf = new Map<string, MerchandisingResult>();
+  const adjust: ScoreAdjust | undefined = learning || ext || hasMerch ? (p, slot, base0) => {
     const key = `${slot}:${p.id}`;
     let base = base0;
     if (ext && ext.status === 'ok') {
@@ -89,6 +99,11 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
       if (w > 0 && typeof s === 'number') { base += w * s; extOf.set(key, { score: s, weight: w, contribution: Math.round(w * s * 1000) / 1000 }); }
     }
     baseOf.set(key, base);
+    if (hasMerch) {
+      // A multiplier on nothing is nothing: a zero base (the default arm, or no signal) gets no block.
+      const m = base > 0 ? merchDetailed(byId.get(p.id) ?? (p as ContentPiece), slot, base) : null;
+      if (m && m.drivers.length) { merchOf.set(key, m); base = m.scoreFinal; }
+    }
     if (!learning) return base;
     const control = learning.controlOf?.(slot, p.id) ?? null;
     if (control) controlOf.set(key, control.mode);
@@ -115,8 +130,6 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
     return pick.ranking ? { ranking: pick.ranking } : { first: pick.pieceId };
   } : undefined;
   const { decisions, candidates } = composeContentDetailed(eligible, affinity, specs, i.candidateLimit ?? 10, adjust, explore);
-
-  const byId = new Map(i.pieces.map((p) => [p.id, p]));
   const specOf = new Map(specs.map((s) => [s.slot, s]));
   // What the region contributed to this decision: Σ over the piece's tags of λ·share·w.
   const regionalOf = (d: { contentId: string; slot: string }): (RegionalBlend & { contribution: number }) | null => {
@@ -139,6 +152,8 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
       const e = extOf.get(`${d.slot}:${d.contentId}`);
       if (e) d.explain.drivers.push({ dim: 'external', value: ext.version, a: e.score, weight: e.weight });
     }
+    const m = merchOf.get(`${d.slot}:${d.contentId}`);
+    if (m) for (const md of m.drivers) d.explain.drivers.push({ dim: 'merchandising', value: md.term, a: md.value, weight: md.weight });
   }
   const externalOf = (slot: string, key: string): { external?: DecisionRecord['explain']['external'] } => {
     if (!ext) return {};
@@ -181,6 +196,7 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
         ...(wasExplored && pick ? { exploration: { mode: pick.mode, reason: pick.reason, bucket: pick.bucket, ...(pick.samples ? { sample: pick.samples[d.contentId] } : {}) } } : {}),
         ...(control ? { control } : {}),
         ...externalOf(d.slot, key),
+        ...(merchOf.has(key) ? { merchandising: (({ boost, clamped, drivers }) => ({ boost, clamped, drivers, sentence: merchandisingSentence(merchOf.get(key)!) }))(merchOf.get(key)!) } : {}),
       },
       inputs,
     };

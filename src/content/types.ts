@@ -6,10 +6,13 @@
 
 import type { ContentPieceLike, ContentDecision, SlotCandidate } from '@/reflex/contentCompose';
 import type { ExternalKind, ExternalModelConfig } from '@/learn/external';
+import type { MerchandisingDriver, MerchandisingSignals, MerchandisingWeights } from '@/reflex/merchandising';
 
 /** A registered piece of the customer's content: their id, our id, its tags. */
 export interface ContentPiece extends ContentPieceLike {
   lifecycle: { status: 'live' | 'draft' | 'expired' };
+  /** Scope §1.5: the item's own season, promotion and margin signals, each in [0, 1], however the feed derives them. */
+  merchandising?: MerchandisingSignals;
   /** Where the customer's front end fetches the asset to paint. Theirs; echoed, never rewritten. */
   renderUrl?: string;
   /** Publish and expire, ISO 8601. Outside the window a live piece is not eligible. */
@@ -33,6 +36,8 @@ export interface SlotStrategy {
   take: number;
   weights: Record<string, number>;
   pinnedPieceId?: string;
+  /** Scope §1.5: the tunable multipliers for this placement. Absent or all zero means off. */
+  merchandising?: MerchandisingWeights;
 }
 
 /** The `slots` document kind: per page, the slots in page order. */
@@ -228,6 +233,11 @@ export interface DecisionRecord {
     control?: 'reject' | 'freeze';
     /** Their model's term on this decision, when the slot weights one. */
     external?: ExternalApplied;
+    /**
+     * Scope §1.5: season, promotion and margin, each itemised as the score delta it caused.
+     * score_base + the sum of the contributions is the merchandised score; the lift then multiplies it.
+     */
+    merchandising?: { boost: number; clamped: boolean; drivers: MerchandisingDriver[]; sentence: string };
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;

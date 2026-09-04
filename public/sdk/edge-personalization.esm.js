@@ -15,7 +15,14 @@ function mintVisitorId(host, key = DEFAULT_VISITOR_KEY) {
     } catch {
     }
   }
-  if (!id) id = `vis-${host.uuid()}`;
+  if (!id) id = freshVisitorId(host);
+  writeVisitorId(host, key, id);
+  return id;
+}
+function freshVisitorId(host) {
+  return `vis-${host.uuid()}`;
+}
+function writeVisitorId(host, key, id) {
   try {
     host.storage.set(key, id);
   } catch {
@@ -24,7 +31,6 @@ function mintVisitorId(host, key = DEFAULT_VISITOR_KEY) {
     host.cookie.set(key, id, YEAR_SECONDS);
   } catch {
   }
-  return id;
 }
 function mintAnonId(host) {
   return `v-${host.uuid().replace(/-/g, "").slice(0, 9).toUpperCase()}`;
@@ -70,7 +76,9 @@ var DEFAULT_PATHS = {
   action: "/realtime/action",
   ws: "/realtime/ws",
   reflex: "/realtime/reflex",
-  snapshot: "/v1/{tenant}/decisions/snapshot"
+  snapshot: "/v1/{tenant}/decisions/snapshot",
+  identityLink: "/v1/{tenant}/identity/link",
+  identityDetach: "/v1/{tenant}/identity/detach"
 };
 function resolveConfig(c, host) {
   const origin = host.location ? `${host.location.protocol}//${host.location.host}` : "";
@@ -91,7 +99,7 @@ function resolveConfig(c, host) {
 }
 function createCore(config, host) {
   const cfg = resolveConfig(config, host);
-  const visitorId = mintVisitorId(host, cfg.visitorIdKey);
+  let visitorId = mintVisitorId(host, cfg.visitorIdKey);
   const anonId = mintAnonId(host);
   const sessionId = mintSessionId(host);
   const entry = entrySignals(host);
@@ -183,6 +191,31 @@ function createCore(config, host) {
       return await res.json();
     } catch {
       return null;
+    }
+  }
+  async function postJson(path, body) {
+    try {
+      const res = await host.fetch(url(path), { method: "POST", headers: headers({ "Content-Type": "application/json" }), credentials: "include", body: JSON.stringify(body) });
+      let json = null;
+      try {
+        json = await res.json();
+      } catch {
+        json = null;
+      }
+      return { ok: res.ok, status: res.status, json };
+    } catch {
+      return { ok: false, status: 0, json: null };
+    }
+  }
+  function setVisitorId(id, reason) {
+    const previous = visitorId;
+    if (!id || id === previous) return;
+    visitorId = id;
+    writeVisitorId(host, cfg.visitorIdKey, id);
+    emit("identity", { visitorId: id, previous, reason });
+    if (wanted) {
+      disconnect();
+      connect();
     }
   }
   let socket = null;
@@ -303,10 +336,12 @@ function createCore(config, host) {
   return {
     config: cfg,
     host,
-    visitorId,
     anonId,
     sessionId,
     entry,
+    get visitorId() {
+      return visitorId;
+    },
     get socketStatus() {
       return status;
     },
@@ -317,6 +352,8 @@ function createCore(config, host) {
     url,
     headers,
     getJson,
+    postJson,
+    setVisitorId,
     connect,
     disconnect,
     applyIncoming
@@ -584,6 +621,43 @@ function createListen(core, opts = {}) {
   return { hydrate, subscribe, onDecisions, apply, current: () => current, rendered };
 }
 
+// src/sdk/identify.ts
+function createIdentity(core) {
+  async function attempt(accountId, o) {
+    return core.postJson(core.config.paths.identityLink, {
+      visitorId: core.visitorId,
+      accountId,
+      ...o.source ? { source: o.source } : {},
+      ...typeof o.exp === "number" ? { exp: o.exp } : {},
+      ...o.assertion ? { assertion: o.assertion } : {}
+    });
+  }
+  async function logout() {
+    const previous = core.visitorId;
+    const res = await core.postJson(core.config.paths.identityDetach, { visitorId: previous });
+    core.setVisitorId(freshVisitorId(core.host), "logout");
+    return { ok: res.ok, status: res.status, visitorId: core.visitorId };
+  }
+  async function identify(accountId, options = {}) {
+    if (!accountId || typeof accountId !== "string") return { ok: false, status: 0, error: "accountId required", retried: false };
+    let retried = false;
+    let res = await attempt(accountId, options);
+    if (res.status === 409) {
+      await logout();
+      retried = true;
+      res = await attempt(accountId, options);
+    }
+    const body = res.json ?? {};
+    const shopperId = typeof body.carry === "string" ? body.carry : typeof body.shopperId === "string" ? body.shopperId : null;
+    if (!res.ok || body.ok === false || !shopperId) {
+      return { ok: false, status: res.status, error: typeof body.error === "string" ? body.error : "link refused", retried };
+    }
+    core.setVisitorId(shopperId, "identified");
+    return { ok: true, shopperId, visitorId: core.visitorId, outcome: typeof body.outcome === "string" ? body.outcome : null, retried };
+  }
+  return { identify, logout };
+}
+
 // src/sdk/memoryHost.ts
 function memoryHost(overrides = {}) {
   const storage = /* @__PURE__ */ new Map();
@@ -705,13 +779,18 @@ function createClient(config, host = browserHost(), options = {}) {
   const core = createCore(config, host);
   const listen = createListen(core, options);
   const emit = createEmit(core, listen);
+  const identity = createIdentity(core);
   return {
     VERSION,
-    visitorId: core.visitorId,
+    get visitorId() {
+      return core.visitorId;
+    },
     sessionId: core.sessionId,
     core,
     emit,
     listen,
+    identify: (accountId, options2) => identity.identify(accountId, options2),
+    logout: () => identity.logout(),
     connect: () => core.connect(),
     disconnect: () => core.disconnect(),
     on: (event, fn) => core.on(event, fn)
@@ -725,6 +804,7 @@ export {
   createClient,
   createCore,
   createEmit,
+  createIdentity,
   createListen,
   memoryHost
 };

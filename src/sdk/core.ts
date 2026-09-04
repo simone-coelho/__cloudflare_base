@@ -5,7 +5,7 @@
 // the socket URL, the welcome frame, the reconnect delay, the action envelope
 // and the POST-versus-push dedupe are its behavior, verbatim.
 
-import { DEFAULT_VISITOR_KEY, entrySignals, mintAnonId, mintSessionId, mintVisitorId } from './identity';
+import { DEFAULT_VISITOR_KEY, entrySignals, mintAnonId, mintSessionId, mintVisitorId, writeVisitorId } from './identity';
 import { toWire } from './wire';
 import type {
   ActionEnvelope, ClientConfig, CoreEvents, DecisionSet, EngineUpdate, EntrySignals, Host, Paths,
@@ -17,6 +17,8 @@ export const DEFAULT_PATHS: Paths = {
   ws: '/realtime/ws',
   reflex: '/realtime/reflex',
   snapshot: '/v1/{tenant}/decisions/snapshot',
+  identityLink: '/v1/{tenant}/identity/link',
+  identityDetach: '/v1/{tenant}/identity/detach',
 };
 
 export interface ResolvedConfig {
@@ -74,6 +76,10 @@ export interface Core {
   url(path: string, query?: Record<string, string | undefined>): string;
   headers(extra?: Record<string, string>): Record<string, string>;
   getJson(path: string, query?: Record<string, string | undefined>): Promise<unknown | null>;
+  /** POST JSON with the site key and credentials; never throws. */
+  postJson(path: string, body: unknown): Promise<{ ok: boolean; status: number; json: unknown }>;
+  /** CW25: the browser now carries this id. Writes both stores, announces the change, reconnects the socket if it was open. */
+  setVisitorId(id: string, reason: 'identified' | 'logout'): void;
   connect(): void;
   disconnect(): void;
   /** Apply an engine update from either door, once. */
@@ -82,7 +88,7 @@ export interface Core {
 
 export function createCore(config: ClientConfig, host: Host): Core {
   const cfg = resolveConfig(config, host);
-  const visitorId = mintVisitorId(host, cfg.visitorIdKey);
+  let visitorId = mintVisitorId(host, cfg.visitorIdKey);
   const anonId = mintAnonId(host);
   const sessionId = mintSessionId(host);
   const entry = entrySignals(host);
@@ -169,6 +175,27 @@ export function createCore(config: ClientConfig, host: Host): Core {
     }
   }
 
+  async function postJson(path: string, body: unknown): Promise<{ ok: boolean; status: number; json: unknown }> {
+    try {
+      const res = await host.fetch(url(path), { method: 'POST', headers: headers({ 'Content-Type': 'application/json' }), credentials: 'include', body: JSON.stringify(body) });
+      let json: unknown = null;
+      try { json = await res.json(); } catch { json = null; }
+      return { ok: res.ok, status: res.status, json };
+    } catch {
+      return { ok: false, status: 0, json: null };
+    }
+  }
+
+  function setVisitorId(id: string, reason: 'identified' | 'logout'): void {
+    const previous = visitorId;
+    if (!id || id === previous) return;
+    visitorId = id;
+    writeVisitorId(host, cfg.visitorIdKey, id);
+    emit('identity', { visitorId: id, previous, reason });
+    // Pushes go to the object named by the id: a socket still open under the old one hears nothing.
+    if (wanted) { disconnect(); connect(); }
+  }
+
   // ── The socket ──────────────────────────────────────────────────────────────
   let socket: SocketLike | null = null;
   let status: SocketStatus = host.openSocket ? 'closed' : 'unavailable';
@@ -242,8 +269,9 @@ export function createCore(config: ClientConfig, host: Host): Core {
   }
 
   return {
-    config: cfg, host, visitorId, anonId, sessionId, entry,
+    config: cfg, host, anonId, sessionId, entry,
+    get visitorId() { return visitorId; },
     get socketStatus() { return status; },
-    on, emit, envelope, send, url, headers, getJson, connect, disconnect, applyIncoming,
+    on, emit, envelope, send, url, headers, getJson, postJson, setVisitorId, connect, disconnect, applyIncoming,
   };
 }

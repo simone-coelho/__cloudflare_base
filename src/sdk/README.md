@@ -81,6 +81,32 @@ client.emit.dataLayer({ mapping: { my_event: (e) => ({ type: 'custom', data: { e
 **Automatic**, for what the platform delivered: `client.emit.rendered(slot, contentId, element)` sends the
 impression once and measures dwell while the element is on screen.
 
+## Signing in and out
+
+The visitor id is anonymous until the site says who the person is. At login, call `identify` with the
+account id; the edge links the browser's visitor id to the person and answers with the person's shopper
+id, which the browser carries as its visitor id from then on. Every later event and decision is the
+person's, and the realtime channel reconnects under the new id so pushes reach the right object.
+
+```js
+// after the site's own login succeeds
+const r = await client.identify(account.id, { source: 'login', exp, assertion });
+if (r.ok) console.log('carrying', r.shopperId);
+
+// at logout: detach, take a fresh anonymous id, reconnect under it
+await client.logout();
+
+client.on('identity', ({ visitorId, previous, reason }) => { /* 'identified' or 'logout' */ });
+```
+
+`assertion` is an HMAC the site's backend computes at login over the tenant, the visitor id, the account
+id and `exp` (unix seconds, at most 24 hours ahead) with the site's identity secret; `signAssertion()` in
+`src/identity/assertion.ts` is the reference. Until the brand has a secret the page may call
+`identify(accountId)` bare and the link is recorded as site-assured. If this browser still carries the
+previous person's shopper id (the server answers 409), the SDK logs that person out and links once more
+with a fresh id; the result says `retried: true`. The full contract is in
+`docs/architecture/25-identity-stitching.md`.
+
 ## Listen-only mode
 
 `createClient({ tenant, listenOnly: true })` keeps the SDK's own capture paths off, for a site that keeps

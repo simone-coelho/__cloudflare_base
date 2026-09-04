@@ -62,9 +62,21 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
       if (window.from && window.to && Date.parse(window.from) >= Date.parse(window.to)) errors.push(`${at}.window: from must precede to`);
     }
   }
+  let merchandising: Record<string, number> | undefined;
+  if (p.merchandising !== undefined) {
+    if (!isRecord(p.merchandising)) errors.push(`${at}.merchandising: object of season | promotion | margin → number 0..1`);
+    else {
+      merchandising = {};
+      for (const [term, v] of Object.entries(p.merchandising)) {
+        if (!['season', 'promotion', 'margin'].includes(term) || !isNum(v) || v < 0 || v > 1) { errors.push(`${at}.merchandising.${term}: season | promotion | margin, number 0..1`); continue; }
+        merchandising[term] = v;
+      }
+    }
+  }
   if (!isStr(id) || !isStr(cid) || !isStr(type) || !isStr(title) || !slotTypes) return null;
   return {
     id, customerContentId: cid, type, title, tags, slotTypes,
+    ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
     lifecycle: { status: status as ContentPiece['lifecycle']['status'] },
     ...(isStr(p.subtitle) ? { subtitle: p.subtitle } : {}),
     ...(p.art === undefined ? {} : { art: p.art as string | null }),
@@ -114,8 +126,22 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     weights[dim] = w;
   }
   if (s.pinnedPieceId !== undefined && !isStr(s.pinnedPieceId)) errors.push(`${at}.pinnedPieceId: string when present`);
+  let merchandising: Record<string, number> | undefined;
+  if (s.merchandising !== undefined) {
+    if (!isRecord(s.merchandising)) errors.push(`${at}.merchandising: object of season | promotion | margin → weight -1..1, maxBoost ≥ 1, minBoost 0..1`);
+    else {
+      merchandising = {};
+      for (const [k, v] of Object.entries(s.merchandising)) {
+        const okTerm = ['season', 'promotion', 'margin'].includes(k) && isNum(v) && v >= -1 && v <= 1;
+        const okMax = k === 'maxBoost' && isNum(v) && v >= 1;
+        const okMin = k === 'minBoost' && isNum(v) && v >= 0 && v <= 1;
+        if (!okTerm && !okMax && !okMin) { errors.push(`${at}.merchandising.${k}: season | promotion | margin in -1..1, maxBoost ≥ 1, minBoost 0..1`); continue; }
+        merchandising[k] = v as number;
+      }
+    }
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
-  return { slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}) };
+  return { slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}) };
 }
 
 export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCatalog> {
