@@ -1,4 +1,5 @@
-import { tenantMiddleware } from '@/tenancy/middleware';
+import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';
+import { retentionDays, rewriteErasures, type R2Erasable } from '@/ledger/erasure';
 import type { TenantId } from '@/tenancy/tenant';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -192,6 +193,13 @@ export default {
           ctx.waitUntil(runCycle(env, tenant).then(
             (r) => console.log(`autonomy cycle ${tenant}: ${r.filter((x) => x.action !== 'none').length} action(s) across ${r.length} slot(s)`),
             (e) => console.error(`autonomy cycle ${tenant} failed`, e),
+          ));
+        }
+        // CW28 (doc 22 §15): the erasure rewrite. Newest day first over the retention window, capped per run, resumes tomorrow.
+        for (const tenant of tenantConfig(env).provisioned) {
+          ctx.waitUntil(rewriteErasures(env.STORAGE as unknown as R2Erasable, tenant, { retentionDays: retentionDays(env) }).then(
+            (r) => { if (r.tombstones) console.log(`erasure rewrite ${tenant}: ${r.rows_removed} row(s) removed from ${r.objects_opened} object(s) over ${r.days.length} day(s); ${r.retired} retired, ${r.remaining} pending${r.more ? ', more tomorrow' : ''}`); },
+            (e) => console.error(`erasure rewrite ${tenant} failed`, e),
           ));
         }
         break;

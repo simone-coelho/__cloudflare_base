@@ -591,7 +591,9 @@ began, is refused with the reason rather than replayed approximately.
 The R2 partitions are the export. A warehouse reads them directly; nothing is transformed on the way out.
 The console's grids and the policy comparisons are downloadable as CSV. `GET /v1/:tenant/ledger/batches?date=`
 lists one day's batch objects per stream (built 2026-09-03), so a warehouse job knows what to fetch with
-its own R2 credentials; nothing is copied through the worker.
+its own R2 credentials; nothing is copied through the worker. Since 2026-09-04 the listing also says how
+many erasures are pending, and `GET /v1/:tenant/ledger/erasures` gives the warehouse job the visitors and
+moments to drop from what it loads until the rewrite has cleaned the objects (§15).
 
 ---
 
@@ -683,7 +685,20 @@ Decision latency: unchanged. Learning freshness: about two minutes. External mod
   path from a count back to a person.
 - **The ledger holds pseudonymous first-party IDs.** Erasure deletes a visitor's ledger rows in D1
   immediately and in R2 through a scheduled compaction; aggregates are unaffected because counts are not
-  personal data.
+  personal data. *Built 2026-09-04 (CW28), with one correction: D1 left the ledger path in §18.10, so there
+  is nothing to delete there. The mechanism is a tombstone and a rewrite. `eraseVisitorLedger` in
+  `src/ledger/erasure.ts` writes one tombstone per visitor under `erasures/{tenant}/pending/` with the moment
+  of erasure, and empties the visitor's ring. From that moment every reader hides the visitor's rows at or
+  before it: the day report, the point lookup and the replay (410 Gone), and the export listing, which
+  names the pending count and the list a warehouse job applies to what it loads. The nightly job at 03:00
+  UTC walks the tenant's partition newest day first from the erasure day back through the retention window
+  (`LEDGER_RETENTION_DAYS`, default 90, to be agreed with Tapestry's privacy team and matched by the
+  bucket's lifecycle rule), removes the rows from each batch object, deletes an object that empties, never
+  touches a day that is not over, stops at a cap of objects and resumes the next night from the day after
+  the last one done, and retires the tombstone under `erasures/{tenant}/retired/` with its counts and a hash
+  in place of the id. Rows the visitor produces after the erasure are new evidence and stay. The identity
+  route that erases the profile and calls this is the delivery session's. Five tests in
+  `src/ledger/erasure.test.ts`.*
 - **Nothing pools across brands** unless the cross-brand flag is deliberately set. Objects, snapshots and
   partitions are keyed by tenant and brand.
 - **Content lifecycle.** An item that expires keeps its statistics archived for the decay horizon and

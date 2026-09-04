@@ -9,6 +9,7 @@
 // where it can be: `buildReport` takes records; `runReport` fetches them.
 
 import type { DecisionRecord, LearnConfig } from '@/content/types';
+import { loadTombstones, withoutErased } from '@/ledger/erasure';
 import type { OutcomeRecord, RewardType } from '@/ledger/records';
 import type { R2Like } from '@/ledger/writer';
 import { attribute, creditWeight, DEFAULT_POLICY, type AttributionPolicy, type RingEntry } from './policy';
@@ -50,6 +51,8 @@ export interface DayReport {
   holdout: Record<string, ArmRow[]>;
   /** slot → each holdout arm against the personalized arm: intervals, verdict, decisions still needed, and the sentence (doc 22 §10). */
   holdoutComparison: Record<string, ArmComparison[]>;
+  /** CW28: tombstones pending for the tenant, and the rows this report dropped for them (doc 22 §15). */
+  erasures?: { pending: number; rows_hidden: number };
 }
 
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
@@ -184,16 +187,21 @@ export async function runReport(
   reporting: ReportPolicy[] | null,
   now = Date.now(),
 ): Promise<DayReport> {
-  const [d, o] = await Promise.all([
+  const [d, o, tombs] = await Promise.all([
     loadDay<DecisionRecord>(r2, ids.tenant, ids.date, 'decision', REPORT_CAP),
     loadDay<OutcomeRecord>(r2, ids.tenant, ids.date, 'outcome', REPORT_CAP),
+    loadTombstones(r2, ids.tenant),
   ]);
+  // CW28: an erased visitor's rows are dropped here at once; the nightly rewrite removes them from the objects.
+  const dBrand = d.records.filter((x) => x.brand === ids.brand), oBrand = o.records.filter((x) => x.brand === ids.brand);
+  const decisions = withoutErased(dBrand, tombs), outcomes = withoutErased(oBrand, tombs);
   const learning: ReportPolicy = { name: 'learning', ...policyOf(learn) };
   const report = buildReport({
     ...ids, learning, reporting: reporting ?? presetPolicies(learning), learn,
-    decisions: d.records.filter((x) => x.brand === ids.brand), outcomes: o.records.filter((x) => x.brand === ids.brand),
+    decisions, outcomes,
     now, truncated: d.truncated || o.truncated,
   });
+  report.erasures = { pending: tombs.size, rows_hidden: dBrand.length + oBrand.length - decisions.length - outcomes.length };
   try { await r2.put(reportKey(ids.tenant, ids.brand, ids.date), JSON.stringify(report), { httpMetadata: { contentType: 'application/json' } }); } catch { /* the response still carries it */ }
   return report;
 }

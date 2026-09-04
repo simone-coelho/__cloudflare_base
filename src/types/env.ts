@@ -27,6 +27,12 @@ export interface Env {
   AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
   /** CW6 — tenants the hourly cron rolls region snapshots up for, comma-separated. */
   TREND_ROLLUP_TENANTS?: string;
+  /**
+   * CW28 (doc 22 §15) — the ledger's retention window in days, the span the nightly erasure rewrite
+   * walks back from an erasure. Must match the R2 bucket's lifecycle rule. Absent means the design's 90.
+   * The number itself is Tapestry's privacy team's to agree.
+   */
+  LEDGER_RETENTION_DAYS?: string;
   // Opal chat agent (SQLite-backed DO, wrangler migration v3) — reached via
   // routeAgentRequest(/agents/*), not app routes; declared here for Env completeness.
   OpalAgent: DurableObjectNamespace;

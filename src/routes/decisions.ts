@@ -14,6 +14,7 @@ import { serveContentDecisions } from '@/content/service';
 import { NAMESPACE_MARKER, type TenantVariables } from '@/tenancy/tenant';
 import { enqueueDecisions } from '@/ledger/enqueue';
 import { findById, type R2Like } from '@/ledger/writer';
+import { eraseVisitorLedger, hidden, loadTombstones, retentionDays, rewriteErasures, type R2Erasable } from '@/ledger/erasure';
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
@@ -165,12 +166,52 @@ decisionRoutes.get('/:tenant/ledger/batches', jwt({ required: true }), async (c)
   if (!TENANT.test(tenant) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return c.json({ ok: false, error: 'tenant slug and date=YYYY-MM-DD' }, 400);
   const stream = c.req.query('stream') === 'outcome' ? 'outcome' : c.req.query('stream') === 'decision' ? 'decision' : null;
   const cursor = (c.req.query('cursor') ?? '').trim() || undefined;
-  const listed = await c.env.STORAGE.list({ prefix: `${tenant}/${date}/`, ...(cursor ? { cursor } : {}), limit: 1000 });
+  const [listed, tombs] = await Promise.all([
+    c.env.STORAGE.list({ prefix: `${tenant}/${date}/`, ...(cursor ? { cursor } : {}), limit: 1000 }),
+    loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant),
+  ]);
   const objects = listed.objects
     .filter((o) => !stream || o.key.includes(`/${stream}/`))
     .map((o) => ({ key: o.key, size: o.size, uploaded: o.uploaded instanceof Date ? o.uploaded.toISOString() : String(o.uploaded) }));
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: true, tenant, date, stream: stream ?? 'both', objects, truncated: listed.truncated, ...(listed.truncated ? { cursor: listed.cursor } : {}) });
+  // CW28: a warehouse job applies the pending erasures to what it loads; the nightly rewrite makes the objects themselves clean.
+  return c.json({ ok: true, tenant, date, stream: stream ?? 'both', objects, truncated: listed.truncated, ...(listed.truncated ? { cursor: listed.cursor } : {}), erasures: { pending: tombs.size, list: `/v1/${tenant}/ledger/erasures` } });
+});
+
+/**
+ * CW28, the ledger half of erasure (doc 22 §15). GET lists the pending
+ * tombstones so an export consumer can apply them at once; POST writes one for
+ * a visitor and empties her ring (the identity route calls the same function
+ * after erasing the profile); POST .../rewrite runs the scheduled rewrite now,
+ * as the nightly cron does. All authenticated; the list carries visitor ids.
+ * Registered before /ledger/:id so the literal segment wins.
+ */
+decisionRoutes.get('/:tenant/ledger/erasures', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const tombs = await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant);
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, tenant, retentionDays: retentionDays(c.env), pending: [...tombs.values()].sort((a, b) => b.erased_at - a.erased_at) });
+});
+decisionRoutes.post('/:tenant/ledger/erasures', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const b = (await c.req.json().catch(() => null)) as { visitorId?: string } | null;
+  const visitorId = (b?.visitorId ?? '').trim();
+  if (!visitorId || visitorId.length > 200 || visitorId.startsWith(NAMESPACE_MARKER)) return c.json({ ok: false, error: 'visitorId required' }, 400);
+  const actor = (c as unknown as { get: (k: 'auth') => AuthContext | undefined }).get('auth')?.user?.sub ?? 'operator';
+  const res = await eraseVisitorLedger(c.env, tenant, visitorId, actor);
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ...res, tenant });
+});
+decisionRoutes.post('/:tenant/ledger/erasures/rewrite', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const b = (await c.req.json().catch(() => ({}))) as { maxObjects?: number } | null;
+  const maxObjects = typeof b?.maxObjects === 'number' && b.maxObjects > 0 ? Math.floor(b.maxObjects) : undefined;
+  const result = await rewriteErasures(c.env.STORAGE as unknown as R2Erasable, tenant, { retentionDays: retentionDays(c.env), ...(maxObjects ? { maxObjects } : {}) });
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, ...result });
 });
 
 /**
@@ -187,7 +228,9 @@ decisionRoutes.get('/:tenant/ledger/:id', jwt({ required: true }), async (c) => 
   const stream = c.req.query('stream') === 'outcome' ? 'outcome' : 'decision';
   const found = await findById<DecisionRecord | OutcomeRecord>(c.env.STORAGE as unknown as R2Like, id, stream);
   c.header('Cache-Control', 'no-store');
-  return found ? c.json({ ok: true, stream, key: found.key, record: found.record }) : c.json({ ok: false, error: 'not found, or not yet written by the consumer' }, 404);
+  if (!found) return c.json({ ok: false, error: 'not found, or not yet written by the consumer' }, 404);
+  if (hidden(await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant), found.record)) return c.json({ ok: false, error: 'erased at the visitor\'s request' }, 410);
+  return c.json({ ok: true, stream, key: found.key, record: found.record });
 });
 
 /**
@@ -203,6 +246,7 @@ decisionRoutes.get('/:tenant/replay/:id', jwt({ required: true }), async (c) => 
   const found = await findById<DecisionRecord>(c.env.STORAGE as unknown as R2Like, id, 'decision');
   c.header('Cache-Control', 'no-store');
   if (!found) return c.json({ ok: false, error: 'not found, or not yet written by the consumer' }, 404);
+  if (hidden(await loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant), found.record)) return c.json({ ok: false, error: 'erased at the visitor\'s request' }, 410);
   const result = await replayDecision(c.env, found.record);
   return c.json({ ok: result.ok, equal: result.equal, ...(result.reason ? { reason: result.reason } : {}), used: result.used, diff: result.diff, key: found.key, served: result.served, replayed: result.replayed });
 });

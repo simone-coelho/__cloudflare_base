@@ -152,6 +152,8 @@ Under `/v1/{tenant}/`. Operator token unless marked.
 | `GET visitors/{visitorId}/recent` | The visitor's ring of recent decisions, what attribution reads |
 | `GET ledger/{decision_id}` and `GET ledger/{outcome_id}?stream=outcome` | One record from the ledger by id, no index needed; behind by the queue's lag during a peak |
 | `GET ledger/batches?date=YYYY-MM-DD[&stream=decision\|outcome][&cursor=]` | The day's batch objects, so a warehouse job knows what to fetch with its own storage credentials. The partitions are the export |
+| `GET ledger/erasures` | The visitors whose erasure is pending, each with the moment of erasure: a warehouse job drops their rows at or before that moment from what it loads, until the nightly rewrite has removed them from the objects themselves. `ledger/batches` says how many are pending |
+| `POST ledger/erasures` `{ visitorId }` | The ledger half of an erasure: writes the tombstone every reader honours at once and empties the visitor's ring. The identity erase route calls the same function after erasing the profile. `POST ledger/erasures/rewrite` runs the nightly rewrite now |
 | `GET replay/{decision_id}` | Decides again from the documents at the recorded revisions, the archived snapshot and the record's inputs, and compares field by field: `{ equal, diff[], used }` |
 | `POST learn/report` `{ date, brand?, policies? }` and `GET learn/report?date=&brand=` | The day's ledger under the learning policy and any reporting policies side by side, the holdout arms, the realized exploration share. Aggregates only |
 | `POST learn/cycle[?brand=]` | Runs the autonomy cycle now: proposals for slots in assisted mode, bounded moves for slots in autonomous mode |
