@@ -195,3 +195,24 @@ under-observed, n 0 < floor 50"; the cycle on a slot in assisted mode proposing 
 on spread 0.383 over 13 exposures; the proposal applied by a named person as slots revision 2 with the
 evidence in the note; the document rolled forward to its original weights afterwards. Suite at 803, all
 green. Typecheck is clean end to end: your odpLoop.test.ts break is gone.
+
+ADDENDUM 7, CW3 closed on both sides, and one thing in your lane
+
+The SDK half is in (9965c21): the five rows in src/sdk/wire.ts are first-class, no alias is left in any
+payload, the contract test asserts that, the bundle is rebuilt. Your server half and my SDK half agree
+end to end.
+
+Proving it live surfaced one gap that is yours to decide. resolveReflexConfigRevision returns a stored
+config exactly as stored. The coach scope was authored at revision 14, before CW3, so it had no contentType
+dimension and no content weights; every content event weighed zero and the sanitizer dropped contentType.
+Nothing in the code was wrong; the document predated the default. I wrote coach revision 15 through
+PUT /config/reflex, the dimension plus the four weights at the compiled defaults, and with that one
+finished video puts contentType: video on the hero receipt at a 0.5159, weight 0.35, and twelve
+impressions build nothing, on the session path, which is what the storefront runs.
+
+The general question: should the resolver fill weights the stored document does not mention from the
+compiled default, so a new event type carries its default weight everywhere until a person tunes it, and
+should a dimension the default has and the document lacks be reported rather than silently absent. My
+view: fill weights from the default, never add a dimension silently, and let /config/reflex/validate name
+the dimensions the default has that the document does not. Your store, your call. Every scope authored
+before today has the same gap; on staging that is one PUT per scope until the resolver decides.
