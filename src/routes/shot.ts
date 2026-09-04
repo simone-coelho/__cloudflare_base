@@ -101,7 +101,10 @@ shot.get('/', async (c) => {
     if (persist && q.js) {
       try { await page.evaluateOnNewDocument(persistWrap(q.js)); } catch (e) { /* optional */ }
     }
-    await page.goto(url.toString(), { waitUntil: 'networkidle0', timeout: 30000 });
+    // wu=load for pages whose live channel keeps the network busy (staging over the public internet);
+    // the default waits for the network to go quiet, which a reconnecting socket never lets it.
+    const waitUntil = q.wu === 'load' || q.wu === 'domcontentloaded' ? q.wu : 'networkidle0';
+    await page.goto(url.toString(), { waitUntil, timeout: Math.min(60000, parseInt(q.navtimeout || '30000', 10) || 30000) });
     await sleep(wait);
     // A swallowed click is how a screenshot "verifies" something that never
     // happened: the selector misses, the catch eats it, and the PNG shows a page

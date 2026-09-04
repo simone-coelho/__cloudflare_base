@@ -289,7 +289,14 @@ class CoachStorefront {
         this._sdkDecisions = null;
         this.sdk.listen.onDecisions((set) => {
             this._sdkDecisions = set;
-            if (!set) { this.logEvent('push', 'decisions', 'none for this page (defaults stand)'); return; }
+            if (!set) {
+                // Graceful absence, the SDK's own rule: the page never waits and never shows a hole.
+                // The engine's slots fall back to the page's defaults the moment absence is declared.
+                this.logEvent('push', 'decisions', 'none for this page (defaults stand)');
+                if (!document.getElementById('hero-content').innerHTML.trim()) this.renderHero(this.heroFallback());
+                if (!document.getElementById('story-card').innerHTML.trim()) this.renderStory(this.storyForStage('early'));
+                return;
+            }
             const first = Object.values((set.decisions || []).reduce((acc, d) => { if (!acc[d.slot] || d.order < acc[d.slot].order) acc[d.slot] = d; return acc; }, {}));
             const rows = first.map((d) => `${d.slot} → ${d.customerContentId}`);
             this.logEvent('push', 'decisions', rows.join(' · ') || 'empty set');
