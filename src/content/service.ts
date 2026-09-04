@@ -15,6 +15,7 @@ import { shopperObject } from '@/tenancy/objects';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from './kinds';
 import { armFor } from './holdout';
 import { cellFor, type CfLike } from './cell';
+import { armUnder, CONSENTING, consentOf, personalizes, type Consent } from './consent';
 import { decideContent } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
 import { fanDecisions, liftKey, readRing, servedCounts, type SlotLearnConfig } from '@/learn/fan';
@@ -67,6 +68,8 @@ export interface DecisionSources {
   /** Phase 3 (doc 22 §9): their model's answer for this page, when a slot on it weights one. */
   external: { kind: string; ref: string; ok: boolean; ms: number; version: string | null; reason: string | null } | null;
   state: 'do' | 'session' | 'none';
+  /** CW31: the shopper's consent switches as the host reported them, and whether the engine personalized at all. */
+  consent: Consent & { personalized: boolean };
 }
 
 interface ShopperRead {
@@ -76,6 +79,8 @@ interface ShopperRead {
   state: DecisionSources['state'];
   /** CW29: the journey stage the engine last derived for this shopper, from whichever host holds it; null when none. */
   stage: string | null;
+  /** CW31: the shopper's two consent switches, from whichever host holds them; a host that says nothing is consenting. */
+  consent: Consent;
 }
 
 /**
@@ -91,10 +96,10 @@ async function readShopper(
       // The brand's object for this visitor; the default brand keeps the bare name.
       const stub = shopperObject(env.SHOPPER_REFLEX, visitorId, tenant);
       const res = await stub.fetch('https://shopper-reflex/snapshot');
-      const body = (await res.json()) as { affinity?: AffinitySnapshot | null; journeyStage?: string | null };
-      return { affinity: body.affinity ?? null, sessionId: null, isNewSession: null, state: 'do', stage: body.journeyStage ?? null };
+      const body = (await res.json()) as { affinity?: AffinitySnapshot | null; journeyStage?: string | null; consent?: { tracking?: unknown; personalization?: unknown } | null };
+      return { affinity: body.affinity ?? null, sessionId: null, isNewSession: null, state: 'do', stage: body.journeyStage ?? null, consent: consentOf({ consent: body.consent }) };
     } catch {
-      return { affinity: null, sessionId: null, isNewSession: null, state: 'none', stage: null };
+      return { affinity: null, sessionId: null, isNewSession: null, state: 'none', stage: null, consent: CONSENTING };
     }
   }
   try {
@@ -104,15 +109,16 @@ async function readShopper(
       affinity: sessionData.reflex ? reflexSnapshot(sessionData.reflex, now, cfg) : null,
       sessionId, isNewSession, state: 'session',
       stage: sessionData.metadata?.journeyStage ?? null,
+      consent: consentOf({ preferences: sessionData.preferences }),
     };
   } catch {
-    return { affinity: null, sessionId: null, isNewSession: null, state: 'none', stage: null };
+    return { affinity: null, sessionId: null, isNewSession: null, state: 'none', stage: null, consent: CONSENTING };
   }
 }
 
 export async function serveContentDecisions(
   env: Env, r: ServeRequest,
-): Promise<ContentDecisionSet & { sources: DecisionSources; afterResponse: Promise<void> }> {
+): Promise<ContentDecisionSet & { sources: DecisionSources; afterResponse: Promise<void>; /** CW31: false when tracking is withheld, and nothing about this request may be written. */ write: boolean }> {
   const now = r.nowMs ?? Date.now();
   const scope = r.tenant;
   const brand = r.brand ?? r.tenant;
@@ -138,7 +144,9 @@ export async function serveContentDecisions(
     // CW29: the stage the host last derived; `cellFor` records anything else as unknown.
     stage: shopper.stage,
   });
-  const arm = armFor(r.visitorId, { ...learn.holdout, salt: learn.holdout.salt || brand });
+  // CW31: either consent switch off means the site's own defaults, whatever the holdout hash says.
+  const consent = shopper.consent;
+  const arm = armUnder(consent, armFor(r.visitorId, { ...learn.holdout, salt: learn.holdout.salt || brand }));
   const slots = slotsDoc.pages[r.page] ?? [];
 
   // CW6: the population prior. Read from KV through the isolate cache, never
@@ -202,12 +210,16 @@ export async function serveContentDecisions(
     served,
   });
 
+  // CW31: a shopper who declined personalization sees why on every receipt.
+  if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = 'the site\'s defaults: personalization is off by the shopper\'s choice';
   // After the response: the visitor's ring and each slot's exposures. Never awaited here.
-  const afterResponse = fanDecisions(env, set, slotLearnConfigOf(learn));
+  // CW31: with tracking withheld the engine writes nothing about this request, here or in the ledger (`write`).
+  const afterResponse = consent.tracking ? fanDecisions(env, set, slotLearnConfigOf(learn)) : Promise.resolve();
 
   return {
     ...set,
     afterResponse,
+    write: consent.tracking,
     sources: {
       catalog: { version: catalog.version ?? null, revision: catalogRev?.revision ?? 0, pieces: catalog.pieces.length },
       slots: { version: slotsDoc.version ?? null, revision: slotsRev?.revision ?? 0, count: slots.length },
@@ -215,6 +227,7 @@ export async function serveContentDecisions(
       config: { label: cfg.version, revision: configRevision },
       external: extCfg && extResult ? { kind: extCfg.kind, ref: extCfg.ref, ok: extResult.ok, ms: extResult.ms, version: extResult.ok ? extResult.version : null, reason: extResult.ok ? null : extResult.reason } : null,
       state: shopper.state,
+      consent: { ...consent, personalized: personalizes(consent) },
     },
   };
 }

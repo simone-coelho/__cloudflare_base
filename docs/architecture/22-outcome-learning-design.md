@@ -730,6 +730,15 @@ Decision latency: unchanged. Learning freshness: about two minutes. External mod
   in place of the id. Rows the visitor produces after the erasure are new evidence and stay. The identity
   route that erases the profile and calls this is the delivery session's. Five tests in
   `src/ledger/erasure.test.ts`.*
+- **Consent is a switch the engine honours, not a flag it stores.** *Built 2026-09-04 (CW31, the content
+  service's half).* The session has always carried `trackingConsent` and `personalizationEnabled`; the
+  shopper object reports the same two as `consent { tracking, personalization }` on its snapshot and its
+  ingest envelope (the delivery session's half). Either off means the shopper gets the site's own
+  defaults, the holdout's `default` arm, whatever the hash would have said, and every receipt says so in
+  its note. Tracking off also means the engine writes nothing about the request: no decision record, no
+  ring append, no exposure, and no outcome from that shopper's events (the event path reads the object's
+  envelope, or the cookie the session host mirrors the switch into). The snapshot answer carries
+  `sources.consent` and `write`. Absent means consenting, which is what every stored session already says.
 - **Nothing pools across brands** unless the cross-brand flag is deliberately set. Objects, snapshots and
   partitions are keyed by tenant and brand.
 - **Content lifecycle.** An item that expires keeps its statistics archived for the decay horizon and

@@ -13,6 +13,7 @@ import { resolveReflexConfig, resolveSurface } from '@/demos/registry';
 import { forwardEventToOdp, mapActionToOdp, odpEnabled, upsertOdpProfile } from '@/services/odpLoop';
 import { outcomeFromAction } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
+import { consentFromCookies, consentOf } from '@/content/consent';
 import { outcomeToLearning } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
 import { z } from 'zod';
@@ -121,7 +122,11 @@ realtimeRoutes.post('/action', async (c) => {
     // client's browsing session, which the SDK persists with an idle rule and sends on the snapshot and
     // on every event; a client that sends none gets the server's session on both. Called once the host
     // has answered, so the server's session is known.
-    const emitOutcome = (serverSessionId: unknown) => {
+    // CW31: a shopper who withheld tracking consent leaves no outcome anywhere. The object says so on its
+    // envelope (`consent.tracking`); the session host mirrors the switch into the request's cookies.
+    const emitOutcome = (serverSessionId: unknown, envelope?: Record<string, unknown>) => {
+      const consent = consentOf({ consent: (envelope?.consent as { tracking?: unknown } | undefined) ?? null, preferences: { trackingConsent: consentFromCookies(c.req.header('Cookie')).tracking } });
+      if (!consent.tracking) return;
       const server = typeof serverSessionId === 'string' && serverSessionId ? serverSessionId : undefined;
       const outcome = outcomeFromAction({ ...actionEvent, sessionId: sessionId ?? server }, c.get('tenant'));
       if (outcome) { const p = Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]); try { c.executionCtx.waitUntil(p); } catch { void p; } }
@@ -141,7 +146,7 @@ realtimeRoutes.post('/action', async (c) => {
         body: JSON.stringify(actionEvent),
       });
       const out = (await doRes.json()) as Record<string, unknown>;
-      emitOutcome(out.sessionId);
+      emitOutcome(out.sessionId, out);
       return c.json(out, doRes.status as 200);
     }
 

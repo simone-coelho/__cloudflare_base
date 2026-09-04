@@ -148,7 +148,8 @@ decisionRoutes.get('/:tenant/decisions/snapshot', async (c) => {
     stateTenant: c.get('tenant'),
   });
   // Phase 0 and Phase 1, after the response, never on it: the ledger, the visitor's ring, each slot's exposures.
-  const ledger = enqueueDecisions(c.env, out.records);
+  // CW31: nothing at all when the shopper withheld tracking consent.
+  const ledger = out.write ? enqueueDecisions(c.env, out.records) : Promise.resolve();
   try { c.executionCtx.waitUntil(ledger); c.executionCtx.waitUntil(out.afterResponse); } catch { void ledger; void out.afterResponse; }
   c.header('Cache-Control', 'no-store');
   return c.json({ ok: true, ...out });

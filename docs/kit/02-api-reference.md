@@ -95,11 +95,15 @@ Every slot's decision for the page, in page order, and the record of each. Site 
   "regional": null,
   "decisions": [ { "contentId": "cnt_7cb1e039", "customerContentId": "CCH-001", "type": "campaign", "slot": "chero", "order": 1, "score": 0.455, "strategy": "affinity", "explain": { "drivers": [ { "dim": "line", "value": "Tabby", "a": 0.7286, "weight": 0.35 } ] } } ],
   "records": [ { "decision_id": "coach:mtn7da1g:vis-2f1c…:home:chero:0", "…": "the full record, see the payload schemas" } ],
-  "sources": { "catalog": { "version": "coach-content+r4", "revision": 4, "pieces": 26 }, "slots": { "version": "slots-coach+r7", "revision": 7, "count": 4 }, "learn": { "version": "learn+r19", "revision": 19 }, "config": { "label": "reflex-demo-v1+r15", "revision": 15 }, "external": null, "state": "session" }
+  "sources": { "catalog": { "version": "coach-content+r4", "revision": 4, "pieces": 26 }, "slots": { "version": "slots-coach+r7", "revision": 7, "count": 4 }, "learn": { "version": "learn+r19", "revision": 19 }, "config": { "label": "reflex-demo-v1+r15", "revision": 15 }, "external": null, "state": "session", "consent": { "tracking": true, "personalization": true, "personalized": true } },
+  "write": true
 }
 ```
 
-Every call writes the records to the decision ledger after the response; a call is a decision.
+Every call writes the records to the decision ledger after the response; a call is a decision. The one
+exception is consent: a shopper whose `trackingConsent` is off gets the site's defaults, `write` is
+`false`, and nothing about the call is recorded anywhere; one whose `personalizationEnabled` is off gets
+the defaults and is recorded as such. `sources.consent` says which.
 
 ## 3. Identity
 
