@@ -336,7 +336,12 @@ class CoachStorefront {
        against), then the page. In the page's own transport there is no served piece, only the page. */
     heroCta() {
         const d = this._engineHero;
-        if (this.sdk && d) this.sdk.core.send('content_click', { contentId: d.contentId, slot: 'chero', customerContentId: d.customerContentId, contentType: d.type });
+        if (this.sdk && d) {
+            this.eventCount++;
+            const t0 = performance.now();
+            this.sdk.core.send('content_click', { contentId: d.contentId, slot: 'chero', customerContentId: d.customerContentId, contentType: d.type })
+                .then(() => this.logEvent('post', 'content_click', `${d.customerContentId} · the hero she was served`, Math.round(performance.now() - t0)));
+        }
         this.go('plp');
     }
     _scheduleRehydrate() {

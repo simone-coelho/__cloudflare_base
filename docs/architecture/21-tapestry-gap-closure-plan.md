@@ -238,7 +238,22 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
   the next honesty item (they should become catalog pieces and pins). The composer's "catalogue order"
   default is now the document's order rather than the ids', so the cold lead is the merchandiser's first
   eligible piece. The rehearsal asserts that the hero and the story on the page are the engine's
-  decisions and that the hero follows the line she circles. The rehearsal is
+  decisions and that the hero follows the line she circles.
+- **The loop, found broken by that rehearsal and fixed (2026-09-04).** A click on the served hero never
+  became a credit: the decision record carries the server's session (the cookie), the outcome carried the
+  client's own `sessionId`, and the learning policy's session scope compared the two. Every real client,
+  the SDK and the storefront's own transport alike, sends its own session id, so session-scope
+  attribution had never credited anything outside my hand-built proofs, which had copied the server's id
+  into the click. The outcome now takes the server session from the cookie and falls back to the client's
+  id only when no cookie session exists (`src/routes/realtime.ts`, the outcome line). The rehearsal's last
+  step is the loop end to end: a fresh visitor, the hero served, its button clicked, and after the publish
+  the served piece's lift row carries the success. One edge stays: the decision reaches the visitor's
+  ring after the response, so an outcome that arrives within about a second of the decision can find the
+  ring empty and credit nothing; a page has seconds between paint and click, a script may not. **Open:**
+  on the Durable Object host the decision
+  carries no session at all (`readShopper` returns `sessionId: null` for `state: do`), so session-scope
+  attribution cannot credit there either; the object should expose its session boundary, or the policy
+  should fall back to visitor scope when the anchor is the durable id. The rehearsal is
   `scripts/rehearse-storefront.sh`: both transports driven through the same beats (load, open a product,
   add it to the bag) in a real headless browser via `/__shot?probe=`, compared field by field (identity
   minted and stored, socket connected, events sent, affinity built, hero painted; in SDK mode the SDK

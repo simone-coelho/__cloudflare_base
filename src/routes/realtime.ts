@@ -116,8 +116,14 @@ realtimeRoutes.post('/action', async (c) => {
     const capture = captureDemoEvent(c.env, actionEvent, sessionId);
     try { c.executionCtx.waitUntil(capture); } catch { void capture; /* no execCtx (e.g. tests) */ }
     // Phase 0 (doc 22 §3.2): a reward-bearing action becomes an outcome record, after the response.
-    const outcome = outcomeFromAction({ ...actionEvent, sessionId }, c.get('tenant'));
-    if (outcome) { const p = Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]); try { c.executionCtx.waitUntil(p); } catch { void p; } }
+    // The outcome carries the SERVER's session, the one the engine resolves for this visitor, because that
+    // is the session the decision record carries. The client's own sessionId is a different notion, and
+    // while the outcome carried it the two never matched, so session-scope attribution credited nothing
+    // from a real client (found 2026-09-04 by the storefront rehearsal). Called once the host has answered.
+    const emitOutcome = (serverSessionId: unknown) => {
+      const outcome = outcomeFromAction({ ...actionEvent, sessionId: typeof serverSessionId === 'string' && serverSessionId ? serverSessionId : sessionId }, c.get('tenant'));
+      if (outcome) { const p = Promise.all([enqueueOutcome(c.env, outcome), outcomeToLearning(c.env, c.get('tenant'), outcome)]); try { c.executionCtx.waitUntil(p); } catch { void p; } }
+    };
 
     // ── Edge Affinity Reflex P2 (doc 16 §6): REFLEX_HOST='do' forwards to the
     // shopper's ShopperReflex DO, which runs the same pipeline IN-OBJECT (reflex →
@@ -133,6 +139,7 @@ realtimeRoutes.post('/action', async (c) => {
         body: JSON.stringify(actionEvent),
       });
       const out = (await doRes.json()) as Record<string, unknown>;
+      emitOutcome(out.sessionId);
       return c.json(out, doRes.status as 200);
     }
 
@@ -144,6 +151,7 @@ realtimeRoutes.post('/action', async (c) => {
     let execCtx: { waitUntil(p: Promise<unknown>): void } | undefined;
     try { execCtx = c.executionCtx; } catch { execCtx = undefined; /* no execCtx (e.g. tests) */ }
     const result = await segmentEngine.processActionEventWithSession(actionEvent, cookieHeader, execCtx);
+    emitOutcome(result.sessionId);
 
     // ODP loop (doc 16 §8): forward the behavioral event to ODP OFF the response
     // path — the shopper never waits on the memory; ODP down = zero impact.

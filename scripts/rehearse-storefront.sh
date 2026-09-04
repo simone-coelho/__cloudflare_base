@@ -30,9 +30,28 @@ for MODE in copy sdk; do
   R[$MODE]="$OUT"
 done
 
-python3 - "$BASE" "$JWT" "${R[copy]}" "${R[sdk]}" <<'PY'
+# The learning loop, end to end: a fresh visitor is served a hero, clicks its button, and after the
+# statistics object's publish (30 s) the served piece's row carries the success. Slow, so it is the
+# last thing the rehearsal does; skip it with QUICK=1.
+CREDIT=""
+if [ -z "${QUICK:-}" ]; then
+  BEFORE=$(curl -s -m 15 -H "X-SDK-Key: demo-site" "$BASE/v1/coach/lift?slot=chero" | python3 -c "import sys,json; s=(json.load(sys.stdin).get('snapshot') or {}); print(json.dumps({k:(v.get('*') or {}).get('s',0) for k,v in s.get('items',{}).items()}))")
+  # Start, then Next three times (the store is on the home view at step 4 with the hero and its button
+  # showing); then the hero's button, pressed through the page's own handler after a check that it is
+  # really on screen, so a transition mid-frame cannot fail the press.
+  CLICK=$(curl -s -m 300 -G "$BASE/__shot" --data-urlencode "token=$TOKEN" --data-urlencode "path=/storefront?sdk=1" --data-urlencode "wait=3000" --data-urlencode "clicks=#dir-next,#dir-next,#dir-next,#dir-next" --data-urlencode "js=(()=>{const el=document.querySelector('#hero-content .hero-cta');const r=el?el.getBoundingClientRect():null;const cs=el?getComputedStyle(el):null;window.__cta={present:!!el,visible:!!(el&&r.width>0&&r.height>0&&cs.display!=='none'&&cs.visibility!=='hidden'),text:el?el.textContent.trim():null,view:['home','plp','pdp'].find(v=>document.getElementById('view-'+v).classList.contains('active'))};if(el)el.click();})()" --data-urlencode "hold=38000" --data-urlencode "probe=JSON.stringify({served: store._engineHero && store._engineHero.contentId, cid: store._engineHero && store._engineHero.customerContentId, cta: window.__cta||null})")
+  AFTER=$(curl -s -m 15 -H "X-SDK-Key: demo-site" "$BASE/v1/coach/lift?slot=chero" | python3 -c "import sys,json; s=(json.load(sys.stdin).get('snapshot') or {}); print(json.dumps({k:(v.get('*') or {}).get('s',0) for k,v in s.get('items',{}).items()}))")
+  CREDIT=$(python3 -c "
+import json,sys
+before, click, after = json.loads(sys.argv[1]), json.loads(sys.argv[2]), json.loads(sys.argv[3])
+r = click.get('result'); r = json.loads(r) if isinstance(r, str) else (r or {})
+served = r.get('served'); gained = (after.get(served, 0) - before.get(served, 0)) if served else 0
+print(json.dumps({'served': served, 'cid': r.get('cid'), 'clicks': click.get('clicks'), 'cta': r.get('cta'), 'gained': round(gained, 3)}))" "$BEFORE" "$CLICK" "$AFTER")
+fi
+
+python3 - "$BASE" "$JWT" "${R[copy]}" "${R[sdk]}" "$CREDIT" <<'PY'
 import json, sys, urllib.request
-base, jwt, copy_raw, sdk_raw = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+base, jwt, copy_raw, sdk_raw, credit_raw = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5] if len(sys.argv) > 5 else ''
 def parse(raw):
     try: j = json.loads(raw)
     except Exception: return None, {'error': raw[:200]}
@@ -80,6 +99,12 @@ for label, j, p in (('copy', cj, c), ('sdk', sj, s)):
                     with urllib.request.urlopen(req, timeout=15) as r: hit = json.load(r); break
                 except Exception: import time; time.sleep(5)
             check('the first decision is in the ledger', bool(hit and hit.get('ok')), f"{did}")
+if credit_raw:
+    cr = json.loads(credit_raw)
+    cta = cr.get('cta') or {}
+    print(f"\nthe loop: served {cr.get('cid')} ({cr.get('served')}); beats {cr.get('clicks')}; button {cta}")
+    check("the hero's button was on screen when pressed", bool(cta.get('visible')), f"view {cta.get('view')}, text {cta.get('text')!r}")
+    check("the click on the served hero became a success on its lift row", (cr.get('gained') or 0) > 0, f"s gained {cr.get('gained')} after the publish")
 same = [k for k in ('ws', 'events') if c.get(k) == s.get(k)]
 print(f"\nboth transports agree on: {same}; affinity dims copy {c.get('affinityDims')} vs sdk {s.get('affinityDims')}")
 print(f"hero: page rules said {c.get('heroTitle')!r}; the engine said {s.get('heroTitle')!r} (by design these differ: one is written into the page, the other is decided)")
