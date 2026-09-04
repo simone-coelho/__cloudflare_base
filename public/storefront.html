@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
+  <!-- The site key, for AUTH_MODE=enforced. Identifies the site, not a person; not a secret. -->
+  <meta name="edge-sdk-key" content="demo-site" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>Coach</title>
@@ -1886,6 +1888,7 @@
     </aside>
 
     <!-- cache-busted load: always fetch the latest storefront.js (no stale cache) -->
+  <script src="/edge-auth.js"></script>
     <script>document.write('<scr' + 'ipt src="storefront.js?t=' + Date.now() + '"></scr' + 'ipt>');</script>
     <!-- Opal chat island (React + Agents SDK), cache-busted -->
     <script>document.write('<scr' + 'ipt src="opal-chat.js?t=' + Date.now() + '"></scr' + 'ipt>');</script>

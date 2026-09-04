@@ -26,9 +26,20 @@ bash scripts/deploy.sh staging      # builds the Meridian engine and the SDK, th
 
 `deploy.sh staging` refuses to run while a `<staging-…>` placeholder remains in `wrangler.toml`.
 
-**What is different in staging.** `AUTH_MODE = "enforced"`:
+**Both workers run `AUTH_MODE = "enforced"`** (the default worker since 2026-09-03; `open` is the one-line
+rollback in `[vars]`). Enforced needs the `SDK_KEYS` secret on the worker or every shopper call answers 401,
+so `deploy.sh` refuses the default deploy while the secret is missing:
 
-| Surface | Open (default worker) | Enforced (staging) |
+```bash
+printf '*:demo-site' | wrangler secret put SDK_KEYS     # once per worker; `*` = the key is good for any tenant
+```
+
+The demo pages (`storefront.html`, `operator-console.html`) carry that site key in
+`<meta name="edge-sdk-key">` and `public/edge-auth.js` attaches it to every gated call, so the audience
+needs nothing. The presenter pastes the operator token once into `/tuning.html`; the shim carries it on the
+console's and the dial's writes. Locally the same allow-list lives in `.dev.vars` as `SDK_KEYS=*:demo-site`.
+
+| Surface | `open` (rollback) | `enforced` (default worker and staging) |
 |---|---|---|
 | `POST /realtime/action`, `GET /realtime/ws`, `GET /realtime/reflex` | no key | `X-SDK-Key` header, or `?sdkKey=` on the socket upgrade |
 | `GET /v1/:tenant/decisions/snapshot` | no key | a key registered for that tenant (or a `*` key) |

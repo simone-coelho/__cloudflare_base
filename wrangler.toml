@@ -147,6 +147,14 @@ migrations_dir = "migrations"
 # Environment Variables (use wrangler secret for sensitive values)
 [vars]
 ENVIRONMENT = "development"
+# Who may talk to this worker (src/middleware/edgeAccess.ts). ENFORCED since
+# 2026-09-03: the demo pages carry the site key `demo-site` in a <meta> and
+# /edge-auth.js attaches it; the presenter's operator token, pasted once into
+# /tuning.html, covers the merchandiser's writes. The audience needs nothing.
+# Requires the SDK_KEYS secret on the worker (deploy.sh refuses without it):
+#   printf '*:demo-site' | wrangler secret put SDK_KEYS
+# ROLLBACK IS THIS ONE LINE: set it to "open".
+AUTH_MODE = "enforced"
 CONNECTOR_MODE = "mock"
 # Mode-B decision source: 'mock' (default — current demo) | 'optimizely' (real FX SDK + datafile).
 # Independent of CONNECTOR_MODE so live decisions can be flipped on without touching segments/audiences.

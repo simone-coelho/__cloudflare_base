@@ -137,6 +137,8 @@ it from there. Without it the dial still turns and the hero still recomposes, an
 "no operator token in this browser; tuning is local for this run" — the beat works either way, but only with
 the token does the receipt carry a real revision (`…+r7`) instead of the local `+tuned` mark.
 
+**The worker is locked, and it costs the presenter nothing.** Since 2026-09-03 the demo worker runs `AUTH_MODE = "enforced"`: the shopper surface wants a site key and the merchandiser's writes want a token. The pages already carry the site key (`demo-site`, in a `<meta>` tag; `/edge-auth.js` attaches it to every call and to the socket), so the audience, the storefront and the console need nothing from you. The one thing you do is the paste above, once, and it covers the console's actions as well as the dial. If anything on stage answers 401, the rollback is one line in `wrangler.toml` (`AUTH_MODE = "open"`) and a deploy; the pages behave identically in either mode.
+
 What the room sees with the token in: turn a slider, the hero re-decides, and the foot reads
 "stored as revision 7 · meridian-retail-demo-v1+r7". A new visitor (Reset) writes the shipped weights
 back as the next revision, so the store's history shows the demo returned to baseline rather than the

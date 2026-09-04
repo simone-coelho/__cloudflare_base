@@ -34,6 +34,21 @@ elif [ "$ENVIRONMENT" = "production" ]; then
     echo "   Deploy the default worker instead (npm run deploy). See docs/deployment/01-deploy.md."
     exit 1
 else
+    # The demo worker runs AUTH_MODE=enforced (wrangler.toml [vars]). Enforced with
+    # no SDK_KEYS secret means every shopper call answers 401 and every demo page
+    # goes dark, so refuse to ship that combination. The pages carry the site key
+    # `demo-site`; the secret is the allow-list that recognises it:
+    #   printf '*:demo-site' | wrangler secret put SDK_KEYS
+    # Rollback for the whole gate is one line: AUTH_MODE = "open" in [vars].
+    if grep -Eq '^AUTH_MODE *= *"enforced"' wrangler.toml; then
+        if ! wrangler secret list 2>/dev/null | grep -q '"SDK_KEYS"'; then
+            echo "❌ AUTH_MODE is enforced but the SDK_KEYS secret is not set on this worker."
+            echo "   Every demo page would answer 401. Set it first:"
+            echo "     printf '*:demo-site' | wrangler secret put SDK_KEYS"
+            echo "   or set AUTH_MODE = \"open\" in [vars] to ship without the gate."
+            exit 1
+        fi
+    fi
     npm run build:meridian && npm run build:sdk
     wrangler deploy
 fi
