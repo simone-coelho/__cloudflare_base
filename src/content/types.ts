@@ -161,6 +161,8 @@ export interface Cell {
   region: string | null;
   /** The leading interest above its entry threshold, as `dim:value`, or null. */
   affinity: string | null;
+  /** CW29: the journey stage the engine derived (early / mid / late), or `unknown`. Optional so older records and literals still type. */
+  stage?: 'early' | 'mid' | 'late' | 'unknown';
 }
 
 /**
@@ -168,8 +170,6 @@ export interface Cell {
  * Phase 3 completes the tuple with the three documents a replay needs; 0 means
  * the compiled default. `policy` is the learn document's revision, kept under
  * its design name.
-  /** CW29: the journey stage the engine derived (early / mid / late), or `unknown`. Optional so older records and literals still type. */
-  stage?: 'early' | 'mid' | 'late' | 'unknown';
  */
 export interface DecisionVersions {
   config: number;
