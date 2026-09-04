@@ -439,7 +439,10 @@
   // ---------- wiring ----------
   $('report-date').value = new Date().toISOString().slice(0, 10);
   $('token').value = S.token;
-  $('token').addEventListener('input', (e) => { S.token = e.target.value.trim(); sessionStorage.setItem('tuning-token', S.token); loadProposals().then(render); render(); });
+  // A pasted token changes what the page may read (the grid, the archive, the proposals, the report all
+  // need it under enforced access), so everything loads again, not only the proposals.
+  let tokenTimer = null;
+  $('token').addEventListener('input', (e) => { S.token = e.target.value.trim(); sessionStorage.setItem('tuning-token', S.token); render(); clearTimeout(tokenTimer); tokenTimer = setTimeout(() => { load().catch(() => render()); }, 300); });
   $('slot').addEventListener('change', async (e) => { S.slot = e.target.value; S.archived = null; S.diffs = {}; await loadLift(); render(); });
   $('brand').addEventListener('change', async (e) => { S.brand = e.target.value.trim() || S.scope; S.archived = null; await Promise.all([loadLift(), loadReport($('report-date').value)]); render(); });
   $('grid-filter').addEventListener('input', (e) => { S.filter = e.target.value; renderGrid(); });
