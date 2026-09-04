@@ -107,13 +107,24 @@ One item of the content catalog. JSON, or a CSV row with the same names as colum
 | `window.from`, `window.to` | no | ISO date-times; outside them the piece does not exist for a decision |
 | `art`, `renderUrl` | no | Image, and a URL your page may render by |
 | `merchandising` | no | `{ season, promotion, margin }`, each 0 to 1: the item's own signals for the multipliers |
+| `journeyStageFit` | no | The stages the piece is made for: `exploring`, `considering`, `deciding` (your `journey_stage_fit`; `early`, `mid`, `late` also accepted). Absent fits every stage. A slot's `stage` rule demotes a piece outside the shopper's stage |
+| `freshnessDate` | no | When the piece became current, ISO 8601 (your `freshness_date`). A slot's `freshness` rule ages from it; absent, from `window.from` |
+| `featuredProductIds` | no | The products the piece features, in your product ids (your `featured_product_ids`). Carried and validated, never rewritten |
+| `inStock` | no | Your catalog's stock flag. `false` removes the piece from every decision; absent means in stock. In a feed, `in_stock` or `ats` (Y/N, 0/1, true/false) is read the same way |
 
 ## The slot document
 
-`{ version, pages: { [page]: [ { slot, take, weights, pinnedPieceId?, merchandising? } ] } }`. `take` is
-how many pieces the slot shows; `weights` is `{ dimension: weight }`, each 0 to 1, the slot's view of
-which dimensions matter; `pinnedPieceId` outranks the engine; `merchandising` is `{ season, promotion,
-margin, maxBoost, minBoost }`, the weight of each multiplier (−1 to 1) and the clamp on their product.
+`{ version, pages: { [page]: [ { slot, take, weights, pinnedPieceId?, merchandising?, stage?, freshness?, fatigue?, diversity? } ] } }`.
+`take` is how many pieces the slot shows; `weights` is `{ dimension: weight }`, each 0 to 1, the slot's
+view of which dimensions matter; `pinnedPieceId` outranks the engine; `merchandising` is `{ season,
+promotion, margin, maxBoost, minBoost }`, the weight of each multiplier (−1 to 1) and the clamp on their
+product. The four rules added on 2026-09-04, each off when absent and each itemised on the receipt:
+`stage` is `{ outOfStage, inStage }`, a multiplier (0 to 1) on a piece made for another journey stage and
+a bonus (0 to 1) for one made for the shopper's; `freshness` is `{ weight, halfLifeDays }`, a bonus of
+`weight × 2^(−age / halfLifeDays)` from the piece's freshness date; `fatigue` is `{ weight, windowHours,
+cap }`, a penalty of `weight × min(served, cap) / cap` for a piece this shopper was served inside the
+window; `diversity` is `{ dimension, max }`, at most `max` pieces sharing one value of the dimension in
+the slot, the piece over the limit yielding to the next and served only when nothing else is eligible.
 
 ## The learn document
 

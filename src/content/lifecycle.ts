@@ -22,3 +22,12 @@ export function isLiveAt(p: ContentPiece, nowMs: number): boolean {
   if (to !== null && nowMs >= to) return false;
   return true;
 }
+
+/**
+ * CW33 (BTIE D11): eligible means live, inside its window, and not marked out
+ * of stock by the catalog. `inStock` is the catalog's own flag; absent means
+ * in stock, so a feed that never says is unaffected.
+ */
+export function isEligibleAt(p: ContentPiece, nowMs: number): boolean {
+  return isLiveAt(p, nowMs) && p.inStock !== false;
+}

@@ -9,7 +9,7 @@ import { composeContentDetailed, type ContentSlotSpec, type AffinityViewLike, ty
 import type {
   Arm, Authority, Cell, ContentDecisionSet, ContentPiece, DecisionRecord, DecisionVersions, IdentityAnchor, LiftApplied, RegionalBlend, SlotStrategy,
 } from './types';
-import { isLiveAt } from './lifecycle';
+import { isEligibleAt } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
 import { explorationPick, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
@@ -70,10 +70,12 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   const specs: ContentSlotSpec[] = i.slots.map((s) => ({
     slot: s.slot, take: s.take, weights: s.weights,
     ...(s.pinnedPieceId ? { pinnedPieceId: s.pinnedPieceId } : {}),
+    // CW33: the slot's diversity rule, applied by the composer at the take.
+    ...(s.diversity ? { diversity: s.diversity } : {}),
   }));
-  // Eligibility before scoring: outside its publish window a piece does not exist
-  // for this decision, however well it would have scored.
-  const eligible = i.pieces.filter((p) => isLiveAt(p, i.nowMs));
+  // Eligibility before scoring: outside its publish window, or out of stock (CW33), a piece does not
+  // exist for this decision, however well it would have scored.
+  const eligible = i.pieces.filter((p) => isEligibleAt(p, i.nowMs));
   const byId = new Map(i.pieces.map((p) => [p.id, p]));
 
   // The learning layer: lift^γ on the base score, looked up at the finest level
@@ -269,6 +271,7 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
         ...(stageOf.has(key) ? { stage: (({ visitor, fit, applied }) => ({ visitor, fit, applied, sentence: stageSentence(stageOf.get(key)!) }))(stageOf.get(key)!) } : {}),
         ...(freshOf.has(key) ? { freshness: { ...freshOf.get(key)!, sentence: freshSentence(freshOf.get(key)!) } } : {}),
         ...(fatigueOf.has(key) ? { fatigue: { ...fatigueOf.get(key)!, sentence: fatigueSentence(fatigueOf.get(key)!) } } : {}),
+        ...(d.explain.diversity ? { diversity: d.explain.diversity } : {}),
       },
       inputs,
     };

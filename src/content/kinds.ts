@@ -5,7 +5,7 @@
 // the decision path down (doc 22 §18.1's failure posture, inherited).
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
-import type { ContentCatalog, ContentPiece, FatigueRule, FreshnessRule, LearnConfig, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
+import type { ContentCatalog, ContentPiece, DiversityRule, FatigueRule, FreshnessRule, LearnConfig, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
@@ -90,12 +90,20 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
     else journeyStageFit = [...new Set(words as StageWord[])];
   }
   if (p.freshnessDate !== undefined && !(isStr(p.freshnessDate) && Number.isFinite(Date.parse(p.freshnessDate)))) errors.push(`${at}.freshnessDate: ISO 8601 date-time`);
+  let featuredProductIds: string[] | undefined;
+  if (p.featuredProductIds !== undefined) {
+    if (!Array.isArray(p.featuredProductIds) || !p.featuredProductIds.every(isStr)) errors.push(`${at}.featuredProductIds: array of product id strings`);
+    else featuredProductIds = [...new Set((p.featuredProductIds as string[]).map((x) => x.trim()).filter(Boolean))];
+  }
+  if (p.inStock !== undefined && typeof p.inStock !== 'boolean') errors.push(`${at}.inStock: boolean when present`);
   if (!isStr(id) || !isStr(cid) || !isStr(type) || !isStr(title) || !slotTypes) return null;
   return {
     id, customerContentId: cid, type, title, tags, slotTypes,
     ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
     ...(journeyStageFit ? { journeyStageFit } : {}),
     ...(isStr(p.freshnessDate) ? { freshnessDate: p.freshnessDate } : {}),
+    ...(featuredProductIds && featuredProductIds.length ? { featuredProductIds } : {}),
+    ...(typeof p.inStock === 'boolean' ? { inStock: p.inStock } : {}),
     lifecycle: { status: status as ContentPiece['lifecycle']['status'] },
     ...(isStr(p.subtitle) ? { subtitle: p.subtitle } : {}),
     ...(p.art === undefined ? {} : { art: p.art as string | null }),
@@ -182,10 +190,16 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
     if (!isRecord(f) || !isNum(f.weight) || f.weight < 0 || f.weight > 1 || !isNum(f.windowHours) || f.windowHours <= 0 || !isNum(f.cap) || !Number.isInteger(f.cap) || f.cap < 1) errors.push(`${at}.fatigue: { weight 0..1, windowHours > 0, cap integer ≥ 1 }`);
     else fatigue = { weight: f.weight, windowHours: f.windowHours, cap: f.cap };
   }
+  let diversity: DiversityRule | undefined;
+  if (s.diversity !== undefined) {
+    const d = s.diversity;
+    if (!isRecord(d) || !isStr(d.dimension) || !isNum(d.max) || !Number.isInteger(d.max) || d.max < 1) errors.push(`${at}.diversity: { dimension: a tag dimension, max: integer ≥ 1 }`);
+    else diversity = { dimension: d.dimension.trim(), max: d.max };
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
   return {
     slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
-    ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}),
+    ...(stage && Object.keys(stage).length ? { stage } : {}), ...(freshness ? { freshness } : {}), ...(fatigue ? { fatigue } : {}), ...(diversity ? { diversity } : {}),
   };
 }
 

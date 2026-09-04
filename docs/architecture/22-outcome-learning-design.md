@@ -369,6 +369,20 @@ The base cannot go below zero. The served counts are carried on the record's `in
 replay reproduces the penalty from the record rather than from a ring that has since moved on. The
 receipt says "this shopper was served it N times in the last H hours: −applied".
 
+### 6.5 Inventory and diversity
+
+Built 2026-09-04 (CW33, BTIE D11). Two rules that are not scores. **Stock** is an eligibility gate next
+to the publish window: a piece the catalog marks `inStock: false` does not exist for the decision, not
+even as a candidate; absent means in stock, so a feed that never says is unaffected. **Diversity** is a
+rule on the slot, `{ dimension, max }`, applied at the take after ranking, exploration and every score
+term: at most `max` served pieces may share one value of the dimension. A piece over the limit yields
+its position to the next ranked piece, stays a recorded candidate, and is named on the explain of the
+piece that took the position ("d3 yielded: at most 2 per line in this slot"). If the rule would leave
+positions empty, the yielded pieces fill them in rank order and the receipt says so (`relaxed`), because
+a hole in a rail is worse than a repeated line. The piece schema also gained `featuredProductIds` the
+same day (CW32, A.3.6's `featured_product_ids`): carried and validated so a shoppable module can be
+painted and a product decision joined; the engine does not yet score on it.
+
 ---
 
 ## 7 · Exploration
@@ -643,6 +657,7 @@ deployment.
 | Serving | Journey-stage rule per slot: outOfStage, inStage | Marketing | off |
 | Serving | Freshness per slot: weight, halfLifeDays | Marketing | off |
 | Serving | Fatigue per slot: weight, windowHours, cap | Marketing | off |
+| Serving | Diversity per slot: dimension, max | Marketing | off |
 | Statistics | Position bucketing on or off per slot | Data science | on for multi-item slots |
 | Statistics | Learn from pinned placements | Marketing | on |
 | Serving | γ trust dial per slot | Marketing | 0 |

@@ -45,6 +45,13 @@ export interface ContentSlotSpec {
    * scored, not smuggled.
    */
   prefer?: { test: (p: ContentPieceLike) => boolean; bonus: number; label: string };
+  /**
+   * CW33 (BTIE D11): at most `max` pieces sharing one value of `dimension` in
+   * this slot. A piece over the limit yields its position to the next ranked
+   * piece and is named on that piece's explain; when the rule leaves positions
+   * unfilled, the yielded pieces fill them in rank order, marked `relaxed`.
+   */
+  diversity?: { dimension: string; max: number };
 }
 
 export interface ContentDecision {
@@ -55,7 +62,12 @@ export interface ContentDecision {
   order: number;
   score: number;
   strategy: 'affinity' | 'default' | 'tenant-pinned';
-  explain: { drivers: Array<{ dim: string; value: string; a: number; weight: number }>; note?: string };
+  explain: {
+    drivers: Array<{ dim: string; value: string; a: number; weight: number }>;
+    note?: string;
+    /** CW33: the slot's diversity rule touched this position. */
+    diversity?: { dimension: string; max: number; skipped: string[]; relaxed: boolean; sentence: string };
+  };
 }
 
 export interface AffinityViewLike { dims: Readonly<Record<string, Readonly<Record<string, number>>>> }
@@ -157,15 +169,37 @@ export function composeContentDetailed(
     candidates[slot.slot] = scored.slice(0, Math.max(0, candidateLimit))
       .map((s) => ({ contentId: s.p.id, score: round3(s.score) }));
 
-    let taken = 0;
-    for (const s of scored) {
-      if (taken >= slot.take) break;
+    // The take. With a diversity rule (CW33), a piece that would put a value of the dimension over
+    // `max` yields to the next ranked piece and is named on that piece's explain; if the rule leaves
+    // positions empty, the yielded pieces fill them in rank order, marked relaxed, because a hole in
+    // a rail is worse than a repeated line.
+    const rule = slot.diversity && slot.diversity.max >= 1 && slot.diversity.dimension ? slot.diversity : null;
+    const seen = new Map<string, number>();
+    const yielded: typeof scored = [];
+    let pendingSkips: string[] = [];
+    const serve = (s: (typeof scored)[number], diversity?: ContentDecision['explain']['diversity']) => {
       const cold = s.score <= 0;
       used.add(s.p.id);
       out.push({ contentId: s.p.id, customerContentId: s.p.customerContentId, type: s.p.type,
         slot: slot.slot, order: order++, score: round3(s.score),
         strategy: cold ? 'default' : 'affinity',
-        explain: { drivers: s.drivers.slice(0, 4), ...(cold ? { note: 'no signal yet — the slot default (catalogue order)' } : {}) } });
+        explain: { drivers: s.drivers.slice(0, 4), ...(cold ? { note: 'no signal yet — the slot default (catalogue order)' } : {}), ...(diversity ? { diversity } : {}) } });
+    };
+    let taken = 0;
+    for (const s of scored) {
+      if (taken >= slot.take) break;
+      if (rule) {
+        const values = s.p.tags[rule.dimension] ?? [];
+        if (values.some((v) => (seen.get(v) ?? 0) >= rule.max)) { yielded.push(s); pendingSkips.push(s.p.id); continue; }
+        for (const v of values) seen.set(v, (seen.get(v) ?? 0) + 1);
+      }
+      const skipped = pendingSkips; pendingSkips = [];
+      serve(s, rule && skipped.length ? { dimension: rule.dimension, max: rule.max, skipped, relaxed: false, sentence: `${skipped.join(', ')} yielded: at most ${rule.max} per ${rule.dimension} in this slot` } : undefined);
+      taken += 1;
+    }
+    for (const s of yielded) {
+      if (taken >= slot.take) break;
+      serve(s, { dimension: rule!.dimension, max: rule!.max, skipped: [], relaxed: true, sentence: `served over the limit of ${rule!.max} per ${rule!.dimension}: nothing else was eligible` });
       taken += 1;
     }
   }

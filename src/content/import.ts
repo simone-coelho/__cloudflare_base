@@ -29,6 +29,17 @@ export function normalizeTags(v: unknown): Record<string, string[]> {
   return out;
 }
 
+/** A stock flag in any of the feed's spellings: booleans, 0/1, Y/N, 'true'/'false', in_stock/sold_out. Undefined when it says nothing. */
+export function stockOf(v: unknown): boolean | undefined {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v !== 0;
+  if (typeof v !== 'string') return undefined;
+  const t = v.trim().toLowerCase();
+  if (['y', 'yes', 'true', '1', 'in_stock', 'in stock', 'available'].includes(t)) return true;
+  if (['n', 'no', 'false', '0', 'sold_out', 'sold out', 'out_of_stock', 'out of stock', 'unavailable'].includes(t)) return false;
+  return undefined;
+}
+
 export function normalizeList(v: unknown): string[] {
   if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
   if (typeof v === 'string') return v.split('|').map((x) => x.trim()).filter(Boolean);
@@ -66,6 +77,8 @@ export function normalizePiece(raw: unknown): Record<string, unknown> | null {
     // BTIE A.3.6 names (CW29, CW30): the stages a piece is made for, and when it became current.
     ...(raw.journeyStageFit !== undefined || raw.journey_stage_fit !== undefined || raw.stageFit !== undefined ? { journeyStageFit: normalizeList(raw.journeyStageFit ?? raw.journey_stage_fit ?? raw.stageFit) } : {}),
     ...(str(raw.freshnessDate) ?? str(raw.freshness_date) ?? str(raw.publishedAt) ? { freshnessDate: str(raw.freshnessDate) ?? str(raw.freshness_date) ?? str(raw.publishedAt) } : {}),
+    ...(raw.featuredProductIds !== undefined || raw.featured_product_ids !== undefined || raw.products !== undefined ? { featuredProductIds: normalizeList(raw.featuredProductIds ?? raw.featured_product_ids ?? raw.products) } : {}),
+    ...(stockOf(raw.inStock ?? raw.in_stock ?? raw.ats) !== undefined ? { inStock: stockOf(raw.inStock ?? raw.in_stock ?? raw.ats) } : {}),
   };
 }
 
@@ -116,7 +129,7 @@ export function parseCsv(text: string): Record<string, string>[] {
 
 export const CSV_COLUMNS = [
   'id', 'customerContentId', 'type', 'title', 'subtitle', 'tags', 'slotTypes', 'status', 'art', 'renderUrl', 'excerpt', 'runtime', 'windowFrom', 'windowTo',
-  'journeyStageFit', 'freshnessDate',
+  'journeyStageFit', 'freshnessDate', 'featuredProductIds', 'inStock',
 ] as const;
 
 // ── Assembly ────────────────────────────────────────────────────────────────

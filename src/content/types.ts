@@ -20,6 +20,10 @@ export interface ContentPiece extends ContentPieceLike {
   journeyStageFit?: StageWord[];
   /** CW30 (BTIE A.3.6 `freshness_date`): when the piece became current, ISO 8601. The freshness term ages from it; absent, from `window.from`; neither, no term. */
   freshnessDate?: string;
+  /** CW32 (BTIE A.3.6 `featured_product_ids`): the products the piece features, in the customer's product ids, so a shoppable module can be painted and a product decision joined. Carried, validated, never rewritten. */
+  featuredProductIds?: string[];
+  /** CW33 (BTIE D11): the catalog's own stock flag. `false` removes the piece from every decision; absent or `true` means in stock. */
+  inStock?: boolean;
   /** Where the customer's front end fetches the asset to paint. Theirs; echoed, never rewritten. */
   renderUrl?: string;
   /** Publish and expire, ISO 8601. Outside the window a live piece is not eligible. */
@@ -55,7 +59,11 @@ export interface SlotStrategy {
   freshness?: FreshnessRule;
   /** CW30: a penalty for content this visitor was already served, `weight × min(served, cap) / cap` over the window, read from the visitor's ring. */
   fatigue?: FatigueRule;
+  /** CW33 (BTIE D11): at most `max` pieces sharing one value of `dimension` in this slot; a piece over the limit yields to the next, and is served after all when nothing else is eligible. */
+  diversity?: DiversityRule;
 }
+
+export interface DiversityRule { dimension: string; max: number }
 
 export interface FreshnessRule { weight: number; halfLifeDays: number }
 export interface FatigueRule { weight: number; windowHours: number; cap: number }
@@ -279,6 +287,8 @@ export interface DecisionRecord {
     freshness?: { ageDays: number; decay: number; applied: number; sentence: string };
     /** CW30: the fatigue penalty, when the slot has the dial and the ring showed the piece served before. */
     fatigue?: { served: number; windowHours: number; applied: number; sentence: string };
+    /** CW33: the slot's diversity rule touched this position: the pieces that yielded to it, or that it was served despite (`relaxed`). */
+    diversity?: { dimension: string; max: number; skipped: string[]; relaxed: boolean; sentence: string };
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;
