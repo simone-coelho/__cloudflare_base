@@ -5,7 +5,7 @@
 // the decision path down (doc 22 §18.1's failure posture, inherited).
 
 import type { DocumentKind, ValidationResult } from '@/config/versionedStore';
-import type { ContentCatalog, ContentPiece, LearnConfig, SlotCatalog, SlotStrategy } from './types';
+import type { ContentCatalog, ContentPiece, LearnConfig, SlotCatalog, SlotStrategy, StageRule, StageWord } from './types';
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
@@ -20,6 +20,15 @@ function stampLabel(base: string | undefined, fallback: string, revision: number
 }
 
 // ── content ─────────────────────────────────────────────────────────────────
+
+/** A stage in either vocabulary, as Tapestry's word; null when it is neither. */
+export function stageWordOf(v: unknown): StageWord | null {
+  if (v === 'exploring' || v === 'considering' || v === 'deciding') return v;
+  if (v === 'early') return 'exploring';
+  if (v === 'mid') return 'considering';
+  if (v === 'late') return 'deciding';
+  return null;
+}
 
 function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[]): ContentPiece | null {
   const at = `pieces[${i}]`;
@@ -73,10 +82,18 @@ function validatePiece(p: unknown, i: number, seen: Set<string>, errors: string[
       }
     }
   }
+  let journeyStageFit: StageWord[] | undefined;
+  if (p.journeyStageFit !== undefined) {
+    const raw = Array.isArray(p.journeyStageFit) ? p.journeyStageFit : null;
+    const words = raw?.map(stageWordOf);
+    if (!raw || !raw.length || !words || words.some((w) => w === null)) errors.push(`${at}.journeyStageFit: non-empty array of exploring | considering | deciding (early | mid | late also accepted)`);
+    else journeyStageFit = [...new Set(words as StageWord[])];
+  }
   if (!isStr(id) || !isStr(cid) || !isStr(type) || !isStr(title) || !slotTypes) return null;
   return {
     id, customerContentId: cid, type, title, tags, slotTypes,
     ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}),
+    ...(journeyStageFit ? { journeyStageFit } : {}),
     lifecycle: { status: status as ContentPiece['lifecycle']['status'] },
     ...(isStr(p.subtitle) ? { subtitle: p.subtitle } : {}),
     ...(p.art === undefined ? {} : { art: p.art as string | null }),
@@ -140,8 +157,19 @@ function validateSlot(s: unknown, page: string, i: number, seen: Set<string>, er
       }
     }
   }
+  let stage: StageRule | undefined;
+  if (s.stage !== undefined) {
+    if (!isRecord(s.stage)) errors.push(`${at}.stage: object with outOfStage 0..1 and/or inStage 0..1`);
+    else {
+      stage = {};
+      for (const [k, v] of Object.entries(s.stage)) {
+        if ((k !== 'outOfStage' && k !== 'inStage') || !isNum(v) || v < 0 || v > 1) { errors.push(`${at}.stage.${k}: outOfStage | inStage, number 0..1`); continue; }
+        stage[k] = v;
+      }
+    }
+  }
   if (!isStr(slot) || !isNum(take) || !isRecord(s.weights)) return null;
-  return { slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}) };
+  return { slot, take, weights, ...(isStr(s.pinnedPieceId) ? { pinnedPieceId: s.pinnedPieceId } : {}), ...(merchandising && Object.keys(merchandising).length ? { merchandising } : {}), ...(stage && Object.keys(stage).length ? { stage } : {}) };
 }
 
 export function validateSlotCatalog(candidate: unknown): ValidationResult<SlotCatalog> {

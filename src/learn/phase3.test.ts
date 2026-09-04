@@ -46,7 +46,7 @@ describe('imported priors (doc 22 §8)', () => {
     // a prior at '*' reaches the finer keys of the item: two live exposures in a cell do not outweigh a belief worth 200
     for (let i = 0; i < 2; i++) recordExposure(st, 'a', cell, NOW - i, DEFAULT_STATS);
     const fine = liftFor(buildSnapshot(st, { tenant: 'coach', brand: 'coach', slot: 'hero' }, 'click', NOW, DEFAULT_STATS, priors), 'a', cell)!;
-    expect(fine.level).toBe(4); expect(fine.n).toBe(2); expect(fine.n0).toBe(200); expect(fine.prior).toEqual({ p: 0.1, n: 200 });
+    expect(fine.level).toBe(5); expect(fine.n).toBe(2); expect(fine.n0).toBe(200); expect(fine.prior).toEqual({ p: 0.1, n: 200 });
     expect(fine.p_hat).toBeCloseTo(20 / 202, 3);
     // b has no prior: n₀ is the slot's, as before
     expect(snap.items.b!['*']!.n0).toBe(DEFAULT_STATS.n0); expect(snap.items.b!['*']!.prior).toBeUndefined();

@@ -74,6 +74,8 @@ interface ShopperRead {
   sessionId: string | null;
   isNewSession: boolean | null;
   state: DecisionSources['state'];
+  /** CW29: the journey stage the engine last derived for this shopper, from whichever host holds it; null when none. */
+  stage: string | null;
 }
 
 /**
@@ -89,10 +91,10 @@ async function readShopper(
       // The brand's object for this visitor; the default brand keeps the bare name.
       const stub = shopperObject(env.SHOPPER_REFLEX, visitorId, tenant);
       const res = await stub.fetch('https://shopper-reflex/snapshot');
-      const body = (await res.json()) as { affinity?: AffinitySnapshot | null };
-      return { affinity: body.affinity ?? null, sessionId: null, isNewSession: null, state: 'do' };
+      const body = (await res.json()) as { affinity?: AffinitySnapshot | null; journeyStage?: string | null };
+      return { affinity: body.affinity ?? null, sessionId: null, isNewSession: null, state: 'do', stage: body.journeyStage ?? null };
     } catch {
-      return { affinity: null, sessionId: null, isNewSession: null, state: 'none' };
+      return { affinity: null, sessionId: null, isNewSession: null, state: 'none', stage: null };
     }
   }
   try {
@@ -101,9 +103,10 @@ async function readShopper(
     return {
       affinity: sessionData.reflex ? reflexSnapshot(sessionData.reflex, now, cfg) : null,
       sessionId, isNewSession, state: 'session',
+      stage: sessionData.metadata?.journeyStage ?? null,
     };
   } catch {
-    return { affinity: null, sessionId: null, isNewSession: null, state: 'none' };
+    return { affinity: null, sessionId: null, isNewSession: null, state: 'none', stage: null };
   }
 }
 
@@ -132,6 +135,8 @@ export async function serveContentDecisions(
     // Only a session boundary the engine itself observed counts as evidence of
     // a first visit; anything else is unknown until CW7 gives visit number real semantics.
     visitNumber: shopper.isNewSession === true ? 1 : null,
+    // CW29: the stage the host last derived; `cellFor` records anything else as unknown.
+    stage: shopper.stage,
   });
   const arm = armFor(r.visitorId, { ...learn.holdout, salt: learn.holdout.salt || brand });
   const slots = slotsDoc.pages[r.page] ?? [];

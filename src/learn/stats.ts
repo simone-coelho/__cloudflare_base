@@ -19,15 +19,20 @@ export interface StatsConfig {
 }
 export const DEFAULT_STATS: StatsConfig = { n0: 30, tauLearnMs: 21 * 24 * 60 * 60 * 1000, liftMin: 0.5, liftMax: 2, nMin: 30 };
 
-export type Level = 0 | 1 | 2 | 3 | 4;
+export type Level = 0 | 1 | 2 | 3 | 4 | 5;
 export const LEVEL_WORDS: Record<Level, string> = {
-  0: 'everyone', 1: 'channel', 2: 'channel and visit bucket', 3: 'channel, visit bucket and region', 4: 'channel, visit bucket, region and affinity cell',
+  0: 'everyone', 1: 'channel', 2: 'channel and visit bucket', 3: 'channel, visit bucket and journey stage',
+  4: 'channel, visit bucket, stage and region', 5: 'channel, visit bucket, stage, region and affinity cell',
 };
 
-/** The five keys a cell materializes, coarsest first. */
+/**
+ * The six keys a cell materializes, coarsest first. CW29 put the journey stage
+ * after the visit bucket: explorers and buyers respond to different content,
+ * and a stage is known for more shoppers than a region or an affinity cell is.
+ */
 export function levelKeys(cell: Cell): string[] {
-  const c = cell.channel || 'unknown', v = cell.visit_bucket || 'unknown', r = cell.region ?? 'none', a = cell.affinity ?? 'none';
-  return ['*', `c=${c}`, `c=${c}|v=${v}`, `c=${c}|v=${v}|r=${r}`, `c=${c}|v=${v}|r=${r}|a=${a}`];
+  const c = cell.channel || 'unknown', v = cell.visit_bucket || 'unknown', st = cell.stage ?? 'unknown', r = cell.region ?? 'none', a = cell.affinity ?? 'none';
+  return ['*', `c=${c}`, `c=${c}|v=${v}`, `c=${c}|v=${v}|s=${st}`, `c=${c}|v=${v}|s=${st}|r=${r}`, `c=${c}|v=${v}|s=${st}|r=${r}|a=${a}`];
 }
 
 /** Decayed accumulators for one key. */

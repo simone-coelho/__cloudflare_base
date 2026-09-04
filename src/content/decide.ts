@@ -13,7 +13,8 @@ import { isLiveAt } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
 import { explorationPick, type ExploreConfig, type ExplorePick } from '@/learn/explore';
 import { merchandisingAdjustDetailed, merchandisingSentence, type MerchandisingResult } from '@/reflex/merchandising';
-import type { DecisionInputs, ExternalTerm, ItemControl } from './types';
+import type { DecisionInputs, ExternalTerm, ItemControl, StageRule, StageWord } from './types';
+import { STAGE_WORDS } from '@/services/JourneyStage';
 
 export interface DecideInput {
   tenant: string;
@@ -93,12 +94,30 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   const hasMerch = [...merchWeights.values()].some((w) => w && (['season', 'promotion', 'margin'] as const).some((t) => (w[t] ?? 0) !== 0));
   const merchDetailed = merchandisingAdjustDetailed<ContentPiece>({ weightsForSlot: (slot) => merchWeights.get(slot) ?? null, signalsOf: (p) => p.merchandising ?? null });
   const merchOf = new Map<string, MerchandisingResult>();
-  const adjust: ScoreAdjust | undefined = learning || ext || hasMerch ? (p, slot, base0) => {
+  // CW29 (BTIE A.3.4): the slot's journey-stage rule. The visitor's stage is on the cell, the piece's
+  // fit on the piece, the dials on the slot; a piece outside the stage is multiplied down, a piece
+  // inside it gets the bonus. Personalization, so never on the default arm, and off when the stage is
+  // unknown: an unknown stage is recorded as such, never guessed, and a guess would demote by accident.
+  const visitorStage: StageWord | null = i.arm !== 'default' && i.cell.stage && i.cell.stage !== 'unknown' ? STAGE_WORDS[i.cell.stage] : null;
+  const stageRules = new Map<string, StageRule>(i.slots.flatMap((s) => (s.stage && ((s.stage.outOfStage ?? 1) < 1 || (s.stage.inStage ?? 0) > 0) ? [[s.slot, s.stage] as const] : [])));
+  const hasStage = visitorStage !== null && stageRules.size > 0;
+  const stageOf = new Map<string, { visitor: StageWord; fit: StageWord[]; applied: number; inside: boolean }>();
+  const adjust: ScoreAdjust | undefined = learning || ext || hasMerch || hasStage ? (p, slot, base0) => {
     const key = `${slot}:${p.id}`;
     let base = base0;
     if (ext && ext.status === 'ok') {
       const w = ext.weightOf(slot), s = ext.scores[p.id];
       if (w > 0 && typeof s === 'number') { base += w * s; extOf.set(key, { score: s, weight: w, contribution: Math.round(w * s * 1000) / 1000 }); }
+    }
+    if (hasStage) {
+      const rule = stageRules.get(slot), fit = (byId.get(p.id) ?? (p as ContentPiece)).journeyStageFit;
+      if (rule && fit && fit.length) {
+        const inside = fit.includes(visitorStage!);
+        const before = base;
+        if (inside) base += rule.inStage ?? 0; else base *= rule.outOfStage ?? 1;
+        const applied = Math.round((base - before) * 1000) / 1000;
+        if (applied !== 0 || (!inside && (rule.outOfStage ?? 1) < 1)) stageOf.set(key, { visitor: visitorStage!, fit, applied, inside });
+      }
     }
     baseOf.set(key, base);
     if (hasMerch) {
@@ -156,7 +175,11 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
     }
     const m = merchOf.get(`${d.slot}:${d.contentId}`);
     if (m) for (const md of m.drivers) d.explain.drivers.push({ dim: 'merchandising', value: md.term, a: md.value, weight: md.weight });
+    const st = stageOf.get(`${d.slot}:${d.contentId}`);
+    if (st) d.explain.drivers.push({ dim: 'stage', value: st.inside ? `fits ${st.visitor}` : `made for ${st.fit.join(' and ')}, shopper ${st.visitor}`, a: 1, weight: st.applied });
   }
+  const stageSentence = (st: { visitor: StageWord; fit: StageWord[]; applied: number; inside: boolean }) =>
+    st.inside ? `made for a shopper who is ${st.visitor}: +${st.applied}` : `made for ${st.fit.join(' and ')}, and this shopper is ${st.visitor}: ${st.applied}`;
   const externalOf = (slot: string, key: string): { external?: DecisionRecord['explain']['external'] } => {
     if (!ext) return {};
     if (ext.status === 'ok') {
@@ -199,6 +222,7 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
         ...(control ? { control } : {}),
         ...externalOf(d.slot, key),
         ...(merchOf.has(key) ? { merchandising: (({ boost, clamped, drivers }) => ({ boost, clamped, drivers, sentence: merchandisingSentence(merchOf.get(key)!) }))(merchOf.get(key)!) } : {}),
+        ...(stageOf.has(key) ? { stage: (({ visitor, fit, applied }) => ({ visitor, fit, applied, sentence: stageSentence(stageOf.get(key)!) }))(stageOf.get(key)!) } : {}),
       },
       inputs,
     };

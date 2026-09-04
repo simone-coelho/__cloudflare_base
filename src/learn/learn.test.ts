@@ -45,7 +45,7 @@ describe('the learning policy', () => {
 describe('the statistics', () => {
   it('cells materialize five keys, coarsest first, and every key knows its parent', () => {
     const keys = levelKeys(cell);
-    expect(keys).toEqual(['*', 'c=paid social', 'c=paid social|v=1', 'c=paid social|v=1|r=US-NY', 'c=paid social|v=1|r=US-NY|a=occasion:evening']);
+    expect(keys).toEqual(['*', 'c=paid social', 'c=paid social|v=1', 'c=paid social|v=1|s=unknown', 'c=paid social|v=1|s=unknown|r=US-NY', 'c=paid social|v=1|s=unknown|r=US-NY|a=occasion:evening']);
     expect(parentKey(keys[4]!)).toBe(keys[3]); expect(parentKey(keys[1]!)).toBe('*'); expect(parentKey('*')).toBeNull();
   });
 
@@ -58,17 +58,17 @@ describe('the statistics', () => {
     for (let i = 0; i < 1880; i++) recordExposure(st, 'Y', cell, T0, cfg);            // 2000 slot exposures in total
     for (let i = 0; i < 91; i++) recordSuccess(st, 'Y', cell, 'add_to_bag', T0, 1, cfg);  // 100 successes → 5%
     const snap = buildSnapshot(st, { tenant: 'coach', brand: 'coach', slot: 'hero' }, 'add_to_bag', T0, cfg);
-    const finest = levelKeys(cell)[4]!;
+    const finest = levelKeys(cell)[5]!;
     expect(snap.slotRates[finest]?.rate).toBeCloseTo(0.05, 2);
     const x = snap.items.X![finest]!;
     expect(x.n).toBe(120); expect(x.s).toBe(9); expect(x.p0).toBeCloseTo(0.05, 2);
     expect(x.p_hat).toBeCloseTo(0.07, 2);
     expect(x.lift).toBeCloseTo(1.4, 1);
     const look = liftFor(snap, 'X', cell)!;
-    expect(look.level).toBe(4); expect(look.lift).toBeCloseTo(1.4, 1); expect(look.level_words).toContain('affinity cell');
+    expect(look.level).toBe(5); expect(look.lift).toBeCloseTo(1.4, 1); expect(look.level_words).toContain('affinity cell');
     // A cell with no exposures of X pools upward until it finds the item's evidence at the coarser levels.
     const other: Cell = { ...cell, affinity: 'line:drover' };
-    expect(liftFor(snap, 'X', other)?.level).toBe(3);
+    expect(liftFor(snap, 'X', other)?.level).toBe(4);
     expect(liftFor(snap, 'Z', cell)).toBeNull();
   });
 
@@ -85,7 +85,7 @@ describe('the statistics', () => {
     // A single exposure with no success is pulled almost entirely to the slot's rate: lift near 1, not near 0.
     const thin = emptyStats(); recordExposure(thin, 'X', cell, T0, cfg);
     const t = buildSnapshot(thin, { tenant: 't', brand: 'b', slot: 's' }, 'click', T0, cfg);
-    const fine = t.items.X![levelKeys(cell)[4]!]!;
+    const fine = t.items.X![levelKeys(cell)[5]!]!;
     expect(fine.p_hat).toBeCloseTo(fine.p0, 3);
     expect(fine.lift).toBeGreaterThan(0.9);
   });

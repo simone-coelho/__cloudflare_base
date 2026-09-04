@@ -284,8 +284,18 @@ cold start uses).
     Level 0   (slot, item)                                       everyone
     Level 1   (slot, item, channel)
     Level 2   (slot, item, channel, visit bucket)
-    Level 3   (slot, item, channel, visit bucket, region)
-    Level 4   (slot, item, channel, visit bucket, region, affinity cell)
+    Level 3   (slot, item, channel, visit bucket, journey stage)
+    Level 4   (slot, item, channel, visit bucket, journey stage, region)
+    Level 5   (slot, item, channel, visit bucket, journey stage, region, affinity cell)
+
+The journey stage joined the ladder on 2026-09-04 (CW29), after the visit bucket: explorers and buyers
+respond to different content, and a stage is known for more shoppers than a region or an affinity cell
+is. It is the engine's own rule-based stage (exploring, considering, deciding, in Tapestry's words), on
+the cell as `stage`, recorded as `unknown` when the host has not derived one, never guessed. The same
+day the piece gained `journeyStageFit`, the stages it is made for, and the slot a `stage` rule:
+`outOfStage` multiplies a piece made for another stage (0 sorts it last), `inStage` is added to a piece
+made for this one; both itemised as the delta they caused, in a `stage` block on the receipt with a
+sentence. Off when the stage is unknown and on the holdout's default arm.
 
 This is the direct answer to "can what we learn be applied across a larger population of similar
 shoppers." Evidence from a fine cell is shrunk toward its parent, and a shopper in a cell with no evidence
@@ -566,7 +576,7 @@ arms against each other (section 10). Aggregates only; capped at fifty thousand 
 pass, and it says so when the day was larger. The console lists the autonomy cycle's proposals with their
 evidence and applies or rejects them, and shows every learn, lift and prior revision with a diff of any
 learn revision against the document in force. Pooling order is not a dial yet: the ladder is fixed at
-channel, visit, region, affinity (section 5.4). Under enforced access the console reaches the `/v1`
+channel, visit, stage, region, affinity (section 5.4). Under enforced access the console reaches the `/v1`
 routes with the operator token alone: a verified token passes the site-key gate, and the routes that
 require a token still verify it themselves.
 
@@ -611,7 +621,8 @@ deployment.
 | Statistics | n₀ prior strength | Data science | 30 |
 | Statistics | τ_learn evidence decay | Data science | 21 days |
 | Statistics | L_min, L_max lift clamp | Data science | 0.5, 2.0 |
-| Statistics | Pooling ladder order and n_min | Data science | channel, visit, region, affinity; 30 |
+| Statistics | Pooling ladder order and n_min | Data science | channel, visit, stage, region, affinity; 30 |
+| Serving | Journey-stage rule per slot: outOfStage, inStage | Marketing | off |
 | Statistics | Position bucketing on or off per slot | Data science | on for multi-item slots |
 | Statistics | Learn from pinned placements | Marketing | on |
 | Serving | γ trust dial per slot | Marketing | 0 |

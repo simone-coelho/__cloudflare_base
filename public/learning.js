@@ -31,7 +31,7 @@
   const MIN = 60000, HOUR = 3600000, DAY = 86400000;
   const DEFAULT_WINDOWS = { click: 30 * MIN, dwell: 30 * MIN, video_complete: 30 * MIN, wishlist: 6 * HOUR, add_to_bag: 6 * HOUR, purchase: 7 * DAY, custom: 30 * MIN };
   const REWARDS = ['click', 'dwell', 'video_complete', 'wishlist', 'add_to_bag', 'purchase', 'custom'];
-  const LEVEL_WORDS = ['everyone', 'channel', 'channel and visit', 'channel, visit and region', 'channel, visit, region and affinity'];
+  const LEVEL_WORDS = ['everyone', 'channel', 'channel and visit', 'channel, visit and stage', 'channel, visit, stage and region', 'channel, visit, stage, region and affinity'];
   const levelOf = (key) => (key === '*' ? 0 : key.split('|').length);
 
   // ---------- tiny DOM helpers ----------

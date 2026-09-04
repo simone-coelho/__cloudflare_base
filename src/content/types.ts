@@ -13,6 +13,11 @@ export interface ContentPiece extends ContentPieceLike {
   lifecycle: { status: 'live' | 'draft' | 'expired' };
   /** Scope §1.5: the item's own season, promotion and margin signals, each in [0, 1], however the feed derives them. */
   merchandising?: MerchandisingSignals;
+  /**
+   * CW29 (BTIE A.3.4): the journey stages this piece is made for, in Tapestry's words. Absent means it fits
+   * every stage. A slot with a `stage` rule demotes a piece outside the visitor's stage and can favour one inside it.
+   */
+  journeyStageFit?: StageWord[];
   /** Where the customer's front end fetches the asset to paint. Theirs; echoed, never rewritten. */
   renderUrl?: string;
   /** Publish and expire, ISO 8601. Outside the window a live piece is not eligible. */
@@ -38,7 +43,17 @@ export interface SlotStrategy {
   pinnedPieceId?: string;
   /** Scope §1.5: the tunable multipliers for this placement. Absent or all zero means off. */
   merchandising?: MerchandisingWeights;
+  /**
+   * CW29: the slot's journey-stage rule. `outOfStage` multiplies the score of a piece whose `journeyStageFit`
+   * excludes the visitor's stage (0 sorts it last, 1 is off); `inStage` is added to the score of a piece that
+   * names the visitor's stage. Off when the visitor's stage is unknown, and on the holdout's default arm.
+   */
+  stage?: StageRule;
 }
+
+/** BTIE's See / Think / Do: what a piece is tagged with and what the receipt says. */
+export type StageWord = 'exploring' | 'considering' | 'deciding';
+export interface StageRule { outOfStage?: number; inStage?: number }
 
 /** The `slots` document kind: per page, the slots in page order. */
 export interface SlotCatalog {
@@ -247,6 +262,8 @@ export interface DecisionRecord {
      * score_base + the sum of the contributions is the merchandised score; the lift then multiplies it.
      */
     merchandising?: { boost: number; clamped: boolean; drivers: MerchandisingDriver[]; sentence: string };
+    /** CW29: the slot's stage rule on this piece, when it applied: the visitor's stage, the piece's fit, the delta it caused. */
+    stage?: { visitor: StageWord; fit: StageWord[]; applied: number; sentence: string };
   };
   /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
   inputs?: DecisionInputs;
