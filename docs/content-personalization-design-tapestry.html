@@ -354,7 +354,7 @@
   <header class="hero">
     <p class="eyebrow">Behavioral Targeting and Intelligence · Solution &amp; Algorithm</p>
     <h1>We recommend <span class="swap">content</span><br>the way we recommend products.</h1>
-    <p class="dek">The right image, banner, or module for each shopper — chosen automatically from everything you already have, based on what that shopper is doing right now. This edition sets out the full design: the model, the dimension registry, the learning logic, and exactly what we need from your team.</p>
+    <p class="dek">The right image, banner, or module for each shopper — chosen automatically from everything you already have, based on what that shopper is doing right now. This edition sets out the full design: the model, the dimension registry, the learning logic, and exactly what we need from your team. It is revised as built: every mechanism it describes runs today, and the integration kit is its companion for your engineers.</p>
     <div class="readmeta">
       <span><i class="dot"></i> Personalized content</span>
       <span><i class="dot s"></i> Your default</span>
@@ -518,7 +518,7 @@
     <div class="msgout block">R[d,g] ← R[d,g] · e^(−Δt / <span class="mo">τ_d</span>) + <span class="mo">w_action</span> · s   <span class="mc">// decay the past, then add the new signal</span></div>
     <ul class="plain">
       <li><span class="kbd">Δt</span> is the time since the accumulator was last touched; <span class="kbd">τ_d</span> is the dimension's decay horizon — a tunable, short for volatile interests, long for stable taste.</li>
-      <li><span class="kbd">w_action</span> is the action's weight. Defaults: view 1 · save/wishlist 2 · add-to-cart 3 · purchase 5; for content interactions, impression 0.25 · click/tap 1 · dwell past threshold 2 · attributed conversion 5. All defaults, all tunable.</li>
+      <li><span class="kbd">w_action</span> is the action's weight. Defaults: view 1 · save/wishlist 2 · add-to-cart 3 · purchase 5; for content interactions, impression 0 · dwell past threshold 0.5 · click/tap 1 · video completion 2. An impression weighs nothing by design: every piece rendered is an impression whether or not the shopper wanted it, so it must not build interest the way a click does. All defaults, all tunable.</li>
       <li>Decay is applied lazily at read time — state stores the value and its timestamp — which is mathematically identical to continuous decay. Interest cools during inactivity without any scheduled process.</li>
     </ul>
 
@@ -572,7 +572,7 @@
     <p><em>Identity honesty, stated plainly for your data scientists:</em> a cleared cookie or a new device is a new visitor until an identifier exists to stitch on. When you later light up hashed-email capture on authenticated touchpoints, ODP stitches those histories server-side — the model needs no change; it simply inherits longer memories. Nothing in version one depends on that.</p>
 
     <h3>Dimension 3 — Entry / marketing channel</h3>
-    <p>Classified at the edge, per session, from UTM parameters and referrer into an agreed taxonomy — proposed: paid social, paid search, organic search, email, direct, referral, affiliate. Channel acts two ways: as a <strong>context attribute</strong> conditioning outcome statistics (what converts for paid-social arrivals differs from search arrivals), and optionally as a <strong>strategy override</strong> (a slot may run a different weight profile for a given channel). You told us channel is your strongest single predictor; the registry treats it as first-class.</p>
+    <p>Classified at the edge, per session, from UTM parameters and referrer into an agreed taxonomy — as built: direct, paid social, paid search, organic search, email, referral; affiliate and partner traffic classify as referral, and an untagged social arrival cannot be told from a referral, so it is one. Channel acts two ways: as a <strong>context attribute</strong> conditioning outcome statistics (what converts for paid-social arrivals differs from search arrivals), and optionally as a <strong>strategy override</strong> (a slot may run a different weight profile for a given channel). You told us channel is your strongest single predictor; the registry treats it as first-class.</p>
 
     <h3>Dimension 4 — Content-type affinity</h3>
     <p>The engine can only serve the right <em>form</em> of asset if it knows the form. The content catalog types every asset against an agreed taxonomy — proposed starting point: <span class="kbd">on-model</span> <span class="kbd">silo</span> (product-only) <span class="kbd">detail/zoom</span> <span class="kbd">construction/sole</span> <span class="kbd">flat-lay</span> <span class="kbd">video</span> <span class="kbd">ugc</span> <span class="kbd">editorial/story</span>. The dimension then learns each shopper's response to each form — dwell, expansion, video completion — so a video-responsive shopper measurably accumulates <em>video affinity</em> and video assets rise in their rankings. This dimension is also what makes the visit-number defaults self-correcting: if a segment's return visitors actually prefer on-model imagery, the data overrides the seed.</p>
@@ -608,19 +608,19 @@
 
     <h3>The delivery contract, literally</h3>
     <p>The strategy produces decisions; this is the payload that carries them — Shopper A's page from the walkthrough above, two of its slots shown, exactly as it arrives on the wire:</p>
-    <div class="msgout block">{ <span class="mk">"kind"</span>: <span class="mv">"content_decisions"</span>, <span class="mk">"page"</span>: <span class="mv">"home"</span>,
+    <div class="msgout block">{ <span class="mk">"ok"</span>: <span class="mo">true</span>, <span class="mk">"page"</span>: <span class="mv">"home"</span>, <span class="mk">"arm"</span>: <span class="mv">"personalized"</span>,
+  <span class="mk">"cell"</span>: { <span class="mk">"channel"</span>: <span class="mv">"paid_social"</span>, <span class="mk">"visit_bucket"</span>: <span class="mv">"2-3"</span>, <span class="mk">"region"</span>: <span class="mv">"US-FL"</span>, <span class="mk">"affinity"</span>: <span class="mv">"occasion:evening"</span> },
+  <span class="mk">"versions"</span>: { <span class="mk">"config"</span>: <span class="mo">15</span>, <span class="mk">"catalog"</span>: <span class="mo">4</span>, <span class="mk">"slots"</span>: <span class="mo">7</span>, <span class="mk">"learn"</span>: <span class="mo">19</span>, <span class="mk">"lift"</span>: <span class="mo">1788540535150</span>, <span class="mk">"prior"</span>: <span class="mo">6</span> },
   <span class="mk">"decisions"</span>: [
-    { <span class="mk">"slot"</span>: <span class="mv">"home-hero"</span>, <span class="mk">"order"</span>: <span class="mo">1</span>,
-      <span class="mk">"content"</span>: { <span class="mk">"customerContentId"</span>: <span class="mv">"CMP1450"</span>, <span class="mk">"systemId"</span>: <span class="mv">"cnt_8f3a…"</span>, <span class="mk">"type"</span>: <span class="mv">"image"</span>, <span class="mk">"url"</span>: <span class="mv">"…"</span> },
-      <span class="mk">"score"</span>: <span class="mo">0.78</span>,
-      <span class="mk">"explain"</span>: { <span class="mk">"drivers"</span>: [ { <span class="mk">"dim"</span>: <span class="mv">"occasion"</span>, <span class="mk">"tag"</span>: <span class="mv">"evening"</span>, <span class="mk">"a"</span>: <span class="mo">0.72</span> } ],
-                   <span class="mk">"context"</span>: { <span class="mk">"channel"</span>: <span class="mv">"paid_social"</span>, <span class="mk">"visit"</span>: <span class="mo">2</span>, <span class="mk">"region"</span>: <span class="mv">"FL"</span> } } },
-    { <span class="mk">"slot"</span>: <span class="mv">"home-story"</span>, <span class="mk">"order"</span>: <span class="mo">3</span>,
-      <span class="mk">"content"</span>: { <span class="mk">"customerContentId"</span>: <span class="mv">"CMP3310"</span>, <span class="mk">"systemId"</span>: <span class="mv">"cnt_2b71…"</span>, <span class="mk">"type"</span>: <span class="mv">"text"</span>, <span class="mk">"url"</span>: <span class="mv">"…"</span> },
-      <span class="mk">"score"</span>: <span class="mo">0.66</span> }
+    { <span class="mk">"slot"</span>: <span class="mv">"hero"</span>, <span class="mk">"order"</span>: <span class="mo">1</span>, <span class="mk">"customerContentId"</span>: <span class="mv">"CMP1450"</span>, <span class="mk">"contentId"</span>: <span class="mv">"cnt_8f3a…"</span>, <span class="mk">"type"</span>: <span class="mv">"image"</span>,
+      <span class="mk">"score"</span>: <span class="mo">0.78</span>, <span class="mk">"strategy"</span>: <span class="mv">"affinity"</span>,
+      <span class="mk">"explain"</span>: { <span class="mk">"drivers"</span>: [ { <span class="mk">"dim"</span>: <span class="mv">"occasion"</span>, <span class="mk">"value"</span>: <span class="mv">"evening"</span>, <span class="mk">"a"</span>: <span class="mo">0.72</span>, <span class="mk">"weight"</span>: <span class="mo">0.35</span> } ] } },
+    { <span class="mk">"slot"</span>: <span class="mv">"story"</span>, <span class="mk">"order"</span>: <span class="mo">3</span>, <span class="mk">"customerContentId"</span>: <span class="mv">"CMP3310"</span>, <span class="mk">"contentId"</span>: <span class="mv">"cnt_2b71…"</span>, <span class="mk">"type"</span>: <span class="mv">"text"</span>,
+      <span class="mk">"score"</span>: <span class="mo">0.66</span>, <span class="mk">"strategy"</span>: <span class="mv">"affinity"</span>, <span class="mk">"explain"</span>: { <span class="mk">"drivers"</span>: [ … ] } }
   ],
-  <span class="mk">"ts"</span>: <span class="mo">1761955200000</span> }</div>
-    <p class="caption">This is the real contract behind the widget's illustration: your content ID echoed back (ours alongside), a score, an explain record, and an explicit <span class="kbd">order</span> per slot — which ships from day one. Any slot absent from <span class="kbd">decisions</span> renders your default.</p>
+  <span class="mk">"records"</span>: [ … ],
+  <span class="mk">"ts"</span>: <span class="mo">1788541396189</span> }</div>
+    <p class="caption">This is the contract as it is on the wire today: your content ID echoed back (ours alongside), a score, the strategy that decided (the shopper's interests, your catalog's default order, or a merchandiser's pin), an explain record, the context cell, the revision of every input, the full decision records the platform also writes to its ledger, and an explicit <span class="kbd">order</span> per slot — which ships from day one. Any slot absent from <span class="kbd">decisions</span> renders your default.</p>
   </section>
 
   <!-- ============ THREE KINDS OF ORDERING ============ -->
@@ -676,7 +676,7 @@
 
     <h3>L3 — Outcome learning: what works</h3>
     <p>The engine accumulates per-item, context-conditioned outcome statistics over the open catalog: for each content item and context cell (channel × visit bucket × region, as agreed), a smoothed conversion lift versus that context's baseline — empirical-Bayes smoothing toward 1.0 with a configurable prior strength, so small samples don't produce wild swings. Ranking scores are multiplied by lift, so assets that demonstrably work for a context rise <em>for that context</em>.</p>
-    <p>New or under-observed content receives a configurable <strong>exploration share</strong> per slot (default 10%): a deterministic rotation guarantees fresh assets accumulate evidence instead of starving. Note what this is <em>not</em>: it is not variation buckets, and it is not bandit-dependent — it is item-level statistics over the whole catalog, the same way product recommendations learn. A contextual bandit (CMAB) remains available as an optional per-slot instrument if your team wants controlled variation testing on a specific placement; it is never required for the system to learn.</p>
+    <p>New or under-observed content receives a configurable <strong>exploration share</strong> per slot (default 10%): a deterministic rotation guarantees fresh assets accumulate evidence instead of starving. Note what this is <em>not</em>: it is not variation buckets, and it is not bandit-dependent — it is item-level statistics over the whole catalog, the same way product recommendations learn. A contextual bandit (CMAB) remains available as an optional per-slot instrument if your team wants controlled variation testing on a specific placement; it is never required for the system to learn. The learned lift reaches a decision through one dial per slot, from 0 (computed and shown on every receipt, ignored in ranking) to 1 (applied in full), so learning launches in shadow and is turned up where a person decides it has earned it. A holdout is part of the design rather than a later study: a stable share of visitors is assigned before the first decision is recorded, sees your defaults, and the daily report compares the arms with the interval around the difference and the number of decisions it would take to call it.</p>
 
     <h3>L4 — Discovery: what matters</h3>
     <p>Offline analysis over the accumulated decision-and-outcome corpus — cohort contrasts, predictive-attribute analysis per channel — surfaces <em>proposals</em>: "this behavior predicts conversion for paid-social visitors; want it as a dimension weight? as an audience?" Proposals are human-approved, never self-activating, and they arrive with the evidence that produced them. This is also where the registry grows over time, governed.</p>
@@ -694,7 +694,7 @@
           <tr><td><span class="pname">Feature Experimentation</span> <span class="mono" style="font-size:11px;">(incl. CMAB)</span></td><td>The experimentation toolkit — flags, tests, bandits. Optional testing instruments, available per slot where your team wants them — never required for content serving.</td><td><span class="badge opti">Optimizely · where it fits</span></td></tr>
           <tr><td><span class="pname">Opal</span></td><td>The AI assistant layer — explains what the system is doing and why, in plain language.</td><td><span class="badge opti">Optimizely · transparency</span></td></tr>
           <tr><td><span class="pname">The affinity engine</span></td><td>The interest thermometer — scores each shopper's interests in real time as they browse.</td><td><span class="badge built">Purpose-built</span></td></tr>
-          <tr><td><span class="pname">Content catalog + matching</span></td><td>Registers your content and picks the best piece per shopper.</td><td><span class="badge built">Purpose-built · in build</span></td></tr>
+          <tr><td><span class="pname">Content catalog + matching</span></td><td>Registers your content and picks the best piece per shopper.</td><td><span class="badge built">Purpose-built · built</span></td></tr>
           <tr><td><span class="pname">The delivery kit (SDK)</span></td><td>The small connector your website uses to receive the decisions.</td><td><span class="badge built">Purpose-built</span></td></tr>
         </tbody>
       </table>
@@ -740,7 +740,7 @@
     <p>Everything so far describes what the system does. This section is about who holds the controls — three commitments, then the surfaces where your data scientists plug in.</p>
     <ul class="plain">
       <li><strong>Every constant in this document is a visible, editable parameter</strong> — action weights, decay horizons (<span class="kbd">τ</span>), saturation constants (<span class="kbd">K</span>), thresholds (<span class="kbd">θ</span>), strategy weight profiles, blending constants, exploration share, smoothing priors. All of it is configuration, versioned, with change history; edits apply immediately, without a deployment.</li>
-      <li><strong>Every decision explains itself.</strong> Each served decision carries its explain record: the dimensions that drove it, their scores and weights, the context, the lift applied. "Why did this shopper see this?" is a lookup, not an investigation.</li>
+      <li><strong>Every decision explains itself.</strong> Each served decision carries its explain record: the dimensions that drove it, their scores and weights, the context, the lift applied. "Why did this shopper see this?" is a lookup, not an investigation — and a replay: given a decision's id, the platform decides again from the recorded inputs and reports whether it matches.</li>
       <li><strong>No black box, structurally.</strong> There is no runtime model call to interrogate — the serving path is arithmetic you can recompute by hand from the explain record.</li>
     </ul>
 
@@ -759,8 +759,8 @@
         <p>Export every decision and outcome record, explain records included. Your team fits whatever they want offline — propensity models, uplift analyses — and writes the results back as priors or strategy weight profiles. Your math, our serving path, complete audit trail.</p>
       </div></li>
       <li><div>
-        <h3>Custom scoring hooks <span class="badge gold">co-design</span></h3>
-        <p>A defined extension point for substituting or adjusting the ranking function on specific slots. We would rather design this with your data scientists against a real use case than guess at the interface — it is an explicit agenda item for the registry workshop.</p>
+        <h3>Your own model, as one term <span class="badge gold">v1</span></h3>
+        <p>A defined extension point: your model's output enters the ranking as one named, weighted term in the same explain record, beside every other driver, so the receipt stays readable. The contract is small — the shopper's interest state, the candidate items and the context in; a score per item and a version tag out — and it can be a service you host, a scoring table you publish, or a hosted model, each under a hard time budget after which the term is omitted and the decision says so. A reference implementation ships with the integration kit. How much each slot trusts the term is a dial. What we would rather settle with your data scientists against a real use case is the weight, not the interface — that is an explicit agenda item for the registry workshop.</p>
       </div></li>
     </ol>
   </section>
@@ -783,8 +783,8 @@
     <h2>Four stages, each useful on its own, each building the next.</h2>
     <ul class="ladder">
       <li><div><span class="lt">The foundation</span><div class="ld">Live interest scoring, self-building audiences, and instant response, wired into your ODP.</div></div><span class="when live">Live today</span></li>
-      <li><div><span class="lt">Content personalization</span><div class="ld">The content catalog plus per-shopper content picking — the Netflix-artwork moment, and the subject of this document.</div></div><span class="when">In build</span></li>
-      <li><div><span class="lt">Learning</span><div class="ld">The system learns which content converts, for whom, and keeps improving.</div></div><span class="when">Follows on</span></li>
+      <li><div><span class="lt">Content personalization</span><div class="ld">The content catalog plus per-shopper content picking — the Netflix-artwork moment, and the subject of this document.</div></div><span class="when">Built</span></li>
+      <li><div><span class="lt">Learning</span><div class="ld">The system learns which content converts, for whom, and keeps improving. Launches in shadow: every receipt shows what it would do, and a dial per slot lets it act.</div></div><span class="when">Built · shadow at launch</span></li>
       <li><div><span class="lt">Layout personalization</span><div class="ld">Not just which content in the slots — the arrangement of the page itself, per shopper.</div></div><span class="when">~6 months</span></li>
     </ul>
     <p class="caption">The stages build on each other — each generates the data the next one needs, so they run in order rather than being skipped. The foundation is live today, and it's the natural starting point.</p>
