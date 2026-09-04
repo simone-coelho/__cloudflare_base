@@ -234,11 +234,11 @@ BRIGHTHOUR_CLOCK_MULTIPLIER = "1"
 
 [[env.staging.kv_namespaces]]
 binding = "CACHE"
-id = "<staging-cache-kv-id>"
+id = "9c963380bedb434aa511e35bc9924c00"
 
 [[env.staging.kv_namespaces]]
 binding = "SESSIONS"
-id = "<staging-sessions-kv-id>"
+id = "0d84ea5da70b4c54a07ed83d86a99e62"
 
 [[env.staging.r2_buckets]]
 binding = "STORAGE"
@@ -300,7 +300,7 @@ binding = "ANALYTICS"
 [[env.staging.d1_databases]]
 binding = "DB"
 database_name = "coach-demo-db-staging"
-database_id = "<staging-d1-id>"
+database_id = "5849815f-37df-4a90-9975-704125e78f63"
 migrations_dir = "migrations"
 
 [env.staging.assets]

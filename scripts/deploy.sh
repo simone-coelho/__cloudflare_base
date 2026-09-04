@@ -21,7 +21,8 @@ npm run test
 # Deploy
 echo "📦 Deploying to Cloudflare Workers..."
 if [ "$ENVIRONMENT" = "staging" ]; then
-    if grep -q '<staging-' wrangler.toml; then
+    # An unfilled id looks like  id = "<staging-…>"; the comment that names the placeholders must not trip this.
+    if grep -Eq '^\s*(id|database_id)\s*=\s*"<staging-' wrangler.toml; then
         echo "❌ staging is declared but not provisioned: placeholders remain in [env.staging]."
         echo "   Run: bash scripts/provision-staging.sh   (creates the resources and fills the ids)"
         exit 1
