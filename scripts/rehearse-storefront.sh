@@ -58,6 +58,11 @@ for label, j, p in (('copy', cj, c), ('sdk', sj, s)):
     check('hero painted', bool(p.get('heroTitle')), repr(p.get('heroTitle'))[:60])
     if label == 'sdk':
         check('SDK loaded', bool(p.get('sdkVersion')), str(p.get('sdkVersion')))
+        eh, es = p.get('engineHero'), p.get('engineStory')
+        check("the hero on the page is the engine's decision", bool(eh and eh.get('title') and eh.get('title') == p.get('heroTitle')), f"{(eh or {}).get('customerContentId')} {(eh or {}).get('strategy')} top={(eh or {}).get('top')}")
+        check("the story on the page is the engine's decision", bool(es and es.get('title') and es.get('title') == p.get('storyTitle')), f"{(es or {}).get('customerContentId')} {repr(p.get('storyTitle'))[:50]}")
+        if p.get('dominantLine'):
+            check("the hero follows the line she circles", p['dominantLine'] in ((eh or {}).get('line') or []), f"line {p['dominantLine']} in {(eh or {}).get('line')}")
         d = p.get('decisions')
         check('content decisions hydrated for the page', isinstance(d, list) and len(d) >= 1, str([(x['slot'], x['item']) for x in d])[:120] if isinstance(d, list) else str(d))
         if isinstance(d, list) and d and jwt and p.get('decisionTs') and p.get('visitorId'):
@@ -77,6 +82,7 @@ for label, j, p in (('copy', cj, c), ('sdk', sj, s)):
             check('the first decision is in the ledger', bool(hit and hit.get('ok')), f"{did}")
 same = [k for k in ('ws', 'events') if c.get(k) == s.get(k)]
 print(f"\nboth transports agree on: {same}; affinity dims copy {c.get('affinityDims')} vs sdk {s.get('affinityDims')}")
+print(f"hero: page rules said {c.get('heroTitle')!r}; the engine said {s.get('heroTitle')!r} (by design these differ: one is written into the page, the other is decided)")
 print('\nRESULT:', 'PASS' if fails == 0 else f'{fails} FAIL')
 sys.exit(1 if fails else 0)
 PY

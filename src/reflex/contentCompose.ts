@@ -102,6 +102,9 @@ export function composeContentDetailed(
   explore?: ExploreHook,
 ): ComposeContentResult {
   const live = pieces.filter((p) => (p.lifecycle?.status ?? 'live') === 'live');
+  // "Catalogue order" is the document's order: the merchandiser's, not the ids'. Ties, and the cold
+  // case where every score is zero, resolve to the first eligible piece as the catalog lists them.
+  const rank = new Map(pieces.map((p, i) => [p.id, i]));
   const used = new Set<string>();
   const out: ContentDecision[] = [];
   const candidates: Record<string, SlotCandidate[]> = {};
@@ -138,7 +141,7 @@ export function composeContentDetailed(
       drivers.sort((x, y) => y.a * y.weight - x.a * x.weight);
       if (adjust) { const adjusted = adjust(p, slot.slot, score); if (Number.isFinite(adjusted) && adjusted >= 0) score = adjusted; }
       return { p, score, drivers };
-    }).sort((x, y) => y.score - x.score || x.p.id.localeCompare(y.p.id));
+    }).sort((x, y) => y.score - x.score || (rank.get(x.p.id) ?? 0) - (rank.get(y.p.id) ?? 0) || x.p.id.localeCompare(y.p.id));
 
     if (explore && scored.length > 1) {
       const pick = explore(slot.slot, scored.map((s) => ({ id: s.p.id, score: s.score })));

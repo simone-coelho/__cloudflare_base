@@ -1,0 +1,977 @@
+{
+ "version": "coach-content",
+ "pieces": [
+  {
+   "id": "cnt_f7f5634c",
+   "customerContentId": "CCH-025",
+   "type": "campaign",
+   "title": "New arrivals: the season's leathers",
+   "subtitle": "Four new leathers, two new sizes, and the bags that arrived this month.",
+   "excerpt": "The season opens with the Tabby in four new leathers. Everything here arrived this month.",
+   "tags": {
+    "category": [
+     "Handbags"
+    ],
+    "occasion": [
+     "everyday"
+    ],
+    "contentType": [
+     "campaign"
+    ]
+   },
+   "slotTypes": [
+    "chero"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/look-everyday-COA-CCX04.jpg"
+  },
+  {
+   "id": "cnt_d053e052",
+   "customerContentId": "CCH-020",
+   "type": "editorial",
+   "title": "Since 1941",
+   "subtitle": "Six generations of leather craft, from a Manhattan loft to your shoulder.",
+   "excerpt": "Coach began as a family-run workshop in a Manhattan loft, six leatherworkers making billfolds by hand. The glovetanned leather we still use was chosen because it wears in rather than out.",
+   "tags": {
+    "line": [
+     "Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "occasion": [
+     "everyday"
+    ],
+    "contentType": [
+     "editorial"
+    ],
+    "journeyStage": [
+     "early"
+    ]
+   },
+   "slotTypes": [
+    "story"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/look-capsule-tabby.jpg"
+  },
+  {
+   "id": "cnt_7cb1e039",
+   "customerContentId": "CCH-001",
+   "type": "campaign",
+   "title": "The Tabby Shop",
+   "subtitle": "Our most-loved shoulder bag, reimagined in heritage leathers for the new season.",
+   "excerpt": "The Tabby is the bag Coach is known for: a structured shoulder silhouette in glovetanned leather, with the turnlock that has closed our bags since 1941. This season it arrives in four new leathers and two new sizes.",
+   "tags": {
+    "line": [
+     "Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Shoulder Bags"
+    ],
+    "silhouette": [
+     "shoulder"
+    ],
+    "occasion": [
+     "everyday",
+     "work",
+     "evening"
+    ],
+    "priceBand": [
+     "core"
+    ],
+    "contentType": [
+     "campaign"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "merch"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/search-everyday.jpg",
+   "merchandising": {
+    "promotion": 0.6
+   }
+  },
+  {
+   "id": "cnt_409ef5e6",
+   "customerContentId": "CCH-002",
+   "type": "editorial",
+   "title": "The Tabby, returned to",
+   "subtitle": "The silhouette you keep circling, and the pieces that finish it.",
+   "excerpt": "Some bags are bought once. The Tabby is the one people come back for in a second colour, a second size, and then the crossbody strap that turns it into a different bag altogether.",
+   "tags": {
+    "line": [
+     "Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Shoulder Bags"
+    ],
+    "silhouette": [
+     "shoulder"
+    ],
+    "occasion": [
+     "everyday",
+     "evening"
+    ],
+    "priceBand": [
+     "core",
+     "elevated"
+    ],
+    "contentType": [
+     "editorial"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "story"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/search-everyday-COA-CCX04.jpg"
+  },
+  {
+   "id": "cnt_8385ce98",
+   "customerContentId": "CCH-003",
+   "type": "guide",
+   "title": "Three ways to carry the Tabby",
+   "subtitle": "Shoulder, crossbody, or in hand: the same bag, three days.",
+   "excerpt": "The Tabby 26 comes with two straps for a reason. Short on the shoulder for the office, long and crossbody for the weekend, and by the top handle when the evening asks for it.",
+   "tags": {
+    "line": [
+     "Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "silhouette": [
+     "shoulder",
+     "crossbody"
+    ],
+    "occasion": [
+     "work",
+     "everyday",
+     "evening"
+    ],
+    "priceBand": [
+     "core"
+    ],
+    "contentType": [
+     "guide"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "story",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/look-capsule-tabby.jpg"
+  },
+  {
+   "id": "cnt_9a40fc44",
+   "customerContentId": "CCH-004",
+   "type": "film",
+   "title": "Pillow Tabby, up close",
+   "subtitle": "Forty-eight seconds with the softest bag we make.",
+   "excerpt": "The Pillow Tabby keeps the Tabby silhouette and swaps the structure for puffed nappa leather. Filmed in the workshop, unedited.",
+   "tags": {
+    "line": [
+     "Pillow Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Shoulder Bags"
+    ],
+    "silhouette": [
+     "shoulder"
+    ],
+    "occasion": [
+     "evening",
+     "date-night"
+    ],
+    "priceBand": [
+     "elevated"
+    ],
+    "contentType": [
+     "video"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/search-cocktail-COA-C0772.jpg",
+   "runtime": "0:48"
+  },
+  {
+   "id": "cnt_d16695c1",
+   "customerContentId": "CCH-005",
+   "type": "editorial",
+   "title": "Date night, carried light",
+   "subtitle": "A bag that holds a phone, a card and a lipstick, and nothing you will regret bringing.",
+   "excerpt": "The evening bag question is always the same: how little can you carry and still feel prepared. Our answer is a small shoulder bag with a chain strap, in a leather that catches the light.",
+   "tags": {
+    "line": [
+     "Tabby",
+     "Pillow Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Shoulder Bags",
+     "Crossbody Bags"
+    ],
+    "silhouette": [
+     "shoulder",
+     "crossbody"
+    ],
+    "occasion": [
+     "date-night",
+     "evening"
+    ],
+    "priceBand": [
+     "core"
+    ],
+    "contentType": [
+     "editorial"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "story",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/search-date-night.jpg"
+  },
+  {
+   "id": "cnt_018a8de7",
+   "customerContentId": "CCH-006",
+   "type": "lookbook",
+   "title": "The Brooklyn, for the commute",
+   "subtitle": "A slouchy shoulder bag that swallows a laptop and still looks like a bag.",
+   "excerpt": "The Brooklyn is the tote for people who do not want to carry a tote. Soft, unlined, and shaped by what you put in it.",
+   "tags": {
+    "line": [
+     "Brooklyn"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Shoulder Bags"
+    ],
+    "silhouette": [
+     "shoulder"
+    ],
+    "occasion": [
+     "work",
+     "everyday"
+    ],
+    "priceBand": [
+     "core"
+    ],
+    "contentType": [
+     "lookbook"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/search-everyday-COA-CBH42.jpg"
+  },
+  {
+   "id": "cnt_53e635f4",
+   "customerContentId": "CCH-007",
+   "type": "guide",
+   "title": "The work tote, packed properly",
+   "subtitle": "What goes where, so the tote stays a tote.",
+   "excerpt": "A tote fails when everything sinks to the bottom. The Mollie has a zip pocket for the things you reach for and a flat pocket for the things you do not, and the rest is up to you.",
+   "tags": {
+    "line": [
+     "Mollie"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Totes & Carryalls"
+    ],
+    "silhouette": [
+     "tote"
+    ],
+    "occasion": [
+     "work",
+     "travel"
+    ],
+    "priceBand": [
+     "core"
+    ],
+    "contentType": [
+     "guide"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "story",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/search-work-tote.jpg"
+  },
+  {
+   "id": "cnt_7927a867",
+   "customerContentId": "CCH-008",
+   "type": "editorial",
+   "title": "Travel light: the crossbody",
+   "subtitle": "Hands free through the airport, the market and the museum.",
+   "excerpt": "The crossbody is the travel bag because it never needs putting down. The Nolita and the Kira are the two we pack ourselves.",
+   "tags": {
+    "line": [
+     "Nolita",
+     "Kira"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Crossbody Bags"
+    ],
+    "silhouette": [
+     "crossbody"
+    ],
+    "occasion": [
+     "travel",
+     "festival",
+     "everyday"
+    ],
+    "priceBand": [
+     "core"
+    ],
+    "contentType": [
+     "editorial"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/search-travel-crossbody.jpg"
+  },
+  {
+   "id": "cnt_11f4bf4c",
+   "customerContentId": "CCH-009",
+   "type": "film",
+   "title": "The Rogue, made to last",
+   "subtitle": "Seventy-two seconds on the bag that is built, not assembled.",
+   "excerpt": "The Rogue is cut from a single hide, hand-burnished at every edge, and finished with hardware that is cast rather than plated. The film shows why it costs what it costs.",
+   "tags": {
+    "line": [
+     "Rogue"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Top-Handle Bags"
+    ],
+    "silhouette": [
+     "top-handle"
+    ],
+    "occasion": [
+     "work",
+     "special-occasion"
+    ],
+    "priceBand": [
+     "elevated"
+    ],
+    "contentType": [
+     "video"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "story"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/search-investment.jpg",
+   "runtime": "1:12"
+  },
+  {
+   "id": "cnt_f9dce47d",
+   "customerContentId": "CCH-010",
+   "type": "lookbook",
+   "title": "Considered, not ordinary",
+   "subtitle": "An elevated selection in our finest leathers, chosen for the discerning eye.",
+   "excerpt": "Eight pieces from the top of the range, photographed in the light they were made for. Nothing here is on offer, and nothing here needs to be.",
+   "tags": {
+    "line": [
+     "Rogue",
+     "Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "occasion": [
+     "special-occasion",
+     "evening"
+    ],
+    "priceBand": [
+     "elevated"
+    ],
+    "contentType": [
+     "lookbook"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/search-investment-COA-CCW92.jpg"
+  },
+  {
+   "id": "cnt_899bd31e",
+   "customerContentId": "CCH-011",
+   "type": "guide",
+   "title": "Gifts that cannot miss, under $200",
+   "subtitle": "A card case, a charm, a wallet: the small things that get used every day.",
+   "excerpt": "The safest gift is the one that gets used. Everything here is under two hundred dollars, monogrammable, and comes in the box.",
+   "tags": {
+    "line": [
+     "Essential"
+    ],
+    "category": [
+     "Small Leather Goods",
+     "Accessories"
+    ],
+    "subcategory": [
+     "Wallets",
+     "Card Cases",
+     "Bag Charms"
+    ],
+    "occasion": [
+     "gift"
+    ],
+    "priceBand": [
+     "entry",
+     "core"
+    ],
+    "contentType": [
+     "guide"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "story",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/search-gift-150.jpg"
+  },
+  {
+   "id": "cnt_9f5f8307",
+   "customerContentId": "CCH-012",
+   "type": "editorial",
+   "title": "Festival, hands free",
+   "subtitle": "A crossbody in a colour that shows up in photographs.",
+   "excerpt": "Three days outdoors need a bag that closes properly, sits close, and does not mind the dust. The quilted Tabby crossbody was made for exactly that weekend.",
+   "tags": {
+    "line": [
+     "Tabby",
+     "Nolita",
+     "Kira"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Crossbody Bags"
+    ],
+    "silhouette": [
+     "crossbody"
+    ],
+    "occasion": [
+     "festival"
+    ],
+    "priceBand": [
+     "core"
+    ],
+    "contentType": [
+     "editorial"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/search-festival.jpg"
+  },
+  {
+   "id": "cnt_ce92061a",
+   "customerContentId": "CCH-013",
+   "type": "lookbook",
+   "title": "Winter wedding, in crystal",
+   "subtitle": "The Tabby, embellished for the one night it matters.",
+   "excerpt": "The crystal Tabby is the evening bag for a winter wedding: small enough for the table, bright enough for the photographs, and still a Tabby the next morning.",
+   "tags": {
+    "line": [
+     "Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Shoulder Bags"
+    ],
+    "occasion": [
+     "special-occasion",
+     "winter"
+    ],
+    "priceBand": [
+     "elevated"
+    ],
+    "contentType": [
+     "lookbook"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/search-winter-wedding.jpg"
+  },
+  {
+   "id": "cnt_6d638450",
+   "customerContentId": "CCH-014",
+   "type": "editorial",
+   "title": "The Summer Edit",
+   "subtitle": "Coral and natural straw, right for the season.",
+   "excerpt": "Summer bags are lighter in every sense. This edit leads with coral leather and natural straw, in the shapes that travel well and dry fast.",
+   "tags": {
+    "line": [
+     "Brooklyn"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "occasion": [
+     "festival",
+     "travel",
+     "everyday"
+    ],
+    "season": [
+     "summer"
+    ],
+    "priceBand": [
+     "core"
+    ],
+    "contentType": [
+     "editorial"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/search-beach-resort-COA-CBH42.jpg"
+  },
+  {
+   "id": "cnt_78bfa74a",
+   "customerContentId": "CCH-015",
+   "type": "editorial",
+   "title": "The Winter Edit",
+   "subtitle": "Burgundy and chocolate leather, for the darker months.",
+   "excerpt": "Winter is when leather looks its best. The edit is burgundy, chocolate and black, in the structured shapes that hold up to a coat.",
+   "tags": {
+    "line": [
+     "Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "occasion": [
+     "winter",
+     "special-occasion",
+     "evening"
+    ],
+    "season": [
+     "winter"
+    ],
+    "priceBand": [
+     "core",
+     "elevated"
+    ],
+    "contentType": [
+     "editorial"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/search-winter-wedding-COA-CCX14.jpg"
+  },
+  {
+   "id": "cnt_cca1e5af",
+   "customerContentId": "CCH-016",
+   "type": "lookbook",
+   "title": "Gallery hours",
+   "subtitle": "A small bag, an evening opening, and nothing to check at the door.",
+   "excerpt": "The gallery bag is the one that does not compete with the room. Quiet leather, a chain that sits flat, and a size that never needs setting down.",
+   "tags": {
+    "line": [
+     "Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "occasion": [
+     "evening",
+     "special-occasion"
+    ],
+    "priceBand": [
+     "elevated"
+    ],
+    "contentType": [
+     "lookbook"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/search-gallery-COA-CCX14.jpg"
+  },
+  {
+   "id": "cnt_e667254f",
+   "customerContentId": "CCH-017",
+   "type": "guide",
+   "title": "Brunch, then everything after",
+   "subtitle": "The bag that goes from the table to the whole day.",
+   "excerpt": "A Sunday bag has to survive a plan that changes. Shoulder for the table, crossbody for the walk, and big enough for the thing you buy on the way home.",
+   "tags": {
+    "line": [
+     "Tabby",
+     "Brooklyn"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "silhouette": [
+     "shoulder"
+    ],
+    "occasion": [
+     "everyday",
+     "date-night"
+    ],
+    "priceBand": [
+     "core",
+     "elevated"
+    ],
+    "contentType": [
+     "guide"
+    ]
+   },
+   "slotTypes": [
+    "story",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/search-brunch-COA-CCX04.jpg"
+  },
+  {
+   "id": "cnt_8600dd97",
+   "customerContentId": "CCH-018",
+   "type": "film",
+   "title": "The Kisslock, five nights running",
+   "subtitle": "Fifty-five seconds, one frame bag, five evenings.",
+   "excerpt": "The Kisslock frame is the oldest closure we make and the most satisfying. We followed one bag through a week of evenings.",
+   "tags": {
+    "line": [
+     "Kisslock",
+     "Nora"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "subcategory": [
+     "Crossbody Bags"
+    ],
+    "silhouette": [
+     "crossbody"
+    ],
+    "occasion": [
+     "evening",
+     "date-night",
+     "special-occasion"
+    ],
+    "priceBand": [
+     "core"
+    ],
+    "contentType": [
+     "video"
+    ]
+   },
+   "slotTypes": [
+    "chero",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/COA-CCY28.jpg",
+   "runtime": "0:55"
+  },
+  {
+   "id": "cnt_4165a33b",
+   "customerContentId": "CCH-019",
+   "type": "editorial",
+   "title": "The hobo, relaxed",
+   "subtitle": "Slouch on purpose: the Teri and the Hadley.",
+   "excerpt": "The hobo is the bag that looks better the more it is used. Soft leather, one strap, and a shape that settles on the shoulder.",
+   "tags": {
+    "line": [
+     "Teri",
+     "Hadley"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "silhouette": [
+     "hobo"
+    ],
+    "occasion": [
+     "work",
+     "everyday"
+    ],
+    "priceBand": [
+     "core"
+    ],
+    "contentType": [
+     "editorial"
+    ]
+   },
+   "slotTypes": [
+    "carousel",
+    "story"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/COA-CV934.jpg"
+  },
+  {
+   "id": "cnt_9ee856c8",
+   "customerContentId": "CCH-021",
+   "type": "editorial",
+   "title": "Coachtopia: crafted to last, designed to circle back",
+   "subtitle": "Our circular sub-brand, made with recycled and repurposed leather.",
+   "excerpt": "Coachtopia makes bags from the offcuts and the returns of the main line, designed from the start to be repaired, resold and remade.",
+   "tags": {
+    "line": [
+     "Brooklyn"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "occasion": [
+     "everyday"
+    ],
+    "contentType": [
+     "editorial"
+    ],
+    "journeyStage": [
+     "mid"
+    ]
+   },
+   "slotTypes": [
+    "story"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/look-brooklyn.jpg"
+  },
+  {
+   "id": "cnt_6adb9363",
+   "customerContentId": "CCH-022",
+   "type": "guide",
+   "title": "Made personal",
+   "subtitle": "Complimentary monogramming and lifetime craftsmanship care on every Coach piece.",
+   "excerpt": "Every bag and every wallet can be monogrammed in store or at checkout, and every one is covered by craftsmanship care for as long as you own it.",
+   "tags": {
+    "category": [
+     "Small Leather Goods",
+     "Handbags"
+    ],
+    "occasion": [
+     "gift"
+    ],
+    "contentType": [
+     "guide"
+    ],
+    "journeyStage": [
+     "late"
+    ]
+   },
+   "slotTypes": [
+    "story"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/look-gift-200.jpg"
+  },
+  {
+   "id": "cnt_a07af9b8",
+   "customerContentId": "CCH-023",
+   "type": "film",
+   "title": "How the Tabby is made",
+   "subtitle": "Two minutes in the workshop, from hide to turnlock.",
+   "excerpt": "Forty-one steps, most of them by hand. The film follows one Tabby from the cutting table to the final polish.",
+   "tags": {
+    "line": [
+     "Tabby"
+    ],
+    "category": [
+     "Handbags"
+    ],
+    "occasion": [
+     "everyday"
+    ],
+    "contentType": [
+     "video"
+    ]
+   },
+   "slotTypes": [
+    "story",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/look-everyday-COA-CCX04.jpg",
+   "runtime": "2:04"
+  },
+  {
+   "id": "cnt_32a9793a",
+   "customerContentId": "CCH-024",
+   "type": "guide",
+   "title": "Leather care, properly",
+   "subtitle": "What to do about rain, and what not to do about scuffs.",
+   "excerpt": "Glovetanned leather wants very little: a dry cloth, occasional conditioner, and to be left alone about the marks that give it character.",
+   "tags": {
+    "category": [
+     "Handbags",
+     "Small Leather Goods"
+    ],
+    "occasion": [
+     "everyday"
+    ],
+    "priceBand": [
+     "core",
+     "elevated"
+    ],
+    "contentType": [
+     "guide"
+    ]
+   },
+   "slotTypes": [
+    "story",
+    "carousel"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/look-work.jpg"
+  },
+  {
+   "id": "cnt_ed7832eb",
+   "customerContentId": "CCH-026",
+   "type": "campaign",
+   "title": "This week's arrivals",
+   "subtitle": "What landed in the last seven days.",
+   "excerpt": "A short list, refreshed every Monday: the pieces that arrived this week, in the order they came in.",
+   "tags": {
+    "category": [
+     "Handbags",
+     "Small Leather Goods"
+    ],
+    "occasion": [
+     "everyday"
+    ],
+    "contentType": [
+     "campaign"
+    ]
+   },
+   "slotTypes": [
+    "merch"
+   ],
+   "lifecycle": {
+    "status": "live"
+   },
+   "art": "/images/generated/grid/look-brunch-COA-CCX04.jpg",
+   "merchandising": {
+    "promotion": 1
+   }
+  }
+ ]
+}

@@ -224,8 +224,21 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
   receipts and the content decisions through `/sdk/edge-personalization.js`; the page's own transport
   copy stays the default until the stage rehearsal says otherwise, so nothing the audience sees changes
   until a person flips it. In SDK mode the page also hydrates the content decisions for `home` and shows
-  them in the engine feed, without replacing the hero and story the demo paints today: swapping those
-  for the decision service is the visible change the rehearsal exists to judge. The rehearsal is
+  them in the engine feed.
+- **The hero and the story are the engine's decisions (2026-09-04, Simone's call: "a realistic
+  representation of what exists, not smoke and mirrors").** In SDK mode the page paints the `chero` and
+  `story` decisions by id from the demo's own content catalog, `public/data/coach-content.json`, 26 Coach
+  pieces written from the demo's former hero and story copy and the generated scenes, tagged on the Coach
+  registry's dimensions; `scripts/seed-coach-content.mjs` writes it and the home slot document to a scope.
+  The page never chooses: the eyebrow is the receipt's top driver in words, the title and art are the
+  piece's own, every decision is an impression and dwell through the SDK, the hero's button is a content
+  click on the served piece (the reward the slot learns against), and every engine update re-decides the
+  page. The page's own hero and story rules still run in the default transport and step aside in SDK
+  mode; experiment takeovers, the Opal scene and the moment encore still write the hero directly and are
+  the next honesty item (they should become catalog pieces and pins). The composer's "catalogue order"
+  default is now the document's order rather than the ids', so the cold lead is the merchandiser's first
+  eligible piece. The rehearsal asserts that the hero and the story on the page are the engine's
+  decisions and that the hero follows the line she circles. The rehearsal is
   `scripts/rehearse-storefront.sh`: both transports driven through the same beats (load, open a product,
   add it to the bag) in a real headless browser via `/__shot?probe=`, compared field by field (identity
   minted and stored, socket connected, events sent, affinity built, hero painted; in SDK mode the SDK

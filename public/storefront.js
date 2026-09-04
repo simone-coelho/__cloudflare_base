@@ -140,6 +140,7 @@ class CoachStorefront {
         // so a shopper who comes back tomorrow is the same person to ODP. The
         // session id is only the fallback for a client that cannot store one.
         this.visitorId = this.mintVisitorId();
+        if (this.sdk && this.sdk.visitorId !== this.visitorId) this.sdk.core.setVisitorId(this.visitorId, 'logout');
     }
     mintVisitorId() {
         const KEY = 'opt_visitor_id';
@@ -269,10 +270,22 @@ class CoachStorefront {
         this.anonId = this.sdk.core.anonId;
         this.sessionId = this.sdk.core.sessionId;
         this.sdk.on('socket', (s) => this.setWs(s));
-        this.sdk.on('update', (u, meta) => this.applyUpdate(u || {}, meta.rttMs, meta.fromPush));
+        this.sdk.on('update', (u, meta) => { this.applyUpdate(u || {}, meta.rttMs, meta.fromPush); this._scheduleRehydrate(); });
         this.sdk.on('receipt', (r, meta) => { if (meta && meta.via === 'push') this.odpReceiptRow(r); else this.odpDispatchRow(r, this._sdkLastPayload); });
         this.sdk.on('audience', (a) => this.logEvent('push', 'audience_published', a ? (a.name || a.key) : 'new audience live'));
         this.sdk.on('identity', (c) => { this.visitorId = c.visitorId; this.logEvent('push', 'identity', `${c.reason}: ${c.visitorId}`); this.renderIdentity(); });
+        // The hero and the story are the engine's decisions, rendered by id from the demo's own content
+        // catalog (the CMS export a production page would hold itself). The page never chooses.
+        this.contentById = null;
+        fetch('/content/catalog?scope=coach').then((r) => r.json()).then((j) => {
+            const map = new Map();
+            for (const p of ((j.document || {}).pieces || [])) { map.set(p.id, p); map.set(p.customerContentId, p); }
+            this.contentById = map;
+            this._renderEngineSlots();
+        }).catch(() => { this.contentById = new Map(); this._renderEngineSlots(); });
+        this._engineHero = null; this._engineStory = null;
+        this.sdk.listen.subscribe('chero', (list, set) => { this._engineHero = list[0] || null; this._engineSet = set; this._renderEngineSlots(); });
+        this.sdk.listen.subscribe('story', (list) => { this._engineStory = list[0] || null; this._renderEngineSlots(); });
         this._sdkDecisions = null;
         this.sdk.listen.onDecisions((set) => {
             this._sdkDecisions = set;
@@ -286,8 +299,56 @@ class CoachStorefront {
         window.__sdkClient = this.sdk;
         return true;
     }
+    /* What the engine decided for the hero and the story, painted by id. Nothing here chooses:
+       the eyebrow is the receipt's top driver in words, the title and art are the piece's own. */
+    _renderEngineSlots() {
+        if (!this.sdk || !this.contentById) return;
+        const hero = this._engineHero, heroPiece = hero ? this.contentById.get(hero.contentId) : null;
+        if (heroPiece) {
+            const line = (heroPiece.tags && heroPiece.tags.line || [])[0] || null;
+            this.renderHero({ eyebrow: this.whyOf(hero), title: heroPiece.title, sub: heroPiece.subtitle || heroPiece.excerpt || '',
+                cta: line ? `Shop the ${line}` : 'Shop New Arrivals', line, art: heroPiece.art || this.lineImage(line || 'Tabby') });
+            this.sdk.listen.rendered('chero', hero.contentId, document.getElementById('hero'));
+        } else if (!document.getElementById('hero-content').innerHTML.trim()) {
+            this.renderHero(this.heroFallback());   // no decision at all: the page's default, painted once
+        }
+        const story = this._engineStory, storyPiece = story ? this.contentById.get(story.contentId) : null;
+        if (storyPiece) {
+            this.renderStory({ eyebrow: this.whyOf(story), title: storyPiece.title, text: storyPiece.excerpt || storyPiece.subtitle || '', art: storyPiece.art });
+            this.sdk.listen.rendered('story', story.contentId, document.getElementById('story'));
+        } else if (!document.getElementById('story-card').innerHTML.trim()) {
+            this.renderStory(this.storyForStage('early'));
+        }
+    }
+    /* The receipt's top driver, in words, stable per piece so a repeat pick does not re-animate. */
+    whyOf(d) {
+        if (!d) return '';
+        if (d.strategy === 'tenant-pinned') return 'Pinned by merchandising';
+        const drivers = ((d.explain && d.explain.drivers) || []).filter((x) => x.dim !== 'merchandising');
+        const top = drivers.slice().sort((a, b) => (b.a * b.weight) - (a.a * a.weight))[0];
+        if (!top || d.strategy === 'default') return 'Coach \u00b7 this season';
+        if (top.dim === 'regional') return `Trending near you \u00b7 ${top.value}`;
+        if (top.dim === 'external') return `Their model \u00b7 ${top.value}`;
+        const words = ({ priceBand: `${top.value} price band`, contentType: `${top.value} content`, silhouette: `${top.value} silhouette` })[top.dim] || top.value;
+        return `For your ${words} affinity \u00b7 decided live`;
+    }
+    /* The hero's button: a content click on the piece the engine served (the reward the slot learns
+       against), then the page. In the page's own transport there is no served piece, only the page. */
+    heroCta() {
+        const d = this._engineHero;
+        if (this.sdk && d) this.sdk.core.send('content_click', { contentId: d.contentId, slot: 'chero', customerContentId: d.customerContentId, contentType: d.type });
+        this.go('plp');
+    }
+    _scheduleRehydrate() {
+        if (!this.sdk) return;
+        clearTimeout(this._rehydrateT);
+        this._rehydrateT = setTimeout(() => { this.sdk.listen.hydrate({ page: 'home' }); }, 400);
+    }
     connectWebSocket() {
-        if (this.sdkMode() && this.initSdk()) return;   // the SDK owns the socket
+        if (this.sdkMode()) {                           // the SDK owns the socket
+            if (this.sdk) { this.sdk.connect(); this._scheduleRehydrate(); } else this.initSdk();
+            return;
+        }
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
         // Keyed on the STABLE visitor id — with REFLEX_HOST='do' this upgrade lands
         // on the shopper's own ShopperReflex DO (the same object that scores events).
@@ -406,12 +467,12 @@ class CoachStorefront {
 
         // Render in a short luxury cascade (one zone at a time) — trimmed so a
         // reflex-driven swap reads as instant while keeping the staggered reveal.
-        this.renderHero(hero);
+        if (!this.sdk) this.renderHero(hero);          // SDK mode: the hero is the engine's decision
         setTimeout(() => this.renderCurated(), 70);
         setTimeout(() => this.applySort(sort), 140);
         setTimeout(() => this.applyCompleteLook(ctl), 200);
         this.applyStageCopy(this.journeyStage);
-        this.renderStory(this.storyForStage(this.journeyStage));
+        if (!this.sdk) this.renderStory(this.storyForStage(this.journeyStage));
         this.refreshPdpRecs();
         this.refreshCartRec();
         this.updateEngine(decisionMs);
@@ -1280,7 +1341,7 @@ class CoachStorefront {
                 <div class="hero-eyebrow">${content.eyebrow}</div>
                 <h1 class="hero-title">${content.title}</h1>
                 <p class="hero-sub">${content.sub}</p>
-                <button class="hero-cta" onclick="store.go('plp')">${content.cta}</button>`;
+                <button class="hero-cta" onclick="store.heroCta()">${content.cta}</button>`;
             if (art) art.style.backgroundImage = content.art ? `url("${content.art}")` : 'none';
             this.renderMarkers();   // re-assert hero marker after content swap
         };
@@ -1314,11 +1375,11 @@ class CoachStorefront {
             // TITLE is painted once by applyGeoColdStart (no "Tabby Shop" first, no swap/ghost).
             const _art = document.getElementById('hero-art'); const _a = (this.heroFallback() || {}).art;
             if (_art && _a) _art.style.backgroundImage = `url("${_a}")`;
-        } else {
+        } else if (!this.sdkMode()) {
             this.renderHero(this._coldHero());
         }
         this.renderCurated();
-        this.renderStory(this.storyForStage('early'));
+        if (!this.sdkMode()) this.renderStory(this.storyForStage('early'));
     }
     /* The cold-start hero: the geo-cohort edit if we resolved a usable cohort, else the geo/season edit, else
      * the default. Order matters — the cohort is the doc-13 anti-MasterCard cold start (what shoppers LIKE them,
@@ -2093,7 +2154,7 @@ class CoachStorefront {
     async applyGeoColdStart(forced) {
         let geo = forced;
         if (!geo) { try { const r = await fetch('/geo'); geo = await r.json(); } catch (e) { geo = null; } }
-        if (!geo) { if (!this.personalized) this.renderHero(this.heroFallback()); return; }   // geo unavailable → paint the default hero ONCE (init skipped it), no later swap
+        if (!geo) { if (!this.personalized && !this.sdkMode()) this.renderHero(this.heroFallback()); return; }   // geo unavailable → paint the default hero ONCE (init skipped it), no later swap
         this.geo = geo;
         // Geo-cohort cold start (doc 13): resolve the first-party + census cohort BEFORE the single hero paint,
         // so _coldHero() returns the COHORT hero on its FIRST (and only) fill — never season→cohort. The REAL
@@ -2126,7 +2187,7 @@ class CoachStorefront {
         // THIS renderHero is the FIRST paint → renderHero.fill() runs directly (no View-Transition cross-fade).
         // Because the cohort is already resolved above, _coldHero() returns the COHORT hero right here — there is
         // NO season-then-cohort double render. We also reshape the curated grid to the cohort edit.
-        if (!this.personalized) {
+        if (!this.personalized && !this.sdkMode()) {
             this.renderHero(this._coldHero());
             this.renderCurated();
         }
@@ -4363,7 +4424,7 @@ class CoachStorefront {
         this.renderEventStream();
         this.updateEngine();
         if (this.ws) { try { this.ws.close(); } catch (e) {} }
-        if (this.sdk) { try { this.sdk.disconnect(); } catch (e) {} }
+        if (this.sdk) { try { this.sdk.disconnect(); } catch (e) {} this._engineHero = null; this._engineStory = null; }
         this.connectWebSocket();
         this.go('home', { silent: true });
     }
@@ -4394,6 +4455,9 @@ window.__sfProbe = () => {
         segments: st && Array.isArray(st.segments) ? st.segments.length : 0,
         affinityDims: dims,
         heroTitle: text('#hero-content .hero-title'),
+        dominantLine: st ? st.dominantLine || null : null,
+        engineHero: (() => { const d = st && st._engineHero; if (!d) return null; const p = st.contentById && st.contentById.get(d.contentId); return { contentId: d.contentId, customerContentId: d.customerContentId, strategy: d.strategy, title: p ? p.title : null, line: p && p.tags ? (p.tags.line || []) : [], top: ((d.explain || {}).drivers || [])[0] || null }; })(),
+        engineStory: (() => { const d = st && st._engineStory; if (!d) return null; const p = st.contentById && st.contentById.get(d.contentId); return { customerContentId: d.customerContentId, title: p ? p.title : null }; })(),
         storyTitle: text('#story-card .story-title') || text('#story-card h3') || text('#story-card'),
         // the first decision per slot: `order` is page-wide, so group by slot and take the lowest
         decisions: set ? Object.values((set.decisions || []).reduce((acc, d) => { if (!acc[d.slot] || d.order < acc[d.slot].order) acc[d.slot] = d; return acc; }, {})).map((d) => ({ slot: d.slot, item: d.customerContentId })) : null,
