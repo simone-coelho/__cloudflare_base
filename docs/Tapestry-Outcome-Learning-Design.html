@@ -570,6 +570,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
     </tbody>
   </table></div>
   <p>The imported form is deliberately the simplest possible: a prior is pseudo-counts. The team decides how strongly it should be believed by choosing <code>n_equiv</code>. A prior worth 20 observations yields to live evidence quickly; one worth 2,000 holds for a long time. The explain record names the prior version in force.</p>
+<p>Built 2026-09-03, three things stated precisely. The prior is the shrinkage target and strength for its key: p̂ = (s + n_equiv · p_prior) / (n + n_equiv). The lift’s reference stays the slot’s rate in the cell, so p̂ / p₀ on the receipt remains the definition of lift, and a prior of 0.10 in a slot converting at 0.05 reads as lift 2 from the first decision. A level with a prior counts the prior’s strength toward the evidence threshold, so an item with a prior and no live events yet has an estimate, and a prior given at a coarser key applies to every finer key of the item until a finer prior overrides it. The document is versioned like every other tuning document, JSON rows or CSV with the same five columns, the snapshot records the revision it was built with, and every receipt’s prior version is that revision.</p>
 </section>
 
 <!-- ================================================================ 9 -->
@@ -581,13 +582,14 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
     <tbody>
       <tr><td class="m">kind</td><td><code>service</code> (a Worker they own, called over a service binding), <code>table</code> (a scoring table they publish to KV), or <code>workers_ai</code> (a hosted model)</td></tr>
       <tr><td class="m">ref</td><td>The binding, key, or model identifier</td></tr>
-      <tr><td class="m">weight</td><td>w<sub>ext</sub>, the term’s weight in the base score</td></tr>
+      <tr><td class="m">weight</td><td>w<sub>ext</sub>, the term’s weight in the base score, per slot</td></tr>
       <tr><td class="m">timeout_ms</td><td>Hard budget, default 20. Runs in parallel with the engine’s own scoring</td></tr>
       <tr><td class="m">fallback</td><td><code>omit</code>: on timeout or error the term is dropped and the decision is flagged <code>ext: unavailable</code></td></tr>
     </tbody>
   </table></div>
   <p>The contract is small: given the shopper’s interest state, the candidate items and the cell, return a score in [0, 1] per item and a version tag. The engine adds w<sub>ext</sub> × score to the base score and lists it beside every other driver. Nitin’s team owns the model, its training, and its versioning. The engine stays inspectable at the term level, and every decision still shows what the model contributed.</p>
   <p>The <code>table</code> kind matters more than it looks: a great deal of what a data science team wants to inject is a lookup they computed offline, and a KV table has no latency cost at all.</p>
+<p>Built 2026-09-03. The request carries the tenant, brand, page and slots, the cell, the interest vector and the candidates with their tags; no visitor id crosses the boundary. The call runs in parallel with the lift reads and only when a slot on the page weights the term; the holdout’s default arm never sees it. The weight is per slot, like γ: the model is one, how much each slot trusts it is a dial. On the receipt the term is a driver named <code>external</code> with the model’s version tag as its value, and the explain record carries kind, ref, version, weight, score and contribution, or <code>unavailable</code> with the reason when the budget or the shape was missed. A reference implementation of the contract ships as a route, to show the shape, not to be a model.</p>
 </section>
 
 <!-- ================================================================ 10 -->
@@ -677,6 +679,7 @@ footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-si
 
   <h3><span class="n">12.3</span>Replay</h3>
   <p>Given a <code>decision_id</code>, fetch the record (one manifest, one batch, 3.4), recompute the decision from the ledger and the recorded versions, and compare it to what was served. Equality is the proof that the system is deterministic and that the explain record is the truth rather than a narrative about it. A replay asked during a peak may be behind by the queue lag; it is exact once the queue has drained.</p>
+<p>Built 2026-09-03. Exactness needs four things the record now provides: the catalog, slots and learn documents by revision, the lift snapshot by version (every publish is also archived), the inputs block (the interest vector as scored, the regional shares and the model’s scores), and the same deterministic exploration and holdout hashes. The replay decides again with exactly those and compares item, exploration flag, base and final score, the lift block, the model’s term, the drivers and the candidate list. A record from before Phase 3 is refused with the reason rather than replayed approximately.</p>
 
   <h3><span class="n">12.4</span>Export</h3>
   <p>The R2 partitions are the export. A warehouse reads them directly; nothing is transformed on the way out. The console’s grids and the policy comparisons are downloadable as CSV.</p>

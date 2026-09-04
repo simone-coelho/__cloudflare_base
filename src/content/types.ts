@@ -5,6 +5,7 @@
 // persists it, and neither side changes it without a row in plan 21 first.
 
 import type { ContentPieceLike, ContentDecision, SlotCandidate } from '@/reflex/contentCompose';
+import type { ExternalKind, ExternalModelConfig } from '@/learn/external';
 
 /** A registered piece of the customer's content: their id, our id, its tags. */
 export interface ContentPiece extends ContentPieceLike {
@@ -91,6 +92,8 @@ export interface SlotDials {
   exploration?: ExploreDials;
   autonomy?: AutonomyDials;
   items?: Record<string, ItemControl>;
+  /** Doc 22 §9: how much this slot trusts their model, w_ext. Absent or 0 means the term is off for the slot. */
+  external?: { weight: number };
 }
 
 export interface LearnConfig {
@@ -101,6 +104,8 @@ export interface LearnConfig {
   stats?: LearnStatsConfig;
   /** slot → dials. A slot absent here runs at γ = 0 on the click reward. */
   slots?: Record<string, SlotDials>;
+  /** Doc 22 §9: their model, one per tenant; each slot dials its weight. */
+  external?: ExternalModelConfig;
 }
 
 /** Doc 22 §12.1: what the learning layer contributed, on every receipt it touched. */
@@ -115,6 +120,8 @@ export interface LiftApplied {
   p_hat: number;
   lift: number;
   gamma: number;
+  /** Doc 22 §8: the imported prior this estimate was shrunk toward, when one was in force for the key. */
+  prior?: { p: number; n: number };
 }
 
 /** What the population contributed to a decision set, so a reader can see the prior. */
@@ -144,12 +151,43 @@ export interface Cell {
   affinity: string | null;
 }
 
-/** Doc 22 §3.1 / §12.1: the four integers that identify what produced a decision. */
+/**
+ * Doc 22 §3.1 / §12.1: the integers that identify what produced a decision.
+ * Phase 3 completes the tuple with the three documents a replay needs; 0 means
+ * the compiled default. `policy` is the learn document's revision, kept under
+ * its design name.
+ */
 export interface DecisionVersions {
   config: number;
+  catalog?: number;
+  slots?: number;
+  learn?: number;
   lift: number;
   prior: number;
   policy: number;
+}
+
+/** Doc 22 §9, on the receipt: what their model contributed, or why it could not. */
+export type ExternalApplied =
+  | { kind: ExternalKind; ref: string; version: string; weight: number; score: number; contribution: number }
+  | { kind: ExternalKind; ref: string; status: 'unavailable'; reason: string };
+
+/** Doc 22 §9, into the decision: the model's answer for this page, or the reason there is none. */
+export type ExternalTerm = { kind: ExternalKind; ref: string; weightOf: (slot: string) => number } & (
+  | { status: 'ok'; version: string; scores: Record<string, number> }
+  | { status: 'unavailable'; reason: string }
+);
+
+/**
+ * Doc 22 §12.3: what the decision was computed from, carried on the record so
+ * a replay is exact. The interest vector as scored (after any regional blend),
+ * the regional shares when a blend applied, and the model's scores when a term
+ * applied. About a kilobyte; the documents are named by revision instead.
+ */
+export interface DecisionInputs {
+  affinity: Record<string, Record<string, number>>;
+  regional_share?: Record<string, Record<string, number>>;
+  external?: { version: string; scores: Record<string, number> };
 }
 
 /** Doc 22 §3.1, one per served slot position. Emitted by CW4, persisted by CW19. */
@@ -188,7 +226,11 @@ export interface DecisionRecord {
     exploration?: { mode: string; reason: string; bucket: number; sample?: number };
     /** A merchandiser's control on this item's lift, when one applied. */
     control?: 'reject' | 'freeze';
+    /** Their model's term on this decision, when the slot weights one. */
+    external?: ExternalApplied;
   };
+  /** Doc 22 §12.3: the inputs a replay needs. Absent on records written before Phase 3. */
+  inputs?: DecisionInputs;
 }
 
 /** What the route returns: the contract the front end paints, and the records the ledger keeps. */

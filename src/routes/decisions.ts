@@ -20,6 +20,8 @@ import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
 import { liftKey, ringName } from '@/learn/fan';
 import { decideProposal, EMPTY_PROPOSALS, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { read } from '@/config/versionedStore';
+import { replayDecision } from '@/learn/replay';
+import { referenceScore, type ExternalRequest } from '@/learn/external';
 import type { AuthContext } from '@/middleware/auth';
 import { jwt } from '@/middleware/auth';
 
@@ -140,6 +142,26 @@ decisionRoutes.get('/:tenant/decisions/snapshot', async (c) => {
 });
 
 /**
+ * GET /v1/:tenant/ledger/batches?date=YYYY-MM-DD[&stream=decision|outcome][&cursor=]
+ * The export (doc 22 §12.4) is the R2 partition itself; this lists one day's
+ * batch objects so a warehouse job knows what to fetch. Authenticated.
+ * Registered before /ledger/:id so the literal segment wins.
+ */
+decisionRoutes.get('/:tenant/ledger/batches', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  const date = (c.req.query('date') ?? '').trim();
+  if (!TENANT.test(tenant) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return c.json({ ok: false, error: 'tenant slug and date=YYYY-MM-DD' }, 400);
+  const stream = c.req.query('stream') === 'outcome' ? 'outcome' : c.req.query('stream') === 'decision' ? 'decision' : null;
+  const cursor = (c.req.query('cursor') ?? '').trim() || undefined;
+  const listed = await c.env.STORAGE.list({ prefix: `${tenant}/${date}/`, ...(cursor ? { cursor } : {}), limit: 1000 });
+  const objects = listed.objects
+    .filter((o) => !stream || o.key.includes(`/${stream}/`))
+    .map((o) => ({ key: o.key, size: o.size, uploaded: o.uploaded instanceof Date ? o.uploaded.toISOString() : String(o.uploaded) }));
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, tenant, date, stream: stream ?? 'both', objects, truncated: listed.truncated, ...(listed.truncated ? { cursor: listed.cursor } : {}) });
+});
+
+/**
  * GET /v1/:tenant/ledger/:id[?stream=outcome]
  * One record by id, straight from R2 with no index (doc 22 §3.4): the id names
  * the brand and the hour, the batch objects are named by the id range they hold.
@@ -154,4 +176,41 @@ decisionRoutes.get('/:tenant/ledger/:id', jwt({ required: true }), async (c) => 
   const found = await findById<DecisionRecord | OutcomeRecord>(c.env.STORAGE as unknown as R2Like, id, stream);
   c.header('Cache-Control', 'no-store');
   return found ? c.json({ ok: true, stream, key: found.key, record: found.record }) : c.json({ ok: false, error: 'not found, or not yet written by the consumer' }, 404);
+});
+
+/**
+ * GET /v1/:tenant/replay/:id (doc 22 §12.3). Fetch the decision record, decide
+ * again from the documents at the recorded revisions, the archived lift
+ * snapshot and the inputs the record carries, and compare. Authenticated,
+ * because the record carries a visitor id. Behind by the queue lag at a peak.
+ */
+decisionRoutes.get('/:tenant/replay/:id', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  const id = (c.req.param('id') ?? '').trim();
+  if (!TENANT.test(tenant) || !id.startsWith(`${tenant}:`)) return c.json({ ok: false, error: 'id must belong to the tenant in the path' }, 400);
+  const found = await findById<DecisionRecord>(c.env.STORAGE as unknown as R2Like, id, 'decision');
+  c.header('Cache-Control', 'no-store');
+  if (!found) return c.json({ ok: false, error: 'not found, or not yet written by the consumer' }, 404);
+  const result = await replayDecision(c.env, found.record);
+  return c.json({ ok: result.ok, equal: result.equal, ...(result.reason ? { reason: result.reason } : {}), used: result.used, diff: result.diff, key: found.key, served: result.served, replayed: result.replayed });
+});
+
+/**
+ * POST /v1/:tenant/models/reference (doc 22 §9). The reference implementation
+ * of the model contract, as a service a data science team can call to see the
+ * shape, and point the `service` kind at by URL to see the term on a receipt.
+ * Stateless; no visitor id crosses it.
+ */
+decisionRoutes.post('/:tenant/models/reference', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const body = (await c.req.json().catch(() => null)) as Partial<ExternalRequest> | null;
+  if (!body || typeof body !== 'object' || !Array.isArray(body.candidates)) return c.json({ ok: false, error: 'a contract request: affinity and candidates' }, 400);
+  const req: ExternalRequest = {
+    tenant, brand: typeof body.brand === 'string' ? body.brand : tenant, page: typeof body.page === 'string' ? body.page : '', slots: Array.isArray(body.slots) ? body.slots.map(String) : [],
+    cell: (body.cell as ExternalRequest['cell']) ?? { channel: 'unknown', visit_bucket: 'unknown', region: null, affinity: null },
+    affinity: body.affinity && typeof body.affinity === 'object' ? body.affinity : {},
+    candidates: body.candidates.filter((x): x is ExternalRequest['candidates'][number] => Boolean(x) && typeof x === 'object' && typeof (x as { id?: unknown }).id === 'string').map((x) => ({ id: x.id, tags: x.tags && typeof x.tags === 'object' ? x.tags : {} })),
+  };
+  return c.json(referenceScore(req));
 });

@@ -95,8 +95,9 @@ One per served decision. Written off the response path.
 | `arm` | `personalized`, `default`, or `no_learning` (section 10) |
 | `explored` | Whether this placement was an exploration pick (section 7) |
 | `authority` | `engine`, `pin`, `gate`, `default` |
-| `versions` | `config_v`, `lift_v`, `prior_v`, `policy_v` as integers, plus the human-readable label of the configuration revision |
-| `explain` | Drivers, scores, the lift term with its counts |
+| `versions` | `config_v`, `lift_v`, `prior_v`, `policy_v` as integers, plus the human-readable label of the configuration revision. Since Phase 3 (2026-09-03) also the catalog, slots and learn document revisions, the three a replay needs; 0 means the compiled default |
+| `explain` | Drivers, scores, the lift term with its counts, their model's term when a slot weights one |
+| `inputs` | Since Phase 3: the interest vector as scored (after any regional blend), the regional shares when a blend applied, and the model's scores when a term applied. About a kilobyte. This is what makes a replay exact rather than a re-estimate; the documents are named by revision instead of copied |
 
 ### 3.2 Outcome records
 
@@ -377,6 +378,18 @@ strongly it should be believed by choosing `n_equiv`. A prior worth 20 observati
 evidence quickly; one worth 2,000 holds for a long time. The explain record names the prior version in
 force.
 
+Built 2026-09-03, three things stated precisely. The prior is the shrinkage target and strength for its
+key: p̂ = (s + n_equiv · p_prior) / (n + n_equiv). The lift's reference stays the slot's rate in the cell,
+so p̂ / p₀ on the receipt remains the definition of lift and a prior of 0.10 in a slot converting at 0.05
+reads as lift 2 from the first decision. A level with a prior counts the prior's strength toward the
+evidence threshold, so an item with a prior and no live events yet has an estimate; that is what
+importing one means. A prior given at a coarser key applies to every finer key of the item until a finer
+prior overrides it, so a handful of live events in one cell never outweighs a belief worth hundreds; only
+their weight of evidence does. The document is versioned like every other tuning document (`PUT /content/priors`,
+JSON rows or CSV with the same five columns, history and rollback as for the catalog), the snapshot
+records the revision it was built with, and every receipt's `prior_v` is that revision; the receipt's
+lift block shows `prior: { p, n }` beside `n0` when one was in force for the served item.
+
 ---
 
 ## 9 · Bringing their own model
@@ -388,7 +401,7 @@ weighted term in the same explain record.**
 |---|---|
 | `kind` | `service` (a Worker they own, called over a service binding), `table` (a scoring table they publish to KV), or `workers_ai` (a hosted model) |
 | `ref` | The binding, key, or model identifier |
-| `weight` | w_ext, the term's weight in the base score |
+| `weight` | w_ext, the term's weight in the base score. Per slot, on the learn document, like γ: the model is one, how much each slot trusts it is a dial |
 | `timeout_ms` | Hard budget, default 20. Runs in parallel with the engine's own scoring |
 | `fallback` | `omit`: on timeout or error the term is dropped and the decision is flagged `ext: unavailable` |
 
@@ -399,6 +412,19 @@ inspectable at the term level, and every decision still shows what the model con
 
 The `table` kind matters more than it looks: a great deal of what a data science team wants to inject is a
 lookup they computed offline, and a KV table has no latency cost at all.
+
+Built 2026-09-03. The request carries the tenant, brand, page and slots, the cell, the interest vector and
+the candidates with their tags; no visitor id crosses the boundary. The call runs in parallel with the
+lift reads and only when a slot on the page weights the term; the holdout's default arm never sees it. A
+`service` ref names a service binding, or an https URL for a model hosted elsewhere; the `table` kind
+reads `ext:{tenant}:{brand}` from KV, `{ version, scores }` by item id, cached a minute in the isolate;
+`workers_ai` needs an AI binding on the stamp and a model that answers in the contract's JSON, and a
+20 ms budget is realistic only for the first two kinds. On the receipt the term is a driver named
+`external` with the model's version tag as its value, and `explain.external` carries kind, ref, version,
+weight, score and contribution, or `status: unavailable` with the reason when the budget or the shape was
+missed. A reference implementation of the contract ships as `POST /v1/:tenant/models/reference`, the mean
+best match over the dimensions the shopper has interest in; it exists to show the shape, not to be a
+model.
 
 ---
 
@@ -511,10 +537,21 @@ the ledger and the recorded versions, and compare it to what was served. Equalit
 system is deterministic and that the explain record is the truth rather than a narrative about it. A replay
 asked during a peak may be behind by the queue lag; it is exact once the queue has drained.
 
+Built 2026-09-03 as `GET /v1/:tenant/replay/:decision_id`. Exactness needs four things the record now
+provides: the catalog, slots and learn documents by revision (read back from the versioned store), the
+lift snapshot by version (every publish is also archived to R2 under `lift/{tenant}/{brand}/{slot}/{version}.json`),
+the inputs block (section 3.1), and the same deterministic exploration and holdout hashes. The replay
+decides again with exactly those and compares item, exploration flag, base and final score, the lift
+block, the model's term, the drivers and the candidate list; the answer is `equal: true` or the list of
+fields that differ. A record from before Phase 3, or one whose snapshot was published before archiving
+began, is refused with the reason rather than replayed approximately.
+
 ### 12.4 Export
 
 The R2 partitions are the export. A warehouse reads them directly; nothing is transformed on the way out.
-The console's grids and the policy comparisons are downloadable as CSV.
+The console's grids and the policy comparisons are downloadable as CSV. `GET /v1/:tenant/ledger/batches?date=`
+lists one day's batch objects per stream (built 2026-09-03), so a warehouse job knows what to fetch with
+its own R2 credentials; nothing is copied through the worker.
 
 ---
 

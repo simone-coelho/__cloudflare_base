@@ -23,6 +23,8 @@ export interface Env {
   DECISION_RING?: DurableObjectNamespace;
   /** Phase 1 — one object per tenant, brand and slot: decayed counts, published as lift snapshots. */
   LEARN_STATS?: DurableObjectNamespace;
+  /** Phase 3 (doc 22 §9) — Workers AI, for the `workers_ai` model kind. Absent on this stamp; the kind reports unavailable. */
+  AI?: { run(model: string, input: Record<string, unknown>): Promise<unknown> };
   /** CW6 — tenants the hourly cron rolls region snapshots up for, comma-separated. */
   TREND_ROLLUP_TENANTS?: string;
   // Opal chat agent (SQLite-backed DO, wrangler migration v3) — reached via

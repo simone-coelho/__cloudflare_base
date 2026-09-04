@@ -216,3 +216,31 @@ should a dimension the default has and the document lacks be reported rather tha
 view: fill weights from the default, never add a dimension silently, and let /config/reflex/validate name
 the dimensions the default has that the document does not. Your store, your call. Every scope authored
 before today has the same gap; on staging that is one PUT per scope until the resolver decides.
+
+ADDENDUM 8, Phase 3 is built
+
+Imported priors, their model as one term, and replay, all under src/learn (priors.ts, external.ts,
+replay.ts) and the content service. Nothing in your files this time: the prior document uses the
+prior: prefix you already reserved, the CSV import is a branch in my content route, the archive is an R2
+key under lift/, and the two new routes and the batches listing are in decisions.ts. Suite at 816,
+typecheck clean, no new bindings.
+
+Two things worth knowing. The decision record grew: versions now carries the catalog, slots and learn
+revisions beside config, lift, prior and policy, and every record carries an inputs block, the interest
+vector as scored plus the regional shares and the model's scores when they applied, about a kilobyte. That
+is what makes a replay exact instead of a re-estimate. And every published lift snapshot is now also
+written to R2 by version, so a replay can read the one that was in force.
+
+One design point I settled while proving it, recorded in section 8. A prior given at a coarser key
+applies to every finer key of the item until a finer prior overrides it. Without that, two live exposures
+in one cell answered ahead of a belief worth two hundred, because the finest level with any evidence
+wins level selection. With it, the prior is the shrinkage target at every level and only the weight of
+evidence displaces it.
+
+Proven live on coach, on the session path. One CSV row imported as prior revision 5: a video piece with
+no live evidence at p 0.5, strength 200. A warm visitor's receipt served that piece with the lift block
+reading n 2, n0 200, p_hat 0.495, lift 2 at gamma 1, prior_v 5, and their model, the reference service at
+weight 0.5, as a driver worth 0.115; base 0.195, final 0.391. With the budget set to 1 ms the receipt
+said unavailable, timeout after 1ms, and the scores were untouched. The replay of that decision came
+back equal with the five versions it used. The batches listing showed the day's eight decision objects.
+Scope restored afterwards.

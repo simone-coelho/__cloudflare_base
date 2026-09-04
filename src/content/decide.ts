@@ -12,7 +12,7 @@ import type {
 import { isLiveAt } from './lifecycle';
 import { liftFor, type LiftSnapshot } from '@/learn/stats';
 import { explorationPick, type ExploreConfig, type ExplorePick } from '@/learn/explore';
-import type { ItemControl } from './types';
+import type { DecisionInputs, ExternalTerm, ItemControl } from './types';
 
 export interface DecideInput {
   tenant: string;
@@ -49,6 +49,8 @@ export interface DecideInput {
     /** Doc 22 §12.2, per slot: a merchandiser's control over an item's learned lift. */
     controlOf?: (slot: string, item: string) => ItemControl | null;
   } | null;
+  /** Doc 22 §9: their model's answer for this page, or why there is none. Null when no model is configured. */
+  external?: ExternalTerm | null;
 }
 
 const NO_SIGNAL: AffinityViewLike = { dims: {} };
@@ -75,9 +77,19 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   const baseOf = new Map<string, number>();
   const liftOf = new Map<string, LiftApplied>();
   const learning = i.arm === 'default' ? null : i.learning ?? null;
-  const adjust: ScoreAdjust | undefined = learning ? (p, slot, base) => {
+  // Phase 3 (doc 22 §9): their model's term, w_ext × score, added to the base
+  // score before the lift and itemized like every other driver.
+  const ext = i.arm === 'default' ? null : i.external ?? null;
+  const extOf = new Map<string, { score: number; weight: number; contribution: number }>();
+  const adjust: ScoreAdjust | undefined = learning || ext ? (p, slot, base0) => {
     const key = `${slot}:${p.id}`;
+    let base = base0;
+    if (ext && ext.status === 'ok') {
+      const w = ext.weightOf(slot), s = ext.scores[p.id];
+      if (w > 0 && typeof s === 'number') { base += w * s; extOf.set(key, { score: s, weight: w, contribution: Math.round(w * s * 1000) / 1000 }); }
+    }
     baseOf.set(key, base);
+    if (!learning) return base;
     const control = learning.controlOf?.(slot, p.id) ?? null;
     if (control) controlOf.set(key, control.mode);
     if (control?.mode === 'reject') return base;                       // learned lift ignored for this item
@@ -88,7 +100,7 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
       return base * Math.pow(control.lift ?? 1, gamma);
     }
     if (!look) return base;
-    liftOf.set(key, { reward: look.reward, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma });
+    liftOf.set(key, { reward: look.reward, level: look.level, level_words: look.level_words, n: look.n, s: look.s, p0: look.p0, n0: look.n0, p_hat: look.p_hat, lift: look.lift, gamma, ...(look.prior ? { prior: look.prior } : {}) });
     return base * Math.pow(look.lift, gamma);
   } : undefined;
   const controlOf = new Map<string, 'reject' | 'freeze'>();
@@ -123,7 +135,26 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
   for (const d of decisions) {
     const r = regionalOf(d);
     if (r) d.explain.drivers.push({ dim: 'regional', value: r.region, a: r.lambda, weight: Math.round((r.contribution / (r.lambda || 1)) * 1000) / 1000 });
+    if (ext?.status === 'ok') {
+      const e = extOf.get(`${d.slot}:${d.contentId}`);
+      if (e) d.explain.drivers.push({ dim: 'external', value: ext.version, a: e.score, weight: e.weight });
+    }
   }
+  const externalOf = (slot: string, key: string): { external?: DecisionRecord['explain']['external'] } => {
+    if (!ext) return {};
+    if (ext.status === 'ok') {
+      const e = extOf.get(key);
+      return e ? { external: { kind: ext.kind, ref: ext.ref, version: ext.version, weight: e.weight, score: e.score, contribution: e.contribution } } : {};
+    }
+    return ext.weightOf(slot) > 0 ? { external: { kind: ext.kind, ref: ext.ref, status: 'unavailable', reason: ext.reason } } : {};
+  };
+  // Doc 22 §12.3: what this set was computed from, so a replay is exact.
+  const plain = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+  const inputs: DecisionInputs = {
+    affinity: plain(affinity.dims) as DecisionInputs['affinity'],
+    ...(i.regional && i.arm !== 'default' ? { regional_share: plain(i.regional.share) as NonNullable<DecisionInputs['regional_share']> } : {}),
+    ...(ext?.status === 'ok' ? { external: { version: ext.version, scores: plain(ext.scores) } } : {}),
+  };
 
   const positionIn = new Map<string, number>();
   const records: DecisionRecord[] = decisions.map((d) => {
@@ -144,12 +175,14 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
       page: i.page, slot: d.slot, position, item_id: d.contentId, customer_item_id: d.customerContentId,
       candidates: candidates[d.slot] ?? [],
       cell: i.cell, arm: i.arm, explored: wasExplored, authority: authorityOf(d.strategy),
-      versions: { ...i.versions, lift: learning?.snapshots[d.slot]?.version ?? 0 }, config_label: i.configLabel,
+      versions: { ...i.versions, lift: learning?.snapshots[d.slot]?.version ?? 0, prior: learning?.snapshots[d.slot]?.priorVersion ?? 0 }, config_label: i.configLabel,
       explain: {
         drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}), lift, score_final: d.score,
         ...(wasExplored && pick ? { exploration: { mode: pick.mode, reason: pick.reason, bucket: pick.bucket, ...(pick.samples ? { sample: pick.samples[d.contentId] } : {}) } } : {}),
         ...(control ? { control } : {}),
+        ...externalOf(d.slot, key),
       },
+      inputs,
     };
   });
 

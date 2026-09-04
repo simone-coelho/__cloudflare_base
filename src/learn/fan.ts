@@ -14,6 +14,8 @@ import type { RewardType } from '@/ledger/records';
 export const ringName = (tenant: string, visitorId: string) => `${tenant}:${visitorId}`;
 export const statsName = (tenant: string, brand: string, slot: string) => `${tenant}:${brand}:${slot}`;
 export const liftKey = (tenant: string, brand: string, slot: string) => `lift:${tenant}:${brand}:${slot}`;
+/** Phase 3 (doc 22 §12.3): every published snapshot is also archived by version, so a replay can read the one in force. */
+export const liftArchiveKey = (tenant: string, brand: string, slot: string, version: number) => `lift/${tenant}/${brand}/${slot}/${version}.json`;
 
 type NS = DurableObjectNamespace | undefined;
 async function post(ns: NS, name: string, path: string, body: unknown): Promise<Response | null> {

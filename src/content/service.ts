@@ -19,6 +19,8 @@ import { decideContent } from './decide';
 import { blendAffinity, lambdaFor, readTrend, regionKeyOf } from '@/reflex/regionTrend';
 import { fanDecisions, liftKey, type SlotLearnConfig } from '@/learn/fan';
 import { DEFAULT_STATS, type LiftSnapshot } from '@/learn/stats';
+import { scoreExternal, type ExternalResult } from '@/learn/external';
+import type { ExternalTerm } from './types';
 import type { ContentDecisionSet } from './types';
 
 export interface ServeRequest {
@@ -60,6 +62,8 @@ export interface DecisionSources {
   slots: { version: string | null; revision: number; count: number };
   learn: { version: string | null; revision: number };
   config: { label: string; revision: number };
+  /** Phase 3 (doc 22 §9): their model's answer for this page, when a slot on it weights one. */
+  external: { kind: string; ref: string; ok: boolean; ms: number; version: string | null; reason: string | null } | null;
   state: 'do' | 'session' | 'none';
 }
 
@@ -150,9 +154,30 @@ export async function serveContentDecisions(
   // session host on the cookie, and a failed read on nothing at all.
   const identityAnchor = shopper.state === 'do' ? 'visitor' : shopper.state === 'session' ? 'session' : 'none';
 
+  // Phase 3 (doc 22 §9): their model, one weighted term under a hard budget, in
+  // parallel with the lift reads. Only when a slot on this page weights it, and
+  // never for the holdout's default arm.
+  const extCfg = learn.external ?? null;
+  const extWeightOf = (slot: string) => learn.slots?.[slot]?.external?.weight ?? 0;
+  const wantsExt = extCfg !== null && arm !== 'default' && slots.some((s) => extWeightOf(s.slot) > 0);
+  const extPromise: Promise<ExternalResult | null> = wantsExt && extCfg
+    ? scoreExternal(extCfg, {
+        tenant: r.tenant, brand, page: r.page, slots: slots.map((s) => s.slot), cell,
+        affinity: affinity?.dims ?? {}, candidates: catalog.pieces.map((p) => ({ id: p.id, tags: p.tags })),
+      }, now, {
+        fetch: (u, init) => fetch(u, init), kv: env.CACHE as unknown as { get(key: string, type: 'json'): Promise<unknown> },
+        ai: env.AI, bindings: env as unknown as Record<string, unknown>,
+      })
+    : Promise.resolve(null);
+
   // Phase 1: the lift snapshot per slot, and the trust dial. Shadow by default.
   const snapshots: Record<string, LiftSnapshot | null> = {};
-  await Promise.all(slots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now); }));
+  const [extResult] = await Promise.all([extPromise, ...slots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now); })]);
+  const external: ExternalTerm | null = extCfg && extResult
+    ? extResult.ok
+      ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'ok', version: extResult.version, scores: extResult.scores }
+      : { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'unavailable', reason: extResult.reason }
+    : null;
   const gammaOf = (slot: string) => learn.slots?.[slot]?.gamma ?? 0;
   const exploreOf = (slot: string) => learn.slots?.[slot]?.exploration ?? null;
   const controlOf = (slot: string, item: string) => learn.slots?.[slot]?.items?.[item] ?? null;
@@ -160,9 +185,10 @@ export async function serveContentDecisions(
   const set = decideContent({
     tenant: r.tenant, brand, page: r.page, visitorId: r.visitorId, sessionId: shopper.sessionId, identityAnchor, nowMs: now,
     pieces: catalog.pieces, slots, affinity, regional, cell, arm,
-    versions: { config: configRevision, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },
+    versions: { config: configRevision, catalog: catalogRev?.revision ?? 0, slots: slotsRev?.revision ?? 0, learn: learnRev?.revision ?? 0, lift: 0, prior: 0, policy: learnRev?.revision ?? 0 },
     configLabel: cfg.version,
     learning: { snapshots, gammaOf, exploreOf, controlOf },
+    external,
   });
 
   // After the response: the visitor's ring and each slot's exposures. Never awaited here.
@@ -176,6 +202,7 @@ export async function serveContentDecisions(
       slots: { version: slotsDoc.version ?? null, revision: slotsRev?.revision ?? 0, count: slots.length },
       learn: { version: learn.version ?? null, revision: learnRev?.revision ?? 0 },
       config: { label: cfg.version, revision: configRevision },
+      external: extCfg && extResult ? { kind: extCfg.kind, ref: extCfg.ref, ok: extResult.ok, ms: extResult.ms, version: extResult.ok ? extResult.version : null, reason: extResult.ok ? null : extResult.reason } : null,
       state: shopper.state,
     },
   };

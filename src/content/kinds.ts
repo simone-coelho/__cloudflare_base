@@ -214,6 +214,17 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
       if (!errors.some((e) => e.startsWith('stats'))) stats = { n0: g.n0 as number, tauLearnMs: g.tauLearnMs as number, liftMin: g.liftMin as number, liftMax: g.liftMax as number, nMin: g.nMin as number };
     }
   }
+  let external: LearnConfig['external'];
+  if (candidate.external !== undefined) {
+    const g = candidate.external;
+    if (!isRecord(g) || !['service', 'table', 'workers_ai'].includes(String(g.kind)) || typeof g.ref !== 'string' || !g.ref.trim()) errors.push('external: kind service|table|workers_ai and a ref');
+    else {
+      const timeoutMs = g.timeoutMs === undefined ? 20 : g.timeoutMs;
+      if (!isNum(timeoutMs) || timeoutMs < 1 || timeoutMs > 5000) errors.push('external.timeoutMs: 1..5000 milliseconds');
+      if (g.fallback !== undefined && g.fallback !== 'omit') errors.push('external.fallback: omit');
+      if (!errors.some((e) => e.startsWith('external'))) external = { kind: g.kind as 'service' | 'table' | 'workers_ai', ref: g.ref.trim(), timeoutMs: timeoutMs as number, fallback: 'omit' };
+    }
+  }
   let slots: LearnConfig['slots'];
   if (candidate.slots !== undefined) {
     if (!isRecord(candidate.slots)) errors.push('slots: object of slot → dials');
@@ -236,6 +247,11 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
           const okPinned = isRecord(a) && Array.isArray(a.pinned) && a.pinned.every(isStr);
           if (!okMode || !okNums || !okPinned) errors.push(`slots.${slot}.autonomy: mode configured|assisted|autonomous, step (0,1], 0 ≤ min < max ≤ 1, pinned string[], minN ≥ 1`);
           else dials.autonomy = { mode: a.mode as 'configured' | 'assisted' | 'autonomous', step: a.step as number, min: a.min as number, max: a.max as number, pinned: [...(a.pinned as string[])], minN: a.minN as number };
+        }
+        if (d.external !== undefined) {
+          const x = d.external;
+          if (!isRecord(x) || !isNum(x.weight) || x.weight < 0 || x.weight > 1) errors.push(`slots.${slot}.external.weight: number 0..1`);
+          else dials.external = { weight: x.weight };
         }
         if (d.items !== undefined) {
           if (!isRecord(d.items)) errors.push(`slots.${slot}.items: object of item → control`);
@@ -260,6 +276,7 @@ export function validateLearnConfig(candidate: unknown): ValidationResult<LearnC
       ...(regional ? { regional } : {}),
       ...(policy ? { policy } : {}),
       ...(stats ? { stats } : {}),
+      ...(external ? { external } : {}),
       ...(slots ? { slots } : {}),
     },
   };

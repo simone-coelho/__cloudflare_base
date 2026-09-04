@@ -22,6 +22,7 @@ import type { Env } from '@/types/env';
 import { jwt, type AuthContext } from '@/middleware/auth';
 import { read, readIndex, readRevision, readVersion, rollback, write, type DocumentKind } from '@/config/versionedStore';
 import { CONTENT_KIND, DEFAULT_LEARN, DEFAULT_SLOTS, EMPTY_CATALOG, LEARN_KIND, SLOTS_KIND } from '@/content/kinds';
+import { EMPTY_PRIORS, parsePriorsCsv, PRIORS_KIND } from '@/learn/priors';
 import { HttpJsonSource, assemble, candidatesFrom, parseCsv, recordsFromJson, type ImportMode } from '@/content/import';
 import type { ContentCatalog } from '@/content/types';
 
@@ -29,10 +30,12 @@ type Ctx = { Bindings: Env; Variables: { auth: AuthContext } };
 export const contentRoutes = new Hono<Ctx>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const KINDS: Record<string, { kind: DocumentKind<any>; fallback: any }> = {
+const KINDS: Record<string, { kind: DocumentKind<any>; fallback: any; fromCsv?: (text: string) => unknown }> = {
   catalog: { kind: CONTENT_KIND, fallback: EMPTY_CATALOG },
   slots: { kind: SLOTS_KIND, fallback: DEFAULT_SLOTS },
   learn: { kind: LEARN_KIND, fallback: DEFAULT_LEARN },
+  // Phase 3 (doc 22 §8): imported priors, as JSON rows or as the CSV a warehouse exports.
+  priors: { kind: PRIORS_KIND, fallback: EMPTY_PRIORS, fromCsv: parsePriorsCsv },
 };
 
 function kindOf(name: string | undefined) { return KINDS[(name ?? '').toLowerCase()] ?? null; }
@@ -53,7 +56,7 @@ contentRoutes.use('/catalog/pull', jwt({ required: true }));
 
 // ── Reads ────────────────────────────────────────────────────────────────────
 contentRoutes.get('/:kind', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots or learn' }, 404);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
   const scope = scopeOf(c);
   const rev = await readRevision(c.env, k.kind, scope);
   const value = rev ? rev.value : k.fallback;
@@ -62,13 +65,13 @@ contentRoutes.get('/:kind', async (c) => {
 });
 
 contentRoutes.get('/:kind/history', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots or learn' }, 404);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
   const scope = scopeOf(c);
   return c.json({ scope, kind: k.kind.name, revisions: await readIndex(c.env, k.kind, scope) });
 });
 
 contentRoutes.get('/:kind/revisions/:n', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots or learn' }, 404);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
   const n = Number(c.req.param('n'));
   if (!Number.isInteger(n) || n < 1) return c.json({ error: 'revision must be a positive integer' }, 400);
   const scope = scopeOf(c);
@@ -78,7 +81,7 @@ contentRoutes.get('/:kind/revisions/:n', async (c) => {
 
 /** Dry run, open: the same validator the write path runs, so a form cannot drift from the store. */
 contentRoutes.post('/:kind/validate', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots or learn' }, 404);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
   const body = await c.req.json().catch(() => null);
   if (body === null) return c.json({ error: 'body must be JSON' }, 400);
   const candidate = (body as { document?: unknown }).document ?? body;
@@ -88,18 +91,28 @@ contentRoutes.post('/:kind/validate', async (c) => {
 
 // ── Writes ───────────────────────────────────────────────────────────────────
 contentRoutes.put('/:kind', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots or learn' }, 404);
-  const body = await c.req.json().catch(() => null);
-  if (body === null) return c.json({ error: 'body must be JSON' }, 400);
-  const { document, note } = body as { document?: unknown; note?: unknown };
-  const result = await write(c.env, k.kind, scopeOf(c), document ?? body, { actor: actorOf(c), note: noteOf(note) });
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
+  let candidate: unknown;
+  let note = '';
+  if ((c.req.header('content-type') ?? '').toLowerCase().includes('text/csv')) {
+    if (!k.fromCsv) return c.json({ error: `${c.req.param('kind')} does not accept CSV` }, 415);
+    candidate = k.fromCsv(await c.req.text());
+    note = noteOf(c.req.query('note'));
+  } else {
+    const body = await c.req.json().catch(() => null);
+    if (body === null) return c.json({ error: 'body must be JSON' }, 400);
+    const { document, note: n } = body as { document?: unknown; note?: unknown };
+    candidate = document ?? body;
+    note = noteOf(n);
+  }
+  const result = await write(c.env, k.kind, scopeOf(c), candidate, { actor: actorOf(c), note });
   return result.ok
     ? c.json({ ok: true, revision: result.revision.revision, version: k.kind.versionOf?.(result.revision.value) ?? '', document: result.revision.value })
     : c.json({ ok: false, errors: result.errors }, 422);
 });
 
 contentRoutes.post('/:kind/rollback/:n', async (c) => {
-  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots or learn' }, 404);
+  const k = kindOf(c.req.param('kind')); if (!k) return c.json({ error: 'kind must be catalog, slots, learn or priors' }, 404);
   const n = Number(c.req.param('n'));
   if (!Number.isInteger(n) || n < 1) return c.json({ error: 'revision must be a positive integer' }, 400);
   const body = await c.req.json().catch(() => ({}));
