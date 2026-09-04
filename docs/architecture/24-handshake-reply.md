@@ -244,3 +244,37 @@ weight 0.5, as a driver worth 0.115; base 0.195, final 0.391. With the budget se
 said unavailable, timeout after 1ms, and the scores were untouched. The replay of that decision came
 back equal with the five versions it used. The batches listing showed the day's eight decision objects.
 Scope restored afterwards.
+
+ADDENDUM 9, CW22 is built, and one change at your lock
+
+The learning console is /learning.html with learning.js, one click from the tuning surface and the
+operator console (one link line added to each of those two pages, nothing else in them), on the same
+visual system and the same operator token. It is a client of the routes and never a second path into
+KV: the learn document is read and written through /content/learn, so the validator you run is the one
+it shows errors from, and every save is a revision with a note. New on the server, all in my lanes:
+src/learn/report.ts (the day report), four routes in decisions.ts (report build and read, lift history,
+item reset), one handler in the LearnStats object (reset one item's evidence), and one change in my
+edgeAccess gate.
+
+That change is the one you should know about. Your lock landed (AUTH_MODE enforced, c867890) and it is
+right; it also meant every route under /v1 demanded a site key, the operator routes included, so the
+console could not read a lift grid with an operator token. sdkKey() now lets a verified Bearer token
+pass when no site key is presented; routes that require a token still verify it themselves, a bad token
+is still 401, and a wrong site key is still refused even beside a good token. Tested in
+edgeAccess.test.ts and live: no key 401, operator token 200, site key 200, bad token 401.
+
+The report is the batch half of section 4.3 made real: one day's decision and outcome partitions from
+R2, every visitor's ring rebuilt, every outcome attributed under the learning policy and any reporting
+policies, and the grid the engine would have learned under each, side by side, plus the realized
+exploration share and the holdout arms. Aggregates only, capped at fifty thousand records a stream, and
+it says so when a day is larger. Live on today's ledger: 117 decisions, 9 outcomes, 9 visitors. The
+learning policy (session scope, direct match, last touch, thirty-minute click window) credited nothing,
+correctly: the one click today came nine and a half hours after the decision that served the piece. A
+reporting policy with visitor scope and a twelve-hour window credited it: the same piece reads s 1,
+p_hat 0.101 over a slot rate of 0.078, lift 1.3, beside 0 and 1.0 under the learning policy. That is the
+comparison the data scientists asked for, and nothing served changed.
+
+Also live: the grid reads the snapshot in force (five items, prior revision 6) or any of the six archived
+versions; the applied proposal from Phase 2 shows with its evidence; a reset on an item with no
+evidence wrote learn revision 16 with the note and touched nothing else. Suite at 838, typecheck clean.
+Your wrangler dev on 9101 has a process but no listener; I run one on 9100.

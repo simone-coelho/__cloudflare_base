@@ -107,11 +107,18 @@ export function verifySdkKey(key: string, tenant: string | null, env: Pick<Env, 
 /**
  * The SDK-facing surface. Reads the key from the header the SDK sends on fetch,
  * or from the query the SDK sends on a socket upgrade, where headers cannot be set.
+ * An operator token is stronger than a site key: the learning console and the
+ * support tools reach the same routes with a Bearer token and no site key, and a
+ * verified token passes the gate (CW22, 2026-09-04). Routes that require a token
+ * still verify it themselves; this only opens the door the site key guards.
  */
 export function sdkKey(): MiddlewareHandler<{ Bindings: Env }> {
   return createMiddleware<{ Bindings: Env }>(async (c, next) => {
     if (authMode(c.env) === 'open') return next();
     const key = (c.req.header('X-SDK-Key') ?? c.req.query('sdkKey') ?? '').trim();
+    if (!key && /^Bearer\s+\S+/i.test(c.req.header('Authorization') ?? '')) {
+      return jwt({ required: true })(c as unknown as Parameters<ReturnType<typeof jwt>>[0], next);
+    }
     const tenant = (c.req.param('tenant') ?? '').trim() || null;
     const verdict = verifySdkKey(key, tenant, c.env);
     if (verdict.ok) return next();

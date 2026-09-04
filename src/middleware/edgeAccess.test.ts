@@ -104,3 +104,19 @@ describe('operator writes', () => {
     expect((await app().request(`${SELF}/operator/audiences/publish`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }, e)).status).toBe(200);
   });
 });
+
+describe('an operator token at the SDK gate (CW22)', () => {
+  it('enforced: a verified Bearer token passes /v1 without a site key; a bad one does not; a site key still works', async () => {
+    const e = env({ AUTH_MODE: 'enforced', SDK_KEYS: 'coach:k-coach' });
+    expect((await app().request(`${SELF}/v1/coach/decisions/snapshot?visitorId=v`, {}, e)).status).toBe(401);
+    expect((await app().request(`${SELF}/v1/coach/decisions/snapshot?visitorId=v`, { headers: { Authorization: 'Bearer nope' } }, e)).status).toBe(401);
+    const token = await new jose.SignJWT({ sub: 'ops-1', roles: ['operator'] })
+      .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setIssuer('iss').setAudience('aud').setExpirationTime('5m')
+      .sign(new TextEncoder().encode('test-secret'));
+    const ok = await app().request(`${SELF}/v1/coach/decisions/snapshot?visitorId=v`, { headers: { Authorization: `Bearer ${token}` } }, e);
+    expect(ok.status).toBe(200);
+    expect((await app().request(`${SELF}/v1/coach/decisions/snapshot?visitorId=v`, { headers: { 'X-SDK-Key': 'k-coach' } }, e)).status).toBe(200);
+    // a site key present but wrong is still refused, token or not: the key was the caller's claim
+    expect((await app().request(`${SELF}/v1/coach/decisions/snapshot?visitorId=v`, { headers: { 'X-SDK-Key': 'k-other', Authorization: `Bearer ${token}` } }, e)).status).toBe(401);
+  });
+});

@@ -17,10 +17,15 @@ import { findById, type R2Like } from '@/ledger/writer';
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from '@/ledger/records';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
-import { liftKey, ringName } from '@/learn/fan';
+import { liftArchiveKey, liftKey, ringName, statsName } from '@/learn/fan';
 import { decideProposal, EMPTY_PROPOSALS, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { read } from '@/config/versionedStore';
 import { replayDecision } from '@/learn/replay';
+import { reportKey, runReport, type DayReport, type ReportPolicy } from '@/learn/report';
+import { LEARN_KIND, DEFAULT_LEARN } from '@/content/kinds';
+import { write } from '@/config/versionedStore';
+import { invalidateLiftCache } from '@/content/service';
+import type { LearnConfig } from '@/content/types';
 import { referenceScore, type ExternalRequest } from '@/learn/external';
 import type { AuthContext } from '@/middleware/auth';
 import { jwt } from '@/middleware/auth';
@@ -60,7 +65,13 @@ decisionRoutes.get('/:tenant/lift', async (c) => {
   if (!slot) return c.json({ ok: false, error: 'slot required' }, 400);
   const brand = (c.req.query('brand') ?? '').trim() || tenant;
   let snapshot: unknown = null;
-  try { snapshot = await c.env.CACHE.get(liftKey(tenant, brand, slot), 'json'); } catch { snapshot = null; }
+  // Phase 3 / CW22: ?version= reads an archived snapshot instead of the one in force.
+  const version = Number(c.req.query('version') ?? 0) || 0;
+  if (version > 0) {
+    try { const obj = await c.env.STORAGE.get(liftArchiveKey(tenant, brand, slot, version)); snapshot = obj ? await obj.json() : null; } catch { snapshot = null; }
+  } else {
+    try { snapshot = await c.env.CACHE.get(liftKey(tenant, brand, slot), 'json'); } catch { snapshot = null; }
+  }
   c.header('Cache-Control', 'no-store');
   return c.json({ ok: true, tenant, brand, slot, snapshot });
 });
@@ -213,4 +224,86 @@ decisionRoutes.post('/:tenant/models/reference', async (c) => {
     candidates: body.candidates.filter((x): x is ExternalRequest['candidates'][number] => Boolean(x) && typeof x === 'object' && typeof (x as { id?: unknown }).id === 'string').map((x) => ({ id: x.id, tags: x.tags && typeof x.tags === 'object' ? x.tags : {} })),
   };
   return c.json(referenceScore(req));
+});
+
+/** GET /v1/:tenant/lift/history?slot=[&brand=]: every archived snapshot version for the slot (doc 22 §12.2). */
+decisionRoutes.get('/:tenant/lift/history', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  const slot = (c.req.query('slot') ?? '').trim();
+  if (!TENANT.test(tenant) || !slot) return c.json({ ok: false, error: 'tenant slug and slot' }, 400);
+  const brand = (c.req.query('brand') ?? '').trim() || tenant;
+  const prefix = `lift/${tenant}/${brand}/${slot}/`;
+  const versions: Array<{ version: number; size: number; uploaded: string }> = [];
+  let cursor: string | undefined;
+  do {
+    const page = await c.env.STORAGE.list({ prefix, ...(cursor ? { cursor } : {}), limit: 1000 });
+    for (const o of page.objects) {
+      const v = Number(o.key.slice(prefix.length).replace(/\.json$/, ''));
+      if (v > 0) versions.push({ version: v, size: o.size, uploaded: o.uploaded instanceof Date ? o.uploaded.toISOString() : String(o.uploaded) });
+    }
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+  versions.sort((a, b) => b.version - a.version);
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, tenant, brand, slot, versions });
+});
+
+/**
+ * POST /v1/:tenant/learn/items/reset (doc 22 §12.2): discard one item's evidence in one slot and start
+ * again from the prior. The next snapshot publishes at once; the learn document gets a revision whose
+ * content is unchanged and whose note records who reset what, so the audit trail shows it.
+ */
+decisionRoutes.post('/:tenant/learn/items/reset', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const b = (await c.req.json().catch(() => null)) as { slot?: string; item?: string; brand?: string } | null;
+  if (!b?.slot || !b.item) return c.json({ ok: false, error: 'slot and item required' }, 400);
+  const brand = (b.brand ?? '').trim() || tenant;
+  if (!c.env.LEARN_STATS) return c.json({ ok: false, error: 'LEARN_STATS binding absent on this stamp' }, 503);
+  const actor = (c as unknown as { get: (k: 'auth') => AuthContext | undefined }).get('auth')?.user?.sub ?? 'operator';
+  const stub = c.env.LEARN_STATS.get(c.env.LEARN_STATS.idFromName(statsName(tenant, brand, b.slot)));
+  const res = (await (await stub.fetch('https://learn/reset-item', { method: 'POST', body: JSON.stringify({ item: b.item }) })).json()) as { ok: boolean; had?: boolean };
+  invalidateLiftCache();
+  const current = await read<LearnConfig>(c.env, LEARN_KIND, tenant, DEFAULT_LEARN);
+  const rev = await write(c.env, LEARN_KIND, tenant, current, { actor, note: `reset ${b.item} in ${b.slot}${brand !== tenant ? ` (${brand})` : ''}: evidence discarded by ${actor}, estimate restarts from the prior` });
+  return c.json({ ok: res.ok, had: res.had ?? false, revision: rev.ok ? rev.revision.revision : null });
+});
+
+/**
+ * POST /v1/:tenant/learn/report (doc 22 §4.2, §7, §10): the day's ledger under the learning policy and
+ * any reporting policies, side by side; what explored; the holdout arms. Body: { date, brand?, policies? }.
+ * GET reads the last report built for the day. Aggregates only; no visitor id in the result.
+ */
+decisionRoutes.post('/:tenant/learn/report', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const b = (await c.req.json().catch(() => ({}))) as { date?: string; brand?: string; policies?: unknown };
+  const date = (b.date ?? new Date().toISOString().slice(0, 10)).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return c.json({ ok: false, error: 'date=YYYY-MM-DD' }, 400);
+  const brand = (b.brand ?? '').trim() || tenant;
+  const learn = await read<LearnConfig>(c.env, LEARN_KIND, tenant, DEFAULT_LEARN);
+  let policies: ReportPolicy[] | null = null;
+  if (Array.isArray(b.policies)) {
+    policies = [];
+    for (const p of b.policies as Array<Record<string, unknown>>) {
+      const okScope = p.scope === 'session' || p.scope === 'visitor', okMatch = p.match === 'direct' || p.match === 'any', okCredit = p.credit === 'last' || p.credit === 'first';
+      if (!p || typeof p.name !== 'string' || !okScope || !okMatch || !okCredit) return c.json({ ok: false, error: 'each policy: name, scope session|visitor, match direct|any, credit last|first, windowsMs?' }, 400);
+      const windowsMs: Record<string, number> = {};
+      if (p.windowsMs && typeof p.windowsMs === 'object') for (const [k, v] of Object.entries(p.windowsMs as Record<string, unknown>)) if (typeof v === 'number' && v > 0) windowsMs[k] = v;
+      policies.push({ name: p.name.slice(0, 40), scope: p.scope as 'session' | 'visitor', match: p.match as 'direct' | 'any', credit: p.credit as 'last' | 'first', windowsMs: Object.keys(windowsMs).length ? windowsMs : learn.policy?.windowsMs ?? {} });
+    }
+  }
+  const report = await runReport(c.env.STORAGE as unknown as Parameters<typeof runReport>[0], { tenant, brand, date }, learn, policies);
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, report });
+});
+decisionRoutes.get('/:tenant/learn/report', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  const date = (c.req.query('date') ?? '').trim();
+  if (!TENANT.test(tenant) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return c.json({ ok: false, error: 'tenant slug and date=YYYY-MM-DD' }, 400);
+  const brand = (c.req.query('brand') ?? '').trim() || tenant;
+  let report: DayReport | null = null;
+  try { const obj = await c.env.STORAGE.get(reportKey(tenant, brand, date)); report = obj ? ((await obj.json()) as DayReport) : null; } catch { report = null; }
+  c.header('Cache-Control', 'no-store');
+  return report ? c.json({ ok: true, report }) : c.json({ ok: false, error: 'no report built for that day yet' }, 404);
 });

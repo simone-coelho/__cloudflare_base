@@ -58,6 +58,20 @@ export class LearnStats {
       }
       case '/publish': { await this.serialize(() => this.publish()); return json({ ok: true }); }
       case '/reset': { await this.serialize(async () => { await this.state.storage.deleteAll(); this.data = null; }); return json({ ok: true, reset: true }); }
+      // Doc 22 §12.2, the merchandiser's `reset`: discard one item's evidence and start again from the
+      // prior. The slot's own counters keep what they saw; only the item's estimate restarts.
+      case '/reset-item': {
+        const b = (await request.json().catch(() => null)) as { item?: string } | null;
+        if (!b?.item) return json({ ok: false, error: 'item required' }, 400);
+        const had = await this.serialize(async () => {
+          const d = await this.loadIfAny();
+          if (!d || !d.stats.items[b.item!]) return false;
+          delete d.stats.items[b.item!];
+          await this.save(); await this.publish();
+          return true;
+        });
+        return json({ ok: true, item: b.item, had });
+      }
       default: return json({ ok: false, error: 'not found' }, 404);
     }
   }

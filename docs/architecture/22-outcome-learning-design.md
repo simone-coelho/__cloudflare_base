@@ -530,6 +530,27 @@ Per tenant, brand and slot:
 - **The dials**: γ, exploration share and mode, attribution policy, pooling order, holdout share, and the
   autonomy mode with its bounds, per slot.
 
+Built 2026-09-04 as `/learning.html`, one click from the tuning surface and the operator console, on the
+same visual system and the same operator token. It is a client of the routes above and never a second
+path into the store: the learn document is read and written through `/content/learn`, so the validator
+the write path runs is the one the console shows errors from, and every save is a revision with a note.
+The lift grid reads the snapshot in force or, from the archive, any version ever published; it sorts,
+filters and exports CSV, and each row's controls (freeze at the current value, reject, clear, reset) are
+the versioned changes section 12.2 names. Reset is the one control that touches evidence rather than
+configuration: it discards the item's counters in the slot's statistics object, republishes at once, and
+records a learn revision whose content is unchanged and whose note says who reset what. The policy
+comparison is the batch half of section 4.3 made real: `POST /v1/:tenant/learn/report` reads one day's
+decision and outcome partitions from R2, rebuilds each visitor's ring, attributes every outcome under the
+learning policy and any reporting policies, and returns the grid the engine would have learned under each,
+side by side, plus the realized exploration share against the configured one (section 7) and the holdout
+arms against each other (section 10). Aggregates only; capped at fifty thousand records per stream per
+pass, and it says so when the day was larger. The console lists the autonomy cycle's proposals with their
+evidence and applies or rejects them, and shows every learn, lift and prior revision with a diff of any
+learn revision against the document in force. Pooling order is not a dial yet: the ladder is fixed at
+channel, visit, region, affinity (section 5.4). Under enforced access the console reaches the `/v1`
+routes with the operator token alone: a verified token passes the site-key gate, and the routes that
+require a token still verify it themselves.
+
 ### 12.3 Replay
 
 Given a `decision_id`, fetch the record (one manifest, one batch, section 3.4), recompute the decision from
