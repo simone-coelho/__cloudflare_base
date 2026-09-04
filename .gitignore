@@ -100,3 +100,6 @@ llm-models-keys.md
 *.token
 # Agent worktrees are full repo copies; never track them (they also broke vitest collection)
 .claude/worktrees/
+
+# Cursor MCP config carries the Optimizely API token. Copy mcp.json.example and fill it in; never commit the real one.
+.cursor/mcp.json
