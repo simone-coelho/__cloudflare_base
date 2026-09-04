@@ -4,6 +4,7 @@
 // recorded that way; a cell that guessed would poison the statistics it feeds.
 
 import type { AffinitySnapshot, ReflexConfig } from '@/reflex/core';
+import { asStage } from '@/services/JourneyStage';
 import type { Cell } from './types';
 
 /** The subset of request.cf this module reads. */
@@ -52,6 +53,12 @@ export function cellFor(input: {
   cfg: ReflexConfig;
   channel?: string | null;
   visitNumber?: number | null;
+  /**
+   * CW29: the shopper's journey stage as the engine already derives it
+   * (early / mid / late; BTIE's exploring / considering / deciding). Anything
+   * else records as `unknown`, never a guess.
+   */
+  stage?: string | null;
 }): Cell {
   const channel = (input.channel ?? '').trim().toLowerCase().slice(0, 32) || 'unknown';
   return {
@@ -59,5 +66,6 @@ export function cellFor(input: {
     visit_bucket: visitBucketOf(input.visitNumber),
     region: regionOf(input.cf),
     affinity: affinityCellOf(input.snap, input.cfg),
+    stage: asStage(input.stage) ?? 'unknown',
   };
 }

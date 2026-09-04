@@ -190,3 +190,12 @@ describe('linkVisitor on the object host', () => {
     expect((await get('t:kate-spade:vis-ks', '/identity/export')).body.forwardTo).toBe(`t:kate-spade:${r.shopperId}`);
   });
 });
+
+describe('CW29: the snapshot says the stage', () => {
+  it('reports the journey stage the object last derived, and null before any event', async () => {
+    expect((await get('vis-stage', '/snapshot')).body.journeyStage).toBeNull();
+    await browseTabby('vis-stage', 2);
+    const snap = await get('vis-stage', '/snapshot');
+    expect(['early', 'mid', 'late']).toContain(snap.body.journeyStage);
+  });
+});

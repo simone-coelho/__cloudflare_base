@@ -14,14 +14,45 @@
 //            (product_views >= 5 || category_dwell_ms > 120000 || product_views >= 2 || wishlist_adds > 0)
 //   - early: anyone else (cold start / just landed)
 
+//
+// CW29 (2026-09-04, Tapestry's BTIE "journey stage", doc 26 D1): the rule is
+// exported on its own as stageFromCounters(), so the content decision can call
+// it from a shopper's counters on either host and put the stage on the context
+// cell. deriveStage() is unchanged in behaviour; it is now that function applied
+// to a QualificationContext. The stage names stay early / mid / late because
+// they are already published as the journey_stage attribute and audience keys;
+// STAGE_WORDS gives BTIE's names for the same three states.
+
 import type { QualificationContext } from '@/connectors/types';
+
+export type JourneyStage = 'early' | 'mid' | 'late';
+
+/** BTIE's See / Think / Do, in its own words, for receipts and reports. */
+export const STAGE_WORDS: Record<JourneyStage, 'exploring' | 'considering' | 'deciding'> = {
+  early: 'exploring',
+  mid: 'considering',
+  late: 'deciding',
+};
+
+/** A stored or wire value as a stage, or null when it is not one. */
+export function asStage(v: unknown): JourneyStage | null {
+  return v === 'early' || v === 'mid' || v === 'late' ? v : null;
+}
 
 const MID_VIEWS = 2; // >= this many PDP views ⇒ at least considering
 const DEEP_VIEWS = 5; // deep browse signal (also the mid_journey_considering audience floor)
 const DEEP_DWELL_MS = 120_000; // 2 min on product content ⇒ considering
 
-export function deriveStage(ctx: QualificationContext): 'early' | 'mid' | 'late' {
-  const a = ctx.attributes ?? {};
+/**
+ * The stage a shopper's counters put them in. Pure; the same rule the engine
+ * has always applied per event, callable from anything that holds the counters.
+ * Segments may pin a stage ahead of the counts, as before.
+ */
+export function stageFromCounters(
+  counters: Record<string, unknown> | null | undefined,
+  segments: readonly string[] | null | undefined = [],
+): JourneyStage {
+  const a = counters ?? {};
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 
   const productViews = num(a.product_views);
@@ -32,7 +63,7 @@ export function deriveStage(ctx: QualificationContext): 'early' | 'mid' | 'late'
 
   // Segments can pin a stage even before raw counts catch up (e.g. an Opal/seed audience that
   // already qualified the shopper as ready-to-buy / cart-abandoner).
-  const segs = (ctx.segments ?? []).map((s) => s.toLowerCase());
+  const segs = (segments ?? []).map((s) => String(s).toLowerCase());
   const segHas = (frag: string) => segs.some((s) => s.includes(frag));
 
   // LATE: real purchase intent — something is in the cart, or a buy happened, or a segment says so.
@@ -54,4 +85,8 @@ export function deriveStage(ctx: QualificationContext): 'early' | 'mid' | 'late'
 
   // EARLY: cold start / just landed.
   return 'early';
+}
+
+export function deriveStage(ctx: QualificationContext): JourneyStage {
+  return stageFromCounters(ctx.attributes ?? {}, ctx.segments ?? []);
 }

@@ -874,6 +874,9 @@ export class ShopperReflex {
             odpConfirmed: this.affinity.odpSeed ?? [],
           }
         : null,
+      // CW29: the stage this object last derived, so the content decision can
+      // put it on the cell without recomputing from counters it does not hold.
+      journeyStage: this.pipeline?.journeyStage ?? null,
     });
   }
 
