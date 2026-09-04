@@ -125,3 +125,20 @@ The **now → after page map** rides beside the band and appears **only** when t
 ---
 
 *Generated 2026-08-29. The tooltip table in `public/meridian/meridian.js` (`TIPS`) must stay in sync with this guide.*
+
+## The tuning dial and the operator token
+
+
+**Before the tuning beat: paste the operator token once.** The dial now writes through the product's own
+versioned store (`/content/slots`, the same store the tuning page and the merchandiser's console use), so
+it tunes *as the merchandiser* and needs the merchandiser's token. Open `/tuning.html` in the same browser,
+paste the token into the top-right field, and it is kept in `sessionStorage` for the session. The dial reads
+it from there. Without it the dial still turns and the hero still recomposes, and the dial's foot line says
+"no operator token in this browser; tuning is local for this run" — the beat works either way, but only with
+the token does the receipt carry a real revision (`…+r7`) instead of the local `+tuned` mark.
+
+What the room sees with the token in: turn a slider, the hero re-decides, and the foot reads
+"stored as revision 7 · meridian-retail-demo-v1+r7". A new visitor (Reset) writes the shipped weights
+back as the next revision, so the store's history shows the demo returned to baseline rather than the
+tuning never having happened. The demo tunes its own scope (`meridian`); Coach's live slot weights are
+never touched.

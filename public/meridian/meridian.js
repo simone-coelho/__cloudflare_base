@@ -785,6 +785,7 @@ async function load(vertical) {
   $('row-title').textContent = vertical === 'retail' ? 'Selected for you' : 'Suited to you';
   $('cfgv').textContent = r.registry.version;
   renderSurfaces(); renderBars(); renderChips([], []); $('episodes').innerHTML = '';
+  await loadSlotsFromStore();                    // the product's stored tuning, if any, before the dial renders
   renderDial(); renderBrowseBeats();
 
   // Ask the edge what it still holds BEFORE seeding, because cold start only
@@ -2091,11 +2092,102 @@ $('btn-skip').onclick = () => skipTime(120);
 // ── The tuning dial ─────────────────────────────────────────────────────────
 // SLOT_STRATEGIES is the live table the composer reads on every recompose, so
 // turning a slider IS the tuning surface: no rebuild, no redeploy, the next
-// decision uses the new weight and the receipt stamps a tuned version. The docs
-// promise exactly this; the delivery ledger says the real build is compile-time
-// today — this is real on the demo and a commitment on the product.
+// decision uses the new weight and the receipt stamps the version.
+//
+// THE STAMP IS REAL NOW. This used to append a literal '+tuned' to the version,
+// which the comment above called "real on the demo and a commitment on the
+// product". The product built the commitment: the versioned document store
+// (src/config/versionedStore.ts) and its `slots` kind (/content/slots). So the
+// dial writes the hero's weights THROUGH that store, under the demo's own scope,
+// and the version the receipt carries is the store's revision, '+r4', the same
+// stamp a merchandiser's tuning produces on the product. The demo tunes the same
+// dial we ship.
+//
+// It cannot break the room. If the store is unreachable the dial still turns,
+// the hero still recomposes, and the version falls back to the local stamp with
+// the foot saying so. Nothing on stage waits on a network write.
 const SHAPE_LABEL = { broad: 'category', narrow: 'line', need: 'occasion', band: 'price band', durable: 'taste', hue: 'colour', content: 'content', stage: 'stage' };
+// Meridian's shapes, in the registry's vocabulary, for the store.
+const SHAPE_DIM = { broad: 'category', narrow: 'line', need: 'occasion', band: 'priceBand', durable: 'taste', hue: 'colour' };
+const DIM_SHAPE = Object.fromEntries(Object.entries(SHAPE_DIM).map(([sh, d]) => [d, sh]));
+const SLOTS_SCOPE = 'meridian';           // the demo tunes its own scope, never Coach's live slots
+const SLOTS_URL = `/content/slots?scope=${SLOTS_SCOPE}`;
+let SLOTS_DOC = null;                     // the stored SlotCatalog, once read
+let SLOTS_REV = 0;                        // its revision; 0 = compiled default
+// The write is the product's own authenticated path, so the dial tunes AS THE
+// MERCHANDISER: the same operator token the tuning page (/tuning.html) keeps in
+// sessionStorage. Paste it there once before the session. Without it the dial
+// still turns and the foot says the tuning is local for this run.
+const operatorToken = () => { try { return sessionStorage.getItem('tuning-token') || ''; } catch { return ''; } };
 let TUNED = false;
+let tuneTimer = null;
+
+/** 'reflex-demo-v1+tuned' / '+r3' → 'reflex-demo-v1'. */
+const baseVersion = (v) => String(v || '').replace(/\+(tuned|r\d+)$/, '');
+
+/** Read the demo scope's stored slot weights, if any, and overlay the hero. */
+async function loadSlotsFromStore() {
+  try {
+    const r = await fetch(SLOTS_URL, { credentials: 'omit' }).then((x) => x.json());
+    if (!r || !r.document) return;
+    SLOTS_DOC = r.document;
+    SLOTS_REV = r.revision || 0;
+    const hero = (r.document.pages?.home || []).find((sl) => sl.slot === 'hero');
+    if (r.source === 'stored' && hero?.weights) {
+      for (const [dim, w] of Object.entries(hero.weights)) {
+        const sh = DIM_SHAPE[dim];
+        if (sh && typeof w === 'number') SLOT_STRATEGIES.hero[sh] = w;
+      }
+      if (SLOTS_REV > 0) {
+        S.config = { ...S.config, version: `${baseVersion(S.config.version)}+r${SLOTS_REV}` };
+        TUNED = true;
+        const badge = $('cfgv'); if (badge) badge.textContent = S.config.version;   // the on-screen registry badge tells the same truth as the receipts
+      }
+    }
+  } catch { /* the store is optional chrome for the demo; never block the page */ }
+}
+
+/**
+ * Write the hero's current weights through the store as a new revision, and
+ * stamp the version the receipts carry with THAT revision. One write per
+ * settled slider, not per pixel of drag.
+ */
+function persistHeroToStore(note) {
+  clearTimeout(tuneTimer);
+  tuneTimer = setTimeout(async () => {
+    const doc = JSON.parse(JSON.stringify(SLOTS_DOC || { pages: { home: [{ slot: 'hero', take: 1, weights: {} }] } }));
+    doc.pages = doc.pages || {}; doc.pages.home = doc.pages.home || [];
+    let hero = doc.pages.home.find((sl) => sl.slot === 'hero');
+    if (!hero) { hero = { slot: 'hero', take: 1, weights: {} }; doc.pages.home.unshift(hero); }
+    hero.weights = Object.fromEntries(
+      Object.entries(SLOT_STRATEGIES.hero).filter(([sh]) => SHAPE_DIM[sh]).map(([sh, w]) => [SHAPE_DIM[sh], w]),
+    );
+    try {
+      const tok = operatorToken();
+      const r = await fetch(SLOTS_URL, {
+        method: 'PUT', credentials: 'omit',
+        headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
+        body: JSON.stringify({ document: doc, note }),
+      }).then((x) => x.json());
+      if (r && r.ok) {
+        SLOTS_DOC = r.document; SLOTS_REV = r.revision;
+        S.config = { ...S.config, version: `${baseVersion(S.config.version)}+r${r.revision}` };
+        const badge = $('cfgv'); if (badge) badge.textContent = S.config.version;
+        const foot = $('dial-foot');
+        if (foot && !/ENFORCED|Nothing to weigh/.test(foot.textContent)) {
+          foot.textContent = foot.textContent.replace(/·\s*[^·]*$/, `· stored as revision ${r.revision} · ${S.config.version}`);
+        }
+      } else {
+        const foot = $('dial-foot');
+        if (foot) foot.textContent += operatorToken()
+          ? ' · (store refused the write; tuning is local for this run)'
+          : ' · (no operator token in this browser; tuning is local for this run)';
+      }
+    } catch {
+      const foot = $('dial-foot'); if (foot) foot.textContent += ' · (store unreachable; tuning is local for this run)';
+    }
+  }, 350);
+}
 // SLOT_STRATEGIES is a module-level table the dial MUTATES, so a new visitor
 // inherited the last one's tuning: the reset replaced S.config and left the
 // weights turned. This is the untouched copy the reset restores from.
@@ -2116,9 +2208,12 @@ function renderDial() {
       SLOT_STRATEGIES.hero[sh] = v;
       $(`dialv-${sh}`).textContent = v.toFixed(2);
       // THE RECEIPT MUST CARRY IT, or the beat's claim is a caption. The version
-      // is what every explain stamps, so the version is what gets marked.
-      if (!TUNED) S.config = { ...S.config, version: `${S.config.version}+tuned` };
+      // is what every explain stamps. Locally it is marked at once so the very
+      // next receipt is honest; the store's real revision replaces it when the
+      // write lands, a few hundred milliseconds later.
+      if (!TUNED) S.config = { ...S.config, version: `${baseVersion(S.config.version)}+tuned` };
       TUNED = true;
+      persistHeroToStore(`hero ${SHAPE_LABEL[sh] || sh} = ${v.toFixed(2)}, from the Opticon dial`);
       S.heroOverride = null;                        // the merchandiser outranks the campaign's copy
       S.heroDirty = true;
       const snap = snapshot(S.reflex, NOW(), S.config);
@@ -4304,6 +4399,10 @@ $('btn-reset').onclick = async () => {
   $('xcard').hidden = true;
   SLOT_STRATEGIES.hero = { ...PRISTINE_STRATEGIES.hero };
   TUNED = false;
+  // A new visitor starts from the shipped weights, and the store records that
+  // too: the reset is a revision, not an erasure, so the audit shows the demo
+  // was returned to baseline rather than the tuning having never happened.
+  if (SLOTS_REV > 0) persistHeroToStore('reset to shipped weights for a new visitor');
   S.sayLockUntil = 0; clockPause();
   await post('/reset', {}); S.seq = -1;
   if (epoch !== RESET_EPOCH) return;
