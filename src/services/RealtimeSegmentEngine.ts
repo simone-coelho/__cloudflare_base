@@ -909,8 +909,11 @@ export class RealtimeSegmentEngine {
           lastSegmentUpdate: parseInt(cookies.lastUpdate || '0') || userProfile.lastUpdated
         },
         preferences: {
-          trackingConsent: cookies.trackingConsent === 'true',
-          personalizationEnabled: cookies.personalizationEnabled === 'true',
+          // CW31: a cookie the browser has not been given yet says nothing, and nothing means consenting,
+          // the same default createOrUpdateSession itself uses. Only an explicit 'false' withholds.
+          // Before this, a first visit was stored as having refused both, which nothing honoured until CW31.
+          trackingConsent: cookies.trackingConsent !== 'false',
+          personalizationEnabled: cookies.personalizationEnabled !== 'false',
           cookieConsent: true
         }
       });
