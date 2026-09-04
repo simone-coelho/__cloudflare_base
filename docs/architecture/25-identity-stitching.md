@@ -96,7 +96,7 @@ brand has a secret, the page may call `identify(accountId)` bare and the link is
 
 ## 6 · What is not done, and is not claimed
 
-- The SDK half (§4). The storefront has no sign-in control; the proof is the script.
+- ~~The SDK half (§4). The storefront has no sign-in control; the proof is the script.~~ **Both done 2026-09-04.** The SDK has `identify()` and `logout()` (the other session, `src/sdk/identify.ts`), and the Coach storefront has a sign-in row in its Affinity tab that works in both transports: sign in as an account and the instrument fills with what every device of that person learned; sign out and the browser is anonymous again with the person's profile intact. `scripts/rehearse-signin.sh` drives two browser contexts through it, phone then laptop, and checks the person carries both devices' lines, the shopper id is what the page stores, and the raw account id appears nowhere: all green, both transports.
 - ODP: the person's vuid derives from the shopper id, so ODP sees one stable profile per person across
   devices, but the account id is **not** sent to ODP as an identifier. Sending it would let ODP do its own
   stitching against their other sources; it is a one-line change in `odpLoop.ts` (handover file) and a

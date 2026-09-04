@@ -1108,6 +1108,18 @@
             padding: 6px 12px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; border-radius: 6px; }
         .pzaf-reset:hover { border-color: var(--tan); color: var(--tan); }
         #tab-affinity .pzp-affinity { border: 1px solid #2C2620; border-radius: 10px; margin: 10px 12px; }
+        .pzaf-signin { padding: 8px 14px 2px; }
+        .pzaf-si-row { display: flex; gap: 6px; align-items: center; }
+        .pzaf-si-input { flex: 1; min-width: 0; background: #1E1A16; border: 1px solid #3A342C; color: #E4DCCB; border-radius: 6px;
+            padding: 6px 9px; font-size: 11.5px; font-family: inherit; }
+        .pzaf-si-input:focus { outline: none; border-color: var(--tan); }
+        .pzaf-si-btn { background: none; border: 1px solid #3A342C; color: #B9AF9C; padding: 6px 10px; font-size: 10px;
+            letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; border-radius: 6px; white-space: nowrap; }
+        .pzaf-si-btn:hover { border-color: var(--tan); color: var(--tan); }
+        .pzaf-si-btn[disabled] { opacity: 0.45; cursor: default; }
+        .pzaf-si-status { font-size: 11px; color: #9A8F7C; line-height: 1.5; padding: 6px 0 0; }
+        .pzaf-si-status b { color: var(--tan); font-weight: 600; }
+        .pzaf-si-status code { font-size: 10px; color: #C9BFAC; }
         .pzaf-empty { font-size: 11.5px; color: #6B6258; line-height: 1.5; padding: 10px 14px; }
         .pzaf-log { display: flex; flex-direction: column; gap: 5px; padding: 4px 14px 14px; }
         .pzaf-lrow { font-size: 10.5px; color: #9A8F7C; display: flex; gap: 7px; align-items: baseline; font-variant-numeric: tabular-nums; }
@@ -1862,6 +1874,18 @@
             <section class="sb-panel" id="tab-affinity">
                 <div class="pzaf-intro">The live affinity vector — built from behavior, <b>decaying in real time</b>. Cross a threshold and you enter an audience; go quiet and you fall back out.
                     <button class="pzaf-reset" onclick="store.newShopper()" title="Clears this browser's session — affinity, cart, journey — and reloads cold">&#128100; New shopper</button></div>
+                <!-- CW25: identity. Sign in as an account and this browser becomes that person: what
+                     another device learned about them folds in here, live, and what this one learns
+                     follows them. The account id is hashed at the edge and never stored. -->
+                <div class="pzaf-signin" id="pzaf-signin">
+                    <div class="pzaf-si-row">
+                        <input class="pzaf-si-input" id="pzaf-account" type="text" placeholder="account id, e.g. ana@example.com" autocomplete="off" spellcheck="false"
+                               onkeydown="if (event.key === 'Enter') store.signIn()" />
+                        <button class="pzaf-si-btn" id="pzaf-si-in" onclick="store.signIn()" title="Link this browser to the account: the person's profile from every device folds in, live">Sign in</button>
+                        <button class="pzaf-si-btn" id="pzaf-si-out" onclick="store.signOut()" title="Detach this browser and start anonymous again; the person's profile stays whole for their next sign-in">Sign out</button>
+                    </div>
+                    <div class="pzaf-si-status" id="pzaf-identity">Anonymous</div>
+                </div>
                 <div class="pzp-affinity" id="pzp-affinity" hidden>
                     <div class="pzaf-head">
                         <span class="pzaf-title">Live affinity</span>

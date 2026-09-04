@@ -165,6 +165,7 @@ class CoachStorefront {
         if (this.sdkMode()) await this.loadSdk();   // the cutover, behind a switch: the SDK carries the transport
         this.connectWebSocket();
         this.hydrateReflex();   // returning shopper: the instrument resumes from the persisted vector
+        this.renderIdentity();  // CW25: who this browser is, anonymous or signed in
         this.buildSteps();
         this.buildChecklist();
         this.previewStep(0);   // step-progress visible on load — never gated behind clicking Next
@@ -271,7 +272,7 @@ class CoachStorefront {
         this.sdk.on('update', (u, meta) => this.applyUpdate(u || {}, meta.rttMs, meta.fromPush));
         this.sdk.on('receipt', (r, meta) => { if (meta && meta.via === 'push') this.odpReceiptRow(r); else this.odpDispatchRow(r, this._sdkLastPayload); });
         this.sdk.on('audience', (a) => this.logEvent('push', 'audience_published', a ? (a.name || a.key) : 'new audience live'));
-        this.sdk.on('identity', (c) => { this.visitorId = c.visitorId; this.logEvent('push', 'identity', `${c.reason}: ${c.visitorId}`); });
+        this.sdk.on('identity', (c) => { this.visitorId = c.visitorId; this.logEvent('push', 'identity', `${c.reason}: ${c.visitorId}`); this.renderIdentity(); });
         this._sdkDecisions = null;
         this.sdk.listen.onDecisions((set) => {
             this._sdkDecisions = set;
@@ -3118,6 +3119,107 @@ class CoachStorefront {
     /* NEW SHOPPER — the presenter's restart. Expires the (HttpOnly) session cookies
        server-side, drops the KV session, rotates the Opal chat session, and reloads
        cold: fresh reflex, fresh journey, geo cold-start hero. No incognito needed. */
+    /* ── CW25: identity on the storefront ──────────────────────────────────────
+       Sign in: this browser becomes the person behind an account. The edge names
+       the person (a salted hash; the account id is never stored), folds what this
+       browser learned into the person's profile, and hands back the id to carry.
+       The page adopts it, reconnects the socket under it (pushes go to the object
+       named by the id), and re-reads the instrument, which now shows what EVERY
+       device of theirs has learned. Sign out detaches this browser and starts it
+       anonymous again; the person's profile stays whole for their next sign-in.
+       Both transports: the page's own copy calls the routes; the SDK has identify()
+       and logout() built in and does the same steps itself. */
+    identityStatus(html) {
+        const el = document.getElementById('pzaf-identity');
+        if (el) el.innerHTML = html;
+    }
+    isSignedIn() { return /^sh_[0-9a-f]{32}$/.test(String(this.visitorId || '')); }
+    renderIdentity(extra) {
+        const id = String(this.visitorId || '');
+        const short = id.length > 14 ? id.slice(0, 11) + '\u2026' : id;
+        this.identityStatus(this.isSignedIn()
+            ? `<b>Signed in</b> as <code title="${id}">${short}</code> \u00b7 the account id was hashed at the edge and is not stored${extra ? ' \u00b7 ' + extra : ''}`
+            : `Anonymous \u00b7 <code title="${id}">${short}</code>${extra ? ' \u00b7 ' + extra : ''}`);
+        const outBtn = document.getElementById('pzaf-si-out');
+        if (outBtn) outBtn.disabled = !this.isSignedIn();
+    }
+    adoptVisitorId(id) {
+        this.visitorId = id;
+        try { localStorage.setItem('opt_visitor_id', id); } catch (e) {}
+        try { document.cookie = 'opt_visitor_id=' + id + '; Max-Age=' + (60 * 60 * 24 * 365) + '; Path=/; SameSite=Lax'; } catch (e) {}
+    }
+    reconnectSocket() {
+        if (this.sdk) return;                       // the SDK reconnects itself on identify() and logout()
+        if (this.ws) { try { this.ws.onclose = null; this.ws.close(); } catch (e) {} this.ws = null; }
+        this.connectWebSocket();
+    }
+    async signIn() {
+        const input = document.getElementById('pzaf-account');
+        const accountId = (input && input.value || '').trim();
+        if (!accountId) { this.renderIdentity('enter an account id first'); if (input) input.focus(); return; }
+        const btn = document.getElementById('pzaf-si-in');
+        if (btn) btn.disabled = true;
+        try {
+            let outcome = null, audiences = 0;
+            if (this.sdk) {
+                const r = await this.sdk.identify(accountId, { source: 'login' });
+                if (!r.ok) { this.renderIdentity(`sign-in refused: ${r.error}`); return; }
+                this.visitorId = r.shopperId;
+                outcome = r.outcome;
+            } else {
+                let res = await fetch('/v1/coach/identity/link', {
+                    method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ visitorId: this.visitorId, accountId, source: 'login' }),
+                });
+                if (res.status === 409) {
+                    // This browser still carries the previous person's id: detach, take a fresh id, link again.
+                    await this.signOut({ reload: false });
+                    res = await fetch('/v1/coach/identity/link', {
+                        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ visitorId: this.visitorId, accountId, source: 'login' }),
+                    });
+                }
+                const j = await res.json().catch(() => ({}));
+                if (!res.ok || !j.ok || !j.carry) { this.renderIdentity(`sign-in refused: ${j.error || res.status}`); return; }
+                this.adoptVisitorId(j.carry);
+                outcome = j.outcome;
+                audiences = (j.audiences || []).length;
+                this.reconnectSocket();
+            }
+            this.logEvent('sent', 'identity', `signed in \u00b7 ${outcome || 'linked'}`);
+            await this.hydrateReflex();
+            const words = outcome === 'linked' ? 'this browser\u2019s profile folded into the person\u2019s'
+                : outcome === 'already' ? 'this browser was already the person\u2019s'
+                : outcome === 'relinked' ? 'this browser moved to a different person; nothing carried over'
+                : 'linked';
+            this.renderIdentity(`${words}${audiences ? ` \u00b7 ${audiences} audience${audiences === 1 ? '' : 's'} live` : ''}`);
+            if (input) input.value = '';
+        } catch (e) {
+            this.renderIdentity('sign-in failed: the edge did not answer');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+    async signOut(opts) {
+        const reload = !opts || opts.reload !== false;
+        try {
+            if (this.sdk) {
+                await this.sdk.logout();
+                this.visitorId = this.sdk.visitorId;
+            } else {
+                await fetch('/v1/coach/identity/detach', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+                try { localStorage.removeItem('opt_visitor_id'); } catch (e) {}
+                try { document.cookie = 'opt_visitor_id=; Max-Age=0; Path=/; SameSite=Lax'; } catch (e) {}
+                this.adoptVisitorId(this.mintVisitorId());
+            }
+        } catch (e) { /* detaching is best effort; the fresh id below is what matters */ }
+        this.logEvent('sent', 'identity', 'signed out \u00b7 fresh anonymous id');
+        // A clean start needs a clean instrument and a clean cart; reloading is the
+        // same restart New shopper does, without the server-side erase.
+        if (reload) { location.reload(); return; }
+        this.reconnectSocket();
+        this.renderIdentity();
+    }
     async newShopper() {
         if (!window.confirm('Start over as a brand-new shopper?\n\nClears this browser\'s session — affinity, cart, journey, chat — and reloads cold.')) return;
         try { await fetch('/realtime/session/reset', { method: 'POST', credentials: 'include' }); } catch (e) {}
