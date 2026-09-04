@@ -1042,12 +1042,16 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
       return seen;
     }
 
-    /** Idle until the queue has been quiet for `quietMs` (or we run out of patience). */
-    async function drainQuietly(seen: { lastAt: number }, quietMs = 250, capMs = 15000) {
-      const started = Date.now();
-      while (Date.now() - seen.lastAt < quietMs && Date.now() - started < capMs) {
-        await new Promise((r) => setTimeout(r, 50));
-      }
+    /**
+     * Wait for every ingestion chain to drain. This used to poll a wall clock for
+     * a quiet period, which flaked under load: the quiet arrived before the last
+     * write did. Now it awaits the chains themselves, which is the same question
+     * asked deterministically. `seen` is kept so the overlap counter still reads
+     * what happened while the chains ran.
+     */
+    async function drainQuietly(_seen: { lastAt: number }) {
+      const { __drainIngestChainsForTests } = await import('@/routes/live');
+      await __drainIngestChainsForTests();
     }
 
     it('serializes a same-visitor burst — never two ingestions in flight at once', async () => {

@@ -1,0 +1,43 @@
+# CI — the evidentiary standard, enforced.
+#
+# The scope appendix says twelve capabilities are "built, tested, and active on
+# signature". Until 2026-09-02 the test harness could not execute; until this
+# file, nothing ran it automatically. A suite nobody runs on every commit is a
+# suite whose green is a memory.
+#
+# Two jobs, on purpose. Typecheck and tests fail independently, so a red run says
+# WHICH standard slipped rather than one bar going red for both.
+name: ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # `vitest run`, never watch mode; exit code propagates. No `| tail`.
+      - run: npm test

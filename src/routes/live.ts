@@ -129,6 +129,24 @@ interface IngestQueue {
 const ingestChains = new Map<string, IngestQueue>();
 
 /**
+ * Await every in-flight ingestion chain. FOR TESTS. The burst tests used to wait
+ * for the queue to "go quiet" on a wall clock, which is a race dressed as an
+ * assertion: under load the quiet period arrived before the last write did and
+ * the test failed for reasons unrelated to the code under test. Awaiting the
+ * tails is the same question asked deterministically.
+ */
+export async function __drainIngestChainsForTests(): Promise<void> {
+  // Tails can enqueue more work (a reply that schedules a push), so loop until
+  // a full pass finds nothing outstanding.
+  for (let pass = 0; pass < 50; pass++) {
+    const tails = [...ingestChains.values()].map((q) => q.tail);
+    if (tails.length === 0) return;
+    await Promise.all(tails);
+    if ([...ingestChains.values()].every((q) => q.depth <= 0)) return;
+  }
+}
+
+/**
  * Queue `fn` behind anything already running for this visitor, and hand back a
  * promise for THIS job. A rejection never poisons the chain, and the map entry
  * is dropped once the queue drains so a long demo cannot leak visitors.
