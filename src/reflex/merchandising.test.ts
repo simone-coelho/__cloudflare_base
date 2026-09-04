@@ -194,3 +194,29 @@ describe('the sentence a person reads', () => {
     expect(merchandisingSentence(applyMerchandising(1, {}, {}))).toBe('');
   });
 });
+
+describe('the seam into the content ranker', () => {
+  const seam = {
+    weightsForSlot: (slot: string) => (slot === 'hero' ? { margin: 0.5 } : null),
+    signalsOf: (piece: { margin?: number }) => ({ margin: piece.margin ?? 0 }),
+  };
+
+  it('produces a ScoreAdjust-shaped hook that multiplies the base score', async () => {
+    const { merchandisingAdjust } = await import('@/reflex/merchandising');
+    const adjust = merchandisingAdjust(seam);
+    expect(adjust({ margin: 1 }, 'hero', 0.4)).toBeCloseTo(0.6, 4);   // 0.4 * (1 + 0.5 * 1)
+  });
+
+  it('is the identity on a slot with no dials, so the ranker is unchanged where nothing is configured', async () => {
+    const { merchandisingAdjust } = await import('@/reflex/merchandising');
+    expect(merchandisingAdjust(seam)({ margin: 1 }, 'rail', 0.4)).toBe(0.4);
+  });
+
+  it('keeps the itemized receipt available for whoever owns the explain record', async () => {
+    const { merchandisingAdjustDetailed } = await import('@/reflex/merchandising');
+    const r = merchandisingAdjustDetailed(seam)({ margin: 1 }, 'hero', 0.4);
+    expect(r.drivers).toHaveLength(1);
+    expect(r.drivers[0]).toMatchObject({ term: 'margin', boost: 1.5 });
+    expect(r.scoreFinal).toBeCloseTo(0.6, 4);
+  });
+});

@@ -171,3 +171,35 @@ export function merchandisingSentence(result: MerchandisingResult): string {
   const tail = result.clamped ? `, capped at ${result.boost.toFixed(2)}x` : '';
   return `${parts.join('; ')}${tail}; ${result.scoreBase.toFixed(4)} to ${result.scoreFinal.toFixed(4)}`;
 }
+
+// -- The seam into the content ranker ----------------------------------------
+//
+// contentCompose.ts exposes a ScoreAdjust hook: (piece, slot, baseScore) => number,
+// applied after the tag sum and before ranking, which is where the learning
+// layer multiplies by lift^gamma. Merchandising multipliers belong in the same
+// chain, after affinity and alongside lift. This factory produces that hook.
+//
+// ONE THING THE HOOK CANNOT DO. It returns a bare number, so the drivers this
+// module itemizes have nowhere to land in the receipt, and section 1.5 promises
+// they are "each itemized in the explain record". merchandisingAdjustDetailed()
+// returns the full result for whoever owns the receipt to attach; the plain
+// adjust is the drop-in until the hook's signature can carry drivers.
+
+export interface MerchandisingSeam<Piece> {
+  /** The per-placement dials. Absent or all-zero means the term is off for that slot. */
+  weightsForSlot: (slot: string) => MerchandisingWeights | null | undefined;
+  /** The item's own season / promotion / margin, however the catalog carries them. */
+  signalsOf: (piece: Piece) => MerchandisingSignals | null | undefined;
+}
+
+/** A ScoreAdjust-shaped hook: base score in, merchandised score out. */
+export function merchandisingAdjust<Piece>(seam: MerchandisingSeam<Piece>) {
+  return (piece: Piece, slot: string, baseScore: number): number =>
+    applyMerchandising(baseScore, seam.signalsOf(piece), seam.weightsForSlot(slot)).scoreFinal;
+}
+
+/** The same adjustment with its receipt, for the explain record. */
+export function merchandisingAdjustDetailed<Piece>(seam: MerchandisingSeam<Piece>) {
+  return (piece: Piece, slot: string, baseScore: number): MerchandisingResult =>
+    applyMerchandising(baseScore, seam.signalsOf(piece), seam.weightsForSlot(slot));
+}
