@@ -247,7 +247,8 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
 - **Operator tokens come from `/auth/login`**, whose users live in KV; the provisioning script seeds
   one. The config routes stay fail-closed regardless of mode, as CW0 built them.
 - **Production is still name-only** and `deploy.sh` still refuses it. Declaring it is the same work as
-  staging, gated on ledger B5 (production or lower environment).
+  staging. B5 is settled (2026-09-04, Simone: probably a lower environment first, and it does not matter either way), so
+  nothing gates it but the account.
 
 ---
 
