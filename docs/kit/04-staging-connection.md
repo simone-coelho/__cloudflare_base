@@ -4,6 +4,10 @@
 a decision, send an event and hold the live channel against the platform's staging host, with
 credentials the platform checks, and both sides have seen the check pass.
 
+## The staging platform
+
+The platform's staging host is `https://edge-platform-staging.expedge.workers.dev`. It runs with the site key enforced and the operator token required for configuration, on its own stores, with the Coach content catalog and slot document seeded. The learning console is at `/learning.html?scope=coach` and the tuning page at `/tuning.html?scope=coach` on that host; an operator signs in at `POST /auth/login` with the email and password we issue, and pastes the token the login returns.
+
 ## What we need from you
 
 | Item | Example | Why |
