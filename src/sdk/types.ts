@@ -159,7 +159,8 @@ export type SocketStatus = 'connecting' | 'connected' | 'reconnecting' | 'error'
 export interface CoreEvents {
   update: (update: EngineUpdate, meta: { fromPush: boolean; rttMs: number | null }) => void;
   decisions: (set: DecisionSet) => void;
-  receipt: (receipt: unknown) => void;
+  /** An ODP receipt: from the POST response (`fetch`, the dispatch) or the socket (`push`, ODP answered). */
+  receipt: (receipt: unknown, meta: { via: 'fetch' | 'push' }) => void;
   audience: (audience: unknown) => void;
   socket: (status: SocketStatus) => void;
   sent: (envelope: ActionEnvelope, meta: { via: 'fetch' | 'beacon' | 'socket' }) => void;

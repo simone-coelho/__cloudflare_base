@@ -157,7 +157,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
       });
       const json = (await res.json()) as { update?: { data?: EngineUpdate }; odp?: unknown } | null;
       emit('sent', env, { via: 'fetch' });
-      if (json?.odp) emit('receipt', json.odp);
+      if (json?.odp) emit('receipt', json.odp, { via: 'fetch' });
       const update = json?.update?.data ?? null;
       if (update) applyIncoming(update, false, host.now() - t0);
       return update;
@@ -220,7 +220,7 @@ export function createCore(config: ClientConfig, host: Host): Core {
     switch (msg.type) {
       case 'connected': setStatus('connected'); return;
       case 'heartbeat_response': return;
-      case 'odp_receipt': emit('receipt', data); return;
+      case 'odp_receipt': emit('receipt', data, { via: 'push' }); return;
       case 'content_decisions': emit('decisions', msg as unknown as DecisionSet); return;
       default: break;
     }

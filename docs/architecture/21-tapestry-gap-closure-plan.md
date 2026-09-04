@@ -218,6 +218,18 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
 - **Two follow-ups this seam names.** The storefront cutover (the demo consuming the SDK rather than its
   own transport copy) is the step that makes "one truth" literal and it needs a Coach rehearsal first.
   SDK-key enforcement on the server is CW10; the SDK already sends the key.
+- **The cutover is built behind a switch (2026-09-04).** `?sdk=1` on the storefront URL, or
+  `<meta name="edge-transport" content="sdk">`, routes identity, the action POST, the socket, the ODP
+  receipts and the content decisions through `/sdk/edge-personalization.js`; the page's own transport
+  copy stays the default until the stage rehearsal says otherwise, so nothing the audience sees changes
+  until a person flips it. In SDK mode the page also hydrates the content decisions for `home` and shows
+  them in the engine feed, without replacing the hero and story the demo paints today: swapping those
+  for the decision service is the visible change the rehearsal exists to judge. The rehearsal is
+  `scripts/rehearse-storefront.sh`: both transports driven through the same beats (load, open a product,
+  add it to the bag) in a real headless browser via `/__shot?probe=`, compared field by field (identity
+  minted and stored, socket connected, events sent, affinity built, hero painted; in SDK mode the SDK
+  loaded, decisions hydrated, the first decision in the ledger). Scripted and repeatable, the Kickoff + 60
+  bar applied to our own store.
 
 ---
 

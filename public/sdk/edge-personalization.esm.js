@@ -177,7 +177,7 @@ function createCore(config, host) {
       });
       const json = await res.json();
       emit("sent", env, { via: "fetch" });
-      if (json?.odp) emit("receipt", json.odp);
+      if (json?.odp) emit("receipt", json.odp, { via: "fetch" });
       const update = json?.update?.data ?? null;
       if (update) applyIncoming(update, false, host.now() - t0);
       return update;
@@ -249,7 +249,7 @@ function createCore(config, host) {
       case "heartbeat_response":
         return;
       case "odp_receipt":
-        emit("receipt", data);
+        emit("receipt", data, { via: "push" });
         return;
       case "content_decisions":
         emit("decisions", msg);

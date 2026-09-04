@@ -162,6 +162,7 @@ class CoachStorefront {
         this.renderCategoryRail();
         this.openDefaultPdp();
         this.updateEngine();
+        if (this.sdkMode()) await this.loadSdk();   // the cutover, behind a switch: the SDK carries the transport
         this.connectWebSocket();
         this.hydrateReflex();   // returning shopper: the instrument resumes from the persisted vector
         this.buildSteps();
@@ -233,7 +234,59 @@ class CoachStorefront {
     /* ════════════════════════════════════════════════════════════════════════
      * TRANSPORT
      * ════════════════════════════════════════════════════════════════════════ */
+    /* ── The SDK cutover (plan 21, the CW8 seam's follow-up) ─────────────────────
+       The demo consuming the SDK rather than its own transport copy is what makes
+       "one truth" literal, and it is rehearsal-gated: nothing here changes what the
+       audience sees until the switch is on. ?sdk=1 on the URL, or
+       <meta name="edge-transport" content="sdk">, routes identity, the action
+       POST, the socket and the content decisions through /sdk/edge-personalization.js.
+       The default stays the transport copy below until the stage rehearsal says
+       otherwise. scripts/rehearse-storefront.sh drives both modes through the same
+       beats and compares. */
+    sdkMode() {
+        try { if (new URLSearchParams(location.search).get('sdk') === '1') return true; } catch (e) {}
+        const m = document.querySelector('meta[name="edge-transport"]');
+        return Boolean(m && (m.getAttribute('content') || '').trim() === 'sdk');
+    }
+    loadSdk() {
+        if (window.EdgePersonalization) return Promise.resolve();
+        return new Promise((resolve) => {
+            const s = document.createElement('script');
+            s.src = '/sdk/edge-personalization.js?t=' + Date.now();
+            s.onload = () => resolve(); s.onerror = () => resolve();   // a missing bundle falls back to the transport copy
+            document.head.appendChild(s);
+        });
+    }
+    initSdk() {
+        const EP = window.EdgePersonalization;
+        if (!EP || this.sdk) return Boolean(this.sdk);
+        const meta = document.querySelector('meta[name="edge-sdk-key"]');
+        const sdkKey = (meta && meta.getAttribute('content') || '').trim() || undefined;
+        this.sdk = EP.createClient({ tenant: 'coach', brand: 'coach', source: 'coach-storefront', surface: 'coach', sdkKey });
+        // Same key, same format: the SDK read the id this page minted, so the shopper's object is the same object.
+        this.visitorId = this.sdk.visitorId;
+        this.anonId = this.sdk.core.anonId;
+        this.sessionId = this.sdk.core.sessionId;
+        this.sdk.on('socket', (s) => this.setWs(s));
+        this.sdk.on('update', (u, meta) => this.applyUpdate(u || {}, meta.rttMs, meta.fromPush));
+        this.sdk.on('receipt', (r, meta) => { if (meta && meta.via === 'push') this.odpReceiptRow(r); else this.odpDispatchRow(r, this._sdkLastPayload); });
+        this.sdk.on('audience', (a) => this.logEvent('push', 'audience_published', a ? (a.name || a.key) : 'new audience live'));
+        this.sdk.on('identity', (c) => { this.visitorId = c.visitorId; this.logEvent('push', 'identity', `${c.reason}: ${c.visitorId}`); });
+        this._sdkDecisions = null;
+        this.sdk.listen.onDecisions((set) => {
+            this._sdkDecisions = set;
+            if (!set) { this.logEvent('push', 'decisions', 'none for this page (defaults stand)'); return; }
+            const first = Object.values((set.decisions || []).reduce((acc, d) => { if (!acc[d.slot] || d.order < acc[d.slot].order) acc[d.slot] = d; return acc; }, {}));
+            const rows = first.map((d) => `${d.slot} → ${d.customerContentId}`);
+            this.logEvent('push', 'decisions', rows.join(' · ') || 'empty set');
+        });
+        this.sdk.listen.hydrate({ page: 'home' });
+        this.sdk.connect();
+        window.__sdkClient = this.sdk;
+        return true;
+    }
     connectWebSocket() {
+        if (this.sdkMode() && this.initSdk()) return;   // the SDK owns the socket
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
         // Keyed on the STABLE visitor id — with REFLEX_HOST='do' this upgrade lands
         // on the shopper's own ShopperReflex DO (the same object that scores events).
@@ -286,6 +339,15 @@ class CoachStorefront {
         this.eventCount++;
         const t0 = performance.now();
         let result = null;
+        if (this.sdk) {
+            // The SDK's one door: it POSTs the same envelope, applies the update through the 'update' event
+            // (deduplicated against the socket echo), and reports the ODP dispatch through 'receipt'.
+            this._sdkLastPayload = payload;
+            const update = await this.sdk.core.send(type, payload || {});
+            const rtt = Math.round(performance.now() - t0);
+            this.logEvent('post', type, (meta && meta.label) || (payload && (payload.productId || payload.path)) || '', rtt, update);
+            return { update: { data: update } };
+        }
         try {
             const res = await fetch('/realtime/action', {
                 method: 'POST',
@@ -4199,6 +4261,7 @@ class CoachStorefront {
         this.renderEventStream();
         this.updateEngine();
         if (this.ws) { try { this.ws.close(); } catch (e) {} }
+        if (this.sdk) { try { this.sdk.disconnect(); } catch (e) {} }
         this.connectWebSocket();
         this.go('home', { silent: true });
     }
@@ -4211,3 +4274,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Markers are in-flow children of the personalized zones, so they scroll with
     // the content automatically — no spotlight/callout repositioning needed.
 });
+
+/* The rehearsal's probe (scripts/rehearse-storefront.sh): one object that says what the page is doing,
+   the same in both transports, so the two runs can be compared field by field. */
+window.__sfProbe = () => {
+    const st = window.store || null;
+    const text = (sel) => { const el = document.querySelector(sel); return el ? (el.textContent || '').trim() : ''; };
+    const dims = st && st.affinity && st.affinity.dims ? Object.keys(st.affinity.dims) : [];
+    const set = st && st._sdkDecisions ? st._sdkDecisions : null;
+    return {
+        mode: st && st.sdk ? 'sdk' : 'copy',
+        sdkVersion: window.EdgePersonalization ? window.EdgePersonalization.VERSION : null,
+        visitorId: st ? st.visitorId : null,
+        storedVisitorId: (() => { try { return localStorage.getItem('opt_visitor_id'); } catch (e) { return null; } })(),
+        ws: text('#eng-ws'),
+        events: st ? st.eventCount : 0,
+        segments: st && Array.isArray(st.segments) ? st.segments.length : 0,
+        affinityDims: dims,
+        heroTitle: text('#hero-content .hero-title'),
+        storyTitle: text('#story-card .story-title') || text('#story-card h3') || text('#story-card'),
+        // the first decision per slot: `order` is page-wide, so group by slot and take the lowest
+        decisions: set ? Object.values((set.decisions || []).reduce((acc, d) => { if (!acc[d.slot] || d.order < acc[d.slot].order) acc[d.slot] = d; return acc; }, {})).map((d) => ({ slot: d.slot, item: d.customerContentId })) : null,
+        decisionTs: set && typeof set.ts === 'number' ? set.ts : null,
+        decisionArm: set ? set.arm || null : null,
+    };
+};

@@ -121,6 +121,13 @@ shot.get('/', async (c) => {
     if (clickLog.some((l) => l.startsWith('FAIL:'))) c.header('x-shot-ok', 'false');
     if (q.js && !persist) { try { await page.evaluate(q.js); await sleep(Math.max(900, wait)); } catch (e) { /* eval optional */ } }
     if (hold > 0) await sleep(hold);
+    // probe=<expression>: answer with the expression's value as JSON instead of a screenshot, so a
+    // rehearsal script can compare what the page is doing rather than what it looks like.
+    if (q.probe) {
+      let result: unknown = null;
+      try { result = await page.evaluate(q.probe); } catch (e) { result = { error: e instanceof Error ? e.message : String(e) }; }
+      return c.json({ ok: !clickLog.some((l) => l.startsWith('FAIL:')), clicks: clickLog, result });
+    }
     if (rec) { const herolog = await page.evaluate('window.__herolog || []'); return c.json({ ok: true, herolog }); }
     let buf: Uint8Array;
     if (q.clip) {
