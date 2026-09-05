@@ -262,6 +262,7 @@ export function decideContent(i: DecideInput): ContentDecisionSet {
       candidates: candidates[d.slot] ?? [],
       cell: i.cell, arm: i.arm, explored: wasExplored, authority: authorityOf(d.strategy),
       versions: { ...i.versions, lift: learning?.snapshots[d.slot]?.version ?? 0, prior: learning?.snapshots[d.slot]?.priorVersion ?? 0 }, config_label: i.configLabel,
+      ...(byId.get(d.contentId)?.featuredProductIds?.length ? { featured_product_ids: [...byId.get(d.contentId)!.featuredProductIds!] } : {}),
       explain: {
         drivers: d.explain.drivers, ...(d.explain.note ? { note: d.explain.note } : {}), score_base: Math.round(scoreBase * 1000) / 1000, ...(regional ? { regional } : {}), lift, score_final: d.score,
         ...(wasExplored && pick ? { exploration: { mode: pick.mode, reason: pick.reason, bucket: pick.bucket, ...(pick.samples ? { sample: pick.samples[d.contentId] } : {}) } } : {}),

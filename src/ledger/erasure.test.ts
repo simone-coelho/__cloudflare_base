@@ -28,7 +28,7 @@ const dec = (visitor: string, ts: number, n = 0): LedgerMessage => ({
 });
 const out = (visitor: string, ts: number): LedgerMessage => ({
   kind: 'ledger', type: 'outcome',
-  record: { outcome_id: `coach:${ts36(ts)}:${visitor}:click`, tenant: 'coach', brand: 'coach', visitor_id: visitor, ts, type: 'click', event: 'click', item_id: 'a', slot: 'hero', value: null, currency: null, margin: null, session_id: null, arm: null },
+  record: { outcome_id: `coach:${ts36(ts)}:${visitor}:click`, tenant: 'coach', brand: 'coach', visitor_id: visitor, ts, type: 'click', event: 'click', item_id: 'a', slot: 'hero', value: null, currency: null, margin: null, products: null, session_id: null, arm: null },
 });
 
 /**

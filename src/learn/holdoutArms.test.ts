@@ -64,7 +64,7 @@ describe('the arms compared with uncertainty (R12-4)', () => {
       page: 'home', slot: 'hero', position: 0, item_id: item, customer_item_id: `cms-${item}`, candidates: [], cell, arm, explored: false, authority: 'engine',
       versions: { config: 1, lift: 0, prior: 0, policy: 1 }, config_label: 'v1', explain: { drivers: [], score_base: 0, lift: null, score_final: 0 },
     } as DecisionRecord);
-    const out = (visitor: string, item: string): OutcomeRecord => ({ outcome_id: `coach:${(T0 + 1000).toString(36)}:${visitor}:click`, tenant: 'coach', brand: 'coach', visitor_id: visitor, session_id: `s-${visitor}`, ts: T0 + 1000, type: 'click', event: 'content_click', item_id: item, slot: 'hero', value: null, currency: null, margin: null, arm: null });
+    const out = (visitor: string, item: string): OutcomeRecord => ({ outcome_id: `coach:${(T0 + 1000).toString(36)}:${visitor}:click`, tenant: 'coach', brand: 'coach', visitor_id: visitor, session_id: `s-${visitor}`, ts: T0 + 1000, type: 'click', event: 'content_click', item_id: item, slot: 'hero', value: null, currency: null, margin: null, products: null, arm: null });
     const decisions: DecisionRecord[] = [];
     const outcomes: OutcomeRecord[] = [];
     for (let i = 0; i < 40; i++) { decisions.push(dec(`p${i}`, 'personalized', 'a')); if (i < 8) outcomes.push(out(`p${i}`, 'a')); }

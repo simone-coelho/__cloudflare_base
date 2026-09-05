@@ -163,6 +163,7 @@ Under `/v1/{tenant}/`. Operator token unless marked.
 | `POST learn/cycle[?brand=]` | Runs the autonomy cycle now: proposals for slots in assisted mode, bounded moves for slots in autonomous mode |
 | `GET learn/proposals` and `POST learn/proposals/{id}/apply\|reject` | The cycle's proposals with their evidence, and a person's decision on each |
 | `POST learn/items/reset` `{ slot, item, brand? }` | Discards one item's evidence in one slot; the estimate restarts from the prior; recorded as a revision with a note |
+| `POST learn/publish` `{ slot, brand? }` | Publishes the slot's lift snapshot now, as the object does within the minute on its own; for an operator who has just changed a dial |
 | `POST models/reference` | The reference implementation of the model contract, for a data science team to see the shape. Site key |
 | `GET trend?region=` (site key or token) and `POST trend/rollup` | The regional interest vector in force, and the roll-up the hourly job does, on demand |
 

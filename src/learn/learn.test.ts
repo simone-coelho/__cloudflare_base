@@ -17,7 +17,7 @@ const T0 = 1_725_000_000_000;
 const cell: Cell = { channel: 'paid social', visit_bucket: '1', region: 'US-NY', affinity: 'occasion:evening' };
 const entry = (id: string, slot: string, item: string, ts: number, session = 's1'): RingEntry => ({ id, ts, page: 'home', slot, item, session_id: session, arm: 'personalized', cell });
 const outcome = (type: OutcomeRecord['type'], item: string | null, ts: number, session = 's1'): OutcomeRecord =>
-  ({ outcome_id: `o:${ts}`, tenant: 'coach', brand: 'coach', visitor_id: 'v1', session_id: session, ts, type, event: type, item_id: item, slot: null, value: null, currency: null, margin: null, arm: 'personalized' });
+  ({ outcome_id: `o:${ts}`, tenant: 'coach', brand: 'coach', visitor_id: 'v1', session_id: session, ts, type, event: type, item_id: item, slot: null, value: null, currency: null, margin: null, products: null, arm: 'personalized' });
 
 describe('the learning policy', () => {
   const ring = [entry('d1', 'hero', 'A', T0), entry('d2', 'story', 'A', T0 + 1000), entry('d3', 'story', 'B', T0 + 2000)];

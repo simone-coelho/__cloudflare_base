@@ -52,6 +52,7 @@ One per served position, written to the ledger after the response and returned i
 | `authority` | `engine`, `pin` or `default` |
 | `versions` | `config`, `catalog`, `slots`, `learn`, `lift`, `prior`, `policy`: the revision of each input, 0 for a compiled default. What a replay reads back |
 | `config_label` | The human-readable label of the configuration revision |
+| `featured_product_ids` | The products the served piece features, when it names any: an outcome naming one of them credits this decision under the default policy, and a warehouse joins it to the product decision |
 | `explain.score_base` | The score before learning: interests times weights, plus the population prior and your model's term when they applied |
 | `explain.regional` | When the population prior applied: `region`, `level`, `lambda` (its share of the score), `version`, `events`, `contribution` |
 | `explain.lift` | The learned term, defined below, or null when nothing has been learned for this item in this cell |
@@ -60,7 +61,11 @@ One per served position, written to the ledger after the response and returned i
 | `explain.control` | `reject` or `freeze` when a merchandiser's control applied to the item |
 | `explain.external` | Your model's term: `kind`, `ref`, `version`, `weight`, `score`, `contribution`; or `status: "unavailable"` with `reason` |
 | `explain.merchandising` | Season, promotion and margin: `boost`, `clamped`, `drivers[]` each with the delta it caused, and a sentence |
-| `inputs` | The interest vector as scored, the regional shares and your model's scores when they applied: what makes a replay exact |
+| `explain.stage` | The slot's journey-stage rule on this piece: the shopper's stage, the piece's fit, the delta it caused, and a sentence |
+| `explain.freshness` | The freshness bonus: `ageDays`, `decay`, `applied`, and a sentence |
+| `explain.fatigue` | The fatigue penalty: `served` times inside `windowHours`, `applied`, and a sentence |
+| `explain.diversity` | The slot's diversity rule touched this position: the pieces that yielded to it (`skipped`), or `relaxed` when it was served over the limit because nothing else was eligible |
+| `inputs` | The interest vector as scored, the regional shares, your model's scores and the served counts the fatigue term read, when they applied: what makes a replay exact |
 
 ### The lift block, and every symbol in it
 
@@ -88,6 +93,8 @@ One per reward-bearing event, written after the response.
 | `event` | The wire event name, so a custom reward keeps its own |
 | `item_id`, `slot` | The content id and slot the event named, when it did |
 | `value`, `currency` | For a purchase |
+| `margin` | The margin the event carried (`margin`, or the items' margins times quantity summed), for a slot that learns margin; null when none |
+| `products` | The products the event named (`productId`, `sku`, or each of `items[].id`); a purchase credits the content that featured one of them |
 | `session_id`, `visitor_id`, `brand`, `arm`, `ts` | As on the decision |
 
 ## The content piece

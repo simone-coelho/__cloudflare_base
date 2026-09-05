@@ -316,6 +316,24 @@ decisionRoutes.post('/:tenant/learn/items/reset', jwt({ required: true }), async
 });
 
 /**
+ * POST /v1/:tenant/learn/publish { slot, brand? }: publish the slot's lift snapshot now, as the object's
+ * alarm does within the minute. For an operator who has just changed a dial, and for the acceptance run.
+ */
+decisionRoutes.post('/:tenant/learn/publish', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const b = (await c.req.json().catch(() => null)) as { slot?: string; brand?: string } | null;
+  if (!b?.slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  const brand = (b.brand ?? '').trim() || tenant;
+  if (!c.env.LEARN_STATS) return c.json({ ok: false, error: 'LEARN_STATS binding absent on this stamp' }, 503);
+  const stub = c.env.LEARN_STATS.get(c.env.LEARN_STATS.idFromName(statsName(tenant, brand, b.slot)));
+  const res = (await (await stub.fetch('https://learn/publish', { method: 'POST' })).json()) as { ok: boolean };
+  invalidateLiftCache();
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: res.ok, tenant, brand, slot: b.slot });
+});
+
+/**
  * POST /v1/:tenant/learn/report (doc 22 §4.2, §7, §10): the day's ledger under the learning policy and
  * any reporting policies, side by side; what explored; the holdout arms. Body: { date, brand?, policies? }.
  * GET reads the last report built for the day. Aggregates only; no visitor id in the result.

@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { decideContent, type DecideInput } from './decide';
 import { validateContentCatalog, validateSlotCatalog } from './kinds';
-import { servedCounts } from '@/learn/fan';
+import { readRing, servedCounts } from '@/learn/fan';
 import { normalizePiece } from './import';
 import type { ContentPiece, SlotStrategy } from './types';
 
@@ -77,6 +77,16 @@ describe('CW30 fatigue', () => {
     const first = decideContent(fatigued);
     const again = decideContent({ ...fatigued, served: first.records[0]!.inputs!.served! });
     expect(again.records).toEqual(first.records);
+  });
+
+  it('reads the ring\'s full records as entries, under its budget, and gives nothing when unbound or slow', async () => {
+    const record = { decision_id: 'd1', ts: NOW - DAY, page: 'home', slot: 'hero', item_id: 'a', session_id: 's', arm: 'personalized', cell: base.cell, featured_product_ids: ['P1'] };
+    const ns = (delayMs: number) => ({ idFromName: (n: string) => n, get: () => ({ fetch: async () => { await new Promise((r) => setTimeout(r, delayMs)); return new Response(JSON.stringify({ ok: true, ring: [record] })); } }) }) as unknown as DurableObjectNamespace;
+    const fast = await readRing({ DECISION_RING: ns(0) }, 'coach', 'v1', 200);
+    expect(fast).toEqual([{ id: 'd1', ts: NOW - DAY, page: 'home', slot: 'hero', item: 'a', session_id: 's', arm: 'personalized', cell: base.cell, products: ['P1'] }]);
+    expect(servedCounts(fast!, [{ slot: 'hero', fatigue: { weight: 0.3, windowHours: 168 } }], NOW)).toEqual({ hero: { a: 1 } });
+    expect(await readRing({ DECISION_RING: ns(80) }, 'coach', 'v1', 20)).toBeNull();
+    expect(await readRing({}, 'coach', 'v1')).toBeNull();
   });
 
   it('counts the ring inside each slot\'s window only', () => {

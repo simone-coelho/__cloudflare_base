@@ -15,7 +15,7 @@ const dec = (id: string, visitor: string, session: string, ts: number, item: str
   versions: { config: 1, lift: 0, prior: 0, policy: 1 }, config_label: 'v1', explain: { drivers: [], score_base: 0, lift: null, score_final: 0 },
 } as DecisionRecord);
 const out = (visitor: string, session: string | null, ts: number, type: OutcomeRecord['type'], item: string | null): OutcomeRecord =>
-  ({ outcome_id: `coach:${ts.toString(36)}:${visitor}:${type}`, tenant: 'coach', brand: 'coach', visitor_id: visitor, session_id: session, ts, type, event: type, item_id: item, slot: null, value: null, currency: null, margin: null, arm: null });
+  ({ outcome_id: `coach:${ts.toString(36)}:${visitor}:${type}`, tenant: 'coach', brand: 'coach', visitor_id: visitor, session_id: session, ts, type, event: type, item_id: item, slot: null, value: null, currency: null, margin: null, products: null, arm: null });
 
 const learn: LearnConfig = { holdout: { share: 0.1, salt: '', arms: ['default'] }, slots: { hero: { reward: 'click', exploration: { mode: 'rotation', share: 0.5, floor: 50 } } } };
 const learning: ReportPolicy = { name: 'learning', ...DEFAULT_POLICY };

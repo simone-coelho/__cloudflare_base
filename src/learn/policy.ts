@@ -38,6 +38,8 @@ export interface RingEntry {
   session_id: string | null;
   arm: string;
   cell: Cell;
+  /** CW32: the products the served piece features; a direct match accepts an outcome naming one of them. */
+  products?: string[];
 }
 
 /** One credited pair, on its way to the slot's statistics object. */
@@ -74,7 +76,13 @@ export function attribute(outcome: OutcomeRecord, ring: readonly RingEntry[], po
   const eligible = ring.filter((e) => {
     if (e.ts > outcome.ts || outcome.ts - e.ts > window) return false;
     if (policy.scope === 'session' && (e.session_id === null || outcome.session_id === null || e.session_id !== outcome.session_id)) return false;
-    if (policy.match === 'direct' && (!outcome.item_id || e.item !== outcome.item_id)) return false;
+    // `direct`: the outcome names the served item, or (CW32) one of the products the served piece features,
+    // so a purchase of a bag credits the story that featured the bag under the default policy.
+    if (policy.match === 'direct') {
+      const named = e.item === outcome.item_id;
+      const featured = Boolean(e.products?.length) && (outcome.products ?? (outcome.item_id ? [outcome.item_id] : [])).some((p) => e.products!.includes(p));
+      if (!named && !featured) return false;
+    }
     return true;
   });
   if (eligible.length === 0) return [];

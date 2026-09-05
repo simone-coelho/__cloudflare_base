@@ -37,8 +37,9 @@ export async function readRing(env: Pick<Env, 'DECISION_RING'>, tenant: string, 
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const read = ns.get(ns.idFromName(ringName(tenant, visitorId))).fetch('https://learn/recent').then(async (res) => {
-      const body = (await res.json()) as { ok?: boolean; ring?: RingEntry[] };
-      return body.ok && Array.isArray(body.ring) ? body.ring : null;
+      // The ring keeps the full served records; attribution and the fatigue term read them as entries.
+      const body = (await res.json()) as { ok?: boolean; ring?: Array<DecisionRecord | RingEntry> };
+      return body.ok && Array.isArray(body.ring) ? body.ring.map((r) => ('decision_id' in r ? ringEntryOf(r) : r)) : null;
     });
     const late = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), timeoutMs); });
     return await Promise.race([read, late]);
@@ -59,7 +60,7 @@ export function servedCounts(ring: readonly RingEntry[], slots: ReadonlyArray<{ 
 }
 
 export const ringEntryOf = (r: DecisionRecord): RingEntry =>
-  ({ id: r.decision_id, ts: r.ts, page: r.page, slot: r.slot, item: r.item_id, session_id: r.session_id, arm: r.arm, cell: r.cell });
+  ({ id: r.decision_id, ts: r.ts, page: r.page, slot: r.slot, item: r.item_id, session_id: r.session_id, arm: r.arm, cell: r.cell, ...(r.featured_product_ids?.length ? { products: [...r.featured_product_ids] } : {}) });
 
 /** The slot's configuration the statistics object publishes against. */
 export interface SlotLearnConfig { reward: RewardType; stats: StatsConfig; /** CW27: absent means unit. */ objective?: 'unit' | 'revenue' | 'margin' }

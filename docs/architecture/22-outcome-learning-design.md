@@ -158,6 +158,13 @@ assumptions. Here it is a **policy**, declared in configuration, with four indep
 These are not alternatives. Last-touch is a credit rule; a time window is a window; per-session is a
 scope. A policy chooses one value on each axis, per reward type.
 
+**`direct` and the products a piece features (built 2026-09-04, CW32).** A purchase or an add-to-bag
+names a product, never a piece of content, so under `direct` it could credit nothing the content engine
+served. Now a piece's `featuredProductIds` travel on its decision record and into the ring, an outcome
+carries the products the event named (`productId`, `sku`, each of `items[].id`), and `direct` accepts an
+outcome that names the served piece or one of the products it features. The story that featured the bag
+is credited for the bag, under the default policy, with nothing for the site to add to its events.
+
 ### 4.2 Learning policies and reporting policies
 
 Because both ledgers are immutable, attribution is a read, not a write. That has a consequence worth

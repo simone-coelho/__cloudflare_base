@@ -260,6 +260,8 @@ export interface DecisionRecord {
   versions: DecisionVersions;
   /** The human-readable label of the configuration revision (doc 22 §12.1). */
   config_label: string;
+  /** CW32: the products the served piece features, so an outcome naming one of them credits this decision, and a warehouse joins it to the product decision. */
+  featured_product_ids?: string[];
   explain: {
     drivers: ContentDecision['explain']['drivers'];
     note?: string;

@@ -25,6 +25,8 @@ export interface OutcomeRecord {
   currency: string | null;
   /** CW27: the outcome's margin when the feed gives one (`data.margin`, or the items' margins summed); null otherwise. */
   margin: number | null;
+  /** CW32: the products the outcome names (`data.items[].id`, `productId`, `sku`), so a purchase can credit the content that featured one of them. Null when none. */
+  products: string[] | null;
   arm: string | null;
 }
 
@@ -106,6 +108,19 @@ function marginOf(d: Record<string, unknown>): number | null {
   return any ? Math.round(sum * 100) / 100 : null;
 }
 
+/** The product ids an event names: `productId` / `product_id` / `sku` on the event, and the same on each of `items[]`. */
+function productsOf(d: Record<string, unknown>): string[] | null {
+  const out = new Set<string>();
+  for (const k of ['productId', 'product_id', 'sku']) { const v = str(d[k]); if (v) out.add(v); }
+  if (Array.isArray(d.items)) for (const it of d.items as unknown[]) {
+    if (!it || typeof it !== 'object') continue;
+    const r = it as Record<string, unknown>;
+    const v = str(r.id) ?? str(r.productId) ?? str(r.product_id) ?? str(r.sku) ?? str(r.item_id);
+    if (v) out.add(v);
+  }
+  return out.size ? [...out] : null;
+}
+
 /** Build the §3.2 record from a wire action, or null when the action is not a reward. */
 export function outcomeFromAction(action: ActionLike, tenant: string, brand = tenant, arm: string | null = null): OutcomeRecord | null {
   const reward = rewardOf(action);
@@ -125,6 +140,7 @@ export function outcomeFromAction(action: ActionLike, tenant: string, brand = te
     value: num(d.value) ?? num(d.price) ?? null,
     currency: str(d.currency),
     margin: marginOf(d),
+    products: productsOf(d),
     arm,
   };
 }

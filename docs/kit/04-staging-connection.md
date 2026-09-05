@@ -49,5 +49,16 @@ bash scripts/verify-origin.sh https://<platform-staging-host> https://staging.co
 
 Your engineers integrate from the [guide](./01-integration-guide.md) inside your environments through
 the freeze window. We support with fixes and tuning sessions. The scripted acceptance run in your lower
-environment is M4; it uses the same requests as this check, extended to the loop: a decision, a click on
-it, and the credit showing in the learning console.
+environment is M4; it uses the same requests as this check, extended to the loop. It exists as
+`scripts/acceptance-run.mjs` and runs against any stamp with an operator token:
+
+```
+node scripts/acceptance-run.mjs --base https://<stamp> --token <operator jwt> --sdk-key <site key>
+```
+
+It seeds an acceptance page on the scope (rolled forward to what it was at the end), walks one shopper
+through a decision, two product views, a click and a purchase, and asserts 56 exact facts on the way:
+the receipt's stage, freshness, fatigue and diversity terms, the out-of-stock gate, the ring, the credit
+weighed by revenue on the story that featured the bag, the day report, an erasure honoured at once, and a
+shopper who withheld consent getting the defaults with nothing written. It stops on the first failure
+and prints the transcript, which is the acceptance evidence.
