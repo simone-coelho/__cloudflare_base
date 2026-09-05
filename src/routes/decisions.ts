@@ -23,6 +23,7 @@ import { decideProposal, EMPTY_PROPOSALS, PROPOSALS_KIND, runCycle, type Proposa
 import { read } from '@/config/versionedStore';
 import { replayDecision } from '@/learn/replay';
 import { reportKey, runReport, type DayReport, type ReportPolicy } from '@/learn/report';
+import { windowReport } from '@/measure/window';
 import { LEARN_KIND, DEFAULT_LEARN } from '@/content/kinds';
 import { write } from '@/config/versionedStore';
 import { invalidateLiftCache } from '@/content/service';
@@ -327,10 +328,11 @@ decisionRoutes.post('/:tenant/learn/publish', jwt({ required: true }), async (c)
   const brand = (b.brand ?? '').trim() || tenant;
   if (!c.env.LEARN_STATS) return c.json({ ok: false, error: 'LEARN_STATS binding absent on this stamp' }, 503);
   const stub = c.env.LEARN_STATS.get(c.env.LEARN_STATS.idFromName(statsName(tenant, brand, b.slot)));
-  const res = (await (await stub.fetch('https://learn/publish', { method: 'POST' })).json()) as { ok: boolean };
+  const res = (await (await stub.fetch('https://learn/publish', { method: 'POST' })).json()) as { ok: boolean; published?: boolean; snapshot?: unknown };
   invalidateLiftCache();
   c.header('Cache-Control', 'no-store');
-  return c.json({ ok: res.ok, tenant, brand, slot: b.slot });
+  // The object answers with what it published, ahead of KV's cache; `published` is false when it has no evidence yet.
+  return c.json({ ok: res.ok, tenant, brand, slot: b.slot, published: res.published ?? false, snapshot: res.snapshot ?? null });
 });
 
 /**
@@ -358,6 +360,23 @@ decisionRoutes.post('/:tenant/learn/report', jwt({ required: true }), async (c) 
     }
   }
   const report = await runReport(c.env.STORAGE as unknown as Parameters<typeof runReport>[0], { tenant, brand, date }, learn, policies);
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, report });
+});
+/**
+ * CW34 (delivery lane, named in plan 21): the day reports over a window, pooled per
+ * slot and arm and compared at the asked confidence against the pre-set targets.
+ * Reads reports already built; a day without one is listed as missing.
+ */
+decisionRoutes.get('/:tenant/learn/report/window', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  const from = (c.req.query('from') ?? '').trim();
+  const to = (c.req.query('to') ?? '').trim();
+  if (!TENANT.test(tenant) || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return c.json({ ok: false, error: 'tenant slug, from=YYYY-MM-DD and to=YYYY-MM-DD' }, 400);
+  const brand = (c.req.query('brand') ?? '').trim() || tenant;
+  const conf = Number(c.req.query('confidence') ?? '0.95');
+  const confidence = [0.9, 0.95, 0.99].includes(conf) ? conf : 0.95;
+  const report = await windowReport(c.env.STORAGE as unknown as Parameters<typeof windowReport>[0], { tenant, brand, from, to }, { confidence });
   c.header('Cache-Control', 'no-store');
   return c.json({ ok: true, report });
 });

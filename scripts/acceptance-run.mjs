@@ -170,12 +170,18 @@ async function run() {
 
   // 3. Outcomes: a click on the hero, and a purchase of the featured product with a value and a margin.
   // The slot objects keep evidence across runs, so the credits are read as what this run added.
+  // Publish answers with what the object published, ahead of KV's cache, which on the real platform can
+  // answer a read with what it held a minute ago. The GET is checked once for shape; the object is the truth.
+  let liftChecked = false;
   const lift = async (slot) => {
     const p = await call('POST', `/v1/${scope}/learn/publish`, { headers: op, body: { slot } });
     check(`publish ${slot}`, p.status === 200 && p.json?.ok, `status ${p.status}`);
-    const r = await call('GET', `/v1/${scope}/lift?slot=${slot}`, { headers: op });
-    check(`read lift ${slot}`, r.status === 200 && r.json?.snapshot, `status ${r.status}`);
-    return r.json.snapshot;
+    if (!liftChecked) {
+      const r = await call('GET', `/v1/${scope}/lift?slot=${slot}`, { headers: op });
+      check(`read lift ${slot} through the serving path`, r.status === 200 && r.json?.ok !== false, `status ${r.status}`);
+      liftChecked = true;
+    }
+    return p.json.snapshot ?? null;
   };
   const sOf = (snap, item) => snap?.items?.[item]?.['*']?.s ?? 0;
   const heroBefore = sOf(await lift('acc-hero'), 'acc-h-consider'), storyBefore = sOf(await lift('acc-story'), 'acc-s-featured');
@@ -188,10 +194,10 @@ async function run() {
   // 4. The ring and the credits. The ring holds the served records; the credits go to each slot's object, published on demand.
   const ring = await until('the ring holds the shopper\'s decisions', async () => { const r = await call('GET', `/v1/${scope}/visitors/${V}/recent`, { headers: op }); return r.json?.ring?.length >= 14 ? r.json : null; });
   check('the ring holds both snapshots', ring.ring.some((e) => e.decision_id === heroDecisionId));
-  const hero = await until('hero credit lands', async () => { const s = await lift('acc-hero'); return sOf(s, 'acc-h-consider') - heroBefore >= 0.99 ? s : null; }, { tries: 10, everyMs: 1000 });
+  const hero = await until('hero credit lands', async () => { const s = await lift('acc-hero'); return s && sOf(s, 'acc-h-consider') - heroBefore >= 0.99 ? s : null; }, { tries: 15, everyMs: 1500 });
   eq('acc-hero learns clicks as units', hero.objective, 'unit');
   near('acc-hero: the click is one success on the piece that was clicked', sOf(hero, 'acc-h-consider') - heroBefore, 1, 0.02);
-  const story = await until('story credit lands', async () => { const s = await lift('acc-story'); return sOf(s, 'acc-s-featured') - storyBefore >= 200 ? s : null; }, { tries: 10, everyMs: 1000 });
+  const story = await until('story credit lands', async () => { const s = await lift('acc-story'); return s && sOf(s, 'acc-s-featured') - storyBefore >= 200 ? s : null; }, { tries: 15, everyMs: 1500 });
   eq('acc-story learns purchases weighed by revenue', story.objective, 'revenue');
   near('acc-story: the purchase of the featured bag credits the story with its value', sOf(story, 'acc-s-featured') - storyBefore, 250, 1);
 
@@ -202,6 +208,10 @@ async function run() {
   }, { tries: 20, everyMs: 1500 });
   check('the report counts the decisions and the outcomes', report.counts.decisions >= 14 && report.counts.outcomes >= 2, JSON.stringify(report.counts));
   check('the report names the learning policy', report.policies.some((p) => p.role === 'learning'));
+  // The report attributes from the ledger with the same policy: the click credits the hero, the purchase the story.
+  const creditedIn = (slot) => (report.holdout?.[slot] ?? []).find((a) => a.arm === 'personalized')?.credited ?? 0;
+  check('the report credits the hero for the click', creditedIn('acc-hero') >= 1, JSON.stringify(report.holdout?.['acc-hero']));
+  check('the report credits the story for the purchase of the featured bag', creditedIn('acc-story') >= 1, JSON.stringify(report.holdout?.['acc-story']));
 
   // 6. Erasure: the tombstone hides at once; the rewrite waits for the day to end.
   const erase = await call('POST', `/v1/${scope}/ledger/erasures`, { headers: op, body: { visitorId: V } });

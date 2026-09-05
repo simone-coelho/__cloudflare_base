@@ -8,7 +8,7 @@ import type { Env } from '@/types/env';
 import type { Cell } from '@/content/types';
 import type { RewardType } from '@/ledger/records';
 import type { Credit } from '@/learn/policy';
-import { buildSnapshot, DEFAULT_STATS, emptyStats, recordExposure, recordSuccess, type StatsConfig, type StatsState } from '@/learn/stats';
+import { buildSnapshot, DEFAULT_STATS, emptyStats, recordExposure, recordSuccess, type StatsConfig, type StatsState, type LiftSnapshot } from '@/learn/stats';
 import { liftArchiveKey, liftKey, type SlotLearnConfig } from '@/learn/fan';
 import { readRevision } from '@/config/versionedStore';
 import { indexPriors, PRIORS_KIND } from '@/learn/priors';
@@ -56,7 +56,12 @@ export class LearnStats {
         const out = await this.serialize(async () => { const d = this.data ?? (await this.loadIfAny()); return d ? buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, await this.priorsFor(d), d.config.objective ?? 'unit') : null; });
         return json({ ok: true, snapshot: out });
       }
-      case '/publish': { await this.serialize(() => this.publish()); return json({ ok: true }); }
+      case '/publish': {
+        // Answers with what it published: the object's own truth, ahead of KV's cache, for an operator who
+        // just changed a dial and for the acceptance run.
+        const snap = await this.serialize(() => this.publish());
+        return json({ ok: true, published: snap !== null, snapshot: snap });
+      }
       case '/reset': { await this.serialize(async () => { await this.state.storage.deleteAll(); this.data = null; }); return json({ ok: true, reset: true }); }
       // Doc 22 §12.2, the merchandiser's `reset`: discard one item's evidence and start again from the
       // prior. The slot's own counters keep what they saw; only the item's estimate restarts.
@@ -99,14 +104,15 @@ export class LearnStats {
     if ((await this.state.storage.getAlarm()) === null) await this.state.storage.setAlarm(Date.now() + PUBLISH_DELAY_MS);
   }
 
-  private async publish(): Promise<void> {
+  private async publish(): Promise<LiftSnapshot | null> {
     const d = await this.loadIfAny();
-    if (!d || d.stats.events === 0) return;
+    if (!d || d.stats.events === 0) return null;
     const snap = buildSnapshot(d.stats, d, d.config.reward, Date.now(), d.config.stats, await this.priorsFor(d), d.config.objective ?? 'unit');
     const body = JSON.stringify(snap);
     try { await this.env.CACHE.put(liftKey(d.tenant, d.brand, d.slot), body); } catch { /* try again on the next alarm */ }
     // Phase 3 (doc 22 §12.3): the archive a replay reads. Best effort; KV is what serves.
     try { await this.env.STORAGE.put(liftArchiveKey(d.tenant, d.brand, d.slot, snap.version), body, { httpMetadata: { contentType: 'application/json' } }); } catch { /* the next publish archives again */ }
+    return snap;
   }
 
   /** Doc 22 §8: the imported priors for this slot, from the tenant's versioned prior document. */
