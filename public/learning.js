@@ -225,8 +225,9 @@
     $('grid-count').textContent = snap ? `${rows.length} row${rows.length === 1 ? '' : 's'} · reward ${snap.reward}${snap.objective && snap.objective !== 'unit' ? ` weighed by ${snap.objective}` : ''} · n₀ ${snap.n0}, n_min ${snap.nMin} · published ${when(snap.publishedAt)}${snap.priorVersion ? ` · prior revision ${snap.priorVersion}` : ''}` : '';
     if (!snap) { host.append(h('div', { class: 'empty' }, 'Nothing published for this slot yet. The first snapshot publishes thirty seconds after the first decision it serves.')); return; }
     if (!rows.length) { host.append(h('div', { class: 'empty' }, 'No rows match.')); return; }
-    const cols = [['name', 'Item'], ['key', 'Cell'], ['n', 'n'], ['s', 's'], ['p_hat', 'p̂'], ['p0', 'p₀'], ['lift', 'lift'], ['evidence', 'evidence']];
-    const thead = h('tr', {}, ...cols.map(([col, label]) => h('th', { class: `sortable${['n', 's', 'p_hat', 'p0', 'lift', 'evidence'].includes(col) ? ' num' : ''}${S.sort.col === col ? ` on${S.sort.dir > 0 ? ' asc' : ''}` : ''}`, onclick: () => { S.sort = { col, dir: S.sort.col === col ? -S.sort.dir : (col === 'name' || col === 'key' ? 1 : -1) }; render(); } }, label)), h('th', {}, 'Controls'));
+    // Headings are words a merchandiser reads; the design's symbol sits under each for whoever reads doc 22.
+    const cols = [['name', 'Item', ''], ['key', 'Cell', ''], ['n', 'Shown', 'n'], ['s', 'Succeeded', 's'], ['p_hat', 'Rate', 'p̂'], ['p0', 'Baseline', 'p₀'], ['lift', 'Lift', 'p̂ / p₀'], ['evidence', 'Evidence', 'n / (n + n₀)']];
+    const thead = h('tr', {}, ...cols.map(([col, label, sym]) => h('th', { class: `sortable${['n', 's', 'p_hat', 'p0', 'lift', 'evidence'].includes(col) ? ' num' : ''}${S.sort.col === col ? ` on${S.sort.dir > 0 ? ' asc' : ''}` : ''}`, title: { n: 'How many times this piece was shown in this cell, decayed', s: 'How many times showing it paid off on the reward this slot learns against, weighed by the objective', p_hat: 'Succeeded over shown, smoothed toward the baseline', p0: 'The slot\'s own rate in this cell', lift: 'The rate over the baseline, clamped', evidence: 'How much of the rate is live observation rather than the prior' }[col] || '', onclick: () => { S.sort = { col, dir: S.sort.col === col ? -S.sort.dir : (col === 'name' || col === 'key' ? 1 : -1) }; render(); } }, label, sym ? h('span', { class: 'sym' }, sym) : null)), h('th', {}, 'Controls'));
     const body = rows.map((r) => {
       const { cur, next, pending } = controlOf(r.item);
       const chips = [];
@@ -264,7 +265,7 @@
       h('span', { class: 'k' }, 'Realized share'), h('span', { class: 'v' }, rep ? `${pct(rep.realized)} of ${rep.decisions} first-position decisions on ${S.report.date}${rep.configured !== null ? ` (configured ${pct(rep.configured)})` : ''}` : 'build the day report below to measure it'),
       h('span', { class: 'k' }, 'Under the floor'), h('span', { class: 'v' }, rows.length ? `${rows.length} item${rows.length === 1 ? '' : 's'}` : 'none: every served item has reached the floor'),
     ));
-    if (rows.length) host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Item'), h('th', { class: 'num' }, 'n'), h('th', { class: 'num' }, 'to the floor'))), h('tbody', {}, ...rows.map((r) => h('tr', {}, h('td', {}, h('div', { class: 'itemname' }, nameOf(r.item)), h('div', { class: 'itemid' }, r.item)), h('td', { class: 'num' }, r.n), h('td', { class: 'num' }, r3(floor - r.n)))))));
+    if (rows.length) host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Item'), h('th', { class: 'num' }, 'Shown', h('span', { class: 'sym' }, 'n')), h('th', { class: 'num' }, 'To the floor'))), h('tbody', {}, ...rows.map((r) => h('tr', {}, h('td', {}, h('div', { class: 'itemname' }, nameOf(r.item)), h('div', { class: 'itemid' }, r.item)), h('td', { class: 'num' }, r.n), h('td', { class: 'num' }, r3(floor - r.n)))))));
   }
   function renderReport() {
     const host = clear($('report'));
@@ -286,7 +287,7 @@
     const cell = (n, item, f) => { const st = (((grid[n] || {}).items || {})[item] || {})['*']; return st ? st[f] : ''; };
     host.append(h('div', { class: 'subhead' }, 'Items under each policy, the pooled row'));
     host.append(h('div', { class: 'table-wrap' }, h('table', {},
-      h('thead', {}, h('tr', {}, h('th', {}, 'Item'), ...names.flatMap((n) => [h('th', { class: 'num' }, `${n} n`), h('th', { class: 'num' }, 's'), h('th', { class: 'num' }, 'p̂'), h('th', { class: 'num' }, 'lift')]))),
+      h('thead', {}, h('tr', {}, h('th', {}, 'Item'), ...names.flatMap((n) => [h('th', { class: 'num' }, `${n}: shown`, h('span', { class: 'sym' }, 'n')), h('th', { class: 'num' }, 'Succeeded', h('span', { class: 'sym' }, 's')), h('th', { class: 'num' }, 'Rate', h('span', { class: 'sym' }, 'p̂')), h('th', { class: 'num' }, 'Lift')]))),
       h('tbody', {}, ...items.map((item) => h('tr', {}, h('td', {}, h('div', { class: 'itemname' }, nameOf(item)), h('div', { class: 'itemid' }, item)), ...names.flatMap((n) => [h('td', { class: 'num' }, cell(n, item, 'n')), h('td', { class: 'num' }, cell(n, item, 's')), h('td', { class: 'num' }, cell(n, item, 'p_hat')), h('td', { class: 'num' }, h('strong', {}, cell(n, item, 'lift')))])))),
     )));
     const arms = R.holdout[S.slot] || [];

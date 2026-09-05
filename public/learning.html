@@ -48,6 +48,7 @@
     .bar.signin { border-top: 1px solid var(--line); padding-top: 10px; padding-bottom: 10px; }
     #who { margin-right: 4px; white-space: nowrap; }
     .bar button.small { white-space: nowrap; }
+    th .sym { display: block; font-family: var(--mono, ui-monospace, monospace); font-size: 10px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-soft); margin-top: 2px; }
     #si-error { color: var(--warn); }
     input.token {
       font-family: var(--font-body); font-size: 12px; padding: 6px 9px; width: 190px;
@@ -245,10 +246,11 @@
       <section class="card">
         <header>
           <h2>The lift grid</h2>
-          <div class="why">Every item the slot has served, in every cell it was seen in. <strong>n</strong> is decayed exposures,
-            <strong>s</strong> decayed successes on the slot&rsquo;s reward, <strong>p&#770;</strong> the smoothed rate (successes plus the prior, over exposures plus the prior&rsquo;s strength n&#8320;),
-            <strong>p&#8320;</strong> the slot&rsquo;s own rate in that cell, the baseline, and <strong>lift</strong> is p&#770; over p&#8320;, clamped.
-            <strong>Evidence</strong> is n over n plus n&#8320;: how much of the estimate is live observation rather than the prior.</div>
+          <div class="why">Every piece the slot has shown, in every cell it was seen in. <strong>Shown</strong> is how many times,
+            <strong>Succeeded</strong> how many of those paid off on the reward this slot learns against (weighed by the objective when it is not unit),
+            <strong>Rate</strong> is succeeded over shown, smoothed toward the baseline, <strong>Baseline</strong> is the slot&rsquo;s own rate in that cell, and
+            <strong>Lift</strong> is the rate over the baseline, clamped. <strong>Evidence</strong> is how much of the rate is live observation rather than the prior.
+            Both counts fade with time. The symbol under each heading is the design&rsquo;s name for it.</div>
         </header>
         <div class="body">
           <div id="grid-banner"></div>
