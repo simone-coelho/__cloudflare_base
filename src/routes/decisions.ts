@@ -23,7 +23,7 @@ import { liftArchiveKey, liftKey, ringName, statsName } from '@/learn/fan';
 import { decideProposal, EMPTY_PROPOSALS, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
 import { read } from '@/config/versionedStore';
 import { replayDecision } from '@/learn/replay';
-import { reportKey, runReport, type DayReport, type ReportPolicy } from '@/learn/report';
+import { countDayObjects, reportKey, runReport, REPORT_MAX_OBJECTS, type DayReport, type ReportPolicy } from '@/learn/report';
 import { windowReport } from '@/measure/window';
 import { LEARN_KIND, DEFAULT_LEARN, CONTENT_KIND, SLOTS_KIND, EMPTY_CATALOG, DEFAULT_SLOTS } from '@/content/kinds';
 import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
@@ -528,8 +528,11 @@ decisionRoutes.post('/:tenant/learn/report', jwt({ required: true }), async (c) 
       policies.push({ name: p.name.slice(0, 40), scope: p.scope as 'session' | 'visitor', match: p.match as 'direct' | 'any', credit: p.credit as 'last' | 'first', windowsMs: Object.keys(windowsMs).length ? windowsMs : learn.policy?.windowsMs ?? {} });
     }
   }
-  const report = await runReport(c.env.STORAGE as unknown as Parameters<typeof runReport>[0], { tenant, brand, date }, learn, policies);
+  // Doc 31: a day of thousands of ledger objects cannot be read in one request; the nightly job builds it and GET reads it.
+  const objects = await countDayObjects(c.env.STORAGE as unknown as R2Like, tenant, date);
   c.header('Cache-Control', 'no-store');
+  if (objects > REPORT_MAX_OBJECTS) return c.json({ ok: false, error: `that day holds ${objects} ledger objects, more than one request may read; the report for it is built by the nightly job at 03:00 UTC and read with GET`, objects, max: REPORT_MAX_OBJECTS }, 413);
+  const report = await runReport(c.env.STORAGE as unknown as Parameters<typeof runReport>[0], { tenant, brand, date }, learn, policies);
   return c.json({ ok: true, report });
 });
 /**

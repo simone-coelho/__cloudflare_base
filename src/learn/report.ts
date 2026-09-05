@@ -179,6 +179,19 @@ export async function loadDay<T>(r2: R2Like, tenant: string, date: string, strea
 
 export const reportKey = (tenant: string, brand: string, date: string) => `reports/${tenant}/${brand}/${date}.json`;
 export const REPORT_CAP = 50_000;
+/** A Worker may open only so many storage objects in one request; past this many ledger objects a day is built by the nightly job, not on demand. */
+export const REPORT_MAX_OBJECTS = 800;
+
+/** How many ledger objects a day holds, both streams, without opening any. */
+export async function countDayObjects(r2: R2Like, tenant: string, date: string): Promise<number> {
+  let n = 0, cursor: string | undefined;
+  do {
+    const page = await r2.list({ prefix: `${tenant}/${date}/`, cursor, limit: 1000 });
+    n += page.objects.length;
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor);
+  return n;
+}
 
 export async function runReport(
   r2: R2Like & { put(key: string, body: string, opts?: unknown): Promise<unknown> },

@@ -9,7 +9,7 @@
 // R2 and Analytics Engine are two destinations, not one reading the other. This
 // file writes R2; the producer wrote the points.
 
-import { fromTs36, hourPrefix, parseId, ts36, type LedgerMessage } from './records';
+import { fromTs36, hourPrefix, parseId, ts36, type LedgerMessage, type LedgerWireMessage } from './records';
 import type { DecisionRecord } from '@/content/types';
 import type { OutcomeRecord } from './records';
 
@@ -32,6 +32,15 @@ export function isLedgerMessage(body: unknown): body is LedgerMessage {
   const id = idOf(m as LedgerMessage);
   return typeof id === 'string' && parseId(id) !== null;
 }
+/** A message carrying a whole decision set (doc 31), or a single record: either way, the records it holds, each placeable. */
+export function expandLedgerMessage(body: unknown): LedgerMessage[] {
+  if (isLedgerMessage(body)) return [body];
+  if (!body || typeof body !== 'object') return [];
+  const m = body as { kind?: unknown; type?: unknown; records?: unknown };
+  if (m.kind !== 'ledger' || m.type !== 'decisions' || !Array.isArray(m.records)) return [];
+  return (m.records as unknown[]).map((record) => ({ kind: 'ledger' as const, type: 'decision' as const, record: record as DecisionRecord })).filter((x) => isLedgerMessage(x));
+}
+export type { LedgerWireMessage };
 
 /** Group messages by stream and hour, write one object per group, return what was written. */
 export async function writeBatches(r2: R2Like, messages: readonly LedgerMessage[], batchId: string): Promise<WrittenBatch[]> {

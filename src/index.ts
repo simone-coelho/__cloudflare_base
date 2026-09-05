@@ -1,5 +1,9 @@
 import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';
 import { retentionDays, rewriteErasures, type R2Erasable } from '@/ledger/erasure';
+import { runReport } from '@/learn/report';
+import { read } from '@/config/versionedStore';
+import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
+import type { LearnConfig } from '@/content/types';
 import type { TenantId } from '@/tenancy/tenant';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -194,6 +198,15 @@ export default {
             (r) => console.log(`autonomy cycle ${tenant}: ${r.filter((x) => x.action !== 'none').length} action(s) across ${r.length} slot(s)`),
             (e) => console.error(`autonomy cycle ${tenant} failed`, e),
           ));
+        }
+        // Doc 31: yesterday's day report, built once by the platform and read by the console with GET.
+        const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+        for (const tenant of tenantConfig(env).provisioned) {
+          ctx.waitUntil((async () => {
+            const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
+            const r = await runReport(env.STORAGE as unknown as Parameters<typeof runReport>[0], { tenant, brand: tenant, date: yesterday }, learn, null);
+            console.log(`day report ${tenant} ${yesterday}: ${r.counts.decisions} decisions, ${r.counts.outcomes} outcomes${r.counts.truncated ? ' (truncated)' : ''}`);
+          })().catch((e) => console.error(`day report ${tenant} ${yesterday} failed`, e)));
         }
         // CW28 (doc 22 §15): the erasure rewrite. Newest day first over the retention window, capped per run, resumes tomorrow.
         for (const tenant of tenantConfig(env).provisioned) {

@@ -33,6 +33,9 @@ export interface OutcomeRecord {
 export type LedgerMessage =
   | { kind: 'ledger'; type: 'decision'; record: DecisionRecord }
   | { kind: 'ledger'; type: 'outcome'; record: OutcomeRecord };
+/** One message per decision set (2026-09-05, doc 31): nine records in one message, not nine messages, so a busy hour is dozens of objects, not thousands. */
+export type LedgerSetMessage = { kind: 'ledger'; type: 'decisions'; records: DecisionRecord[] };
+export type LedgerWireMessage = LedgerMessage | LedgerSetMessage;
 
 export const LEDGER_KIND = 'ledger' as const;
 

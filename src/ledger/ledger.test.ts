@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { enqueueDecisions, enqueueOutcome, pointsForDecisions } from './enqueue';
 import { consumeLedger } from './consume';
-import { candidateKeys, findById, isLedgerMessage, writeBatches } from './writer';
+import { candidateKeys, expandLedgerMessage, findById, isLedgerMessage, writeBatches } from './writer';
 import { hourPrefix, outcomeFromAction, parseId, rewardOf, ts36, type OutcomeRecord } from './records';
 import { decideContent } from '@/content/decide';
 import type { ContentPiece, DecisionRecord, SlotStrategy } from '@/content/types';
@@ -51,16 +51,16 @@ describe('ids and prefixes', () => {
 });
 
 describe('producer', () => {
-  it('enqueues one message per record and writes one point per record, never throwing', async () => {
+  it('enqueues one message per decision set and writes one point per record, never throwing', async () => {
     const q = new FakeQueue(), ae = new FakeAE();
     const s = set('v1');
     await enqueueDecisions({ EVENT_QUEUE: q as never, ANALYTICS: ae as never }, s.records);
-    expect(q.sent).toHaveLength(3);
-    expect(q.sent[0]).toMatchObject({ kind: 'ledger', type: 'decision', record: { decision_id: s.records[0]!.decision_id } });
+    expect(q.sent).toHaveLength(1);
+    expect(q.sent[0]).toMatchObject({ kind: 'ledger', type: 'decisions', records: [{ decision_id: s.records[0]!.decision_id }, { decision_id: s.records[1]!.decision_id }, { decision_id: s.records[2]!.decision_id }] });
     expect(ae.points).toHaveLength(3);
     expect((ae.points[0] as { blobs: string[] }).blobs.slice(0, 5)).toEqual(['decision', 'coach', 'coach', 'home', 'hero']);
     await enqueueOutcome({ EVENT_QUEUE: q as never, ANALYTICS: ae as never }, outcomeFromAction({ type: 'add_to_cart', userId: 'v1', timestamp: T0, data: { productId: 'p1' } }, 'coach'));
-    expect(q.sent).toHaveLength(4);
+    expect(q.sent).toHaveLength(2);
     await expect(enqueueDecisions({ EVENT_QUEUE: undefined as never, ANALYTICS: undefined as never }, s.records)).resolves.toBeUndefined();
     pointsForDecisions(undefined, s.records);
   });
@@ -106,5 +106,24 @@ describe('consumer and lookup', () => {
     const res = await consumeLedger({ STORAGE: r2 as never }, set('v1').records.map((record) => ({ kind: 'ledger', type: 'decision', record })));
     expect(res.ok).toBe(false); expect(res.error).toContain('R2');
     expect(await writeBatches(new FakeR2(), [], 'b')).toEqual([]);
+  });
+});
+
+describe('one message per decision set (doc 31)', () => {
+  it('the producer sends the set as one message and the consumer expands it into its records', async () => {
+    const q = new FakeQueue(), ae = new FakeAE();
+    const out = set('v-set');
+    await enqueueDecisions({ EVENT_QUEUE: q as never, ANALYTICS: ae as never }, out.records);
+    expect(q.sent).toHaveLength(1);
+    const m = q.sent[0] as { kind: string; type: string; records: unknown[] };
+    expect([m.kind, m.type, m.records.length]).toEqual(['ledger', 'decisions', out.records.length]);
+    const expanded = expandLedgerMessage(m);
+    expect(expanded.map((x) => x.type)).toEqual(out.records.map(() => 'decision'));
+    expect(expandLedgerMessage({ kind: 'ledger', type: 'decisions', records: [{ nope: true }] })).toEqual([]);
+    expect(expandLedgerMessage({ kind: 'ledger', type: 'outcome', record: outcomeFromAction({ type: 'content_click', userId: 'v', timestamp: 5, data: { contentId: 'a' } }, 'coach') })).toHaveLength(1);
+    // The consumer writes the set's records as one object per hour and stream.
+    const r2 = new FakeR2();
+    const res = await consumeLedger({ STORAGE: r2 as never }, [m], 1);
+    expect([res.written, res.objects, res.skipped, res.ok]).toEqual([out.records.length, 1, 0, true]);
   });
 });

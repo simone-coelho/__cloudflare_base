@@ -5,7 +5,7 @@
 // behind it, and R2 never sees anything the consumer could not parse.
 
 import type { Env } from '@/types/env';
-import { isLedgerMessage, writeBatches, type R2Like } from './writer';
+import { expandLedgerMessage, writeBatches, type R2Like } from './writer';
 import type { LedgerMessage } from './records';
 
 export interface ConsumeResult { written: number; objects: number; skipped: number; ok: boolean; error?: string }
@@ -17,7 +17,7 @@ export interface ConsumeResult { written: number; objects: number; skipped: numb
 export async function consumeLedger(env: Pick<Env, 'STORAGE'>, bodies: readonly unknown[], now = Date.now()): Promise<ConsumeResult> {
   const messages: LedgerMessage[] = [];
   let skipped = 0;
-  for (const b of bodies) { if (isLedgerMessage(b)) messages.push(b); else skipped++; }
+  for (const b of bodies) { const got = expandLedgerMessage(b); if (got.length) messages.push(...got); else skipped++; }
   if (messages.length === 0) return { written: 0, objects: 0, skipped, ok: true };
   const batchId = `${now.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   try {

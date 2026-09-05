@@ -49,7 +49,9 @@ export function pointForOutcome(analytics: AnalyticsLike | undefined, o: Outcome
 /** Enqueue every record of a served decision set and write its points. Resolves without throwing. */
 export async function enqueueDecisions(env: Pick<Env, 'EVENT_QUEUE' | 'ANALYTICS'>, records: readonly DecisionRecord[]): Promise<void> {
   pointsForDecisions(env.ANALYTICS as unknown as AnalyticsLike | undefined, records);
-  await sendAll(env.EVENT_QUEUE as unknown as QueueLike | undefined, records.map((record) => ({ kind: LEDGER_KIND, type: 'decision', record })));
+  // One message per set (doc 31): the consumer writes one object per hour and stream per batch of messages,
+  // so nine records in one message is nine times fewer objects for the same rows.
+  if (records.length) await sendAll(env.EVENT_QUEUE as unknown as QueueLike | undefined, [{ kind: LEDGER_KIND, type: 'decisions', records: [...records] } as unknown as LedgerMessage]);
 }
 
 export async function enqueueOutcome(env: Pick<Env, 'EVENT_QUEUE' | 'ANALYTICS'>, outcome: OutcomeRecord | null): Promise<void> {

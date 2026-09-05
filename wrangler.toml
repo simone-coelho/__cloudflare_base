@@ -34,8 +34,8 @@ binding = "EVENT_QUEUE"
 
 [[queues.consumers]]
 queue = "events"
-max_batch_size = 10
-max_batch_timeout = 2     # process promptly (scene-gen jobs shouldn't wait to fill a batch)
+max_batch_size = 100      # doc 31: the ledger writes one R2 object per batch, hour and stream; small batches made thousands of objects an hour
+max_batch_timeout = 3     # a scene-gen job waits at most three seconds for the batch to fill
 max_concurrency = 6       # generate several novel scenes in parallel under load
 max_retries = 2
 
@@ -250,8 +250,8 @@ binding = "EVENT_QUEUE"
 
 [[env.staging.queues.consumers]]
 queue = "events-staging"
-max_batch_size = 10
-max_batch_timeout = 2
+max_batch_size = 100
+max_batch_timeout = 3
 max_concurrency = 6
 max_retries = 2
 
