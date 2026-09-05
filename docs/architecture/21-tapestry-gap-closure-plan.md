@@ -460,6 +460,8 @@ Each is one bounded edit. `wrangler.toml` needs nothing from either track for th
 The third row is where the collision happened and where it will happen again if either of us is casual.
 Nothing there is edited without a line in this table changing first.
 
+**2026-09-05, and again.** The CW34 route line in `decisions.ts`, named here before it was written, reached HEAD inside the other session's `1c2209d` (the file was staged whole), one commit before the module it imports; HEAD did not typecheck alone for that one commit. No harm, same lesson, both directions: **`git add -p` or a HEAD-based patch on any file the other track has touched, never the file.**
+
 **2026-09-04, the rule cut the other way.** The Phase 3 commit (`67e6e3d`) carried the CW25 rows this table had uncommitted at the time, because the doc was staged as a file. Nothing was lost and nothing was wrong; the lesson is only that *stage hunks, not files* applies to docs too, and to both of us.
 
 **And one rule added 2026-09-03 after the second collision, which was mine.** I started CW8 from memory
