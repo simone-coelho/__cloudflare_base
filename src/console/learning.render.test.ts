@@ -66,6 +66,7 @@ function platform(fx: Fixtures, log: string[]) {
       if ((b.newPassword || '').length < 10) return okJson({ error: 'A password needs at least ten characters.' }, 400);
       return okJson({ ok: true, user: { id: 'ops-1', email: 'ops@brand.test', name: 'Test Operator', roles: ['operator'] } });
     }
+    if (p.startsWith('/auth/audit')) return signed ? okJson({ ok: true, entries: [{ id: 2, at: 1_788_000_100_000, action: 'account_created', actorEmail: 'admin@brand.test', targetEmail: 'ops@brand.test' }, { id: 1, at: 1_788_000_000_000, action: 'sign_in', actorEmail: 'admin@brand.test', targetEmail: 'admin@brand.test' }] }) : okJson({ error: 'Authorization token required' }, 401);
     if (p === '/auth/users' && !init?.body) return signed ? okJson({ ok: true, users: [{ id: 'ops-0', email: 'admin@brand.test', name: 'Test Admin', roles: ['operator', 'admin'], disabled: false, mustChangePassword: false, createdAt: 1, lastSignInAt: 1_788_000_000_000 }, { id: 'ops-1', email: 'ops@brand.test', name: 'Test Operator', roles: ['operator'], disabled: false, mustChangePassword: true, createdAt: 1, lastSignInAt: null }] }) : okJson({ error: 'Authorization token required' }, 401);
     if (p === '/auth/users' && init?.body) {
       const b = JSON.parse(init.body) as { email: string; name: string; roles?: string[] };
@@ -178,6 +179,8 @@ describe('the learning console, rendered', () => {
       expect(note).toContain('Account created for merch@brand.test');
       expect(note).toContain('Ab3dEf7hJk2mNp4q');
       expect(note).toContain('shown once');
+      const audit = c.$('account-audit').textContent || '';
+      expect(audit).toContain('created the account'); expect(audit).toContain('signed in');
       expect(c.text()).not.toMatch(STRAY);
     } finally { c.close(); }
   });

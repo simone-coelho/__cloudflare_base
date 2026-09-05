@@ -8,15 +8,17 @@ note that says what is built, what is not, and the decision a customer will make
 
 | What | Where | Shape | Lifetime |
 |---|---|---|---|
-| An account | Cloudflare KV, the CACHE namespace of the environment (staging: id `9c963380…`; production: its own) | `user:<email>` holds the record; `user_id:<id>` mirrors it for the renewal route. The record: `id`, `email`, `name`, `roles` (`operator`, `admin`), `permissions`, `password_hash`, `must_change_password`, `disabled`, `createdAt`, `updatedAt`, `lastSignInAt` | Until an admin removes it |
+| An account | D1, the environment's database (staging: `coach-demo-db-staging`; production: its own), table `operator_accounts` (migration 0010). *Moved from KV the same day after Simone's review: KV had no backup, no restore, no record of who changed a key, and eventual consistency.* | One row: `id`, `email` (unique), `name`, `roles` (`operator`, `admin`), `permissions`, `password_hash`, `must_change_password`, `disabled`, `created_at`, `updated_at`, `last_sign_in_at` | Until an admin removes it; thirty days of point-in-time restore behind that |
 | The password | inside the record, as `password_hash` | PBKDF2 with SHA-256, 100,000 rounds, a random 16-byte salt, base64url: `pbkdf2$100000$<salt>$<hash>`. Nothing in the platform can turn it back into the password | Until changed |
-| A record from before hashing | the same key, with `password` in the clear | Verified once at the next sign-in and rewritten as a hash in the same request; the plain field is deleted | Until that sign-in |
-| A session's refresh token | Cloudflare KV, the SESSIONS namespace | `refresh:<id>:<session id>`, the signed token itself | Seven days; deleted by sign-out, reset, disable, removal |
+| A record provisioning wrote to KV before the move | KV, `user:<email>`, with `password` in the clear | Verified once at its owner's next sign-in, written to D1 as a hash in the same request, and the KV keys deleted; the audit records the move | Until that sign-in |
+| A session's refresh token | D1, table `operator_sessions` | one row per session: the token's random id, the account, the SHA-256 of the token (never the token), created and expiry times | Seven days; deleted by sign-out, reset, disable, removal |
+| Who did what | D1, table `operator_audit` | sign-ins and failed sign-ins, lockouts, sign-outs, passwords changed, accounts created, reset, disabled, enabled, changed, removed, moved; the actor, the account, the time, a detail. Read by an admin at `GET /auth/audit` and in the console's Accounts section | Kept |
+| A lockout | derived from the audit | ten failed sign-ins against an email inside ten minutes refuse the eleventh for ten minutes, and are recorded | Ten minutes |
 | An access token | nowhere | A JWT signed with `JWT_SECRET` (a worker secret), HS256, fifteen minutes; carries `sub`, `email`, `name`, `roles` | Fifteen minutes |
 | In the browser | the page's `localStorage` under `operator-session` (and a mirror of the access token in `sessionStorage` under `tuning-token` for the tuning page) | the two tokens, the expiry, the person's name and roles | Until sign-out, or seven days without renewal |
 
-Two things a security team will ask about. KV is encrypted at rest and replicated by Cloudflare; the
-account records are per environment, so staging and production never share one. Tokens in `localStorage`
+One thing a security team will ask about. The account records are per environment, so staging and
+production never share one, and D1 is encrypted at rest by Cloudflare. Tokens in `localStorage`
 are readable by any script running on the console's origin; the stricter option, an `HttpOnly` cookie the
 page cannot read, is a contained change to the session module and the auth routes and is listed in §4.
 
@@ -61,7 +63,7 @@ password absent.
 | Tokens in local storage or in a cookie the page cannot read | ours, after their security review | local storage |
 | Password rules beyond ten characters (length, rotation, lockout after failed attempts) | theirs, from their policy | ten characters, not the email, not one character repeated; no lockout yet |
 
-Two of these are worth doing before any customer asks: a lockout after repeated failed sign-ins (a
-counter in KV per email, ten minutes after ten failures), and the cookie option. Both are small. The email
+The lockout is built (ten failures in ten minutes). The cookie option is the one small thing still worth
+doing before any customer asks. The email
 path is built when a customer names a provider; single sign-on when a customer names theirs. Nothing built
 today has to be undone for either.

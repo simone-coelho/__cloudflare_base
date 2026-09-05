@@ -2,32 +2,15 @@
 // Operator accounts: a person per record, a password nobody can read back,
 // roles that say what they may do, and the two flows an admin needs without
 // an email service: a temporary password handed over once and changed at the
-// first sign-in, and a reset that does the same. Records live in the CACHE
-// store under `user:<email>` with a mirror under `user_id:<id>` for the refresh
-// route. A record from before this module carries the password in the clear;
-// it is verified once and rewritten as a hash at that sign-in.
+// first sign-in, and a reset that does the same. The records live in D1
+// (doc 30) behind the store in ./store; a record still in KV from before is
+// moved at its owner's next sign-in and its KV keys deleted.
 
 import type { Env } from '@/types/env';
+import { d1Store, type AccountStore, type Role, type UserRecord } from './store';
+export type { AccountStore, AuditEntry, AuditRow, Role, UserRecord } from './store';
 
-export type Role = 'operator' | 'admin';
 export const ROLES: readonly Role[] = ['operator', 'admin'];
-
-export interface UserRecord {
-  id: string;
-  email: string;
-  name: string;
-  roles: Role[];
-  permissions: string[];
-  /** `pbkdf2$<iterations>$<salt>$<hash>`, base64url. */
-  password_hash?: string;
-  /** Only on records from before hashing; removed at the first successful sign-in. */
-  password?: string;
-  must_change_password?: boolean;
-  disabled?: boolean;
-  createdAt?: number;
-  updatedAt?: number;
-  lastSignInAt?: number;
-}
 
 export interface PublicUser { id: string; email: string; name: string; roles: Role[]; disabled: boolean; mustChangePassword: boolean; createdAt: number | null; lastSignInAt: number | null }
 
@@ -45,6 +28,11 @@ async function derive(password: string, salt: Uint8Array, iterations: number): P
 export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   return `pbkdf2$${ITERATIONS}$${b64u(salt)}$${b64u(await derive(password, salt, ITERATIONS))}`;
+}
+
+/** SHA-256 of a token, base64url: what the sessions table keeps instead of the token. */
+export async function tokenHash(token: string): Promise<string> {
+  return b64u(await crypto.subtle.digest('SHA-256', enc.encode(token)));
 }
 
 const same = (a: Uint8Array, b: Uint8Array): boolean => { if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a[i]! ^ b[i]!; return d === 0; };
@@ -89,46 +77,6 @@ export function publicUser(u: UserRecord): PublicUser {
   return { id: u.id, email: u.email, name: u.name, roles: rolesOf(u.roles), disabled: Boolean(u.disabled), mustChangePassword: Boolean(u.must_change_password), createdAt: u.createdAt ?? null, lastSignInAt: u.lastSignInAt ?? null };
 }
 
-// ── The store ────────────────────────────────────────────────────────────────
-
-type Store = Pick<Env, 'CACHE'>;
-const emailKey = (email: string) => `user:${normalizeEmail(email)}`;
-const idKey = (id: string) => `user_id:${id}`;
-const isUser = (v: unknown): v is UserRecord => Boolean(v) && typeof v === 'object' && typeof (v as UserRecord).email === 'string' && typeof (v as UserRecord).id === 'string';
-
-export async function getUserByEmail(env: Store, email: string): Promise<UserRecord | null> {
-  const v = await env.CACHE.get(emailKey(email), 'json').catch(() => null);
-  return isUser(v) ? v : null;
-}
-export async function getUserById(env: Store, id: string): Promise<UserRecord | null> {
-  const v = await env.CACHE.get(idKey(id), 'json').catch(() => null);
-  return isUser(v) ? v : null;
-}
-/** Writes the record under both keys. The email key is the truth; the id key is the mirror the refresh route reads. */
-export async function putUser(env: Store, user: UserRecord): Promise<void> {
-  const body = JSON.stringify(user);
-  await env.CACHE.put(emailKey(user.email), body);
-  await env.CACHE.put(idKey(user.id), body);
-}
-export async function deleteUser(env: Store, user: UserRecord): Promise<void> {
-  await env.CACHE.delete(emailKey(user.email));
-  await env.CACHE.delete(idKey(user.id));
-}
-/** Every account, by email. Anything under the prefix that is not an account is skipped. */
-export async function listUsers(env: Store): Promise<UserRecord[]> {
-  const out: UserRecord[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await env.CACHE.list({ prefix: 'user:', cursor, limit: 1000 });
-    for (const k of page.keys) {
-      const v = await env.CACHE.get(k.name, 'json').catch(() => null);
-      if (isUser(v)) out.push(v);
-    }
-    cursor = page.list_complete ? undefined : page.cursor;
-  } while (cursor);
-  return out.sort((a, b) => a.email.localeCompare(b.email));
-}
-
 export function newUser(input: { email: string; name: string; roles?: unknown }, passwordHash: string, now = Date.now()): UserRecord {
   const roles = rolesOf(input.roles);
   return {
@@ -136,4 +84,26 @@ export function newUser(input: { email: string; name: string; roles?: unknown },
     roles, permissions: roles.includes('admin') ? ['*'] : ['read'],
     password_hash: passwordHash, must_change_password: true, disabled: false, createdAt: now, updatedAt: now,
   };
+}
+
+// ── The store, and the records still in KV ───────────────────────────────────
+
+/** D1 on the worker; a test hands in its own store on the environment. */
+export function storeFor(env: Pick<Env, 'DB' | 'ACCOUNTS'>): AccountStore {
+  if (env.ACCOUNTS) return env.ACCOUNTS;
+  return d1Store(env.DB as unknown as Parameters<typeof d1Store>[0]);
+}
+
+type KVLike = { get(key: string, type: 'json'): Promise<unknown>; delete(key: string): Promise<void> };
+const isUser = (v: unknown): v is UserRecord => Boolean(v) && typeof v === 'object' && typeof (v as UserRecord).email === 'string' && typeof (v as UserRecord).id === 'string';
+
+/** A record provisioning wrote to KV before D1 held the accounts, or null. */
+export async function legacyRecord(env: Pick<Env, 'CACHE'>, email: string): Promise<UserRecord | null> {
+  try { const v = await (env.CACHE as unknown as KVLike).get(`user:${normalizeEmail(email)}`, 'json'); return isUser(v) ? { ...v, email: normalizeEmail(v.email), roles: rolesOf(v.roles) } : null; } catch { return null; }
+}
+/** Once the record is in D1, the KV keys go. */
+export async function forgetLegacy(env: Pick<Env, 'CACHE'>, user: UserRecord): Promise<void> {
+  const kv = env.CACHE as unknown as KVLike;
+  try { await kv.delete(`user:${normalizeEmail(user.email)}`); } catch { /* best effort */ }
+  try { await kv.delete(`user_id:${user.id}`); } catch { /* best effort */ }
 }

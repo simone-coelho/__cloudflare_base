@@ -444,7 +444,7 @@
     $('changecount').textContent = n ? `${n} change${n === 1 ? '' : 's'}${S.checking ? ', checking…' : ''}` : 'No changes';
     $('save').disabled = !n || !canEdit() || S.errors.length > 0 || S.checking;
   }
-  function render() { renderBar(); renderMessages(); renderGrid(); renderExploring(); renderReport(); renderHistory(); renderSlotDials(); renderGlobalDials(); renderSession(); renderAccounts(); }
+  function render() { renderBar(); renderMessages(); renderGrid(); renderExploring(); renderReport(); renderHistory(); renderSlotDials(); renderGlobalDials(); renderSession(); renderAccounts(); renderAudit(); }
 
   // ---------- wiring ----------
   $('report-date').value = new Date().toISOString().slice(0, 10);
@@ -478,11 +478,25 @@
   });
 
   // ---------- accounts, an admin's ----------
-  S.accounts = null;
+  S.accounts = null; S.audit = null;
   async function loadAccounts() {
-    if (!(window.OperatorSession && OperatorSession.isAdmin())) { S.accounts = null; return; }
-    const { ok, data } = await json('/auth/users');
-    S.accounts = ok ? data.users || [] : null;
+    if (!(window.OperatorSession && OperatorSession.isAdmin())) { S.accounts = null; S.audit = null; return; }
+    const [users, audit] = await Promise.all([json('/auth/users'), json('/auth/audit?limit=30')]);
+    S.accounts = users.ok ? users.data.users || [] : null;
+    S.audit = audit.ok ? audit.data.entries || [] : null;
+  }
+  const ACTION_WORDS = { sign_in: 'signed in', sign_in_failed: 'failed to sign in', sign_in_locked: 'was locked out for ten minutes', sign_out: 'signed out', password_changed: 'changed the password of', account_created: 'created the account', account_reset: 'reset the password of', account_disabled: 'disabled', account_enabled: 'enabled', account_changed: 'changed', account_removed: 'removed', account_migrated: 'moved to the accounts database' };
+  function renderAudit() {
+    const host = clear($('account-audit'));
+    if (!(window.OperatorSession && OperatorSession.isAdmin())) return;
+    if (!S.audit) { host.append(h('div', { class: 'empty' }, 'Could not read the activity.')); return; }
+    if (!S.audit.length) { host.append(h('div', { class: 'empty' }, 'Nothing yet.')); return; }
+    host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'When'), h('th', {}, 'Who'), h('th', {}, 'Did what'), h('th', {}, 'Account'))), h('tbody', {}, ...S.audit.map((e) => h('tr', {},
+      h('td', {}, when(e.at)),
+      h('td', {}, e.actorEmail || (e.action.startsWith('sign_in') ? e.targetEmail || '' : 'the platform')),
+      h('td', {}, ACTION_WORDS[e.action] || e.action),
+      h('td', {}, e.action === 'sign_in' || e.action === 'sign_out' ? '' : (e.targetEmail || '')),
+    )))));
   }
   function notice(html) { const host = clear($('account-notice')); if (html) host.append(h('div', { class: 'msg ok', html })); }
   const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -493,7 +507,7 @@
     const me = OperatorSession.user() || {};
     const rows = S.accounts.map((a) => {
       const state = a.disabled ? 'disabled' : a.mustChangePassword ? 'temporary password, not yet changed' : 'active';
-      const act = async (label, run) => { try { await run(); await loadAccounts(); renderAccounts(); } catch (err) { notice(`<strong>${esc(label)} did not go through.</strong> ${esc(err && err.message ? err.message : '')}`); } };
+      const act = async (label, run) => { try { await run(); await loadAccounts(); renderAccounts(); renderAudit(); } catch (err) { notice(`<strong>${esc(label)} did not go through.</strong> ${esc(err && err.message ? err.message : '')}`); } };
       const call = async (method, path, body) => { const r = await json(path, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) }); if (!r.ok) throw new Error(r.data.error || `${method} ${path} answered ${r.status}`); return r.data; };
       const self = a.id === me.id;
       return h('tr', {},
@@ -517,7 +531,7 @@
       if (!r.ok) throw new Error(r.data.error || 'The account was not created.');
       notice(`<strong>Account created for ${esc(r.data.user.email)}.</strong> Temporary password: <code>${esc(r.data.temporaryPassword)}</code>. Give it to them in person; it is shown once. They choose their own at their first sign-in.`);
       $('acct-email').value = ''; $('acct-name').value = '';
-      await loadAccounts(); renderAccounts();
+      await loadAccounts(); renderAccounts(); renderAudit();
     } catch (err) { $('acct-error').textContent = err && err.message ? err.message : 'The account was not created.'; }
     finally { $('acct-submit').disabled = false; }
   });

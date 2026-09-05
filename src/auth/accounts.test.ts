@@ -1,19 +1,12 @@
 // src/auth/accounts.test.ts
 // A password nobody can read back, verified in constant time; a record from
 // before hashing verified once and rewritten; a temporary password handed
-// over once; the rules a chosen password must meet; the store's two keys.
+// over once; the rules a chosen password must meet; the store, in memory,
+// with the same interface D1 answers.
 
 import { describe, it, expect } from 'vitest';
-import type { Env } from '@/types/env';
-import { deleteUser, getUserByEmail, getUserById, hashPassword, listUsers, newUser, passwordProblem, publicUser, putUser, rolesOf, temporaryPassword, verifyPassword } from './accounts';
-
-class FakeKV {
-  store = new Map<string, string>();
-  async get(key: string, type?: string): Promise<unknown> { const raw = this.store.get(key); if (raw === undefined) return null; return type === 'json' ? JSON.parse(raw) : raw; }
-  async put(key: string, value: string): Promise<void> { this.store.set(key, value); }
-  async delete(key: string): Promise<void> { this.store.delete(key); }
-  async list(opts: { prefix: string }) { return { keys: [...this.store.keys()].filter((k) => k.startsWith(opts.prefix)).map((name) => ({ name })), list_complete: true, cursor: undefined }; }
-}
+import { hashPassword, newUser, passwordProblem, publicUser, rolesOf, temporaryPassword, tokenHash, verifyPassword } from './accounts';
+import { memoryStore } from './store';
 
 describe('operator accounts', () => {
   it('hashes a password so it cannot be read back, and verifies it', async () => {
@@ -51,18 +44,27 @@ describe('operator accounts', () => {
     expect(rolesOf([])).toEqual(['operator']);
   });
 
-  it('the store keeps a record under its email and its id, lists accounts and skips what is not one', async () => {
-    const env = { CACHE: new FakeKV() } as unknown as Env;
-    await env.CACHE.put('user:not-an-account', JSON.stringify({ sessionId: 'x' }));
+  it('the store keeps a record by email and by id, lists accounts, and counts failed sign-ins', async () => {
+    const store = memoryStore();
     const u = newUser({ email: 'ops@brand.test', name: 'Operator', roles: ['admin'] }, await hashPassword('a fine long password'));
-    await putUser(env, u);
-    expect((await getUserByEmail(env, 'OPS@brand.test'))?.id).toBe(u.id);
-    expect((await getUserById(env, u.id))?.email).toBe('ops@brand.test');
-    expect((await listUsers(env)).map((x) => x.email)).toEqual(['ops@brand.test']);
+    await store.put(u);
+    expect((await store.getByEmail('OPS@brand.test'))?.id).toBe(u.id);
+    expect((await store.getById(u.id))?.email).toBe('ops@brand.test');
+    expect((await store.list()).map((x) => x.email)).toEqual(['ops@brand.test']);
     expect(publicUser(u)).toMatchObject({ email: 'ops@brand.test', roles: ['admin'], disabled: false, mustChangePassword: true });
     expect(JSON.stringify(publicUser(u))).not.toContain('pbkdf2');
-    await deleteUser(env, u);
-    expect(await getUserByEmail(env, 'ops@brand.test')).toBeNull();
-    expect(await getUserById(env, u.id)).toBeNull();
+    await store.audit({ at: 1000, action: 'sign_in_failed', targetEmail: 'ops@brand.test' });
+    await store.audit({ at: 2000, action: 'sign_in_failed', targetEmail: 'ops@brand.test' });
+    expect(await store.failedSignIns('ops@brand.test', 1500)).toBe(1);
+    expect(await store.failedSignIns('ops@brand.test', 0)).toBe(2);
+    await store.remove(u.id);
+    expect(await store.getByEmail('ops@brand.test')).toBeNull();
+  });
+
+  it('a token is kept as its hash only', async () => {
+    const h = await tokenHash('a.b.c');
+    expect(h).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(h).toBe(await tokenHash('a.b.c'));
+    expect(h).not.toBe(await tokenHash('a.b.d'));
   });
 });

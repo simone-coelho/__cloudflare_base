@@ -181,7 +181,7 @@ creates accounts.
 
 | Route | Body | Answer |
 |---|---|---|
-| `POST login` | `{ email, password }` | `{ accessToken, refreshToken, user, mustChangePassword, expiresIn: 900 }`. The access token lasts fifteen minutes, the refresh token seven days; `401` for a wrong email or password, `403` for a disabled account |
+| `POST login` | `{ email, password }` | `{ accessToken, refreshToken, user, mustChangePassword, expiresIn: 900 }`. The access token lasts fifteen minutes, the refresh token seven days; `401` for a wrong email or password, `403` for a disabled account, `429` after ten failed sign-ins in ten minutes, for ten minutes |
 | `POST refresh` | `{ refreshToken }` | A new access token. Each session has its own refresh token; a reset, a disable, a removal or a sign-out ends all of the account's sessions |
 | `POST logout` | none, operator token | Ends the account's sessions |
 | `GET me` | operator token | Who is signed in, and the account |
@@ -191,8 +191,9 @@ creates accounts.
 | `PATCH users/{id}` | `{ name?, roles?, disabled? }`, admin token | Renames, changes the role, disables or enables. An admin cannot disable their own account or take admin away from it |
 | `POST users/{id}/reset` | admin token | A new `temporaryPassword`, once; the person's sessions end and they choose their own at the next sign-in |
 | `DELETE users/{id}` | admin token | Removes the account and ends its sessions. Not your own |
+| `GET audit?limit=` | admin token | Who did what, newest first: sign-ins and failed sign-ins, lockouts, sign-outs, passwords changed, accounts created, reset, disabled, enabled, changed, removed; each with the actor, the account and the time |
 
-Passwords are stored as PBKDF2 hashes; nothing in the platform can read one back.
+Accounts, sessions and the audit live in the platform's database (D1), with thirty days of point-in-time restore. Passwords are stored as PBKDF2 hashes and refresh tokens as their SHA-256; nothing in the platform can read either back.
 
 ## 7. Health
 

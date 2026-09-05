@@ -41,6 +41,8 @@ export interface Env {
   // Backs the Opal chat's aggregate-then-reason query surface. See
   // docs/architecture/10-d1-schema.md; binding declared in wrangler.toml.
   DB: D1Database;
+  /** Operator accounts (doc 30) live in D1 behind src/auth/store; a test hands its own store in here. Never set on a stamp. */
+  ACCOUNTS?: import('@/auth/store').AccountStore;
 
   /**
    * Stamp tenancy (CW1). JSON:
