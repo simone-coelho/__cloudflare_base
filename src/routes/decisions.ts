@@ -25,7 +25,10 @@ import { replayDecision } from '@/learn/replay';
 import { reportKey, runReport, type DayReport, type ReportPolicy } from '@/learn/report';
 import { windowReport } from '@/measure/window';
 import { LEARN_KIND, DEFAULT_LEARN, CONTENT_KIND, SLOTS_KIND, EMPTY_CATALOG, DEFAULT_SLOTS } from '@/content/kinds';
-import { decodeCursor, encodeCursor, pageRows, rowsOf, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
+import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
+import { receiptOf } from '@/learn/receipts';
+import { queueOf } from '@/learn/queue';
+import { DEFAULT_EXPLORE } from '@/learn/explore';
 import type { ContentCatalog, SlotCatalog } from '@/content/types';
 import type { LiftSnapshot } from '@/learn/stats';
 import { write } from '@/config/versionedStore';
@@ -122,6 +125,85 @@ decisionRoutes.get('/:tenant/learn/slots', async (c) => {
   }
   c.header('Cache-Control', 'no-store');
   return c.json({ ok: true, tenant, brand, q: q ?? null, total: index.total, pages: index.pages });
+});
+
+/**
+ * GET /v1/:tenant/learn/exploring?slot=&brand=&limit=&cursor= (doc 28 §4): the items under the slot's
+ * observation floor, least observed first, paged; with the slot's exploration mode, share and floor.
+ */
+decisionRoutes.get('/:tenant/learn/exploring', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const slot = (c.req.query('slot') ?? '').trim();
+  if (!slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  const brand = (c.req.query('brand') ?? '').trim() || tenant;
+  const cur = decodeCursor(c.req.query('cursor'));
+  if (c.req.query('cursor') && !cur) return c.json({ ok: false, error: 'cursor not recognised' }, 400);
+  const limit = cur ? cur.limit ?? DEFAULT_LIMIT : Math.max(1, Math.min(MAX_LIMIT, Number(c.req.query('limit')) || DEFAULT_LIMIT));
+  const [snapshot, catalog, learn] = await Promise.all([
+    c.env.CACHE.get(liftKey(tenant, brand, slot), 'json').catch(() => null) as Promise<LiftSnapshot | null>,
+    read<ContentCatalog>(c.env, CONTENT_KIND, tenant, EMPTY_CATALOG), read<LearnConfig>(c.env, LEARN_KIND, tenant, DEFAULT_LEARN),
+  ]);
+  const ex = learn.slots?.[slot]?.exploration ?? null;
+  const floor = ex?.floor ?? DEFAULT_EXPLORE.floor;
+  c.header('Cache-Control', 'no-store');
+  if (!snapshot) return c.json({ ok: true, tenant, brand, slot, version: 0, published: false, mode: ex?.mode ?? 'off', share: ex?.share ?? 0, floor, total: 0, offset: 0, limit, rows: [], cursor: null });
+  if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
+  const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
+  const page = pageOf(exploringRows(snapshot, names, floor), cur ? cur.o : 0, limit);
+  const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level: 'exploring', limit });
+  return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, mode: ex?.mode ?? 'off', share: ex?.share ?? 0, floor, total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
+});
+
+/**
+ * GET /v1/:tenant/learn/queue?brand= (doc 28 §3.5): what needs a person, as counts. Authenticated,
+ * because the erasure count and the slot list are operator facts.
+ */
+decisionRoutes.get('/:tenant/learn/queue', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const brand = (c.req.query('brand') ?? '').trim() || tenant;
+  const now = Date.now();
+  const [slots, catalog, learn, proposals, tombs] = await Promise.all([
+    read<SlotCatalog>(c.env, SLOTS_KIND, tenant, DEFAULT_SLOTS), read<ContentCatalog>(c.env, CONTENT_KIND, tenant, EMPTY_CATALOG), read<LearnConfig>(c.env, LEARN_KIND, tenant, DEFAULT_LEARN),
+    read<ProposalsDoc>(c.env, PROPOSALS_KIND, tenant, EMPTY_PROPOSALS), loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant),
+  ]);
+  const index = slotsIndex(slots, catalog, learn, now);
+  const entries = index.pages.flatMap((p) => p.slots);
+  let budget = 200;
+  for (const s of entries) {
+    if (budget-- <= 0) { s.evidence = null; continue; }
+    try { const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null; s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null; } catch { s.evidence = null; }
+  }
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, tenant, brand, ...queueOf({ proposals: proposals.proposals.filter((p) => p.brand === brand), slots: entries, learn, erasuresPending: tombs.size }) });
+});
+
+/**
+ * GET /v1/:tenant/visitors/:visitorId/receipts?limit=&cursor= (doc 28 §4): what this shopper was served,
+ * newest first, each with the sentences that say why, from her own ring. Authenticated, like /recent.
+ * An erased shopper answers 410.
+ */
+decisionRoutes.get('/:tenant/visitors/:visitorId/receipts', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  const visitorId = (c.req.param('visitorId') ?? '').trim();
+  if (!TENANT.test(tenant) || !visitorId || visitorId.startsWith(NAMESPACE_MARKER)) return c.json({ ok: false, error: 'bad tenant or visitor id' }, 400);
+  const ns = c.env.DECISION_RING;
+  if (!ns) return c.json({ ok: false, error: 'ring not bound' }, 503);
+  const cur = decodeCursor(c.req.query('cursor'));
+  if (c.req.query('cursor') && !cur) return c.json({ ok: false, error: 'cursor not recognised' }, 400);
+  const limit = cur ? cur.limit ?? DEFAULT_LIMIT : Math.max(1, Math.min(MAX_LIMIT, Number(c.req.query('limit')) || DEFAULT_LIMIT));
+  const [ringRes, catalog, tombs] = await Promise.all([
+    ns.get(ns.idFromName(ringName(tenant, visitorId))).fetch('https://learn/recent').then((r) => r.json() as Promise<{ ok?: boolean; ring?: DecisionRecord[] }>).catch(() => null),
+    read<ContentCatalog>(c.env, CONTENT_KIND, tenant, EMPTY_CATALOG), loadTombstones(c.env.STORAGE as unknown as R2Erasable, tenant),
+  ]);
+  c.header('Cache-Control', 'no-store');
+  if (tombs.has(visitorId)) return c.json({ ok: false, error: 'erased at the visitor\'s request' }, 410);
+  const ring = (ringRes?.ring ?? []).slice().sort((a, b) => b.ts - a.ts || a.position - b.position);
+  const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
+  const page = pageOf(ring, cur ? cur.o : 0, limit);
+  const cursor = page.next === null ? null : encodeCursor({ v: 0, o: page.next, level: 'exploring', limit });
+  return c.json({ ok: true, tenant, visitor_id: visitorId, total: page.total, offset: page.offset, limit: page.limit, receipts: page.rows.map((r) => receiptOf(r, names)), cursor });
 });
 
 /**

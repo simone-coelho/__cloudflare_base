@@ -31,7 +31,7 @@ export interface LiftRow {
 
 export const SORT_KEYS = ['item', 'name', 'key', 'n', 's', 'p_hat', 'p0', 'lift', 'evidence'] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
-export type RowLevel = 'pooled' | 'cells';
+export type RowLevel = 'pooled' | 'cells' | 'exploring';
 
 export interface RowsQuery {
   level: RowLevel;
@@ -104,8 +104,31 @@ export function decodeCursor(s: string | undefined | null): Cursor | null {
   if (!s) return null;
   try {
     const c = JSON.parse(unb64(s)) as Cursor;
-    return c && typeof c.v === 'number' && typeof c.o === 'number' && (c.level === 'pooled' || c.level === 'cells') ? c : null;
+    return c && typeof c.v === 'number' && typeof c.o === 'number' && (c.level === 'pooled' || c.level === 'cells' || c.level === 'exploring') ? c : null;
   } catch { return null; }
+}
+
+// ── What is exploring ────────────────────────────────────────────────────────
+
+export interface ExploringRow { item: string; customer_item_id: string | null; title: string | null; n: number; to_floor: number }
+
+/** The items under the slot's observation floor, least observed first: what exploration serves on purpose. */
+export function exploringRows(snap: LiftSnapshot, names: Names, floor: number): ExploringRow[] {
+  const out: ExploringRow[] = [];
+  for (const [id, byKey] of Object.entries(snap.items)) {
+    const n = byKey['*']?.n ?? 0;
+    if (n >= floor) continue;
+    const nm = names.get(id);
+    out.push({ item: id, customer_item_id: nm?.customerContentId ?? null, title: nm?.title ?? null, n: r3(n), to_floor: r3(floor - n) });
+  }
+  return out.sort((a, b) => a.n - b.n || a.item.localeCompare(b.item));
+}
+
+/** A plain page of any list, with the next offset. */
+export function pageOf<T>(list: readonly T[], offset: number, limit: number): { total: number; offset: number; limit: number; rows: T[]; next: number | null } {
+  const lim = Math.max(1, Math.min(MAX_LIMIT, Math.floor(limit || DEFAULT_LIMIT)));
+  const off = Math.max(0, Math.floor(offset || 0));
+  return { total: list.length, offset: off, limit: lim, rows: list.slice(off, off + lim), next: off + lim < list.length ? off + lim : null };
 }
 
 // ── The slots index ──────────────────────────────────────────────────────────

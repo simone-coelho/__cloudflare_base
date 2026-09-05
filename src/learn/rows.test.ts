@@ -4,7 +4,7 @@
 // index groups every slot by page with what is set on it.
 
 import { describe, it, expect } from 'vitest';
-import { decodeCursor, encodeCursor, pageRows, rowsOf, slotsIndex } from './rows';
+import { decodeCursor, encodeCursor, exploringRows, pageOf, pageRows, rowsOf, slotsIndex } from './rows';
 import type { LiftSnapshot } from './stats';
 import type { ContentCatalog, LearnConfig, SlotCatalog } from '@/content/types';
 
@@ -59,6 +59,17 @@ describe('the grid, paged by the server', () => {
     expect(decodeCursor(c)).toEqual({ v: 1000, o: 50, level: 'pooled', q: 'tab', sort: 'n', dir: 'asc', limit: 50 });
     expect(decodeCursor('not-a-cursor')).toBeNull();
     expect(decodeCursor(encodeCursor({ v: 1, o: 0, level: 'nope' as 'pooled' }))).toBeNull();
+  });
+});
+
+describe('what is exploring, paged', () => {
+  it('lists the items under the floor, least observed first, and pages any list', () => {
+    const rows = exploringRows(snap, names, 30);
+    expect(rows).toEqual([{ item: 'c', customer_item_id: null, title: null, n: 5, to_floor: 25 }, { item: 'b', customer_item_id: 'CCH-003', title: 'Three ways', n: 20, to_floor: 10 }]);
+    expect(exploringRows(snap, names, 5)).toEqual([]);
+    const p = pageOf(rows, 1, 1);
+    expect([p.total, p.offset, p.limit, p.rows.map((r) => r.item), p.next]).toEqual([2, 1, 1, ['b'], null]);
+    expect(pageOf(rows, 0, 0).limit).toBe(50);
   });
 });
 
