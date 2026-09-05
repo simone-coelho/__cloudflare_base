@@ -347,6 +347,13 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
   home" showing the press as a success, slot "story · home" showing "reward purchase weighed by revenue"
   and the order's $375 on the row of the story that featured the bag, 27 seconds after the order. The
   exact steps are in kit 04.
+- **The console has a rendering check now (2026-09-05).** Simone saw the word "null" on the page, twice under
+  Exploration, four times under the regional prior and their model: a DOM append turns a null row into that
+  word, and nothing had ever rendered the console outside a browser. `src/console/learning.render.test.ts`
+  loads `learning.html`, `operator-session.js` and `learning.js` into jsdom against a fake platform and fails
+  on any "null", "undefined" or "NaN" anywhere on the page, signed out and signed in, every dial off and
+  every dial on; it also pins the grid's word headings and the sign-in. The same check is owed to the
+  tuning page (the delivery session's), which appends rows the same way.
 - **`scripts/import-content.mjs`** is the manual adapter for the demo catalog: it pulls Meridian's
   eighteen pieces through the seam into a scope and writes a slot document whose names and weights match
   the catalog's vocabulary, so the full chain, SDK to decision, can be shown on the dev server today.
