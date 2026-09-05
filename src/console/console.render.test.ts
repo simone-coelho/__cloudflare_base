@@ -176,9 +176,14 @@ function platform(fx: Fixtures, log: string[], saved: Array<Record<string, unkno
     }
     if (u.pathname === '/auth/login') {
       const b = JSON.parse(init?.body || '{}') as { email?: string; password?: string };
-      if (b.password !== 'right-password') return okJson({ error: 'Invalid credentials' }, 401);
+      if (b.password !== 'right-password' && b.password !== 'temp-password') return okJson({ error: 'Invalid credentials' }, 401);
       const token = 'h.' + Buffer.from(JSON.stringify({ sub: 'ops-1', exp: Math.floor(Date.now() / 1000) + 900 })).toString('base64url') + '.s';
-      return okJson({ accessToken: token, refreshToken: 'r', user: { id: 'ops-1', email: b.email, name: 'Test Operator', roles: ['operator'] }, expiresIn: 900 });
+      return okJson({ accessToken: token, refreshToken: 'r', user: { id: 'ops-1', email: b.email, name: 'Test Operator', roles: ['operator'] }, mustChangePassword: b.password === 'temp-password', expiresIn: 900 });
+    }
+    if (u.pathname === '/auth/password') {
+      const b = JSON.parse(init?.body || '{}') as { newPassword?: string };
+      saved.push({ passwordChangedTo: b.newPassword });
+      return okJson({ ok: true, user: { id: 'ops-1', email: 'ops@brand.test', name: 'Test Operator', roles: ['operator'] } });
     }
     if (u.pathname === '/auth/logout') return okJson({ success: true });
     return okJson({ ok: false, error: `unstubbed ${p}` }, 404);
@@ -553,6 +558,41 @@ describe('the operator application, rendered', () => {
       expect(c.all('#rail-views a').length).toBeGreaterThan(4);
       expect(c.$('slot').value).toBe('chero');
       expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('a temporary password is asked to be changed, and cannot be dismissed until it is', async () => {
+    const c = await open();
+    try {
+      await c.signIn('temp-password');
+      expect(c.$('who').textContent).toBe('Signed in as Test Operator');
+      // The console works, and says the account is not finished.
+      expect(c.$('password-form').hidden).toBe(false);
+      expect(c.$('pw-note').textContent).toBe('You signed in with a temporary password. Choose your own to carry on.');
+      c.$('pw-cancel').click(); await c.settle();
+      expect(c.$('password-form').hidden).toBe(false);   // it will not go away
+
+      c.$('pw-current').value = 'temp-password';
+      c.$('pw-new').value = 'a-chosen-password';
+      c.$('password-form').dispatchEvent(new (c.w.window as unknown as { Event: new (t: string, o: object) => unknown }).Event('submit', { bubbles: true, cancelable: true }));
+      await c.settle(); await c.settle();
+      expect(c.saved.some((x) => x.passwordChangedTo === 'a-chosen-password')).toBe(true);
+      expect(c.$('password-form').hidden).toBe(true);
+      expect(c.text()).toContain('Your password is changed');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('an ordinary sign-in is not asked to change anything', async () => {
+    const c = await open();
+    try {
+      await c.signIn();
+      expect(c.$('password-form').hidden).toBe(true);
+      expect(c.$('change-password').hidden).toBe(false);
+      c.$('change-password').click(); await c.settle();
+      expect(c.$('password-form').hidden).toBe(false);
+      c.$('pw-cancel').click(); await c.settle();
+      expect(c.$('password-form').hidden).toBe(true);    // this one may be dismissed
     } finally { c.close(); }
   });
 

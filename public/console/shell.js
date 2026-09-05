@@ -246,7 +246,18 @@
     $('who').textContent = u ? `Signed in as ${u.name || u.email}` : '';
     $('sign-in').hidden = on;
     $('sign-out').hidden = !on;
+    $('change-password').hidden = !on;
     if (on) $('sign-in-form').hidden = true;
+    // A temporary password is good for one sign-in. An operator who has just
+    // been given an account is asked to choose their own before anything else,
+    // and cannot dismiss the form until they have.
+    const must = on && OperatorSession.mustChangePassword && OperatorSession.mustChangePassword();
+    if (must) {
+      $('password-form').hidden = false;
+      $('pw-note').textContent = 'You signed in with a temporary password. Choose your own to carry on.';
+    } else if (!on) {
+      $('password-form').hidden = true;
+    }
   }
 
   // ---------- messages ----------
@@ -328,6 +339,19 @@
         await route();
       } catch (err) { $('si-error').textContent = err && err.message ? err.message : 'Sign-in did not go through.'; }
       finally { $('si-submit').disabled = false; }
+    });
+    $('change-password').addEventListener('click', () => { $('password-form').hidden = false; $('pw-note').textContent = ''; $('pw-error').textContent = ''; $('pw-current').focus(); });
+    $('pw-cancel').addEventListener('click', () => { if (!(window.OperatorSession && OperatorSession.mustChangePassword && OperatorSession.mustChangePassword())) $('password-form').hidden = true; });
+    $('password-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      $('pw-submit').disabled = true; $('pw-error').textContent = '';
+      try {
+        await OperatorSession.changePassword($('pw-current').value, $('pw-new').value);
+        $('pw-current').value = ''; $('pw-new').value = ''; $('password-form').hidden = true;
+        await freshToken();
+        flash('Your password is changed.');
+      } catch (err) { $('pw-error').textContent = err && err.message ? err.message : 'The password was not changed.'; }
+      finally { $('pw-submit').disabled = false; }
     });
     $('sign-out').addEventListener('click', async () => {
       await OperatorSession.signOut();

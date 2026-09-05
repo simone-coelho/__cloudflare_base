@@ -198,6 +198,7 @@
     <span class="spacer"></span>
     <span class="sub" id="who"></span>
     <button class="small" id="sign-in" type="button">Sign in</button>
+    <button class="small" id="change-password" type="button" hidden>Change password</button>
     <button class="small" id="sign-out" type="button" hidden>Sign out</button>
   </div>
   <form class="signin" id="sign-in-form" hidden autocomplete="on">
@@ -206,6 +207,15 @@
     <button class="small" id="si-submit" type="submit">Sign in</button>
     <button class="small" id="si-cancel" type="button">Cancel</button>
     <span class="sub" id="si-error" role="alert"></span>
+  </form>
+
+  <form class="signin" id="password-form" hidden autocomplete="on">
+    <span class="sub" id="pw-note"></span>
+    <label for="pw-current">Current password</label><input class="small" id="pw-current" type="password" name="current-password" autocomplete="current-password" required style="width:180px" />
+    <label for="pw-new">New password</label><input class="small" id="pw-new" type="password" name="new-password" autocomplete="new-password" required style="width:180px" />
+    <button class="small" id="pw-submit" type="submit">Change</button>
+    <button class="small" id="pw-cancel" type="button">Cancel</button>
+    <span class="sub" id="pw-error" role="alert"></span>
   </form>
 
   <div class="frame">
