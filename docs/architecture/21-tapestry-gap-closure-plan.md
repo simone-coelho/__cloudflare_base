@@ -334,8 +334,11 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
   2026-09-05, in about six seconds each. Its first two runs found two things worth knowing: the fatigue
   term read the ring's records as entries and counted nothing (fixed the same hour), and the rewrite
   sweeps every pending tombstone's window, so a run after an earlier erasure sees days swept that are not
-  its own (the assertion was wrong, the engine right). The staging run needs an operator token from
-  `POST /auth/login`, which only the account holder can mint.
+  its own (the assertion was wrong, the engine right). **Passed against staging on 2026-09-05, 55 checks
+  in 30 seconds**, with Simone's operator token, after one more lesson: on the real platform KV answers
+  a read with what it held up to a minute ago, so the run reads a slot's evidence from the object's own
+  publish answer (`POST learn/publish` returns the snapshot it wrote) and checks the serving path once
+  for shape. Nothing in the engine needed changing on staging.
 - **`scripts/import-content.mjs`** is the manual adapter for the demo catalog: it pulls Meridian's
   eighteen pieces through the seam into a scope and writes a slot document whose names and weights match
   the catalog's vocabulary, so the full chain, SDK to decision, can be shown on the dev server today.

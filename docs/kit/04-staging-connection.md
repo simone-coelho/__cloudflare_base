@@ -57,7 +57,7 @@ node scripts/acceptance-run.mjs --base https://<stamp> --token <operator jwt> --
 ```
 
 It seeds an acceptance page on the scope (rolled forward to what it was at the end), walks one shopper
-through a decision, two product views, a click and a purchase, and asserts 56 exact facts on the way:
+through a decision, two product views, a click and a purchase, and asserts 55 exact facts on the way:
 the receipt's stage, freshness, fatigue and diversity terms, the out-of-stock gate, the ring, the credit
 weighed by revenue on the story that featured the bag, the day report, an erasure honoured at once, and a
 shopper who withheld consent getting the defaults with nothing written. It stops on the first failure
