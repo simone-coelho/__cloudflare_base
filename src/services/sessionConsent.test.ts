@@ -34,6 +34,12 @@ let mgr: SessionManager;
 
 const stored = (id: string) => JSON.parse(kv.store.get(`session:${id}`) as string);
 
+/** A complete metadata block, because Partial<SessionData> is shallow: the field
+    itself is optional, the object inside it is not. Only the score varies here. */
+const meta = (engagementScore: number) => ({
+  firstSeen: 1, lastSeen: 2, sessionCount: 1, engagementScore, lastSegmentUpdate: 2,
+});
+
 beforeEach(() => {
   kv = new FakeKV();
   mgr = new SessionManager({ SESSIONS: kv } as unknown as Env);
@@ -44,7 +50,7 @@ describe('CW31 on the session host: consent decides what is written', () => {
     await mgr.createOrUpdateSession('s1', 'v1', {
       segments: ['browsers'],
       attributes: { favouriteLine: 'tabby' },
-      metadata: { engagementScore: 42 },
+      metadata: meta(42),
     });
     const rec = stored('s1');
     expect(rec.segments).toEqual(['browsers']);
@@ -58,14 +64,14 @@ describe('CW31 on the session host: consent decides what is written', () => {
     await mgr.createOrUpdateSession('s1', 'v1', {
       segments: ['browsers'],
       attributes: { favouriteLine: 'tabby' },
-      metadata: { engagementScore: 42 },
+      metadata: meta(42),
     });
 
     // She withholds tracking, and in the same request the engine computes more.
     const answer = await mgr.createOrUpdateSession('s1', 'v1', {
       segments: ['browsers', 'high_intent'],
       attributes: { favouriteLine: 'tabby', cartValue: 890 },
-      metadata: { engagementScore: 99 },
+      metadata: meta(99),
       preferences: { trackingConsent: false, personalizationEnabled: true, cookieConsent: true },
     });
 
