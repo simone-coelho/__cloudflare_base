@@ -153,6 +153,8 @@ Under `/v1/{tenant}/`. Operator token unless marked.
 |---|---|
 | `GET lift?slot=&brand=[&version=]` | The slot's lift snapshot in force, or an archived version: every item's estimate in every cell. Site key or token |
 | `GET lift/history?slot=&brand=` | Every archived snapshot version for the slot |
+| `GET lift/rows?slot=&brand=[&level=pooled\|cells][&item=][&q=][&sort=][&dir=][&limit=][&cursor=]` | The grid one page at a time, cut by the server: one pooled row per item, or one item's cells (`level=cells&item=`), filtered by `q` over the item id, your id, the title and the cell, sorted by any column, fifty a page up to five hundred. `total` counts what matched; `cursor` fetches the next page and is bound to the snapshot version, so a listing that outlives a publish answers 409 and starts again. Names and a merchandiser's freeze or reject ride each row. Site key or token |
+| `GET learn/slots?brand=[&q=][&evidence=1]` | Every slot on every page, grouped by page, with what is set on it (dimensions weighted, rules, reward, objective, trust, exploration, autonomy, controls) and how many pieces are eligible now; `q` narrows by slot or page name; `evidence=1` adds what each slot has learned so far. The picker and the overview of an operator application |
 | `GET visitors/{visitorId}/recent` | The visitor's ring of recent decisions, what attribution reads |
 | `GET ledger/{decision_id}` and `GET ledger/{outcome_id}?stream=outcome` | One record from the ledger by id, no index needed; behind by the queue's lag during a peak |
 | `GET ledger/batches?date=YYYY-MM-DD[&stream=decision\|outcome][&cursor=]` | The day's batch objects, so a warehouse job knows what to fetch with its own storage credentials. The partitions are the export |

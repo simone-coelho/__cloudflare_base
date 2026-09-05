@@ -24,7 +24,10 @@ import { read } from '@/config/versionedStore';
 import { replayDecision } from '@/learn/replay';
 import { reportKey, runReport, type DayReport, type ReportPolicy } from '@/learn/report';
 import { windowReport } from '@/measure/window';
-import { LEARN_KIND, DEFAULT_LEARN } from '@/content/kinds';
+import { LEARN_KIND, DEFAULT_LEARN, CONTENT_KIND, SLOTS_KIND, EMPTY_CATALOG, DEFAULT_SLOTS } from '@/content/kinds';
+import { decodeCursor, encodeCursor, pageRows, rowsOf, slotsIndex, DEFAULT_LIMIT, MAX_LIMIT, SORT_KEYS, type RowLevel, type SortKey } from '@/learn/rows';
+import type { ContentCatalog, SlotCatalog } from '@/content/types';
+import type { LiftSnapshot } from '@/learn/stats';
 import { write } from '@/config/versionedStore';
 import { invalidateLiftCache } from '@/content/service';
 import type { LearnConfig } from '@/content/types';
@@ -52,6 +55,73 @@ decisionRoutes.get('/:tenant/trend', async (c) => {
   c.header('Cache-Control', 'no-store');
   if (!read) return c.json({ ok: true, tenant, region, level: null, snapshot: null });
   return c.json({ ok: true, tenant, region, asked: region, level: read.level, answered: read.region, snapshot: read.snapshot });
+});
+
+/**
+ * GET /v1/:tenant/lift/rows?slot=&brand=&level=pooled|cells&item=&q=&sort=&dir=&limit=&cursor= (doc 28 §4).
+ * The grid as pages: one pooled row per item, or one item's cells; filtered, sorted and cut by the
+ * server, with the catalog's names and the merchandiser's controls joined on. The cursor names the
+ * snapshot version it was cut from, so a page never straddles two snapshots; when the snapshot has
+ * moved on, the answer is 409 and the application starts the listing again. Same access as /lift.
+ */
+decisionRoutes.get('/:tenant/lift/rows', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const slot = (c.req.query('slot') ?? '').trim();
+  if (!slot) return c.json({ ok: false, error: 'slot required' }, 400);
+  const brand = (c.req.query('brand') ?? '').trim() || tenant;
+  const cur = decodeCursor(c.req.query('cursor'));
+  if (c.req.query('cursor') && !cur) return c.json({ ok: false, error: 'cursor not recognised' }, 400);
+  const levelQ = c.req.query('level');
+  const level: RowLevel = cur ? cur.level : levelQ === 'cells' ? 'cells' : 'pooled';
+  const item = cur ? cur.item : ((c.req.query('item') ?? '').trim() || undefined);
+  const q = cur ? cur.q : ((c.req.query('q') ?? '').trim() || undefined);
+  const sortQ = cur ? cur.sort : (c.req.query('sort') ?? '').trim();
+  const sort = sortQ && (SORT_KEYS as readonly string[]).includes(sortQ) ? (sortQ as SortKey) : undefined;
+  if (sortQ && !sort) return c.json({ ok: false, error: `sort must be one of ${SORT_KEYS.join(', ')}` }, 400);
+  const dirQ = cur ? cur.dir : c.req.query('dir');
+  const dir = dirQ === 'asc' || dirQ === 'desc' ? dirQ : undefined;
+  const limit = cur ? cur.limit ?? DEFAULT_LIMIT : Math.max(1, Math.min(MAX_LIMIT, Number(c.req.query('limit')) || DEFAULT_LIMIT));
+  const offset = cur ? cur.o : 0;
+  let snapshot: LiftSnapshot | null = null;
+  try { snapshot = (await c.env.CACHE.get(liftKey(tenant, brand, slot), 'json')) as LiftSnapshot | null; } catch { snapshot = null; }
+  c.header('Cache-Control', 'no-store');
+  if (!snapshot) return c.json({ ok: true, tenant, brand, slot, version: 0, published: false, level, total: 0, offset: 0, limit, rows: [], cursor: null });
+  if (cur && cur.v !== snapshot.version) return c.json({ ok: false, error: 'the snapshot has moved on since this page was cut; start the listing again', version: snapshot.version }, 409);
+  const [catalog, learn] = await Promise.all([read<ContentCatalog>(c.env, CONTENT_KIND, tenant, EMPTY_CATALOG), read<LearnConfig>(c.env, LEARN_KIND, tenant, DEFAULT_LEARN)]);
+  const names = new Map(catalog.pieces.map((p) => [p.id, { customerContentId: p.customerContentId, title: p.title }]));
+  const rows = rowsOf(snapshot, names, learn.slots?.[slot]?.items, level, item);
+  const page = pageRows(rows, { level, item, q, sort, dir, offset, limit });
+  const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level, item, q, sort, dir, limit });
+  return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', n0: snapshot.n0, nMin: snapshot.nMin, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
+});
+
+/**
+ * GET /v1/:tenant/learn/slots?brand=&q=&evidence=1 (doc 28 §4): every slot on every page, grouped by
+ * page, with what is configured on it and how many pieces are eligible now; `q` narrows by slot or
+ * page name; `evidence=1` adds what each slot has learned so far (items, events, when published),
+ * for up to 200 slots. The application's picker and its overview.
+ */
+decisionRoutes.get('/:tenant/learn/slots', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const brand = (c.req.query('brand') ?? '').trim() || tenant;
+  const q = (c.req.query('q') ?? '').trim() || undefined;
+  const now = Date.now();
+  const [slots, catalog, learn] = await Promise.all([read<SlotCatalog>(c.env, SLOTS_KIND, tenant, DEFAULT_SLOTS), read<ContentCatalog>(c.env, CONTENT_KIND, tenant, EMPTY_CATALOG), read<LearnConfig>(c.env, LEARN_KIND, tenant, DEFAULT_LEARN)]);
+  const index = slotsIndex(slots, catalog, learn, now, q);
+  if (c.req.query('evidence') === '1') {
+    let budget = 200;
+    for (const page of index.pages) for (const s of page.slots) {
+      if (budget-- <= 0) { s.evidence = null; continue; }
+      try {
+        const snap = (await c.env.CACHE.get(liftKey(tenant, brand, s.slot), 'json')) as LiftSnapshot | null;
+        s.evidence = snap ? { items: Object.keys(snap.items).length, events: snap.events, publishedAt: snap.publishedAt } : null;
+      } catch { s.evidence = null; }
+    }
+  }
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, tenant, brand, q: q ?? null, total: index.total, pages: index.pages });
 });
 
 /**
