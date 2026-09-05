@@ -279,7 +279,14 @@
       const active = document.activeElement;
       const focusKey = active && active.dataset ? active.dataset.focusKey : null;
       const caret = focusKey && typeof active.selectionStart === 'number' ? [active.selectionStart, active.selectionEnd] : null;
-      if (view) view.render(host, S);
+      // A view is painted before its enter() has loaded anything, and again
+      // after. One that throws in either pass shows its error in its own place
+      // rather than blanking the application and losing the rail with it.
+      try {
+        if (view) view.render(host, S);
+      } catch (e) {
+        clear(host).append(h('div', { class: 'msg err' }, `This screen could not be drawn: ${e && e.message ? e.message : e}. The rest of the console still works.`));
+      }
       if (focusKey) {
         const again = host.querySelector(`[data-focus-key="${focusKey}"]`);
         if (again) { again.focus(); if (caret) { try { again.setSelectionRange(caret[0], caret[1]); } catch (e) { /* not selectable */ } } }

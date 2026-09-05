@@ -67,6 +67,32 @@ const SLOTS_DOC = { version: 'slots-coach', pages: { home: [
   { slot: 'merch', take: 1, weights: {}, pinnedPieceId: 'cnt_m' },
 ] } };
 
+const CMP = {
+  control: { arm: 'default', n: 220, s: 7, rate: { p: 0.0318, lo: 0.0155, hi: 0.0641 } },
+  treatment: { arm: 'personalized', n: 4000, s: 166, rate: { p: 0.0415, lo: 0.0358, hi: 0.048 } },
+  difference: { p: 0.0097, lo: -0.0243, hi: 0.0271 }, relative: 0.305, verdict: 'undecided',
+  neededPerArm: 4820, confidence: 0.95,
+  alsoAt: { confidence: 0.9, difference: { p: 0.0097, lo: -0.019, hi: 0.024 }, verdict: 'undecided' },
+  targets: { targets: { minimum: 0.1, target: 0.4, stretch: 0.6 }, relativeLow: -0.76, relativeHigh: 0.85, standing: 'on_track' },
+  words: 'personalized 4.2% of 4,000 decisions vs default 3.2% of 220: +1.0 points (+31% relative); the 95% interval runs −2.4 points to +2.7 points, so not yet distinguishable from zero.',
+};
+const WINDOW = {
+  tenant: 'coach', brand: 'coach', from: '2026-08-09', to: '2026-09-05', days: ['2026-09-04', '2026-09-05'], missing: ['2026-09-03'], confidence: 0.95,
+  slots: { chero: { arms: [
+    { arm: 'default', n: 220, s: 7, rate: { p: 0.0318, lo: 0.0155, hi: 0.0641 } },
+    { arm: 'personalized', n: 4000, s: 166, rate: { p: 0.0415, lo: 0.0358, hi: 0.048 } },
+  ], comparisons: [CMP] } },
+};
+const DAY = {
+  tenant: 'coach', brand: 'coach', date: '2026-09-05', builtAt: 1_788_000_000_000,
+  counts: { decisions: 117, outcomes: 9, visitors: 9, truncated: false },
+  policies: [{ name: 'learning', role: 'learning', credits: 4 }, { name: 'visitor-scope', role: 'reporting', credits: 9 }],
+  grids: { chero: { learning: { items: { cnt_aaa: { '*': { n: 20.8, s: 2, p_hat: 0.083, lift: 1.116 } } } }, 'visitor-scope': { items: { cnt_aaa: { '*': { n: 20.8, s: 4, p_hat: 0.14, lift: 1.4 } } } } } },
+  exploration: [{ slot: 'chero', decisions: 96, explored: 9, realized: 0.094, configured: 0.1, mode: 'rotation' }],
+  holdout: { chero: [{ arm: 'default', decisions: 16, credited: 4, rate: 0.25 }, { arm: 'personalized', decisions: 26, credited: 13, rate: 0.5 }] },
+  holdoutComparison: { chero: [CMP] },
+};
+
 const LEARN_OFF = { holdout: { share: 0.05, salt: '', arms: ['default'] }, slots: {} };
 const LEARN_ON = {
   holdout: { share: 0.1, salt: 'x', arms: ['default', 'no_learning'] },
@@ -102,6 +128,22 @@ function platform(fx: Fixtures, log: string[], saved: Array<Record<string, unkno
         ? okJson({ ok: true, retentionDays: 90, pending: [{ visitor_id: 'vis-1', erased_at: 1_788_000_000_000, actor: 'ops', rows_removed: 4, objects_rewritten: 1 }] })
         : okJson({ ok: false, error: 'unauthorized' }, 401);
     }
+    if (u.pathname === '/v1/coach/learn/report/window') {
+      return signed ? okJson({ ok: true, report: WINDOW }) : okJson({ ok: false, error: 'unauthorized' }, 401);
+    }
+    if (u.pathname === '/v1/coach/learn/report') {
+      if (init?.method === 'POST') { saved.push(JSON.parse(init.body || '{}') as Record<string, unknown>); return okJson({ ok: true, report: DAY }); }
+      return okJson({ ok: false, error: 'no report built for that day yet' }, 404);
+    }
+    if (u.pathname === '/v1/coach/lift/history') return okJson({ ok: true, versions: [{ version: 1_788_000_000_000, size: 2048, uploaded: '2026-09-05T00:00:00Z' }] });
+    if (u.pathname.endsWith('/history')) {
+      const kind = u.pathname.split('/').slice(-2)[0];
+      return okJson({ ok: true, revisions: kind === 'priors' ? [] : [
+        { revision: 2, version: `${kind}-v1+r2`, actor: 'Local Ops', note: 'the second', at: 1_788_000_000_000 },
+        { revision: 1, version: `${kind}-v1+r1`, actor: 'ops', note: 'the first', at: 1_787_000_000_000 },
+      ] });
+    }
+    if (u.pathname.includes('/rollback/')) return okJson({ ok: true, revision: 7 });
     if (u.pathname === '/config/reflex/validate') return okJson({ valid: true, errors: [], warnings: [] });
     if (u.pathname === '/config/reflex') {
       if (init?.method === 'PATCH') {
@@ -165,6 +207,7 @@ async function open(fx: Fixtures = {}, hash = '#/work?scope=coach') {
   w.eval(pub('console/shell.js'));
   w.eval(pub('console/views.js'));
   w.eval(pub('console/views-config.js'));
+  w.eval(pub('console/views-measure.js'));
   const settle = async () => { for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 12)); };
   /** Long enough for the dials' validator, which waits 350ms after the last keystroke. */
   const settleChecked = async () => { await new Promise((r) => setTimeout(r, 450)); await settle(); };
@@ -445,6 +488,70 @@ describe('the operator application, rendered', () => {
       expect(doc.pages.home[0].stage).toEqual({ outOfStage: 0.5, inStage: 1.2 });
       expect(doc.pages.home[0].freshness).toEqual({ weight: 0.2, halfLifeDays: 14 });
       expect(c.text()).toContain('Saved as slots revision 5');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('measurement leads with the window, the interval and the pre-set targets', async () => {
+    const c = await open();
+    try {
+      await c.signIn();
+      await c.goTo('#/measure?scope=coach&slot=chero');
+      expect(c.$('view-title').textContent).toBe('Did it work');
+      // The window first: the sentence, then the numbers behind it.
+      expect(c.text()).toContain('Over the window · chero');
+      expect(c.text()).toContain('not yet distinguishable from zero');
+      expect(c.text()).toContain('2 days read, 1 day with no report');
+      expect(c.text()).toContain('about 4,820 decisions on each arm; the smaller arm has 220');
+      expect(c.text()).toContain('on track · minimum 10%, target 40%, stretch 60% relative');
+      expect(c.text()).toContain('At 90%');
+      // A day with no report says so rather than showing an empty table.
+      expect(c.text()).toContain('No report for this day yet');
+      expect(c.text()).not.toMatch(STRAY);
+
+      // Building the day reads the ledger and changes nothing served.
+      const build = c.all('#view button').find((b) => (b.textContent || '').includes('Build this day'))!;
+      build.click(); await c.settle(); await c.settle();
+      expect(c.saved.some((x) => x.date === '2026-09-05')).toBe(true);
+      expect(c.text()).toContain('117 decisions, 9 outcomes, 9 visitors');
+      expect(c.text()).toContain('learning 4 · visitor-scope 9');
+      expect(c.text()).toContain('9% of 96 decisions in the first position, against 10% configured');
+      expect(c.text()).toContain('What each policy would have credited · chero');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('history shows every document, names who changed it, and can roll one back', async () => {
+    const c = await open();
+    try {
+      await c.signIn();
+      await c.goTo('#/history?scope=coach&slot=chero');
+      for (const title of ['What the engine notices', 'What the engine may do', 'The slots and their rules', 'The content catalog', 'Imported priors'])
+        expect(c.text()).toContain(title);
+      expect(c.text()).toContain('Local Ops');
+      expect(c.text()).toContain('in force');
+      // Priors has nothing stored, and says so rather than showing an empty table.
+      expect(c.text()).toContain('Nothing stored for this brand');
+      expect(c.text()).toContain('Published snapshots · chero');
+      expect(c.text()).toContain('2 KB');
+      expect(c.text()).not.toMatch(STRAY);
+      const back = c.all('#view .link').find((b) => (b.textContent || '').includes('Roll back'))!;
+      back.click(); await c.settle(); await c.settle();
+      expect(c.text()).toContain('Rolled revision 1 forward as revision 7');
+    } finally { c.close(); }
+  });
+
+  it('a view that throws shows its own error and leaves the rest of the console standing', async () => {
+    const c = await open();
+    try {
+      await c.goTo('#/work?scope=coach');
+      c.w.eval("Console.view({ id: 'boom', group: 'Attention', title: 'Boom', heading: 'Boom', render() { throw new Error('on purpose'); } });");
+      await c.goTo('#/boom?scope=coach');
+      expect(c.text()).toContain('This screen could not be drawn: on purpose');
+      expect(c.text()).toContain('The rest of the console still works');
+      // The rail and the context are still there, so the operator can leave.
+      expect(c.all('#rail-views a').length).toBeGreaterThan(4);
+      expect(c.$('slot').value).toBe('chero');
       expect(c.text()).not.toMatch(STRAY);
     } finally { c.close(); }
   });
