@@ -73,11 +73,12 @@ async function openConsole(fx: Fixtures) {
   const settle = async () => { for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 15)); };
   await settle();
   const text = () => (w.document.body.textContent || '').replace(/\s+/g, ' ');
-  const $ = (id: string) => w.document.getElementById(id) as HTMLElement & { value: string; hidden: boolean; click: () => void };
+  type El = { value: string; hidden: boolean; click: () => void; textContent: string | null; querySelectorAll: (sel: string) => ArrayLike<{ textContent: string | null }>; dispatchEvent: (e: unknown) => boolean };
+  const $ = (id: string) => w.document.getElementById(id) as unknown as El;
   const signIn = async (password: string) => {
     $('sign-in').click(); await settle();
     $('si-email').value = 'ops@brand.test'; $('si-password').value = password;
-    ($('sign-in-form') as unknown as HTMLFormElement).dispatchEvent(new w.window.Event('submit', { bubbles: true, cancelable: true }));
+    $('sign-in-form').dispatchEvent(new (w.window as unknown as { Event: new (t: string, o: object) => unknown }).Event('submit', { bubbles: true, cancelable: true }));
     await settle(); await settle();
   };
   return { dom, w, log, text, $, signIn, settle, close: () => w.close() };
