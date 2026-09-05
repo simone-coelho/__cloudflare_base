@@ -12,6 +12,7 @@ import { Hono } from 'hono';
 import type { Env } from '@/types/env';
 import { serveContentDecisions } from '@/content/service';
 import { NAMESPACE_MARKER, type TenantVariables } from '@/tenancy/tenant';
+import { tenantConfig } from '@/tenancy/middleware';
 import { enqueueDecisions } from '@/ledger/enqueue';
 import { findById, type R2Like } from '@/ledger/writer';
 import { eraseVisitorLedger, hidden, loadTombstones, retentionDays, rewriteErasures, type R2Erasable } from '@/ledger/erasure';
@@ -97,6 +98,20 @@ decisionRoutes.get('/:tenant/lift/rows', async (c) => {
   const page = pageRows(rows, { level, item, q, sort, dir, offset, limit });
   const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level, item, q, sort, dir, limit });
   return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, publishedAt: snapshot.publishedAt, reward: snapshot.reward, objective: snapshot.objective ?? 'unit', n0: snapshot.n0, nMin: snapshot.nMin, level, item: item ?? null, q: q ?? null, sort: sort ?? 'lift', dir: dir ?? (sort === 'item' || sort === 'name' || sort === 'key' ? 'asc' : 'desc'), total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
+});
+
+/**
+ * GET /v1/:tenant/brands (doc 28 §4, the application's last free-text box): the brands this stamp serves,
+ * which is every provisioned tenant, the default first. A brand is a tenant here; the scope in the path
+ * names whose documents the application is reading.
+ */
+decisionRoutes.get('/:tenant/brands', async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const cfg = tenantConfig(c.env);
+  const brands = [...new Set([cfg.provisioned[0] ?? tenant, ...cfg.provisioned, tenant])].map((id) => ({ id, default: id === (cfg.provisioned[0] ?? tenant) }));
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, tenant, brands });
 });
 
 /**
