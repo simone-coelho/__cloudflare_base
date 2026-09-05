@@ -45,6 +45,16 @@ bash scripts/verify-origin.sh https://<platform-staging-host> https://staging.co
 | The live channel | The socket upgrade with the key in the query is accepted |
 | A wrong key is refused | A call with a key for another brand answers 403 |
 
+## Production
+
+The production host is `https://edge-platform-production.expedge.workers.dev`, provisioned on 2026-09-05
+with its own stores and no screenshot route. It runs the same code as staging, deployed with
+`bash scripts/deploy.sh production`. Two things are issued to a customer at kickoff and stored nowhere
+readable afterwards: the site key their site sends as `X-SDK-Key`, and the first admin's password, which
+that admin replaces at the first sign-in and then uses the console's Accounts section to bring in the
+rest of their people. The site's origins go into the allow-list and the tenant map at the same time; until
+then the host answers only same-origin callers and the SDK with the key.
+
 ## After the check
 
 Your engineers integrate from the [guide](./01-integration-guide.md) inside your environments through
