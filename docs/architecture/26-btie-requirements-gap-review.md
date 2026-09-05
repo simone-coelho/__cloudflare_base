@@ -137,9 +137,9 @@ we should simply match:
 |---|---|---|
 | Holdout 5–10 %, **permanent**, assigned on a persistent identifier | 5 % default, deterministic on the visitor id, sticky; the salt can rotate | Document that the salt is set once per brand and never rotated during a measurement period; the hash fix R12-3 before launch, because a rotation later is what they warn against |
 | Holdout sees the current production experience (segment rules) | The `default` arm serves no personalization: the site's own defaults | Same thing, said the same way |
-| 90 %+ significance | 95 % intervals in `compareArms` | Add a confidence parameter; report both (D4) |
-| Pre-set targets: minimum +10 % CVR lift, target +40 %, stretch +60 %; RPV +10/+25/+40; returns < +5 % | Nothing compares against a pre-set target | D4: the comparison takes a target and says "reached / not yet / against it" |
-| Aggregate over windows, not point-in-time; monthly, quarterly, bi-annual | `pooled()` exists; the report is per day | D4: the pooled window on the report route |
+| 90 %+ significance | 95 % intervals in `compareArms` | ✅ D4 (2026-09-05): a confidence parameter, and the verdict at the other level always beside it |
+| Pre-set targets: minimum +10 % CVR lift, target +40 %, stretch +60 %; RPV +10/+25/+40; returns < +5 % | Nothing compares against a pre-set target | ✅ D4 (2026-09-05): the CVR-lift targets are read on the low end of the relative interval, in the sentence. RPV and returns need a value-weighted rate (CW27's objective) and a returns feed; not yet |
+| Aggregate over windows, not point-in-time; monthly, quarterly, bi-annual | `pooled()` exists; the report is per day | ✅ D4 (2026-09-05): `GET …/learn/report/window?from=&to=` pools the day reports and names the days without one |
 | Attribution is not incrementality | Our word for it: the arm report is the incrementality number; the attribution policies are for learning, and the console shows them side by side | Keep saying it their way |
 | IABI reporting: insight, action, business impact | The sentence `compareArms` writes is an insight with an action ("needs about N more decisions per arm"); business impact is not computed | Position: the console is the operating surface; IABI is the analyst's document over it |
 

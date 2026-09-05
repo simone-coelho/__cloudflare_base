@@ -50,6 +50,38 @@ export interface ArmSummary extends ArmCount {
 
 export type Verdict = 'treatment_better' | 'control_better' | 'undecided';
 
+/**
+ * Pre-set targets, as RELATIVE lift of the treatment rate over the control rate
+ * (BTIE §6.4.2: "CVR lift vs holdout, minimum +10 %, target +40 %, stretch +60 %").
+ * Set before any money is spent; the comparison only ever reports against them.
+ */
+export interface Targets { minimum: number; target: number; stretch: number }
+
+/** Tapestry's own numbers, from their measurement chapter. A tenant may set its own. */
+export const TAPESTRY_TARGETS: Targets = { minimum: 0.10, target: 0.40, stretch: 0.60 };
+
+export type Standing = 'reached_stretch' | 'reached_target' | 'reached_minimum' | 'on_track' | 'below' | 'undecided';
+
+export interface TargetReading {
+  targets: Targets;
+  /** The relative lift's interval, from the absolute interval over the control rate. Null when the control rate is zero. */
+  relativeLow: number | null;
+  relativeHigh: number | null;
+  /**
+   * reached_*: the interval's LOW end clears that target, so the target is met at
+   * this confidence. on_track: the point estimate clears the minimum but the
+   * interval does not yet. below: the point estimate is under the minimum.
+   */
+  standing: Standing;
+}
+
+export interface CompareOptions {
+  /** 0.90, 0.95 or 0.99. Tapestry's rule is 90 % or better; the default stays 95 %. */
+  confidence?: number;
+  /** null switches the target reading off. */
+  targets?: Targets | null;
+}
+
 export interface ArmComparison {
   control: ArmSummary;
   treatment: ArmSummary;
@@ -60,12 +92,39 @@ export interface ArmComparison {
   verdict: Verdict;
   /** Decisions PER ARM at which a difference of the observed size could be called at 80% power. Null when the rates are equal. */
   neededPerArm: number | null;
+  /** The confidence the intervals above are at. */
+  confidence: number;
+  /** The same difference at the other everyday confidence (90 beside 95), so nobody has to rerun. */
+  alsoAt: { confidence: number; difference: Proportion; verdict: Verdict };
+  /** Where the observed lift stands against the pre-set targets. Absent when targets were switched off. */
+  targets?: TargetReading;
   /** The whole thing, in one sentence a person can read. */
   words: string;
 }
 
 const Z95 = 1.959963984540054;
 const Z80_POWER = 0.8416212335729143;
+
+/** The two-sided normal quantile for a confidence level. Exact at the three everyday levels; interpolated elsewhere. */
+export function zFor(confidence: number): number {
+  const c = clamp01(finite(confidence) || 0.95);
+  if (Math.abs(c - 0.90) < 1e-9) return 1.6448536269514722;
+  if (Math.abs(c - 0.95) < 1e-9) return Z95;
+  if (Math.abs(c - 0.99) < 1e-9) return 2.5758293035489004;
+  // Acklam's inverse-normal approximation for anything else, relative error under 1.2e-9.
+  const p = 1 - (1 - c) / 2;   // the upper tail's probability: two-sided, so half the remainder on each side
+  const a = [-3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2, 1.383577518672690e2, -3.066479806614716e1, 2.506628277459239];
+  const b = [-5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2, 6.680131188771972e1, -1.328068155288572e1];
+  const cc = [-7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+  const d = [7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996, 3.754408661907416];
+  const tail = (q: number) => (((((cc[0] * q + cc[1]) * q + cc[2]) * q + cc[3]) * q + cc[4]) * q + cc[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  if (p < 0.02425) return tail(Math.sqrt(-2 * Math.log(p)));
+  if (p <= 1 - 0.02425) {
+    const q = p - 0.5, r = q * q;
+    return ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q) / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  }
+  return -tail(Math.sqrt(-2 * Math.log(1 - p)));
+}
 
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 const finite = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : 0);
@@ -121,41 +180,90 @@ export function pooled(rows: readonly ArmCount[]): ArmCount {
 
 const pct = (p: number) => `${(p * 100).toFixed(1)}%`;
 const pts = (d: number) => `${d >= 0 ? '+' : '−'}${(Math.abs(d) * 100).toFixed(1)} points`;
+const rel = (r: number) => `${r >= 0 ? '+' : '−'}${(Math.abs(r) * 100).toFixed(0)}%`;
 const fmt = (n: number) => n.toLocaleString('en-US');
+const verdictOf = (d: Proportion): Verdict => (d.lo > 0 ? 'treatment_better' : d.hi < 0 ? 'control_better' : 'undecided');
+
+/** Where a relative lift stands against the targets, judged on the interval's low end. */
+export function readTargets(difference: Proportion, controlRate: number, targets: Targets): TargetReading {
+  if (!(controlRate > 0)) return { targets, relativeLow: null, relativeHigh: null, standing: 'undecided' };
+  const relativeLow = r4(difference.lo / controlRate);
+  const relativeHigh = r4(difference.hi / controlRate);
+  const point = difference.p / controlRate;
+  const standing: Standing =
+    relativeLow >= targets.stretch ? 'reached_stretch'
+    : relativeLow >= targets.target ? 'reached_target'
+    : relativeLow >= targets.minimum ? 'reached_minimum'
+    : point >= targets.minimum ? 'on_track'
+    : 'below';
+  return { targets, relativeLow, relativeHigh, standing };
+}
+
+function targetWords(r: TargetReading): string {
+  const t = r.targets;
+  const named = `the pre-set targets (minimum ${rel(t.minimum)}, target ${rel(t.target)}, stretch ${rel(t.stretch)} relative)`;
+  if (r.standing === 'undecided' || r.relativeLow === null) return `${named} cannot be read against a control rate of zero`;
+  const low = `the low end of the interval is ${rel(r.relativeLow)}`;
+  switch (r.standing) {
+    case 'reached_stretch': return `against ${named}: the stretch target is reached, ${low}`;
+    case 'reached_target': return `against ${named}: the target is reached, ${low}`;
+    case 'reached_minimum': return `against ${named}: the minimum is reached, ${low}`;
+    case 'on_track': return `against ${named}: on track, the observed lift clears the minimum but ${low}, so no target is reached yet`;
+    default: return `against ${named}: below the minimum`;
+  }
+}
 
 /**
  * Compare a treatment arm against a control arm. Control is normally `default`
  * (the site's own defaults, no personalization) and treatment `personalized`;
  * `no_learning` against `personalized` isolates what learning adds on top.
+ *
+ * Intervals at `confidence` (default 95 %), the same difference at the other
+ * everyday level beside it, and the reading against the pre-set targets
+ * (Tapestry's by default; null to switch off).
  */
 export function compareArms(
   control: ArmCount & { arm?: string },
   treatment: ArmCount & { arm?: string },
+  options: CompareOptions = {},
 ): ArmComparison {
-  const c: ArmSummary = { arm: control.arm ?? 'default', n: Math.max(0, finite(control.n)), s: Math.max(0, finite(control.s)), rate: wilson(control.s, control.n) };
-  const t: ArmSummary = { arm: treatment.arm ?? 'personalized', n: Math.max(0, finite(treatment.n)), s: Math.max(0, finite(treatment.s)), rate: wilson(treatment.s, treatment.n) };
-  const difference = newcombe(t, c);
+  const confidence = [0.9, 0.95, 0.99].includes(options.confidence ?? 0.95) ? (options.confidence ?? 0.95) : clamp01(finite(options.confidence) || 0.95);
+  const z = zFor(confidence);
+  const other = Math.abs(confidence - 0.95) < 1e-9 ? 0.9 : 0.95;
+  const targets = options.targets === undefined ? TAPESTRY_TARGETS : options.targets;
+
+  const c: ArmSummary = { arm: control.arm ?? 'default', n: Math.max(0, finite(control.n)), s: Math.max(0, finite(control.s)), rate: wilson(control.s, control.n, z) };
+  const t: ArmSummary = { arm: treatment.arm ?? 'personalized', n: Math.max(0, finite(treatment.n)), s: Math.max(0, finite(treatment.s)), rate: wilson(treatment.s, treatment.n, z) };
+  const difference = newcombe(t, c, z);
   const relative = c.rate.p > 0 ? r4((t.rate.p - c.rate.p) / c.rate.p) : null;
-  const verdict: Verdict = difference.lo > 0 ? 'treatment_better' : difference.hi < 0 ? 'control_better' : 'undecided';
+  const verdict = verdictOf(difference);
   const needed = neededPerArm(c, t);
+  const otherDiff = newcombe(t, c, zFor(other));
+  const alsoAt = { confidence: other, difference: otherDiff, verdict: verdictOf(otherDiff) };
+  const reading = targets ? readTargets(difference, c.rate.p, targets) : undefined;
 
   let words: string;
+  const level = `${Math.round(confidence * 100)}% interval`;
   if (c.n === 0 || t.n === 0) {
     words = `${t.arm} ${pct(t.rate.p)} of ${fmt(t.n)} decisions vs ${c.arm} ${pct(c.rate.p)} of ${fmt(c.n)}: one arm has no decisions yet, so there is nothing to compare.`;
   } else {
     const head = `${t.arm} ${pct(t.rate.p)} of ${fmt(t.n)} decisions vs ${c.arm} ${pct(c.rate.p)} of ${fmt(c.n)}: ${pts(difference.p)}`
-      + (relative !== null ? ` (${relative >= 0 ? '+' : '−'}${(Math.abs(relative) * 100).toFixed(0)}% relative)` : '');
-    const range = `the interval runs ${pts(difference.lo)} to ${pts(difference.hi)}`;
+      + (relative !== null ? ` (${rel(relative)} relative)` : '');
+    const range = `the ${level} runs ${pts(difference.lo)} to ${pts(difference.hi)}`;
+    const also = alsoAt.verdict !== verdict
+      ? ` At ${Math.round(other * 100)}% it ${alsoAt.verdict === 'undecided' ? 'would not be called' : `would be called: ${alsoAt.verdict === 'treatment_better' ? t.arm : c.arm} better`}.`
+      : '';
     if (verdict === 'undecided') {
       const tail = needed === null
         ? 'the two rates are the same so far.'
         : needed <= Math.min(c.n, t.n)
           ? 'not yet distinguishable from zero.'
           : `not yet distinguishable from zero; a difference this size needs about ${fmt(needed)} decisions on each arm to call, and the smaller arm has ${fmt(Math.min(c.n, t.n))}.`;
-      words = `${head}; ${range}, so ${tail}`;
+      words = `${head}; ${range}, so ${tail}${also}`;
     } else {
-      words = `${head}; ${range}, which excludes zero: ${verdict === 'treatment_better' ? t.arm : c.arm} is doing better, and the holdout is the reason we can say so.`;
+      words = `${head}; ${range}, which excludes zero: ${verdict === 'treatment_better' ? t.arm : c.arm} is doing better, and the holdout is the reason we can say so.${also}`;
     }
+    if (reading) words += ` ${targetWords(reading).replace(/^./, (ch) => ch.toUpperCase())}.`;
   }
-  return { control: c, treatment: t, difference, relative, verdict, neededPerArm: needed, words };
+  return { control: c, treatment: t, difference, relative, verdict, neededPerArm: needed, confidence, alsoAt, ...(reading ? { targets: reading } : {}), words };
 }
