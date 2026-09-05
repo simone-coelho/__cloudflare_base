@@ -155,6 +155,14 @@ realtimeRoutes.post('/action', async (c) => {
     // Get cookie header for session management
     const cookieHeader = c.req.header('Cookie') ?? null;
 
+    // CW31 (BTIE D10). The session host's own report of the shopper's switches:
+    // SessionManager mirrors the two preferences into the request's cookies, so
+    // the cookies are what this host knows before it has read the record. With
+    // tracking off nothing about this request leaves the edge, which is the rule
+    // the object host already holds in-object; the outcome is refused by
+    // emitOutcome above and the two ODP dispatches below are refused here.
+    const consent = consentFromCookies(cookieHeader);
+
     // Process the action event with enhanced session management
     const segmentEngine = new RealtimeSegmentEngine(c.env, getConnectors(c.env), { tenant: c.get('tenant') });
     let execCtx: { waitUntil(p: Promise<unknown>): void } | undefined;
@@ -170,7 +178,7 @@ realtimeRoutes.post('/action', async (c) => {
     // forwarding); the forwarder later pushes the ODP status over the WebSocket as
     // an `odp_receipt` so the feed row upgrades to its real ✓ 202.
     let odpReceipt: { receiptId: string; type: string; action?: string; product_id?: string } | undefined;
-    if (odpEnabled(c.env)) {
+    if (consent.tracking && odpEnabled(c.env)) {
       const mapped = mapActionToOdp(actionEvent);
       if (mapped) {
         odpReceipt = {

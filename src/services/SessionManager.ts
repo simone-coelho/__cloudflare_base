@@ -245,6 +245,40 @@ export class SessionManager {
       // Validate the session data
       const validatedData = sessionDataSchema.parse(sessionData);
 
+      // CW31 (BTIE D10). A shopper who withheld tracking consent is still
+      // ANSWERED, from the state that is already stored, and nothing this
+      // request learned is kept. This is the object host's rule exactly
+      // (ShopperReflex step 8, where the record is restored to what it was):
+      // the two hosts must never disagree about the same shopper, because
+      // REFLEX_HOST decides which one a brand runs on and consent is not a
+      // property of that choice.
+      //
+      // The one write that still happens is the INSTRUCTION itself. Without it
+      // the next request reads no stored preference, the default of that is
+      // consenting, and the engine would start writing again on the request
+      // after the shopper asked it to stop.
+      if (!validatedData.preferences.trackingConsent) {
+        const onlyTheInstruction = sessionDataSchema.parse(
+          existingSession
+            ? { ...existingSession, preferences: validatedData.preferences }
+            : {
+                userId,
+                segments: [],
+                attributes: {},
+                metadata: { firstSeen: now, lastSeen: now, sessionCount: 0, engagementScore: 0, lastSegmentUpdate: now },
+                preferences: validatedData.preferences,
+              }
+        );
+        await this.kv.put(
+          `session:${sessionId}`,
+          JSON.stringify(onlyTheInstruction),
+          { expirationTtl: this.sessionTTL }
+        );
+        // The pointer stays, or the switches could not be found again.
+        await this.kv.put(`user:${userId}`, sessionId, { expirationTtl: this.sessionTTL });
+        return validatedData;
+      }
+
       // Store session in KV
       await this.kv.put(
         `session:${sessionId}`,
