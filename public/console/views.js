@@ -343,7 +343,13 @@
     C.render();
   }
   async function loadDials() {
-    const { data } = await C.content('/learn');
+    // A screen must never sit on the word "Loading". If the read fails, say so
+    // and paint the settings the engine ships with, so the dials are still legible.
+    const res = await C.content('/learn');
+    const data = res.data || {};
+    dl.failed = res.ok ? '' : (res.status === 401 || res.status === 403
+      ? 'Sign in at the top right to read this brand\u2019s settings. These are the defaults.'
+      : `Could not read the learn document (${res.status || 'no answer'}). These are the defaults.`);
     dl.doc = data.document || { holdout: { share: 0.05, salt: '', arms: ['default'] } };
     dl.draft = copy(dl.doc);
     dl.revision = data.revision || 0;
@@ -491,7 +497,8 @@
     hint: 'Everything here takes effect without a deployment, as a new revision with your note on it. Nothing is applied until you save.',
     async enter() { await loadDials(); },
     render(host) {
-      if (!dl.draft) { host.append(h('div', { class: 'empty' }, 'Loading the dials…')); return; }
+      if (!dl.draft) { host.append(h('div', { class: 'msg err' }, 'The dials could not be read, so there is nothing to show. Reload the page; if it happens again the platform is not answering.')); return; }
+      if (dl.failed) host.append(h('div', { class: 'msg note' }, dl.failed));
       const n = changes().length;
       C.dirty({
         count: n,

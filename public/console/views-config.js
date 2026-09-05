@@ -270,7 +270,13 @@
     C.render();
   }
   async function loadRules() {
-    const { data } = await C.content('/slots');
+    // Same rule as the dials: a failed read says so and paints an empty document,
+    // rather than leaving the screen on the word "Loading" for ever.
+    const res = await C.content('/slots');
+    const data = res.data || {};
+    rules.failed = res.ok ? '' : (res.status === 401 || res.status === 403
+      ? 'Sign in at the top right to read this brand\u2019s slot document.'
+      : `Could not read the slot document (${res.status || 'no answer'}).`);
     rules.doc = data.document || { pages: {} };
     rules.draft = copy(rules.doc);
     rules.revision = data.revision || 0;
@@ -312,7 +318,8 @@
     hint: 'Beside the weights, four rules shape what this slot may show: whether a piece suits where the shopper is, how fresh it is, how often she has already seen it, and how much of one thing the slot may show at once.',
     async enter() { await loadRules(); },
     render(host) {
-      if (!rules.draft) { host.append(h('div', { class: 'empty' }, 'Loading the slot document…')); return; }
+      if (!rules.draft) { host.append(h('div', { class: 'msg err' }, 'The slot document could not be read, so there is nothing to show. Reload the page; if it happens again the platform is not answering.')); return; }
+      if (rules.failed) host.append(h('div', { class: 'msg note' }, rules.failed));
       if (!S.slot) { host.append(h('div', { class: 'empty' }, 'Choose a slot in the rail.')); return; }
       const found = strategyOf(rules.draft);
       if (!found) { host.append(h('div', { class: 'empty' }, `${S.slot} is not in the slot document for this brand.`)); return; }

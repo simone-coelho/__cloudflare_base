@@ -21,7 +21,7 @@ import { JSDOM } from 'jsdom';
 
 const pub = (f: string) => readFileSync(new URL(`../../public/${f}`, import.meta.url), 'utf8');
 
-type Fixtures = { published?: boolean; slots?: boolean; learn?: Record<string, unknown> };
+type Fixtures = { published?: boolean; slots?: boolean; learn?: Record<string, unknown>; dead?: boolean };
 
 const SLOTS = {
   ok: true, tenant: 'coach', brand: 'coach', q: null, total: 3,
@@ -110,6 +110,10 @@ function platform(fx: Fixtures, log: string[], saved: Array<Record<string, unkno
     const u = new URL(url, 'http://console.test');
     const p = u.pathname + u.search;
     log.push(`${init?.method || 'GET'} ${p}`);
+    // A platform that is up but broken: the shape of a store whose migrations
+    // were never applied, which is how POST /auth/login answered 500 and every
+    // screen behind it looked like it was still loading.
+    if (fx.dead) return okJson({ error: 'Internal server error', message: 'D1_ERROR: no such table' }, 500);
     const signed = Boolean(init?.headers?.authorization);
     if (u.pathname === '/v1/coach/learn/slots') return okJson(fx.slots === false ? { ok: true, total: 0, pages: [] } : SLOTS);
     if (u.pathname === '/v1/coach/lift/rows') {
@@ -231,6 +235,10 @@ async function open(fx: Fixtures = {}, hash = '#/work?scope=coach') {
 }
 
 const STRAY = /\b(null|undefined|NaN)\b/;
+
+/** No screen may sit on a spinner: a load that failed has to say so. */
+const STILL_LOADING = /Loading the |Loading…/;
+
 
 describe('the operator application, rendered', () => {
   it('opens on the work queue, signed out, with a rail and no stray value', async () => {
@@ -611,6 +619,34 @@ describe('the operator application, rendered', () => {
       expect(c.text()).toContain('vis-1');
       expect(c.text()).toContain('kept 90 days');
       expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  // ── A platform that answers, but answers wrongly ──────────────────────────
+  // The preview store once ran without its migrations, so /auth/login answered
+  // 500 and every screen behind it read as "still loading". A screen that cannot
+  // read its data has to say that, on every route, signed in or out.
+  it('never leaves a screen on the word Loading when the platform is broken', async () => {
+    for (const route of ['work', 'lift', 'slots', 'dials', 'rules', 'interests', 'proposals', 'erasures', 'measure', 'history']) {
+      const c = await open({ dead: true }, `#/${route}?scope=coach&slot=chero`);
+      try {
+        await c.settle();
+        const shown = c.$('view').textContent || '';
+        expect(shown, `${route} sat on a loading string`).not.toMatch(STILL_LOADING);
+        expect(shown.trim().length, `${route} painted nothing at all`).toBeGreaterThan(0);
+        expect(c.text()).not.toMatch(STRAY);
+      } finally { c.close(); }
+    }
+  });
+
+  it('says so when a sign-in is refused by a broken platform rather than looking signed in', async () => {
+    const c = await open({ dead: true });
+    try {
+      await c.signIn('right-password');
+      // The sign-in did not take, and the console says why instead of pretending.
+      expect((c.$('si-error').textContent || '').length).toBeGreaterThan(0);
+      expect(c.$('sign-in').hidden).toBe(false);
+      expect(c.$('who').textContent).toBe('');
     } finally { c.close(); }
   });
 });
