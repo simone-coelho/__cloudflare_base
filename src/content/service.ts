@@ -70,6 +70,8 @@ export interface DecisionSources {
   state: 'do' | 'session' | 'none';
   /** CW31: the shopper's consent switches as the host reported them, and whether the engine personalized at all. */
   consent: Consent & { personalized: boolean };
+  /** Milliseconds per stage of this decision: documents, shopper, trend, lift, decide. */
+  timings: Record<string, number>;
 }
 
 interface ShopperRead {
@@ -122,6 +124,10 @@ export async function serveContentDecisions(
   const now = r.nowMs ?? Date.now();
   const scope = r.tenant;
   const brand = r.brand ?? r.tenant;
+  // Where the time goes, in milliseconds per stage, on the answer and on the Server-Timing header.
+  const timings: Record<string, number> = {};
+  let mark = performance.now();
+  const lap = (name: string) => { const t = performance.now(); timings[name] = Math.round(t - mark); mark = t; };
 
   const [catalogRev, slotsRev, learnRev, cfgRev] = await Promise.all([
     readRevision(env, CONTENT_KIND, scope, now),
@@ -134,8 +140,10 @@ export async function serveContentDecisions(
   const learn = learnRev?.value ?? DEFAULT_LEARN;
   const cfg = cfgRev?.config ?? DEFAULT_REFLEX_CONFIG;
   const configRevision = cfgRev?.revision ?? 0;
+  lap('documents');
 
   const shopper = await readShopper(env, r.visitorId, r.cookieHeader, cfg, now, r.stateTenant ?? DEFAULT_TENANT);
+  lap('shopper');
   const cell = cellFor({
     cf: r.cf, snap: shopper.affinity, cfg, channel: r.channel,
     // Only a session boundary the engine itself observed counts as evidence of
@@ -165,6 +173,7 @@ export async function serveContentDecisions(
     }
   }
 
+  lap('trend');
   // What the state hung on: the DO host keys it on the durable visitor id, the
   // session host on the cookie, and a failed read on nothing at all.
   const identityAnchor = shopper.state === 'do' ? 'visitor' : shopper.state === 'session' ? 'session' : 'none';
@@ -191,6 +200,7 @@ export async function serveContentDecisions(
   const wantsRing = arm !== 'default' && slots.some((s) => (s.fatigue?.weight ?? 0) > 0);
   const [extResult, ring] = await Promise.all([extPromise, wantsRing ? readRing(env, r.tenant, r.visitorId) : Promise.resolve(null), ...slots.map(async (s) => { snapshots[s.slot] = await readLift(env, scope, brand, s.slot, now); })]);
   const served = ring ? servedCounts(ring, slots, now) : null;
+  lap('lift');
   const external: ExternalTerm | null = extCfg && extResult
     ? extResult.ok
       ? { kind: extCfg.kind, ref: extCfg.ref, weightOf: extWeightOf, status: 'ok', version: extResult.version, scores: extResult.scores }
@@ -210,6 +220,7 @@ export async function serveContentDecisions(
     served,
   });
 
+  lap('decide');
   // CW31: a shopper who declined personalization sees why on every receipt.
   if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = 'the site\'s defaults: personalization is off by the shopper\'s choice';
   // After the response: the visitor's ring and each slot's exposures. Never awaited here.
@@ -228,6 +239,7 @@ export async function serveContentDecisions(
       external: extCfg && extResult ? { kind: extCfg.kind, ref: extCfg.ref, ok: extResult.ok, ms: extResult.ms, version: extResult.ok ? extResult.version : null, reason: extResult.ok ? null : extResult.reason } : null,
       state: shopper.state,
       consent: { ...consent, personalized: personalizes(consent) },
+      timings,
     },
   };
 }

@@ -315,6 +315,8 @@ decisionRoutes.get('/:tenant/decisions/snapshot', async (c) => {
     tenant, brand, page, visitorId, sessionId, channel, cf, cookieHeader: c.req.header('Cookie') ?? null,
     stateTenant: c.get('tenant'),
   });
+  // Where the time went, for whoever is measuring: one Server-Timing entry per stage.
+  c.header('Server-Timing', Object.entries(out.sources.timings).map(([k, v]) => `${k};dur=${v}`).join(', '));
   // Phase 0 and Phase 1, after the response, never on it: the ledger, the visitor's ring, each slot's exposures.
   // CW31: nothing at all when the shopper withheld tracking consent.
   const ledger = out.write ? enqueueDecisions(c.env, out.records) : Promise.resolve();

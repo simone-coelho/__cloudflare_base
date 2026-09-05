@@ -138,6 +138,7 @@ realtimeRoutes.post('/action', async (c) => {
     // shape ({success, update?, sessionId, cookiesUpdated, odp?}). The DO owns the
     // ODP loop on this path (forward + seed + receipt over its own socket), so no
     // route-level ODP dispatch here. The D1 captureDemoEvent above ran either way.
+    const tEngine = performance.now();
     if ((c.env.REFLEX_HOST ?? 'session') === 'do') {
       const stub = shopperObject(c.env.SHOPPER_REFLEX, actionEvent.userId, c.get('tenant'));
       const doRes = await stub.fetch('https://shopper-reflex/ingest', {
@@ -146,6 +147,7 @@ realtimeRoutes.post('/action', async (c) => {
         body: JSON.stringify(actionEvent),
       });
       const out = (await doRes.json()) as Record<string, unknown>;
+      c.header('Server-Timing', `object;dur=${Math.round(performance.now() - tEngine)}`);
       emitOutcome(out.sessionId, out);
       return c.json(out, doRes.status as 200);
     }
@@ -158,6 +160,8 @@ realtimeRoutes.post('/action', async (c) => {
     let execCtx: { waitUntil(p: Promise<unknown>): void } | undefined;
     try { execCtx = c.executionCtx; } catch { execCtx = undefined; /* no execCtx (e.g. tests) */ }
     const result = await segmentEngine.processActionEventWithSession(actionEvent, cookieHeader, execCtx);
+    // Where the time went: the engine's own work on the session host, for whoever is measuring.
+    c.header('Server-Timing', `engine;dur=${Math.round(performance.now() - tEngine)}`);
     emitOutcome(result.sessionId);
 
     // ODP loop (doc 16 §8): forward the behavioral event to ODP OFF the response
