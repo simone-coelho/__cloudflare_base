@@ -50,7 +50,7 @@ describe('the receipt as sentences', () => {
   });
 
   it('a pin, a holdout default, a cold shopper, a frozen lift and an explored pick each say what they are', () => {
-    const everywhere = receiptOf({ ...base, explain: { ...base.explain, regional: { region: '*', level: 'everyone', lambda: 0.14, version: 1, events: 9, contribution: 0.16 } as DecisionRecord['explain']['regional'] } }, names);
+    const everywhere = receiptOf({ ...base, explain: { ...base.explain, regional: { region: '*', level: 'global', lambda: 0.14, version: 1, events: 9, contribution: 0.16 } as DecisionRecord['explain']['regional'] } }, names);
     expect(everywhere.why[1]).toBe("What is trending everywhere contributed 0.16 (the trend's share of the score: 0.14).");
     expect(receiptOf({ ...base, authority: 'pin' }, names).why).toEqual(['Pinned by the merchandiser for this slot; the engine never ranked it.']);
     expect(receiptOf({ ...base, arm: 'default' }, names).why).toEqual(["The site's own defaults, no personalization: this shopper is in the holdout's default arm."]);
