@@ -229,7 +229,7 @@ JWT_ISSUER = "edge-platform-staging"
 JWT_AUDIENCE = "edge-platform-api"
 OPTIMIZELY_SDK_KEY = "RLCQEiLW3ifgVH5fwuHoo"
 OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/RLCQEiLW3ifgVH5fwuHoo.json"
-REFLEX_HOST = "session"
+REFLEX_HOST = "do"   # 2026-09-05: the session host wrote KV on every request (580 to 720 ms per decision, seconds per event under the load test); the object host is the one built for the path
 BRIGHTHOUR_CLOCK_MULTIPLIER = "1"
 
 [[env.staging.kv_namespaces]]
