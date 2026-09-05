@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Operator &mdash; the console for the engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* The same tokens as /tuning.html and /learning.html: the surfaces are one product. */
+    :root {
+      --ink: #1a1a1a; --ink-soft: #4a4642; --paper: #faf8f5; --panel: #ffffff;
+      --tan: #c8a063; --tan-deep: #8a6d3b; --tan-wash: #f4ecdd;
+      --line: #e7e1d8; --line-strong: #d8cfc1;
+      --warn: #7a2e2e; --warn-wash: #f7ecec;
+      --ok: #2f6b4f; --ok-wash: #e7f1ec;
+      --ai: #5b4b8a; --ai-wash: #efeaf6;
+      --font-display: 'Playfair Display', Georgia, serif;
+      --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+      --radius: 2px;
+      --rail: 250px;
+    }
+    * { box-sizing: border-box; }
+    /* Every rule below sets a display, which would otherwise beat the hidden
+       attribute's default and leave the sign-in form and the save bar on screen. */
+    [hidden] { display: none !important; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--paper); color: var(--ink); font-family: var(--font-body);
+      font-size: 13px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--tan-deep); }
+
+    /* ---------- The top bar ---------- */
+    .top {
+      display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+      background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20;
+    }
+    .top h1 { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0; letter-spacing: .01em; }
+    .top .where { font-size: 12px; color: var(--ink-soft); }
+    .spacer { flex: 1; }
+    .sub { font-size: 12px; color: var(--ink-soft); }
+    .top form.signin { gap: 8px; }
+    form.signin { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line); }
+    label { font-size: 12px; color: var(--ink-soft); }
+    input.small, select.small {
+      font-family: var(--font-body); font-size: 12px; padding: 6px 9px; color: inherit;
+      border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel);
+    }
+    input.small:focus, select.small:focus { outline: none; border-color: var(--tan); }
+    button.small, button.primary {
+      font-family: var(--font-body); font-size: 12px; padding: 6px 10px; white-space: nowrap; cursor: pointer;
+      border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel); color: inherit;
+    }
+    button.small:hover:not([disabled]), button.primary:hover:not([disabled]) { border-color: var(--tan); color: var(--tan-deep); }
+    button.small[disabled], button.primary[disabled] { color: var(--ink-soft); cursor: default; opacity: .6; }
+    button.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    button.primary:hover:not([disabled]) { background: var(--tan-deep); border-color: var(--tan-deep); color: #fff; }
+    button.warn { color: var(--warn); border-color: #e3c9c9; }
+    button.link { background: none; border: none; padding: 0; font: inherit; color: var(--tan-deep); cursor: pointer; text-decoration: underline; }
+    button.link[disabled] { color: var(--ink-soft); text-decoration: none; cursor: default; }
+    #si-error { color: var(--warn); }
+
+    /* ---------- The frame: a rail and a view ---------- */
+    .frame { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); align-items: start; }
+    @media (max-width: 900px) { .frame { grid-template-columns: minmax(0, 1fr); } }
+    .rail {
+      position: sticky; top: 49px; align-self: start; max-height: calc(100vh - 49px); overflow-y: auto;
+      background: var(--panel); border-right: 1px solid var(--line); padding: 16px 0 24px;
+    }
+    .rail .group { padding: 0 16px 14px; }
+    .rail .group h2 {
+      font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft);
+      font-weight: 600; margin: 0 0 8px;
+    }
+    .rail .field { margin-bottom: 9px; }
+    .rail .field label { display: block; margin-bottom: 3px; }
+    .rail .field input, .rail .field select { width: 100%; }
+    .rail .count { font-size: 11px; color: var(--ink-soft); margin-top: 3px; }
+    .rail nav { border-top: 1px solid var(--line); padding-top: 10px; }
+    .rail nav a {
+      display: flex; align-items: baseline; gap: 8px; padding: 7px 16px; text-decoration: none;
+      color: var(--ink); border-left: 2px solid transparent;
+    }
+    .rail nav a:hover { background: var(--paper); }
+    .rail nav a.on { border-left-color: var(--tan); background: var(--tan-wash); font-weight: 600; }
+    .rail nav a .n { margin-left: auto; font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+    .rail nav a.on .n { color: var(--tan-deep); }
+    .rail nav .heading {
+      font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft);
+      padding: 12px 16px 4px; font-weight: 600;
+    }
+
+    main { padding: 20px 24px 90px; min-width: 0; }
+    .head { margin-bottom: 14px; }
+    .head h2 { font-family: var(--font-display); font-size: 22px; font-weight: 600; margin: 0 0 3px; }
+    .head .why { font-size: 12.5px; color: var(--ink-soft); max-width: 76ch; }
+
+    /* ---------- Cards, tables, messages ---------- */
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 16px; }
+    .card > header { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+    .card > header h3 { font-family: var(--font-display); font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+    .card > header .why { font-size: 12px; color: var(--ink-soft); max-width: 78ch; }
+    .card .body { padding: 12px 14px; }
+    .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+    .toolbar .spacer { flex: 1; }
+
+    .table-wrap { overflow-x: auto; max-height: 62vh; overflow-y: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+    thead th {
+      position: sticky; top: 0; z-index: 1; background: var(--panel);
+      text-align: left; font-weight: 600; font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
+      color: var(--ink-soft); padding: 8px 10px; border-bottom: 1px solid var(--line-strong); white-space: nowrap;
+    }
+    thead th.sortable { cursor: pointer; }
+    thead th.on { color: var(--tan-deep); }
+    thead th .sym { display: block; font-size: 10px; letter-spacing: 0; text-transform: none; color: var(--ink-soft); font-weight: 400; }
+    tbody td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; height: 34px; }
+    tbody tr:hover { background: var(--paper); }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .itemname { font-weight: 500; }
+    .itemid, .cellkey { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; color: var(--ink-soft); }
+    .pager { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--ink-soft); }
+    .empty { padding: 16px 14px; color: var(--ink-soft); font-size: 12.5px; }
+
+    .msg { padding: 10px 13px; border-radius: var(--radius); font-size: 12.5px; margin: 0 0 12px; }
+    .msg.err { background: var(--warn-wash); color: var(--warn); border: 1px solid #e3c9c9; }
+    .msg.ok { background: var(--ok-wash); color: var(--ok); border: 1px solid #cadfd4; }
+    .msg.note { background: var(--tan-wash); border: 1px solid var(--line-strong); }
+    .msg ul { margin: 5px 0 0 18px; }
+
+    .chip { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 9px; margin-right: 4px; border: 1px solid var(--line-strong); }
+    .chip.freeze { background: var(--ai-wash); color: var(--ai); border-color: #d5cbe8; }
+    .chip.reject { background: var(--warn-wash); color: var(--warn); border-color: #e3c9c9; }
+    .chip.pending { background: var(--tan-wash); color: var(--tan-deep); }
+    .chip.prior { background: var(--ok-wash); color: var(--ok); border-color: #cadfd4; }
+
+    /* The work queue */
+    .queue { display: grid; grid-template-columns: repeat(auto-fill, minmax(224px, 1fr)); gap: 12px; }
+    .qcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 14px; }
+    .qcard .n { font-size: 27px; font-weight: 600; line-height: 1.1; font-variant-numeric: lining-nums tabular-nums; }
+    .qcard.act .n { color: var(--tan-deep); }
+    .qcard .what { font-weight: 600; margin: 2px 0 3px; }
+    .qcard .why { font-size: 11.5px; color: var(--ink-soft); }
+    .qcard .go { margin-top: 8px; }
+
+    /* Dials, and the rows a picker holds */
+    .dial { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .dial:last-child { border-bottom: none; }
+    .dial .name { font-weight: 600; }
+    .dial .help { font-size: 12px; color: var(--ink-soft); max-width: 70ch; }
+    .dial .derived { font-size: 11.5px; color: var(--tan-deep); margin-top: 3px; }
+    .dial input.num { width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
+    .dial input.txt { width: 220px; }
+    .dial input, .dial select {
+      font-family: var(--font-body); font-size: 12px; padding: 5px 8px; color: inherit;
+      border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel);
+    }
+    .dial input.changed, .dial select.changed { border-color: var(--tan); background: var(--tan-wash); }
+    .subhead { font-family: var(--font-display); font-size: 13px; font-weight: 600; margin: 14px 0 2px; padding-top: 8px; border-top: 1px solid var(--line); }
+    .subhead:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+    .kv { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 3px 12px; font-size: 12.5px; padding: 4px 0; }
+    .kv .k { color: var(--ink-soft); }
+
+    /* ---------- The save bar ---------- */
+    .savebar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      display: flex; align-items: center; gap: 10px; padding: 10px 20px;
+      background: var(--panel); border-top: 1px solid var(--line-strong);
+    }
+    .savebar input.note { flex: 1; font-family: var(--font-body); font-size: 12px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); }
+    .savebar .changecount { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>Operator</h1>
+    <span class="where" id="where">&mdash;</span>
+    <span class="spacer"></span>
+    <span class="sub" id="who"></span>
+    <button class="small" id="sign-in" type="button">Sign in</button>
+    <button class="small" id="sign-out" type="button" hidden>Sign out</button>
+  </div>
+  <form class="signin" id="sign-in-form" hidden autocomplete="on">
+    <label for="si-email">Email</label><input class="small" id="si-email" type="email" name="email" autocomplete="username" required style="width:240px" />
+    <label for="si-password">Password</label><input class="small" id="si-password" type="password" name="password" autocomplete="current-password" required style="width:200px" />
+    <button class="small" id="si-submit" type="submit">Sign in</button>
+    <button class="small" id="si-cancel" type="button">Cancel</button>
+    <span class="sub" id="si-error" role="alert"></span>
+  </form>
+
+  <div class="frame">
+    <aside class="rail">
+      <div class="group">
+        <h2>Context</h2>
+        <div class="field">
+          <label for="scope">Brand</label>
+          <input class="small" id="scope" list="scope-list" autocomplete="off" />
+          <datalist id="scope-list"></datalist>
+          <div class="count" id="scope-note"></div>
+        </div>
+        <div class="field">
+          <label for="slot-q">Find a slot</label>
+          <input class="small" id="slot-q" placeholder="hero, home, story&hellip;" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label for="slot">Slot</label>
+          <select class="small" id="slot"></select>
+          <div class="count" id="slot-count"></div>
+        </div>
+      </div>
+      <nav id="rail-views"></nav>
+    </aside>
+
+    <main>
+      <div class="head">
+        <h2 id="view-title">&mdash;</h2>
+        <div class="why" id="view-hint"></div>
+      </div>
+      <div id="messages"></div>
+      <div id="view"></div>
+    </main>
+  </div>
+
+  <div class="savebar" id="savebar" hidden>
+    <span class="changecount" id="changecount">No changes</span>
+    <input class="note" id="note" placeholder="What are you changing, and why? (recorded with the revision)" />
+    <button class="small" id="discard">Discard</button>
+    <button class="primary" id="save" disabled>Save</button>
+  </div>
+
+  <script src="/operator-session.js"></script>
+  <script src="/console/shell.js"></script>
+  <script src="/console/views.js"></script>
+</body>
+</html>
