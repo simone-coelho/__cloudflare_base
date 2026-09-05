@@ -5,7 +5,7 @@
 // at the first sign-in. This writes the account where it lives (doc 30) with a PBKDF2 hash, prints
 // the password once, and stores nothing readable anywhere.
 //
-//   node scripts/operator-seed.mjs --email ops@brand.test [--name "Operator"] [--admin] [--env staging] [--local]
+//   node scripts/operator-seed.mjs --email ops@brand.test [--name "Operator"] [--admin] [--env staging|production] [--db <d1 name>] [--local]
 //
 // The password is generated; pass --password to choose one. Needs wrangler logged in for a remote stamp.
 import { spawnSync } from 'node:child_process';
@@ -33,7 +33,7 @@ const perms = JSON.stringify(admin ? ['*'] : ['read']);
 const now = Date.now();
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 const sql = `INSERT INTO operator_accounts (id, email, name, roles, permissions, password_hash, must_change_password, disabled, created_at, updated_at) VALUES (${q(id)}, ${q(email)}, ${q(name)}, ${q(roles)}, ${q(perms)}, ${q(hash)}, 1, 0, ${now}, ${now});`;
-const db = envName === 'staging' ? 'coach-demo-db-staging' : 'coach-demo-db';
+const db = arg('--db', '') || (envName === 'staging' ? 'coach-demo-db-staging' : envName ? `edge-platform-db-${envName}` : 'coach-demo-db');
 const args = ['wrangler', 'd1', 'execute', db, '--command', sql, local ? '--local' : '--remote', ...(envName ? ['--env', envName] : [])];
 const r = spawnSync('npx', args, { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' });
 if (r.status !== 0) { console.error('the insert failed:', (r.stderr || r.stdout || '').split('\n').filter(Boolean).slice(-3).join(' | ')); process.exit(1); }

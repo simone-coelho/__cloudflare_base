@@ -3,12 +3,6 @@ main = "src/index.ts"
 compatibility_date = "2025-06-01"
 compatibility_flags = ["nodejs_compat"]
 
-# Named environments inherit NOTHING from the top level in Wrangler: no
-# bindings, no vars. Production still declares only a name and is therefore not
-# deployable; scripts/deploy.sh refuses it. Staging is declared in full at the
-# bottom of this file (CW10).
-[env.production]
-name = "edge-platform-prod"
 
 # KV Namespaces
 [[kv_namespaces]]
@@ -304,6 +298,101 @@ database_id = "5849815f-37df-4a90-9975-704125e78f63"
 migrations_dir = "migrations"
 
 [env.staging.assets]
+directory = "public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# ── Production ────────────────────────────────────────────────────────────────
+# Provisioned with scripts/provision-stamp.sh production (2026-09-05). Mirrors staging with its own
+# stores; no screenshot route; CORS_ORIGINS and TENANTS are onboarding inputs per customer.
+[env.production]
+name = "edge-platform-production"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+# Enforced: SDK keys on /realtime and /v1, JWT on operator writes, CORS allow-list only.
+AUTH_MODE = "enforced"
+# The customer's site origins, comma-separated (`*.example.com` allowed): an onboarding input.
+# Empty means the worker answers only same-origin callers and the local dev server.
+CORS_ORIGINS = ""
+CONNECTOR_MODE = "mock"
+DECISION_SOURCE = "mock"
+ODP_API_HOST = "https://api.zaius.com"
+JWT_ISSUER = "edge-platform-production"
+JWT_AUDIENCE = "edge-platform-api"
+OPTIMIZELY_SDK_KEY = "RLCQEiLW3ifgVH5fwuHoo"
+OPTIMIZELY_DATAFILE_URL = "https://cdn.optimizely.com/datafiles/RLCQEiLW3ifgVH5fwuHoo.json"
+REFLEX_HOST = "session"   # the object host takes this path once it passes the acceptance run (doc 31)
+
+[[env.production.kv_namespaces]]
+binding = "CACHE"
+id = "d7d72b2f530a40aba4bc0adf127e5607"
+
+[[env.production.kv_namespaces]]
+binding = "SESSIONS"
+id = "0864e56a2a6e4ca5828746c380ef8873"
+
+[[env.production.r2_buckets]]
+binding = "STORAGE"
+bucket_name = "edge-platform-storage-production"
+
+[[env.production.queues.producers]]
+queue = "events-production"
+binding = "EVENT_QUEUE"
+
+[[env.production.queues.consumers]]
+queue = "events-production"
+max_batch_size = 100
+max_batch_timeout = 3
+max_concurrency = 6
+max_retries = 2
+
+[[env.production.durable_objects.bindings]]
+name = "STATE_MANAGER"
+class_name = "StateManager"
+
+[[env.production.durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
+[[env.production.durable_objects.bindings]]
+name = "PERSONALIZATION_WEBSOCKET"
+class_name = "PersonalizationWebSocket"
+
+[[env.production.durable_objects.bindings]]
+name = "OpalAgent"
+class_name = "OpalAgent"
+
+[[env.production.durable_objects.bindings]]
+name = "SHOPPER_REFLEX"
+class_name = "ShopperReflex"
+
+[[env.production.durable_objects.bindings]]
+name = "MERIDIAN_REFLEX"
+class_name = "MeridianReflex"
+
+[[env.production.durable_objects.bindings]]
+name = "REGION_TREND"
+class_name = "RegionTrend"
+
+[[env.production.durable_objects.bindings]]
+name = "DECISION_RING"
+class_name = "DecisionRing"
+
+[[env.production.durable_objects.bindings]]
+name = "LEARN_STATS"
+class_name = "LearnStats"
+
+[[env.production.analytics_engine_datasets]]
+binding = "ANALYTICS"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "edge-platform-db-production"
+database_id = "e55d131f-cc5a-4a9b-adba-da5fd709c3ad"
+migrations_dir = "migrations"
+
+[env.production.assets]
 directory = "public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"

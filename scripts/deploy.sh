@@ -30,10 +30,14 @@ if [ "$ENVIRONMENT" = "staging" ]; then
     npm run build:meridian && npm run build:sdk
     wrangler deploy --env staging
 elif [ "$ENVIRONMENT" = "production" ]; then
-    echo "❌ '--env production' is not deployable yet: [env.production] in wrangler.toml declares only a name."
-    echo "   Named envs do NOT inherit bindings — this would ship a worker with no KV/R2/D1/DO/Queues/vars."
-    echo "   Deploy the default worker instead (npm run deploy). See docs/deployment/01-deploy.md."
-    exit 1
+    # Provisioned 2026-09-05 with scripts/provision-stamp.sh production; an unfilled id means it was not.
+    if grep -Eq '^\s*(id|database_id)\s*=\s*"<production-' wrangler.toml; then
+        echo "❌ production is declared but not provisioned: placeholders remain in [env.production]."
+        echo "   Run: bash scripts/provision-stamp.sh production --admin-email <you>"
+        exit 1
+    fi
+    npm run build:meridian && npm run build:sdk
+    wrangler deploy --env production
 else
     # The demo worker runs AUTH_MODE=enforced (wrangler.toml [vars]). Enforced with
     # no SDK_KEYS secret means every shopper call answers 401 and every demo page
