@@ -350,6 +350,8 @@
   }
 
   // ---------- dials ----------
+  /** Append only what is there: a conditional row that is null must not become the word "null" on the page. */
+  function put(host, ...items) { host.append(...items.flat().filter((x) => x !== null && x !== undefined && x !== false)); }
   function dial(name, help, control, derived) {
     return h('div', { class: 'dial' }, h('div', {}, h('div', { class: 'name' }, name), h('div', { class: 'help' }, help), derived ? h('div', { class: 'derived' }, derived) : null), control);
   }
@@ -374,7 +376,7 @@
     if (!S.slot) { host.append(h('div', { class: 'empty' }, 'No slots configured for this scope.')); return; }
     const d = dials(); const base = `slots.${S.slot}`;
     const gamma = d.gamma ?? 0;
-    host.append(
+    put(host,
       dial('γ, the trust dial', 'How much the learned lift moves the score: score_final = score_base × lift^γ. At 0 the lift is computed and shown on every receipt and changes nothing; at 1 it applies in full.', num(d.gamma, (v) => { if (v === undefined) delete d.gamma; else d.gamma = v; scheduleCheck(); }, `${base}.gamma`, { min: 0, max: 1, step: 0.05 }), gamma === 0 ? 'Shadow: learning is visible and inert.' : `A lift of 1.4 becomes ×${r3(Math.pow(1.4, gamma))} on the score.`),
       dial('Reward', 'The outcome this slot learns against. One reward per slot; the others still land in the ledger.', sel(d.reward || 'click', REWARDS.map((r) => [r, r.replace('_', ' ')]), (v) => { d.reward = v; scheduleCheck(); }, `${base}.reward`)),
       dial('Objective', 'What a success is worth. Unit counts it; revenue weighs it by the order value; margin by the margin the feed gives, or the value when it gives none. Revenue and margin need a reward that carries a value: purchase or add to bag.', sel(d.objective || 'unit', [['unit', 'unit'], ['revenue', 'revenue'], ['margin', 'margin']], (v) => { if (v === 'unit') delete d.objective; else d.objective = v; scheduleCheck(); }, `${base}.objective`)),
@@ -400,7 +402,7 @@
     const st = D.stats || null;
     const reg = D.regional || null;
     const ext = D.external || null;
-    host.append(
+    put(host,
       h('div', { class: 'subhead' }, 'Holdout'),
       dial('Share', 'The fraction of visitors held out of learning, assigned by a stable hash. The default arm sees the site’s own defaults; a no_learning arm sees personalization without lift.', num(D.holdout.share, (v) => { D.holdout.share = v ?? 0; scheduleCheck(); }, 'holdout.share', { min: 0, max: 1, step: 0.01 }), `${pct(D.holdout.share)} of visitors`),
       dial('Arms', 'Which comparison arms exist beside the personalized one.', sel(D.holdout.arms.includes('no_learning') ? 'both' : 'default', [['default', 'default only'], ['both', 'default and no_learning']], (v) => { D.holdout.arms = v === 'both' ? ['default', 'no_learning'] : ['default']; scheduleCheck(); }, 'holdout.arms')),
