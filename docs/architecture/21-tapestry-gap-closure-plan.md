@@ -338,7 +338,15 @@ Route: `GET /v1/:tenant/decisions/snapshot?page=home&visitorId=…`, mounted at 
   in 30 seconds**, with Simone's operator token, after one more lesson: on the real platform KV answers
   a read with what it held up to a minute ago, so the run reads a slot's evidence from the object's own
   publish answer (`POST learn/publish` returns the snapshot it wrote) and checks the serving path once
-  for shape. Nothing in the engine needed changing on staging.
+  for shape. Nothing in the engine needed changing on staging. **Then Simone's correction, which stands
+  as the rule:** a script is an engineering check, not the acceptance; the acceptance is what a person does
+  on the product's own screens. Done the same day in a real browser on staging: the storefront in SDK mode,
+  "Start", "Next" three times, the hero's button "Shop the Tabby", a product, "Add to Bag", "Checkout",
+  "Place order" (the order step, new that day, sends the purchase through the SDK); then the learning
+  console, "Sign in" with an email and a password (new that day; no token is ever typed), slot "chero ·
+  home" showing the press as a success, slot "story · home" showing "reward purchase weighed by revenue"
+  and the order's $375 on the row of the story that featured the bag, 27 seconds after the order. The
+  exact steps are in kit 04.
 - **`scripts/import-content.mjs`** is the manual adapter for the demo catalog: it pulls Meridian's
   eighteen pieces through the seam into a scope and writes a slot document whose names and weights match
   the catalog's vocabulary, so the full chain, SDK to decision, can be shown on the dev server today.

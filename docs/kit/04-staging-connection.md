@@ -56,6 +56,18 @@ environment is M4; it uses the same requests as this check, extended to the loop
 node scripts/acceptance-run.mjs --base https://<stamp> --token <operator jwt> --sdk-key <site key>
 ```
 
+The walk a person does, driven in a real browser on staging on 2026-09-05 before it was written down:
+
+1. Open `/storefront?sdk=1`. Press "Start ►" at the top of the right-hand panel, then "Next ►" three times. The home view shows the hero the engine decided, "The Tabby Shop".
+2. Press the hero's button, "Shop the Tabby". The product list opens.
+3. Press the first product. Press "Add to Bag". The bag opens.
+4. Press "Checkout". The bag shows the items and the total. Press "Place order". The bag reads "Order placed" with the order number and the total.
+5. Open `/learning.html?scope=coach`. Press "Sign in" at the top right and sign in with the email and password we issued. The bar reads "Signed in as" and your name.
+6. In the "Slot" dropdown choose "chero · home": the hero's row shows the press as a success. Choose "story · home": the line above the grid reads "reward purchase weighed by revenue", and the row of the story that featured the bag you bought shows the order's value as its success. If a row has not moved yet, wait a minute and reload.
+
+The engineering check behind the same loop is `scripts/acceptance-run.mjs`, which runs against any stamp
+with an operator token and is what CI would run:
+
 It seeds an acceptance page on the scope (rolled forward to what it was at the end), walks one shopper
 through a decision, two product views, a click and a purchase, and asserts 55 exact facts on the way:
 the receipt's stage, freshness, fatigue and diversity terms, the out-of-stock gate, the ring, the credit
