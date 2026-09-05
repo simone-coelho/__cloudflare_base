@@ -593,6 +593,4 @@
     er.pending = again.ok ? again.data.pending || [] : er.pending;
     C.render();
   }
-
-  C.start();
 })();

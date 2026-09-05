@@ -357,6 +357,9 @@
     canEdit, freshToken, render, loadSlots, slotList, slotEntry, state: S,
     fmt, dec, pct, r3, when, plural,
     view: (def) => { VIEWS.push(def); },
-    start: () => start().catch(fail),
   };
+
+  // Every view file registers synchronously as it loads; this runs after the
+  // last of them, so no file has to be told that it is the last one.
+  setTimeout(() => start().catch(fail), 0);
 })();

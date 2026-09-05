@@ -54,6 +54,19 @@ const CELLS = {
 };
 const EMPTY = { ok: true, tenant: 'coach', brand: 'coach', slot: 'chero', version: 0, published: false, level: 'pooled', total: 0, offset: 0, limit: 50, rows: [], cursor: null };
 
+const REFLEX = {
+  version: 'reflex-demo-v1+r3', tauMs: 60_000, K: 1.8, thetaIn: 0.6, thetaOut: 0.45, epsilon: 0.0001, maxValuesPerDim: 24,
+  weights: { product_view: 1, pdp_view: 1, view_product: 1, wishlist: 2, wishlist_add: 2, add_to_wishlist: 2, save_for_later: 2, add_to_cart: 3, cart_add: 3, purchase: 5, checkout: 5, order_complete: 5, content_impression: 0, content_dwell: 0.5, content_click: 1, video_complete: 2, tick: 0, try_on: 4 },
+  dimensions: [
+    { key: 'line', source: 'line' },
+    { key: 'priceBand', source: 'price_usd', derive: 'band', cuts: [150, 400], labels: ['entry', 'core', 'elevated'], tauMs: 150_000 },
+  ],
+};
+const SLOTS_DOC = { version: 'slots-coach', pages: { home: [
+  { slot: 'chero', take: 2, weights: { line: 0.35 }, freshness: { weight: 0.2, halfLifeDays: 14 } },
+  { slot: 'merch', take: 1, weights: {}, pinnedPieceId: 'cnt_m' },
+] } };
+
 const LEARN_OFF = { holdout: { share: 0.05, salt: '', arms: ['default'] }, slots: {} };
 const LEARN_ON = {
   holdout: { share: 0.1, salt: 'x', arms: ['default', 'no_learning'] },
@@ -88,6 +101,27 @@ function platform(fx: Fixtures, log: string[], saved: Array<Record<string, unkno
       return signed
         ? okJson({ ok: true, retentionDays: 90, pending: [{ visitor_id: 'vis-1', erased_at: 1_788_000_000_000, actor: 'ops', rows_removed: 4, objects_rewritten: 1 }] })
         : okJson({ ok: false, error: 'unauthorized' }, 401);
+    }
+    if (u.pathname === '/config/reflex/validate') return okJson({ valid: true, errors: [], warnings: [] });
+    if (u.pathname === '/config/reflex') {
+      if (init?.method === 'PATCH') {
+        saved.push(JSON.parse(init.body || '{}') as Record<string, unknown>);
+        return okJson({ ok: true, revision: 4, version: 'reflex-demo-v1+r4', config: REFLEX });
+      }
+      return okJson({
+        scope: 'coach', source: 'stored', revision: 3, actor: 'ops', note: 'first', at: 1_788_000_000_000,
+        config: REFLEX, inherited: ['content_click', 'content_dwell', 'content_impression', 'video_complete'],
+        warnings: ["dimension 'contentType' (source 'contentType') is in the compiled default and not in this document"],
+      });
+    }
+    if (u.pathname === '/content/slots/validate') return okJson({ valid: true, errors: [] });
+    if (u.pathname === '/content/slots') {
+      if (init?.method === 'PUT') {
+        const body = JSON.parse(init.body || '{}') as Record<string, unknown>;
+        saved.push(body);
+        return okJson({ ok: true, revision: 5, document: body.document });
+      }
+      return okJson({ ok: true, source: 'stored', revision: 4, document: SLOTS_DOC });
     }
     if (u.pathname === '/content/learn/validate') return okJson({ valid: true, errors: [] });
     if (u.pathname === '/content/learn') {
@@ -130,6 +164,7 @@ async function open(fx: Fixtures = {}, hash = '#/work?scope=coach') {
   w.eval(pub('operator-session.js'));
   w.eval(pub('console/shell.js'));
   w.eval(pub('console/views.js'));
+  w.eval(pub('console/views-config.js'));
   const settle = async () => { for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 12)); };
   /** Long enough for the dials' validator, which waits 350ms after the last keystroke. */
   const settleChecked = async () => { await new Promise((r) => setTimeout(r, 450)); await settle(); };
@@ -340,6 +375,76 @@ describe('the operator application, rendered', () => {
       await c.goTo('#/lift?scope=coach');
       expect(c.text()).toContain('Choose a slot in the rail');
       expect(c.log.filter((l) => l.includes('/lift/rows'))).toEqual([]);
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('the interests screen speaks in shopper terms, names what is inherited, and saves a patch', async () => {
+    const c = await open();
+    try {
+      await c.signIn();
+      await c.goTo('#/interests?scope=coach');
+      expect(c.$('view-title').textContent).toBe('What the engine notices, and how fast it forgets');
+      // A number is shown as its consequence, not as a symbol.
+      expect(c.text()).toContain('Interest halves about every 41.6 seconds of inactivity');
+      expect(c.text()).toContain('halfway to full strength after about 1.8 product views');
+      // The behaviour groups, with the raw event names underneath for the data team.
+      expect(c.text()).toContain('Viewed a product');
+      expect(c.text()).toContain('product_view, pdp_view, view_product');
+      // An action the engine knows and this screen does not group is still tunable.
+      expect(c.text()).toContain('try_on');
+      // Weights the document never wrote down, and the interest it does not carry.
+      expect(c.text()).toContain('Inherited from the shipped defaults');
+      expect(c.text()).toContain("dimension 'contentType'");
+      // The hysteresis band, drawn to scale, with the sentence that says why the gap is there.
+      expect(c.text()).toContain('leaves 0.45');
+      expect(c.text()).toContain('joins 0.6');
+      expect(c.text()).toContain('stops a shopper flickering in and out');
+      // The registry, with the half-life it inherits computed per interest.
+      expect(c.text()).toContain('1.7 minutes');   // priceBand's own 150s tau
+      expect(c.text()).not.toMatch(STRAY);
+
+      const K = c.w.document.querySelector('[data-focus-key="K"]')!;
+      K.value = '3';
+      K.dispatchEvent(new (c.w.window as unknown as { Event: new (t: string, o: object) => unknown }).Event('input', { bubbles: true }));
+      await c.settleChecked();
+      expect(c.$('changecount').textContent).toBe('1 change');
+      c.$('note').value = 'slower to commit';
+      c.$('save').click(); await c.settle(); await c.settle();
+      // A patch, not the whole document: only what moved.
+      expect(c.saved[0]).toEqual({ patch: { K: 3 }, note: 'slower to commit' });
+      expect(c.text()).toContain('Saved as revision 4. Live now, on reflex-demo-v1+r4.');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('a slot rule switched on writes its defaults, and off leaves nothing behind', async () => {
+    const c = await open();
+    try {
+      await c.signIn();
+      await c.goTo('#/rules?scope=coach&slot=chero');
+      expect(c.text()).toContain('chero on home, from revision 4 of the slot document');
+      expect(c.text()).toContain('Where the shopper is in her journey');
+      expect(c.text()).toContain('How fresh the piece is');
+      expect(c.text()).toContain('How often she has already seen it');
+      expect(c.text()).toContain('How much of one thing it may show');
+      // Freshness is on in the fixture, so its own settings are there; stage is off.
+      expect(c.text()).toContain('The bonus halves every');
+      expect(c.text()).not.toContain('A piece for another stage is worth');
+      expect(c.text()).not.toMatch(STRAY);
+
+      // Switching a rule on writes the defaults a person can then change.
+      const sw = c.all('#view select').find((x) => x.dataset.focusKey === 'rule:Where the shopper is in her journey')!;
+      sw.value = 'on';
+      sw.dispatchEvent(new (c.w.window as unknown as { Event: new (t: string, o: object) => unknown }).Event('change', { bubbles: true }));
+      await c.settleChecked();
+      expect(c.text()).toContain('A piece for another stage is worth');
+      expect(c.text()).toContain('50% of what it would otherwise score');
+      c.$('save').click(); await c.settle(); await c.settle();
+      const doc = c.saved[0].document as { pages: { home: Array<Record<string, unknown>> } };
+      expect(doc.pages.home[0].stage).toEqual({ outOfStage: 0.5, inStage: 1.2 });
+      expect(doc.pages.home[0].freshness).toEqual({ weight: 0.2, halfLifeDays: 14 });
+      expect(c.text()).toContain('Saved as slots revision 5');
       expect(c.text()).not.toMatch(STRAY);
     } finally { c.close(); }
   });

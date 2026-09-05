@@ -163,6 +163,24 @@
     .kv { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 3px 12px; font-size: 12.5px; padding: 4px 0; }
     .kv .k { color: var(--ink-soft); }
 
+    /* The hysteresis band: two marks and the gap between them, to scale. */
+    .band { margin-top: 12px; }
+    .band .track { position: relative; height: 30px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
+    .band .fill { position: absolute; top: 0; bottom: 0; background: var(--tan-wash); }
+    .band .mark { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); }
+    .band .mark.out { background: var(--ink-soft); }
+    .band .lab { position: absolute; top: 33px; font-size: 11px; color: var(--ink-soft); transform: translateX(-50%); white-space: nowrap; }
+    .band .caption { margin-top: 30px; font-size: 12px; color: var(--ink-soft); max-width: 74ch; }
+    .dimname { font-weight: 500; }
+    .dimsrc { font-size: 11px; color: var(--ink-soft); }
+    .inherit { color: var(--ink-soft); }
+    .unit { font-size: 11px; color: var(--ink-soft); text-align: right; margin-top: 3px; }
+    tbody input.num {
+      width: 88px; text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-body);
+      font-size: 12px; padding: 4px 6px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel);
+    }
+    tbody input.num.changed { border-color: var(--tan); background: var(--tan-wash); }
+
     /* ---------- The save bar ---------- */
     .savebar {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
@@ -233,5 +251,6 @@
   <script src="/operator-session.js"></script>
   <script src="/console/shell.js"></script>
   <script src="/console/views.js"></script>
+  <script src="/console/views-config.js"></script>
 </body>
 </html>
