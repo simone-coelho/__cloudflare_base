@@ -38,7 +38,7 @@ describe('the receipt as sentences', () => {
     expect(r).toMatchObject({ item: 'cnt_a', customer_item_id: 'CCH-001', title: 'The Tabby Shop', slot: 'hero', arm: 'personalized', score_base: 0.445 });
     expect(r.why).toEqual([
       'Interest matched: line Tabby (interest 0.7 × weight 0.35).',
-      "What is trending in US-NY contributed 0.05 (the region's share of the score: 0.4).",
+      "What is trending in US-NY contributed 0.05 (the trend's share of the score: 0.4).",
       'Their model (MODEL, v7) scored it 0.6; at weight 0.3 that added 0.18.',
       'Journey stage: made for a shopper who is considering: +0.2.',
       'Freshness: 1 days old, freshness at 0.906 of new: +0.181.',
@@ -50,6 +50,8 @@ describe('the receipt as sentences', () => {
   });
 
   it('a pin, a holdout default, a cold shopper, a frozen lift and an explored pick each say what they are', () => {
+    const everywhere = receiptOf({ ...base, explain: { ...base.explain, regional: { region: '*', level: 'everyone', lambda: 0.14, version: 1, events: 9, contribution: 0.16 } as DecisionRecord['explain']['regional'] } }, names);
+    expect(everywhere.why[1]).toBe("What is trending everywhere contributed 0.16 (the trend's share of the score: 0.14).");
     expect(receiptOf({ ...base, authority: 'pin' }, names).why).toEqual(['Pinned by the merchandiser for this slot; the engine never ranked it.']);
     expect(receiptOf({ ...base, arm: 'default' }, names).why).toEqual(["The site's own defaults, no personalization: this shopper is in the holdout's default arm."]);
     const cold = receiptOf({ ...base, explain: { drivers: [], score_base: 0, lift: null, score_final: 0, note: 'no signal yet — the slot default (catalogue order)' } }, names);
