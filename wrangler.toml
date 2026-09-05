@@ -203,8 +203,13 @@ ip = "localhost"
 # Cron schedules (the scheduled handler in src/index.ts matches on the pattern):
 #   0 * * * *  regional trend roll-up, per tenant in TREND_ROLLUP_TENANTS (doc 22 §5.2)
 #   0 3 * * *  the learning cycle: proposals or bounded moves for slots in assisted / autonomous mode (doc 22 §7.3)
+# Persisted, queryable logs in the dashboard for every environment (src/ops/monitor.ts writes one line per run).
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 [triggers]
-crons = ["0 * * * *", "0 3 * * *"]
+crons = ["*/5 * * * *", "0 * * * *", "0 3 * * *"]   # the monitor every five minutes; the trend rollup hourly; the day report, the autonomy cycle and the erasure rewrite at 03:00 UTC
 
 [env.staging]
 name = "edge-platform-staging"

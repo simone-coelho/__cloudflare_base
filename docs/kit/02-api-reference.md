@@ -195,6 +195,23 @@ creates accounts.
 
 Accounts, sessions and the audit live in the platform's database (D1), with thirty days of point-in-time restore. Passwords are stored as PBKDF2 hashes and refresh tokens as their SHA-256; nothing in the platform can read either back.
 
-## 7. Health
+## 7. Health and the platform's own monitor
 
-`GET /health` answers `200` with the state of each store when the platform is up.
+`GET /health` answers `200` with the state of each store when the platform is up; it reads and never
+writes.
+
+Every five minutes the platform checks itself, per tenant, from inside the worker: the two KV stores, the
+object store, the database, a statistics object, and a real decision served to a synthetic visitor who
+withholds tracking, so the whole path runs and nothing is written. The result is kept, logged, and sent
+to analytics.
+
+| Route | Answer |
+|---|---|
+| `GET /v1/{tenant}/monitor` | the last self-check: `at`, `ok`, `checks` (each with `ok`, `ms`, `detail`), `problems` as sentences, and whether an alert webhook is configured. Operator token |
+| `POST /v1/{tenant}/monitor` | runs a check now and answers with it. Operator token |
+
+When a check fails, or a decision takes longer than 1,500 ms, the platform posts an alert to the
+webhook configured as the worker secret `ALERT_WEBHOOK_URL`: any URL that accepts a JSON post (a chat
+channel's incoming webhook, an on-call tool). The post carries `text` (one sentence), `environment`,
+`tenant`, `at`, `problems` and `checks`. One alert per half hour per tenant while the problem lasts; a
+recovery is always sent. Without the secret, nobody is paged and the result is still kept and logged.

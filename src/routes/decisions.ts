@@ -21,6 +21,7 @@ import type { OutcomeRecord } from '@/ledger/records';
 import { readTrend, regionKeyOf, rollupTenant } from '@/reflex/regionTrend';
 import { liftArchiveKey, liftKey, ringName, statsName } from '@/learn/fan';
 import { decideProposal, EMPTY_PROPOSALS, PROPOSALS_KIND, runCycle, type ProposalsDoc } from '@/learn/cycle';
+import { monitorKey, runMonitor, type MonitorResult } from '@/ops/monitor';
 import { read } from '@/config/versionedStore';
 import { replayDecision } from '@/learn/replay';
 import { countDayObjects, reportKey, runReport, REPORT_MAX_OBJECTS, type DayReport, type ReportPolicy } from '@/learn/report';
@@ -168,6 +169,25 @@ decisionRoutes.get('/:tenant/learn/exploring', async (c) => {
   const page = pageOf(exploringRows(snapshot, names, floor), cur ? cur.o : 0, limit);
   const cursor = page.next === null ? null : encodeCursor({ v: snapshot.version, o: page.next, level: 'exploring', limit });
   return c.json({ ok: true, tenant, brand, slot, version: snapshot.version, published: true, mode: ex?.mode ?? 'off', share: ex?.share ?? 0, floor, total: page.total, offset: page.offset, limit: page.limit, rows: page.rows, cursor });
+});
+
+/**
+ * GET /v1/:tenant/monitor: the platform's last self-check for the tenant, and POST runs one now. Operator token.
+ */
+decisionRoutes.get('/:tenant/monitor', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  let last: MonitorResult | null = null;
+  try { last = (await c.env.CACHE.get(monitorKey(tenant), 'json')) as MonitorResult | null; } catch { last = null; }
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, tenant, last, alerts: (c.env.ALERT_WEBHOOK_URL ?? '').trim() ? 'webhook configured' : 'no webhook configured: results are kept and logged, nobody is paged' });
+});
+decisionRoutes.post('/:tenant/monitor', jwt({ required: true }), async (c) => {
+  const tenant = (c.req.param('tenant') ?? '').trim();
+  if (!TENANT.test(tenant)) return c.json({ ok: false, error: 'tenant must be a short slug' }, 400);
+  const result = await runMonitor(c.env, tenant);
+  c.header('Cache-Control', 'no-store');
+  return c.json({ ok: true, result });
 });
 
 /**

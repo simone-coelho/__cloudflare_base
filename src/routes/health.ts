@@ -29,19 +29,14 @@ health.get('/', async (c) => {
     await c.env.STORAGE.head('health-check');
     checks.services.storage = 'healthy';
   } catch (error) {
-    checks.services.storage = 'healthy';
-  }
-
-  try {
-    await c.env.EVENT_QUEUE.send({
-      type: 'health-check',
-      timestamp: Date.now(),
-    });
-    checks.services.queue = 'healthy';
-  } catch (error) {
-    checks.services.queue = 'unhealthy';
+    checks.services.storage = 'unhealthy';   // it used to say healthy here too, which is not a check
     checks.status = 'degraded';
   }
+
+  // The queue is not probed by enqueueing: every health call used to add a message the consumer then
+  // logged as an unknown event. The binding's presence is the check; the monitor exercises the real path.
+  checks.services.queue = c.env.EVENT_QUEUE ? 'bound' : 'unbound';
+  if (!c.env.EVENT_QUEUE) checks.status = 'degraded';
 
   try {
     const id = c.env.STATE_MANAGER.idFromName('health-check');

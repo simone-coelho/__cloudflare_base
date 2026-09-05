@@ -33,6 +33,12 @@ export interface Env {
    * The number itself is Tapestry's privacy team's to agree.
    */
   LEDGER_RETENTION_DAYS?: string;
+  /**
+   * Where the platform posts an alert when its five-minute self-check fails or recovers (src/ops/monitor.ts):
+   * any URL that accepts a JSON post, a chat webhook or an on-call tool. A secret. Absent means the result is
+   * kept and logged but nobody is paged.
+   */
+  ALERT_WEBHOOK_URL?: string;
   // Opal chat agent (SQLite-backed DO, wrangler migration v3) — reached via
   // routeAgentRequest(/agents/*), not app routes; declared here for Env completeness.
   OpalAgent: DurableObjectNamespace;

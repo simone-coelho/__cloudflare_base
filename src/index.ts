@@ -1,6 +1,7 @@
 import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';
 import { retentionDays, rewriteErasures, type R2Erasable } from '@/ledger/erasure';
 import { runReport } from '@/learn/report';
+import { runMonitor } from '@/ops/monitor';
 import { read } from '@/config/versionedStore';
 import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
 import type { LearnConfig } from '@/content/types';
@@ -187,9 +188,16 @@ export default {
   },
   scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
     switch (event.cron) {
-      case '*/5 * * * *':
-        console.log('Running 5-minute scheduled task');
+      case '*/5 * * * *': {
+        // The platform watching itself (src/ops/monitor.ts): every store, and a real decision, per tenant.
+        for (const tenant of tenantConfig(env).provisioned) {
+          ctx.waitUntil(runMonitor(env, tenant).then(
+            (r) => { if (!r.ok) console.error(`monitor ${tenant}: ${r.problems.join('; ')}`); },
+            (e) => console.error(`monitor ${tenant} failed to run`, e),
+          ));
+        }
         break;
+      }
       case '0 3 * * *': {
         // Doc 22 §11: the autonomy cycle, daily. Slots in configured mode are untouched.
         const tenants = (env.TREND_ROLLUP_TENANTS ?? 'coach').split(',').map((t) => t.trim()).filter(Boolean);
