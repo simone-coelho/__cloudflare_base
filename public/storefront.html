@@ -323,6 +323,10 @@
         .cart-subtotal { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 16px; }
         .cart-subtotal .st-val { font-variant-numeric: tabular-nums; font-weight: 600; }
         .cart-checkout { width: 100%; background: var(--ink); color: var(--paper); border: none; padding: 16px; font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; border-radius: var(--radius); }
+        .order-review { font-size: 13px; color: var(--muted); margin: 0 0 12px; line-height: 1.5; }
+        .order-done { padding-top: 6px; font-size: 14px; line-height: 1.5; }
+        .order-done strong { display: block; font-size: 15px; margin-bottom: 4px; }
+        .order-done .order-id { font-variant-numeric: tabular-nums; color: var(--muted); }
 
         /* ════════════════════════════════════════════════════════════════════
          * SPOTLIGHT — dim the page, punch a hole around the target, pulse it.
@@ -1589,7 +1593,12 @@
         <div class="cart-foot">
             <div id="cart-nudge"></div>
             <div class="cart-subtotal"><span>Subtotal</span><span class="st-val" id="cart-subtotal">$0</span></div>
-            <button class="cart-checkout" onclick="store.beginCheckout()">Checkout</button>
+            <button class="cart-checkout" id="cart-checkout" onclick="store.beginCheckout()">Checkout</button>
+            <div id="cart-order" hidden>
+                <div class="order-review" id="order-review"></div>
+                <button class="cart-checkout" id="cart-place-order" onclick="store.placeOrder()">Place order</button>
+            </div>
+            <div class="order-done" id="order-done" hidden></div>
         </div>
     </div>
 

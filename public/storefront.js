@@ -1731,6 +1731,7 @@ class CoachStorefront {
     addToCart(id, opts) {
         const p = this.byId.get(id);
         if (!p) return;
+        this._orderDone = false;
         this.cart.push({ id, color: (p.colors && p.colors[0]) || '' });
         const badge = document.getElementById('cart-count');
         badge.textContent = this.cart.length;
@@ -1755,7 +1756,11 @@ class CoachStorefront {
     }
     renderCart() {
         const wrap = document.getElementById('cart-items');
-        if (this.cart.length === 0) wrap.innerHTML = '<div class="cart-empty">Your bag is empty.</div>';
+        // The order step shows only between Checkout and Place order; the confirmation only after an order, until the next add.
+        document.getElementById('cart-order').hidden = true;
+        document.getElementById('cart-checkout').hidden = false;
+        document.getElementById('order-done').hidden = !(this._orderDone && this.cart.length === 0);
+        if (this.cart.length === 0) wrap.innerHTML = this._orderDone ? '' : '<div class="cart-empty">Your bag is empty.</div>';
         else wrap.innerHTML = this.cart.map((ci) => {
             const p = this.byId.get(ci.id); if (!p) return '';
             return `<div class="cart-item">
@@ -1785,8 +1790,36 @@ class CoachStorefront {
     openCart() { document.getElementById('mini-cart').classList.add('open'); document.getElementById('cart-overlay').classList.add('open'); }
     closeCart() { document.getElementById('mini-cart').classList.remove('open'); document.getElementById('cart-overlay').classList.remove('open'); }
     beginCheckout() {
+        if (this.cart.length === 0) return;
         const v = this.cart.reduce((s, ci) => s + (this.byId.get(ci.id)?.price_usd || 0), 0);
         this.sendAction('add_to_cart', { eventName: 'begin_checkout', cartValue: v, line: 'Tabby' });
+        // The order step: what is in the bag and what it comes to, then one press places it.
+        document.getElementById('order-review').textContent = `${this.cart.length} item${this.cart.length === 1 ? '' : 's'} · $${v.toLocaleString()} · complimentary delivery`;
+        document.getElementById('cart-checkout').hidden = true;
+        document.getElementById('cart-order').hidden = false;
+    }
+    /* The order: the conversion event, the one outcome learning cannot do without. In the SDK's transport it
+       goes through the SDK's own purchase call, with the products in the bag, so a story that featured one of
+       them is credited with the order's value; in the page's own transport the same envelope goes the old way. */
+    placeOrder() {
+        if (this.cart.length === 0) return;
+        const items = this.cart.map((ci) => { const p = this.byId.get(ci.id); return { productId: ci.id, quantity: 1, price: p ? p.price_usd : 0, line: p ? p.line : '', name: p ? p.name : ci.id }; });
+        const value = items.reduce((sum, it) => sum + (it.price || 0), 0);
+        const orderId = 'ord-' + Date.now().toString(36);
+        const order = { orderId, value, currency: 'USD', items };
+        const label = `${orderId} · $${value.toLocaleString()}`;
+        if (this.sdk) {
+            this.eventCount++;
+            const t0 = performance.now();
+            this.sdk.emit.purchase(order).then((u) => this.logEvent('post', 'purchase', label, Math.round(performance.now() - t0), u)).catch(() => {});
+        } else {
+            this.sendAction('purchase', order, { label }).catch(() => {});
+        }
+        this.lastOrder = { ...order, at: Date.now() };
+        this._orderDone = true;
+        this.cart = [];
+        this.renderCart();
+        document.getElementById('order-done').innerHTML = `<strong>Order placed</strong><span class="order-id">${orderId}</span> · $${value.toLocaleString()} · ${items.length} item${items.length === 1 ? '' : 's'}`;
     }
     toggleWish(id, ev) {
         if (ev) ev.stopPropagation();
@@ -4407,7 +4440,7 @@ class CoachStorefront {
         this.segments = []; this.decisions = {}; this.journeyStage = 'early';
         this.recommendations = null; this.sortOrder = null; this.personalized = false;
         this.eventCount = 0; this.productViews = 0; this.viewedLineCounts = {}; this.dominantLine = null;
-        this.cart = []; this.wishlist = new Set(); this.currentLook = null;
+        this.cart = []; this.wishlist = new Set(); this.currentLook = null; this._orderDone = false; this.lastOrder = null;
         this.opalAudience = null; this.eventLog = [];
         // reset the new panels/modals so a fresh run starts clean
         this.hideTransientPanels();

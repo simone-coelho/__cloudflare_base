@@ -46,4 +46,17 @@ const slots = { version: `slots-${scope}`, pages: { home: [
 ] } };
 const sl = await put('slots', slots, 'slots for the Coach content catalog: merch pinned to the arrivals campaign, chero and story weighted on the registry');
 console.log('slots:', JSON.stringify({ ok: sl.ok, revision: sl.revision, version: sl.version, errors: sl.errors }));
-process.exit(sl.ok ? 0 : 1);
+if (!sl.ok) process.exit(1);
+
+// What each slot learns against. The hero learns clicks; the stories learn purchases weighed by the
+// order's value, which is what a story that featured the bag is for. Merged over the learn document in
+// force, so dials an operator has set (trust, exploration, the holdout) are kept.
+const current = await (await fetch(`${base}/content/learn?scope=${scope}`, { headers: auth })).json();
+const learnDoc = current.document || {};
+const learnSlots = { ...(learnDoc.slots || {}) };
+for (const [slot, dials] of Object.entries({ chero: { reward: 'click', objective: 'unit' }, story: { reward: 'purchase', objective: 'revenue' }, carousel: { reward: 'click', objective: 'unit' } })) {
+  learnSlots[slot] = { ...(learnSlots[slot] || {}), ...dials };
+}
+const ln = await put('learn', { ...learnDoc, slots: learnSlots }, 'what each slot learns against: the hero clicks, the stories purchases weighed by revenue');
+console.log('learn:', JSON.stringify({ ok: ln.ok, revision: ln.revision, version: ln.version, errors: ln.errors }));
+process.exit(ln.ok ? 0 : 1);
