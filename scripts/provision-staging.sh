@@ -41,12 +41,8 @@ for s in JWT_SECRET SDK_KEYS GEMINI_API_KEY; do
 done
 echo "   (optional) ODP_PUBLIC_KEY, SHOT_TOKEN: wrangler secret put NAME --env $ENV"
 
-echo "▸ Operator login for /auth/login (the tuning UI and operator writes need a token)"
+echo "▸ The first operator, an admin, written to D1 as a hash (doc 30)"
 read -rp "   Operator email: " EMAIL
-PASS=$(openssl rand -base64 18 | tr -d '/+=' | cut -c1-20)
-npx wrangler kv key put "user:$EMAIL" \
-  "{\"id\":\"ops-1\",\"email\":\"$EMAIL\",\"name\":\"Operator\",\"password\":\"$PASS\",\"roles\":[\"operator\"],\"permissions\":[]}" \
-  --binding CACHE --env $ENV --remote
-echo "   Operator password (store it now, it is not shown again): $PASS"
+node scripts/operator-seed.mjs --email "$EMAIL" --name "Operator" --admin --env $ENV
 
 echo "✅ Staging provisioned. Deploy with: bash scripts/deploy.sh staging"
