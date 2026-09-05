@@ -12,6 +12,11 @@
 //   TENANTS='{"provisioned":["coach","holdout-proof"],"hosts":{}}'
 // and restart wrangler afterwards; .dev.vars was not hot-reloaded here.
 //
+// Two local-dev facts learned the hard way (2026-09-05): the local queue is not
+// persisted, so a restart loses what it held; and a wrangler hot reload while a
+// batch is in flight can leave the local broker stalled for good. Do not edit
+// source while this runs, and read the "ledger holds N of M" line.
+//
 // What it found on 2026-09-04, recorded in plan 21: the learning policy's
 // session scope credits nothing because decisions carry the server session id
 // and outcomes the client's; the no_learning arm runs at the slot's gamma, not
@@ -109,10 +114,23 @@ for (const arm of ['personalized', 'default', 'no_learning']) {
 console.log('   clicked:', JSON.stringify(clicked));
 ok(clicked.personalized > 0 && clicked.default > 0, 'clicks accepted on both arms');
 
-// 4. The report reads R2, never Analytics Engine. Give the queue a moment to flush the batches.
-console.log('\n4. build the day report');
-await sleep(8000);
-const rep = await j(`/v1/${SCOPE}/learn/report`, { method: 'POST', body: { date } });
+// 4. The report reads R2, never Analytics Engine, and R2 is fed by the queue, which is
+// asynchronous: a decision set is nine records and the local broker delivers a batch every
+// few hundred milliseconds, so sixty visitors are tens of seconds of drain. Wait for the
+// ledger to hold every click before judging the credits; a report built early is not wrong,
+// it is early, and the proof says how long the drain took.
+console.log('\n4. build the day report, once the ledger holds every click');
+const totalClicked = clicked.personalized + clicked.default + clicked.no_learning;
+const outcomesBefore = ((await j(`/v1/${SCOPE}/learn/report`, { method: 'POST', body: { date } })).body?.report?.holdout?.chero ?? []).reduce((n, a) => n + (a.credited ?? 0), 0);
+const t0 = Date.now();
+let rep = null;
+for (;;) {
+  rep = await j(`/v1/${SCOPE}/learn/report`, { method: 'POST', body: { date } });
+  // What is judged below is credits per arm, so that is what the drain waits for.
+  const seen = (rep.body?.report?.holdout?.chero ?? []).reduce((n, a) => n + (a.credited ?? 0), 0) - outcomesBefore;
+  if (seen >= totalClicked || Date.now() - t0 > 120_000) { console.log(`   ledger holds ${seen} of ${totalClicked} clicks after ${Math.round((Date.now() - t0) / 1000)}s`); break; }
+  await sleep(3000);
+}
 ok(rep.status === 200 && rep.body?.ok, 'report built', JSON.stringify(rep.body).slice(0, 200));
 const R = rep.body?.report ?? {};
 const arms = R.holdout?.chero ?? [];
