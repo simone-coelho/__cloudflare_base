@@ -48,6 +48,7 @@
     .bar.signin { border-top: 1px solid var(--line); padding-top: 10px; padding-bottom: 10px; }
     #who { margin-right: 4px; white-space: nowrap; }
     .bar button.small { white-space: nowrap; }
+    #account-notice .msg code { font-family: var(--mono, ui-monospace, monospace); font-size: 14px; letter-spacing: .04em; user-select: all; }
     th .sym { display: block; font-family: var(--mono, ui-monospace, monospace); font-size: 10px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-soft); margin-top: 2px; }
     #si-error { color: var(--warn); }
     input.token {
@@ -229,8 +230,17 @@
     <span class="stamp" id="stamp">&mdash;</span>
     <span class="sub" id="who"></span>
     <button class="small" id="sign-in" type="button">Sign in</button>
+    <button class="small" id="change-password" type="button" hidden>Change password</button>
     <button class="small" id="sign-out" type="button" hidden>Sign out</button>
   </div>
+  <form class="bar signin" id="password-form" hidden autocomplete="on">
+    <span class="sub" id="pw-note"></span>
+    <label for="pw-current">Current password</label><input class="small" id="pw-current" type="password" name="current-password" autocomplete="current-password" required style="width:180px" />
+    <label for="pw-new">New password</label><input class="small" id="pw-new" type="password" name="new-password" autocomplete="new-password" required style="width:180px" />
+    <button class="small" id="pw-submit" type="submit">Change</button>
+    <button class="small" id="pw-cancel" type="button">Cancel</button>
+    <span class="sub" id="pw-error" role="alert"></span>
+  </form>
   <form class="bar signin" id="sign-in-form" hidden autocomplete="on">
     <label for="si-email">Email</label><input class="small" id="si-email" type="email" name="email" autocomplete="username" required style="width:240px" />
     <label for="si-password">Password</label><input class="small" id="si-password" type="password" name="password" autocomplete="current-password" required style="width:200px" />
@@ -316,6 +326,20 @@
           <div class="subhead">Prior document revisions</div>
           <div id="prior-history"></div>
         </div>
+      </section>
+
+      <section class="card" id="accounts-section" hidden>
+        <h2>Accounts</h2>
+        <div class="why">Who may sign in here. A new account gets a temporary password, shown to you once; the person chooses their own at their first sign-in. Resetting hands over a new temporary password and ends the person&rsquo;s sessions; disabling keeps the account but refuses sign-in.</div>
+        <form class="bar signin" id="account-form" autocomplete="off">
+          <label for="acct-email">Email</label><input class="small" id="acct-email" type="email" required style="width:240px" />
+          <label for="acct-name">Name</label><input class="small" id="acct-name" type="text" required minlength="2" style="width:180px" />
+          <label for="acct-role">Role</label><select id="acct-role"><option value="operator">operator</option><option value="admin">admin</option></select>
+          <button class="small" id="acct-submit" type="submit">Add account</button>
+          <span class="sub" id="acct-error" role="alert"></span>
+        </form>
+        <div id="account-notice"></div>
+        <div class="table-wrap" id="accounts"></div>
       </section>
     </main>
 

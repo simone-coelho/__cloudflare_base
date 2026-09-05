@@ -30,7 +30,15 @@
   async function signIn(email, password) {
     const r = await post('/auth/login', { email: String(email || '').trim(), password: String(password || '') });
     if (!r.ok || !r.data.accessToken) throw new Error(r.status === 401 || r.status === 400 ? 'That email and password were not accepted.' : 'Sign-in did not go through. Try again in a moment.');
-    save({ accessToken: r.data.accessToken, refreshToken: r.data.refreshToken, exp: expOf(r.data.accessToken), user: r.data.user || null });
+    save({ accessToken: r.data.accessToken, refreshToken: r.data.refreshToken, exp: expOf(r.data.accessToken), user: r.data.user || null, mustChangePassword: Boolean(r.data.mustChangePassword) });
+    return s.user;
+  }
+  /** Change the signed-in person's own password. Resolves when done; rejects with a sentence. */
+  async function changePassword(currentPassword, newPassword) {
+    if (!s) throw new Error('Sign in first.');
+    const r = await post('/auth/password', { currentPassword: String(currentPassword || ''), newPassword: String(newPassword || '') }, { authorization: `Bearer ${s.accessToken}` });
+    if (!r.ok) throw new Error(r.data.error || 'The password was not changed.');
+    save({ ...s, user: r.data.user || s.user, mustChangePassword: false });
     return s.user;
   }
   /** Renew the access token with the refresh token. A refusal ends the session. */
@@ -38,7 +46,7 @@
     if (!s || !s.refreshToken) return null;
     const r = await post('/auth/refresh', { refreshToken: s.refreshToken });
     if (!r.ok || !r.data.accessToken) { save(null); return null; }
-    save({ ...s, accessToken: r.data.accessToken, exp: expOf(r.data.accessToken), user: r.data.user || s.user });
+    save({ ...s, accessToken: r.data.accessToken, exp: expOf(r.data.accessToken), user: r.data.user || s.user, mustChangePassword: r.data.mustChangePassword !== undefined ? Boolean(r.data.mustChangePassword) : Boolean(s.mustChangePassword) });
     return s.accessToken;
   }
   /** The current access token, renewed first when it is about to run out; empty when signed out. */
@@ -59,9 +67,11 @@
   if (s && Date.now() > (s.exp || 0) - 60_000) refresh().catch(() => {});
 
   window.OperatorSession = {
-    signIn, signOut, token, refresh,
+    signIn, signOut, token, refresh, changePassword,
     user: () => (s ? s.user : null),
     signedIn: () => Boolean(s),
+    isAdmin: () => Boolean(s && s.user && Array.isArray(s.user.roles) && s.user.roles.includes('admin')),
+    mustChangePassword: () => Boolean(s && s.mustChangePassword),
     onChange: (f) => { listeners.push(f); },
   };
 })();

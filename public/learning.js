@@ -136,7 +136,7 @@
     // The session hands over the current token, renewed first when it is about to run out.
     if (window.OperatorSession && OperatorSession.signedIn()) S.token = await OperatorSession.token();
     await loadSlots();
-    await Promise.all([loadLearn(), loadLearnHistory(), loadPriorHistory(), loadLift(), loadProposals(), loadReport($('report-date').value)]);
+    await Promise.all([loadLearn(), loadLearnHistory(), loadPriorHistory(), loadLift(), loadProposals(), loadReport($('report-date').value), loadAccounts()]);
     render();
   }
 
@@ -444,7 +444,7 @@
     $('changecount').textContent = n ? `${n} change${n === 1 ? '' : 's'}${S.checking ? ', checking…' : ''}` : 'No changes';
     $('save').disabled = !n || !canEdit() || S.errors.length > 0 || S.checking;
   }
-  function render() { renderBar(); renderMessages(); renderGrid(); renderExploring(); renderReport(); renderHistory(); renderSlotDials(); renderGlobalDials(); renderSession(); }
+  function render() { renderBar(); renderMessages(); renderGrid(); renderExploring(); renderReport(); renderHistory(); renderSlotDials(); renderGlobalDials(); renderSession(); renderAccounts(); }
 
   // ---------- wiring ----------
   $('report-date').value = new Date().toISOString().slice(0, 10);
@@ -455,9 +455,72 @@
     const on = Boolean(window.OperatorSession && OperatorSession.signedIn());
     const u = on ? OperatorSession.user() : null;
     $('who').textContent = u ? `Signed in as ${u.name || u.email}` : '';
-    $('sign-in').hidden = on; $('sign-out').hidden = !on;
+    $('sign-in').hidden = on; $('sign-out').hidden = !on; $('change-password').hidden = !on;
     if (on) $('sign-in-form').hidden = true;
+    // A temporary password is for one sign-in: the person chooses their own before anything else.
+    const must = on && OperatorSession.mustChangePassword();
+    if (must) { $('password-form').hidden = false; $('pw-note').textContent = 'You signed in with a temporary password. Choose your own to continue.'; }
+    else if (!on) { $('password-form').hidden = true; }
+    const admin = on && OperatorSession.isAdmin();
+    $('accounts-section').hidden = !admin;
+    if (!admin) { S.accounts = null; }
   }
+  $('change-password').addEventListener('click', () => { $('password-form').hidden = false; $('pw-note').textContent = ''; $('pw-error').textContent = ''; $('pw-current').focus(); });
+  $('pw-cancel').addEventListener('click', () => { if (!(window.OperatorSession && OperatorSession.mustChangePassword())) $('password-form').hidden = true; });
+  $('password-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); $('pw-submit').disabled = true; $('pw-error').textContent = '';
+    try {
+      await OperatorSession.changePassword($('pw-current').value, $('pw-new').value);
+      $('pw-current').value = ''; $('pw-new').value = ''; $('password-form').hidden = true;
+      flash('Your password is changed.'); renderSession();
+    } catch (err) { $('pw-error').textContent = err && err.message ? err.message : 'The password was not changed.'; }
+    finally { $('pw-submit').disabled = false; }
+  });
+
+  // ---------- accounts, an admin's ----------
+  S.accounts = null;
+  async function loadAccounts() {
+    if (!(window.OperatorSession && OperatorSession.isAdmin())) { S.accounts = null; return; }
+    const { ok, data } = await json('/auth/users');
+    S.accounts = ok ? data.users || [] : null;
+  }
+  function notice(html) { const host = clear($('account-notice')); if (html) host.append(h('div', { class: 'msg ok', html })); }
+  const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  function renderAccounts() {
+    const host = clear($('accounts'));
+    if (!(window.OperatorSession && OperatorSession.isAdmin())) return;
+    if (!S.accounts) { host.append(h('div', { class: 'empty' }, 'Could not read the accounts.')); return; }
+    const me = OperatorSession.user() || {};
+    const rows = S.accounts.map((a) => {
+      const state = a.disabled ? 'disabled' : a.mustChangePassword ? 'temporary password, not yet changed' : 'active';
+      const act = async (label, run) => { try { await run(); await loadAccounts(); renderAccounts(); } catch (err) { notice(`<strong>${esc(label)} did not go through.</strong> ${esc(err && err.message ? err.message : '')}`); } };
+      const call = async (method, path, body) => { const r = await json(path, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) }); if (!r.ok) throw new Error(r.data.error || `${method} ${path} answered ${r.status}`); return r.data; };
+      const self = a.id === me.id;
+      return h('tr', {},
+        h('td', {}, h('div', { class: 'itemname' }, a.email), h('div', { class: 'itemid' }, a.name)),
+        h('td', {}, (a.roles || []).join(', ')),
+        h('td', {}, state),
+        h('td', {}, a.lastSignInAt ? when(a.lastSignInAt) : 'never'),
+        h('td', {},
+          h('button', { class: 'small', title: 'A new temporary password, shown once; ends their sessions', onclick: () => act('Reset', async () => { const d = await call('POST', `/auth/users/${encodeURIComponent(a.id)}/reset`); notice(`<strong>Temporary password for ${esc(a.email)}:</strong> <code>${esc(d.temporaryPassword)}</code>. Give it to them in person; it is shown once. They choose their own at their next sign-in.`); }) }, 'Reset password'), ' ',
+          self ? null : h('button', { class: 'small', onclick: () => act(a.disabled ? 'Enable' : 'Disable', async () => { await call('PATCH', `/auth/users/${encodeURIComponent(a.id)}`, { disabled: !a.disabled }); notice(''); }) }, a.disabled ? 'Enable' : 'Disable'), ' ',
+          self ? null : h('button', { class: 'small warn', onclick: () => { if (confirm(`Remove the account ${a.email}? This cannot be undone.`)) act('Remove', async () => { await call('DELETE', `/auth/users/${encodeURIComponent(a.id)}`); notice(''); }); } }, 'Remove'),
+        ),
+      );
+    });
+    host.append(h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Account'), h('th', {}, 'Role'), h('th', {}, 'State'), h('th', {}, 'Last sign-in'), h('th', {}, 'Actions'))), h('tbody', {}, ...rows)));
+  }
+  $('account-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); $('acct-submit').disabled = true; $('acct-error').textContent = '';
+    try {
+      const r = await json('/auth/users', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: $('acct-email').value.trim(), name: $('acct-name').value.trim(), roles: [$('acct-role').value] }) });
+      if (!r.ok) throw new Error(r.data.error || 'The account was not created.');
+      notice(`<strong>Account created for ${esc(r.data.user.email)}.</strong> Temporary password: <code>${esc(r.data.temporaryPassword)}</code>. Give it to them in person; it is shown once. They choose their own at their first sign-in.`);
+      $('acct-email').value = ''; $('acct-name').value = '';
+      await loadAccounts(); renderAccounts();
+    } catch (err) { $('acct-error').textContent = err && err.message ? err.message : 'The account was not created.'; }
+    finally { $('acct-submit').disabled = false; }
+  });
   $('sign-in').addEventListener('click', () => { $('sign-in-form').hidden = false; $('si-error').textContent = ''; $('si-email').focus(); });
   $('si-cancel').addEventListener('click', () => { $('sign-in-form').hidden = true; });
   $('sign-in-form').addEventListener('submit', async (e) => {

@@ -53,11 +53,24 @@ function platform(fx: Fixtures, log: string[]) {
     if (p.startsWith('/v1/coach/learn/report')) return okJson({ ok: false, error: 'no report built for that day yet' }, 404);
     if (p === '/auth/login') {
       const b = JSON.parse(init?.body || '{}') as { email?: string; password?: string };
-      if (b.password !== 'right-password') return okJson({ error: 'Invalid credentials' }, 401);
-      const token = 'h.' + Buffer.from(JSON.stringify({ sub: 'ops-1', exp: Math.floor(Date.now() / 1000) + 900 })).toString('base64url') + '.s';
-      return okJson({ accessToken: token, refreshToken: 'r', user: { id: 'ops-1', email: b.email, name: 'Test Operator', roles: ['operator'] }, expiresIn: 900 });
+      const admin = b.email === 'admin@brand.test';
+      const temp = b.password === 'temporary-pw-16';
+      if (b.password !== 'right-password' && !temp) return okJson({ error: 'Invalid credentials' }, 401);
+      const token = 'h.' + Buffer.from(JSON.stringify({ sub: admin ? 'ops-0' : 'ops-1', exp: Math.floor(Date.now() / 1000) + 900 })).toString('base64url') + '.s';
+      return okJson({ accessToken: token, refreshToken: 'r', user: { id: admin ? 'ops-0' : 'ops-1', email: b.email, name: admin ? 'Test Admin' : 'Test Operator', roles: admin ? ['operator', 'admin'] : ['operator'] }, mustChangePassword: temp, expiresIn: 900 });
     }
     if (p === '/auth/logout') return okJson({ success: true });
+    if (p === '/auth/password') {
+      const b = JSON.parse(init?.body || '{}') as { currentPassword?: string; newPassword?: string };
+      if (!signed) return okJson({ error: 'Authorization token required' }, 401);
+      if ((b.newPassword || '').length < 10) return okJson({ error: 'A password needs at least ten characters.' }, 400);
+      return okJson({ ok: true, user: { id: 'ops-1', email: 'ops@brand.test', name: 'Test Operator', roles: ['operator'] } });
+    }
+    if (p === '/auth/users' && !init?.body) return signed ? okJson({ ok: true, users: [{ id: 'ops-0', email: 'admin@brand.test', name: 'Test Admin', roles: ['operator', 'admin'], disabled: false, mustChangePassword: false, createdAt: 1, lastSignInAt: 1_788_000_000_000 }, { id: 'ops-1', email: 'ops@brand.test', name: 'Test Operator', roles: ['operator'], disabled: false, mustChangePassword: true, createdAt: 1, lastSignInAt: null }] }) : okJson({ error: 'Authorization token required' }, 401);
+    if (p === '/auth/users' && init?.body) {
+      const b = JSON.parse(init.body) as { email: string; name: string; roles?: string[] };
+      return okJson({ ok: true, user: { id: 'ops-2', email: b.email, name: b.name, roles: b.roles || ['operator'], disabled: false, mustChangePassword: true, createdAt: 2, lastSignInAt: null }, temporaryPassword: 'Ab3dEf7hJk2mNp4q' }, 201);
+    }
     return okJson({ ok: false, error: `unstubbed ${p}` }, 404);
   };
 }
@@ -139,6 +152,54 @@ describe('the learning console, rendered', () => {
       for (const label of ['Share', 'Floor', 'Step', 'Bounds', 'Minimum exposures', 'Pinned dimensions']) expect(slot).toContain(label);
       for (const label of ['K, the blend constant', 'Minimum events', 'Ref', 'Budget']) expect(global).toContain(label);
       expect(c.$('grid-count').textContent).toContain('reward purchase weighed by revenue');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('an admin sees the Accounts section and creates an account whose temporary password is shown once; an operator sees no such section', async () => {
+    const c = await openConsole({ learn: learnOff, snapshot });
+    try {
+      await c.signIn('right-password');                      // an operator
+      expect(c.$('accounts-section').hidden).toBe(true);
+      expect(c.$('change-password').hidden).toBe(false);
+      c.$('sign-out').click(); await c.settle(); await c.settle();
+      c.$('sign-in').click(); await c.settle();
+      c.$('si-email').value = 'admin@brand.test'; c.$('si-password').value = 'right-password';
+      c.$('sign-in-form').dispatchEvent(new (c.w.window as unknown as { Event: new (t: string, o: object) => unknown }).Event('submit', { bubbles: true, cancelable: true }));
+      await c.settle(); await c.settle(); await c.settle();
+      expect(c.$('who').textContent).toBe('Signed in as Test Admin');
+      expect(c.$('accounts-section').hidden).toBe(false);
+      const table = c.$('accounts').textContent || '';
+      expect(table).toContain('admin@brand.test'); expect(table).toContain('ops@brand.test'); expect(table).toContain('temporary password, not yet changed');
+      c.$('acct-email').value = 'merch@brand.test'; c.$('acct-name').value = 'Merchandiser';
+      c.$('account-form').dispatchEvent(new (c.w.window as unknown as { Event: new (t: string, o: object) => unknown }).Event('submit', { bubbles: true, cancelable: true }));
+      await c.settle(); await c.settle();
+      const note = c.$('account-notice').textContent || '';
+      expect(note).toContain('Account created for merch@brand.test');
+      expect(note).toContain('Ab3dEf7hJk2mNp4q');
+      expect(note).toContain('shown once');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('a person on a temporary password is made to choose their own before anything else', async () => {
+    const c = await openConsole({ learn: learnOff, snapshot });
+    try {
+      await c.signIn('temporary-pw-16');
+      expect(c.$('who').textContent).toBe('Signed in as Test Operator');
+      expect(c.$('password-form').hidden).toBe(false);
+      expect(c.$('pw-note').textContent).toBe('You signed in with a temporary password. Choose your own to continue.');
+      c.$('pw-cancel').click(); await c.settle();
+      expect(c.$('password-form').hidden).toBe(false);            // no way around it
+      c.$('pw-current').value = 'temporary-pw-16'; c.$('pw-new').value = 'short';
+      c.$('password-form').dispatchEvent(new (c.w.window as unknown as { Event: new (t: string, o: object) => unknown }).Event('submit', { bubbles: true, cancelable: true }));
+      await c.settle(); await c.settle();
+      expect(c.$('pw-error').textContent).toBe('A password needs at least ten characters.');
+      c.$('pw-new').value = 'a fine long password';
+      c.$('password-form').dispatchEvent(new (c.w.window as unknown as { Event: new (t: string, o: object) => unknown }).Event('submit', { bubbles: true, cancelable: true }));
+      await c.settle(); await c.settle();
+      expect(c.$('password-form').hidden).toBe(true);
+      expect(c.text()).toContain('Your password is changed.');
       expect(c.text()).not.toMatch(STRAY);
     } finally { c.close(); }
   });
