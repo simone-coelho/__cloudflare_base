@@ -45,6 +45,9 @@
     }
     .badge.stored { background: var(--ok-wash); color: var(--ok); }
     .badge.compiled { background: var(--ai-wash); color: var(--ai); }
+    .bar.signin { border-top: 1px solid var(--line); padding-top: 10px; padding-bottom: 10px; }
+    #who { margin-right: 4px; }
+    #si-error { color: var(--warn); }
     input.token {
       font-family: var(--font-body); font-size: 12px; padding: 6px 9px; width: 190px;
       border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper);
@@ -222,8 +225,17 @@
     <label for="slot">Slot</label><select id="slot"></select>
     <span class="badge" id="source">loading</span>
     <span class="stamp" id="stamp">&mdash;</span>
-    <input class="token" id="token" type="password" placeholder="Operator token to edit" autocomplete="off" />
+    <span class="sub" id="who"></span>
+    <button class="small" id="sign-in" type="button">Sign in</button>
+    <button class="small" id="sign-out" type="button" hidden>Sign out</button>
   </div>
+  <form class="bar signin" id="sign-in-form" hidden autocomplete="on">
+    <label for="si-email">Email</label><input class="small" id="si-email" type="email" name="email" autocomplete="username" required style="width:240px" />
+    <label for="si-password">Password</label><input class="small" id="si-password" type="password" name="password" autocomplete="current-password" required style="width:200px" />
+    <button class="small" id="si-submit" type="submit">Sign in</button>
+    <button class="small" id="si-cancel" type="button">Cancel</button>
+    <span class="sub" id="si-error" role="alert"></span>
+  </form>
 
   <div class="wrap">
     <main>
@@ -329,6 +341,7 @@
     <button class="primary" id="save" disabled>Save</button>
   </div>
 
+  <script src="/operator-session.js"></script>
   <script src="/learning.js"></script>
 </body>
 </html>

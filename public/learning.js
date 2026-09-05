@@ -90,7 +90,7 @@
     const res = await fetch(api('/learn'), { method: 'PUT', headers: { 'content-type': 'application/json', ...auth() }, body: JSON.stringify({ document: S.draft, note }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) {
-      S.errors = res.status === 401 || res.status === 403 ? ['That token was not accepted. Changes need an operator token.'] : data.errors || ['The save was refused.'];
+      S.errors = res.status === 401 || res.status === 403 ? ['Your sign-in was not accepted. Sign in again to change the dials.'] : data.errors || ['The save was refused.'];
       render(); return;
     }
     S.learn = data.document; S.draft = copy(S.learn); S.learnRevision = data.revision; S.learnSource = 'stored';
@@ -126,13 +126,15 @@
   async function loadProposals() {
     const { ok, status, data } = await json(v1('/learn/proposals'), { headers: auth() });
     if (ok) { S.proposals = data.proposals || []; S.proposalsError = ''; }
-    else { S.proposals = null; S.proposalsError = status === 401 || status === 403 ? 'Proposals need an operator token to read.' : 'Could not read the proposals.'; }
+    else { S.proposals = null; S.proposalsError = status === 401 || status === 403 ? 'Sign in to read the proposals.' : 'Could not read the proposals.'; }
   }
   async function loadReport(date) {
     const { ok, data } = await json(v1(`/learn/report?date=${date}&brand=${encodeURIComponent(S.brand)}`));
     S.report = ok ? data.report : null;
   }
   async function load() {
+    // The session hands over the current token, renewed first when it is about to run out.
+    if (window.OperatorSession && OperatorSession.signedIn()) S.token = await OperatorSession.token();
     await loadSlots();
     await Promise.all([loadLearn(), loadLearnHistory(), loadPriorHistory(), loadLift(), loadProposals(), loadReport($('report-date').value)]);
     render();
@@ -180,7 +182,7 @@
     const res = await fetch(v1('/learn/report'), { method: 'POST', headers: { 'content-type': 'application/json', ...auth() }, body: JSON.stringify({ date, brand: S.brand, policies: chosen }) });
     const data = await res.json().catch(() => ({}));
     $('report-run').disabled = false; $('report-run').textContent = 'Build the report';
-    if (!res.ok || !data.ok) { S.reportError = res.status === 401 || res.status === 403 ? 'Building a report needs an operator token.' : data.error || 'The report could not be built.'; S.report = null; render(); return; }
+    if (!res.ok || !data.ok) { S.reportError = res.status === 401 || res.status === 403 ? 'Sign in to build a report.' : data.error || 'The report could not be built.'; S.report = null; render(); return; }
     S.reportError = ''; S.report = data.report; render();
   }
 
@@ -325,7 +327,7 @@
         h('div', { class: 'top' }, h('span', { class: 'n' }, `r${r.revision}`), r.version ? h('span', { class: 'v' }, r.version) : null, isCurrent ? h('span', { class: 'chip pending' }, 'in force') : null),
         h('div', { class: 'meta' }, `${r.actor || 'unknown'} · ${when(r.at)}`),
         r.note ? h('div', { class: 'note' }, r.note) : null,
-        h('div', {}, !isCurrent ? h('button', { class: 'link', onclick: () => showDiff(r.revision) }, d ? 'Hide the diff' : 'Diff against the document in force') : null, ' ', !isCurrent ? h('button', { class: 'link', disabled: !canEdit(), title: canEdit() ? '' : 'Needs an operator token', onclick: () => rollback(r.revision) }, 'Roll back to this') : null),
+        h('div', {}, !isCurrent ? h('button', { class: 'link', onclick: () => showDiff(r.revision) }, d ? 'Hide the diff' : 'Diff against the document in force') : null, ' ', !isCurrent ? h('button', { class: 'link', disabled: !canEdit(), title: canEdit() ? '' : 'Sign in to roll back', onclick: () => rollback(r.revision) }, 'Roll back to this') : null),
         d ? h('div', { class: 'diff' },
           h('div', { style: 'color:var(--ink-soft);margin-bottom:4px' }, `Compared with r${S.learnRevision}, the revision in force. Nothing changes until you roll back.`),
           ...(d.length ? d.map((x) => h('div', {}, h('span', {}, `${x.path}: `), h('span', { class: 'del' }, `in force ${JSON.stringify(x.to)}`), ' · ', h('span', { class: 'add' }, `r${r.revision} ${JSON.stringify(x.from)}`))) : [h('div', {}, 'Identical content: this revision and the one in force say the same thing.')])) : null,
@@ -425,7 +427,7 @@
     const host = clear($('messages'));
     if (S.flash) host.append(h('div', { class: 'msg ok' }, S.flash));
     if (S.errors.length) host.append(h('div', { class: 'msg err' }, 'The document as drafted was refused:', h('ul', {}, ...S.errors.map((e) => h('li', {}, e)))));
-    if (!canEdit()) host.append(h('div', { class: 'msg', style: 'background:var(--tan-wash);border:1px solid var(--line-strong)' }, 'Read-only. Paste an operator token in the top bar to change dials, controls, proposals or to build a report.'));
+    if (!canEdit()) host.append(h('div', { class: 'msg', style: 'background:var(--tan-wash);border:1px solid var(--line-strong)' }, 'Read-only. Sign in at the top right to change the dials, the controls and the proposals, or to build a report.'));
   }
   function renderBar() {
     const sl = $('slot');
@@ -439,15 +441,35 @@
     $('changecount').textContent = n ? `${n} change${n === 1 ? '' : 's'}${S.checking ? ', checking…' : ''}` : 'No changes';
     $('save').disabled = !n || !canEdit() || S.errors.length > 0 || S.checking;
   }
-  function render() { renderBar(); renderMessages(); renderGrid(); renderExploring(); renderReport(); renderHistory(); renderSlotDials(); renderGlobalDials(); }
+  function render() { renderBar(); renderMessages(); renderGrid(); renderExploring(); renderReport(); renderHistory(); renderSlotDials(); renderGlobalDials(); renderSession(); }
 
   // ---------- wiring ----------
   $('report-date').value = new Date().toISOString().slice(0, 10);
-  $('token').value = S.token;
-  // A pasted token changes what the page may read (the grid, the archive, the proposals, the report all
-  // need it under enforced access), so everything loads again, not only the proposals.
-  let tokenTimer = null;
-  $('token').addEventListener('input', (e) => { S.token = e.target.value.trim(); sessionStorage.setItem('tuning-token', S.token); render(); clearTimeout(tokenTimer); tokenTimer = setTimeout(() => { load().catch(() => render()); }, 300); });
+  // The sign-in. A person signs in once; the session renews itself; signing out ends it. What the page may
+  // read changes with it (the grid, the archive, the proposals, the report all need it under enforced
+  // access), so everything loads again after either.
+  function renderSession() {
+    const on = Boolean(window.OperatorSession && OperatorSession.signedIn());
+    const u = on ? OperatorSession.user() : null;
+    $('who').textContent = u ? `Signed in as ${u.name || u.email}` : '';
+    $('sign-in').hidden = on; $('sign-out').hidden = !on;
+    if (on) $('sign-in-form').hidden = true;
+  }
+  $('sign-in').addEventListener('click', () => { $('sign-in-form').hidden = false; $('si-error').textContent = ''; $('si-email').focus(); });
+  $('si-cancel').addEventListener('click', () => { $('sign-in-form').hidden = true; });
+  $('sign-in-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); $('si-submit').disabled = true; $('si-error').textContent = '';
+    try {
+      await OperatorSession.signIn($('si-email').value, $('si-password').value);
+      $('si-password').value = ''; $('sign-in-form').hidden = true;
+      S.token = await OperatorSession.token(); renderSession();
+      await load();
+    } catch (err) { $('si-error').textContent = err && err.message ? err.message : 'Sign-in did not go through.'; }
+    finally { $('si-submit').disabled = false; }
+  });
+  $('sign-out').addEventListener('click', async () => { await OperatorSession.signOut(); S.token = ''; renderSession(); await load().catch(() => render()); });
+  if (window.OperatorSession) OperatorSession.onChange(() => { S.token = sessionStorage.getItem('tuning-token') || ''; renderSession(); });
+  renderSession();
   $('slot').addEventListener('change', async (e) => { S.slot = e.target.value; S.archived = null; S.diffs = {}; await loadLift(); render(); });
   $('brand').addEventListener('change', async (e) => { S.brand = e.target.value.trim() || S.scope; S.archived = null; await Promise.all([loadLift(), loadReport($('report-date').value)]); render(); });
   $('grid-filter').addEventListener('input', (e) => { S.filter = e.target.value; renderGrid(); });

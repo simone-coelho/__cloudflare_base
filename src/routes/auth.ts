@@ -61,6 +61,9 @@ auth.post('/login', async (c) => {
     await c.env.SESSIONS.put(`refresh:${user.id}`, refreshToken, {
       expirationTtl: 7 * 24 * 60 * 60,
     });
+    // The refresh route finds the user by id. A provisioned login is stored by email only, so the
+    // mirror is written here, at the one moment both are known; without it no session could renew.
+    await c.env.CACHE.put(`user_id:${user.id}`, JSON.stringify(user));
     
     return c.json({
       accessToken,
