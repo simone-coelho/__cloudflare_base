@@ -149,8 +149,8 @@ migrations_dir = "migrations"
 ENVIRONMENT = "development"
 # Who may talk to this worker (src/middleware/edgeAccess.ts). ENFORCED since
 # 2026-09-03: the demo pages carry the site key `demo-site` in a <meta> and
-# /edge-auth.js attaches it; the presenter's operator token, pasted once into
-# /tuning.html, covers the merchandiser's writes. The audience needs nothing.
+# /edge-auth.js attaches it; the presenter signs in once on /tuning.html (email and
+# password, the shared sign-in) and that covers the merchandiser's writes. The audience needs nothing.
 # Requires the SDK_KEYS secret on the worker (deploy.sh refuses without it):
 #   printf '*:demo-site' | wrangler secret put SDK_KEYS
 # ROLLBACK IS THIS ONE LINE: set it to "open".

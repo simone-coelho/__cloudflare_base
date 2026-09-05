@@ -38,7 +38,7 @@
     draft: null,  // config as edited
     history: [],
     errors: [],
-    token: sessionStorage.getItem('tuning-token') || '',
+    token: '',    // from the shared sign-in (OperatorSession); it mirrors the token into sessionStorage for the dial and the auth shim
     checking: false,
   };
 
@@ -490,6 +490,11 @@
   // ── Load / save ────────────────────────────────────────────────────────────
 
   const canEdit = () => Boolean(S.token);
+  /** The current access token, renewed by the shared session when it is about to run out; empty when signed out. */
+  async function freshToken() {
+    S.token = window.OperatorSession && OperatorSession.signedIn() ? await OperatorSession.token() : '';
+    return S.token;
+  }
 
   async function load() {
     const [cfgRes, histRes] = await Promise.all([
@@ -507,6 +512,7 @@
   async function save() {
     const patch = buildPatch();
     if (!Object.keys(patch).length) return;
+    await freshToken();
     const res = await fetch(api('/reflex'), {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${S.token}` },
@@ -515,7 +521,7 @@
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.ok === false) {
       S.errors = data.errors || [res.status === 401
-        ? 'That token was not accepted. Changes need an operator token.'
+        ? 'Your sign-in was not accepted. Sign in again to save.'
         : 'The change was refused.'];
       render();
       return;
@@ -526,6 +532,7 @@
   }
 
   async function rollback(n) {
+    await freshToken();
     const res = await fetch(api(`/reflex/rollback/${n}`), {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${S.token}` },
@@ -575,7 +582,7 @@
         b.className = 'link';
         b.textContent = `Roll back to r${h.revision}`;
         b.disabled = !canEdit();
-        b.title = canEdit() ? '' : 'Needs an operator token';
+        b.title = canEdit() ? '' : 'Sign in to roll back';
         b.addEventListener('click', () => rollback(h.revision));
         d.appendChild(b);
       }
@@ -639,7 +646,7 @@
       r.className = 'msg';
       r.innerHTML = '<span class="readonly-note">Read only.</span> ' +
         'You can look at every setting and check a change before committing to it. ' +
-        'Paste an operator token in the top bar to save.';
+        'Sign in at the top right to save.';
       host.appendChild(r);
     }
   }
@@ -685,12 +692,28 @@
 
   // ── Wiring ─────────────────────────────────────────────────────────────────
 
-  $('token').value = S.token;
-  $('token').addEventListener('input', (e) => {
-    S.token = e.target.value.trim();
-    sessionStorage.setItem('tuning-token', S.token);
-    render();
+  // The sign-in: the same controls and the same shared module as the learning console. A person
+  // signs in once; the session renews itself; signing out ends it. What this page may do changes
+  // with it, so it re-renders after either.
+  function renderSession() {
+    const on = Boolean(window.OperatorSession && OperatorSession.signedIn());
+    const u = on ? OperatorSession.user() : null;
+    $('who').textContent = u ? `Signed in as ${u.name || u.email}` : '';
+    $('sign-in').hidden = on; $('sign-out').hidden = !on;
+    if (on) $('sign-in-form').hidden = true;
+  }
+  $('sign-in').addEventListener('click', () => { $('sign-in-form').hidden = false; $('si-error').textContent = ''; $('si-email').focus(); });
+  $('si-cancel').addEventListener('click', () => { $('sign-in-form').hidden = true; });
+  $('sign-in-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); $('si-submit').disabled = true; $('si-error').textContent = '';
+    try {
+      await OperatorSession.signIn($('si-email').value, $('si-password').value);
+      $('si-password').value = ''; $('sign-in-form').hidden = true;
+      await freshToken(); renderSession(); render();
+    } catch (err) { $('si-error').textContent = err && err.message ? err.message : 'Sign-in did not go through.'; }
+    finally { $('si-submit').disabled = false; }
   });
+  $('sign-out').addEventListener('click', async () => { await OperatorSession.signOut(); S.token = ''; renderSession(); render(); });
   $('save').addEventListener('click', save);
   $('reset').addEventListener('click', () => {
     S.draft = JSON.parse(JSON.stringify(S.base));
@@ -699,7 +722,7 @@
     render();
   });
 
-  load().catch(() => {
+  freshToken().then(() => { renderSession(); return load(); }).catch(() => {
     $('messages').innerHTML =
       '<div class="msg err">Could not load the current settings. The engine is still running on ' +
       'whatever is stored; this page just cannot see it.</div>';

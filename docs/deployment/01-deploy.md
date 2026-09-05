@@ -36,7 +36,7 @@ printf '*:demo-site' | wrangler secret put SDK_KEYS     # once per worker; `*` =
 
 The demo pages (`storefront.html`, `operator-console.html`) carry that site key in
 `<meta name="edge-sdk-key">` and `public/edge-auth.js` attaches it to every gated call, so the audience
-needs nothing. The presenter pastes the operator token once into `/tuning.html`; the shim carries it on the
+needs nothing. The presenter signs in once on `/tuning.html` (or the learning console) with the operator email and password; the shared sign-in carries the session and the shim carries it on the
 console's and the dial's writes. Locally the same allow-list lives in `.dev.vars` as `SDK_KEYS=*:demo-site`.
 
 | Surface | `open` (rollback) | `enforced` (default worker and staging) |
@@ -48,7 +48,7 @@ console's and the dial's writes. Locally the same allow-list lives in `.dev.vars
 | CORS | reflects any origin | only `CORS_ORIGINS` and the page's own origin |
 
 The SDK sends the key on every request once `createClient({ sdkKey })` is set. The operator token comes
-from `POST /auth/login` with the email and password `provision-staging.sh` seeded; paste it into the tuning
+from `POST /auth/login` with the email and password `provision-staging.sh` seeded; the tuning page and the learning console sign in on the page with the same email and password (since 2026-09-05; there is no token box). For a script, use the token from the login
 UI's token field.
 
 ## ⚠️ Production (do not use `--env production` yet)

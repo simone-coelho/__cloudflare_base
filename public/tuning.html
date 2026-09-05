@@ -45,10 +45,19 @@
     }
     .badge.stored { background: var(--ok-wash); color: var(--ok); }
     .badge.compiled { background: var(--ai-wash); color: var(--ai); }
-    input.token {
-      font-family: var(--font-body); font-size: 12px; padding: 6px 9px; width: 190px;
+    /* Sign-in: the same three controls as the learning console, one shared module behind them. */
+    .bar.signin { border-top: 1px solid var(--line); padding-top: 10px; padding-bottom: 10px; }
+    .bar label { font-size: 12px; color: var(--ink-soft); }
+    .bar input.small {
+      font-family: var(--font-body); font-size: 12px; padding: 6px 9px;
       border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper);
     }
+    button.small {
+      font-family: var(--font-body); font-size: 12px; padding: 6px 10px; white-space: nowrap; cursor: pointer;
+      border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper); color: inherit;
+    }
+    button.small[disabled] { color: var(--ink-soft); cursor: default; }
+    #si-error { color: var(--warn); }
 
     /* ---------- Layout ---------- */
     .wrap { display: grid; grid-template-columns: minmax(0,1fr) 330px; gap: 26px; padding: 26px 28px; align-items: start; }
@@ -157,8 +166,17 @@
     <a class="sub" id="to-learning" href="/learning.html" style="color:var(--ai)">Learning console &rarr;</a>
     <span class="badge" id="source">loading</span>
     <span class="stamp" id="stamp">&mdash;</span>
-    <input class="token" id="token" type="password" placeholder="Operator token to edit" autocomplete="off" />
+    <span class="sub" id="who"></span>
+    <button class="small" id="sign-in" type="button">Sign in</button>
+    <button class="small" id="sign-out" type="button" hidden>Sign out</button>
   </div>
+  <form class="bar signin" id="sign-in-form" hidden autocomplete="on">
+    <label for="si-email">Email</label><input class="small" id="si-email" type="email" name="email" autocomplete="username" required style="width:240px" />
+    <label for="si-password">Password</label><input class="small" id="si-password" type="password" name="password" autocomplete="current-password" required style="width:200px" />
+    <button class="small" id="si-submit" type="submit">Sign in</button>
+    <button class="small" id="si-cancel" type="button">Cancel</button>
+    <span class="sub" id="si-error" role="alert"></span>
+  </form>
 
   <div class="wrap">
     <main>
@@ -184,6 +202,7 @@
     <button class="primary" id="save" disabled>Save</button>
   </div>
 
+  <script src="/operator-session.js"></script>
   <script src="/tuning.js"></script>
 </body>
 </html>

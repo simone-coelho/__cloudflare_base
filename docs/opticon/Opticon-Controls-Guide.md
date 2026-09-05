@@ -129,15 +129,17 @@ The **now → after page map** rides beside the band and appears **only** when t
 ## The tuning dial and the operator token
 
 
-**Before the tuning beat: paste the operator token once.** The dial now writes through the product's own
-versioned store (`/content/slots`, the same store the tuning page and the merchandiser's console use), so
-it tunes *as the merchandiser* and needs the merchandiser's token. Open `/tuning.html` in the same browser,
-paste the token into the top-right field, and it is kept in `sessionStorage` for the session. The dial reads
-it from there. Without it the dial still turns and the hero still recomposes, and the dial's foot line says
-"no operator token in this browser; tuning is local for this run" — the beat works either way, but only with
-the token does the receipt carry a real revision (`…+r7`) instead of the local `+tuned` mark.
+**Before the tuning beat: sign in once.** The dial writes through the product's own versioned store
+(`/content/slots`, the same store the tuning page and the merchandiser's console use), so it tunes *as the
+merchandiser* and needs the merchandiser signed in. Open `/tuning.html` in the same browser, press **Sign in**
+at the top right, enter the operator email and password, press **Sign in** on the form. The bar then reads
+"Signed in as …", the session renews itself while the tab is open, and the dial reads it from there (the
+shared sign-in keeps the session in `sessionStorage`; nothing to paste). Without it the dial still turns and
+the hero still recomposes, and the dial's foot line says "no operator token in this browser; tuning is local
+for this run" — the beat works either way, but only signed in does the receipt carry a real revision (`…+r7`)
+instead of the local `+tuned` mark. (Changed 2026-09-05: the token box is gone.)
 
-**The worker is locked, and it costs the presenter nothing.** Since 2026-09-03 the demo worker runs `AUTH_MODE = "enforced"`: the shopper surface wants a site key and the merchandiser's writes want a token. The pages already carry the site key (`demo-site`, in a `<meta>` tag; `/edge-auth.js` attaches it to every call and to the socket), so the audience, the storefront and the console need nothing from you. The one thing you do is the paste above, once, and it covers the console's actions as well as the dial. If anything on stage answers 401, the rollback is one line in `wrangler.toml` (`AUTH_MODE = "open"`) and a deploy; the pages behave identically in either mode.
+**The worker is locked, and it costs the presenter nothing.** Since 2026-09-03 the demo worker runs `AUTH_MODE = "enforced"`: the shopper surface wants a site key and the merchandiser's writes want a token. The pages already carry the site key (`demo-site`, in a `<meta>` tag; `/edge-auth.js` attaches it to every call and to the socket), so the audience, the storefront and the console need nothing from you. The one thing you do is the sign-in above, once, and it covers the console's actions as well as the dial. If anything on stage answers 401, the rollback is one line in `wrangler.toml` (`AUTH_MODE = "open"`) and a deploy; the pages behave identically in either mode.
 
 What the room sees with the token in: turn a slider, the hero re-decides, and the foot reads
 "stored as revision 7 · meridian-retail-demo-v1+r7". A new visitor (Reset) writes the shipped weights

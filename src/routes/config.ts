@@ -49,8 +49,15 @@ function scopeOf(c: { req: { query: (k: string) => string | undefined } }): Conf
   return /^[a-z0-9][a-z0-9:_-]{0,63}$/i.test(raw) ? raw : DEFAULT_SCOPE;
 }
 
+/**
+ * Who made the change, for the revision's audit line. A person's name first,
+ * then their email, then the token's subject: the history is read by people,
+ * and "Local Ops changed the view weight" beats a UUID. Since 2026-09-05 the
+ * operator signs in on the page, so the token carries a name.
+ */
 function actorOf(c: { get: (k: 'auth') => AuthContext | undefined }): string {
-  return c.get('auth')?.user?.sub ?? c.get('auth')?.user?.email ?? 'unknown';
+  const u = c.get('auth')?.user as { sub?: string; email?: string; name?: string } | undefined;
+  return u?.name?.trim() || u?.email?.trim() || u?.sub || 'unknown';
 }
 
 // ── Reads ────────────────────────────────────────────────────────────────────
