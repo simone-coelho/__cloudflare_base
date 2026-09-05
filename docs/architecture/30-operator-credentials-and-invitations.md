@@ -1,4 +1,4 @@
-# 29 · Operator credentials: where they live, and how a person gets theirs
+# 30 · Operator credentials: where they live, and how a person gets theirs
 
 Written 2026-09-05 after Simone's question, "where exactly are these credentials being stored?", and the
 instruction that the handover of a first password may not be what a customer wants. Internal. This is the
