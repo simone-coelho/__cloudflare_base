@@ -172,6 +172,27 @@ Under `/v1/{tenant}/`. Operator token unless marked.
 | `POST models/reference` | The reference implementation of the model contract, for a data science team to see the shape. Site key |
 | `GET trend?region=` (site key or token) and `POST trend/rollup` | The regional interest vector in force, and the roll-up the hourly job does, on demand |
 
-## 6. Health
+## 6. Operators: sign-in and accounts
+
+Under `/auth/`. A person signs in on the console with an email and a password; these are the routes
+behind that, for an integration that needs a token of its own. There is no open registration: an admin
+creates accounts.
+
+| Route | Body | Answer |
+|---|---|---|
+| `POST login` | `{ email, password }` | `{ accessToken, refreshToken, user, mustChangePassword, expiresIn: 900 }`. The access token lasts fifteen minutes, the refresh token seven days; `401` for a wrong email or password, `403` for a disabled account |
+| `POST refresh` | `{ refreshToken }` | A new access token. Each session has its own refresh token; a reset, a disable, a removal or a sign-out ends all of the account's sessions |
+| `POST logout` | none, operator token | Ends the account's sessions |
+| `GET me` | operator token | Who is signed in, and the account |
+| `POST password` | `{ currentPassword, newPassword }`, operator token | Changes your own password. At least ten characters, not your email, not one character repeated. A person signed in on a temporary password must do this first |
+| `GET users` | admin token | Every account: email, name, roles, state, last sign-in. Never a password or a hash |
+| `POST users` | `{ email, name, roles? }`, admin token | Creates the account and answers with `temporaryPassword`, once. Roles are `operator` (default) and `admin` |
+| `PATCH users/{id}` | `{ name?, roles?, disabled? }`, admin token | Renames, changes the role, disables or enables. An admin cannot disable their own account or take admin away from it |
+| `POST users/{id}/reset` | admin token | A new `temporaryPassword`, once; the person's sessions end and they choose their own at the next sign-in |
+| `DELETE users/{id}` | admin token | Removes the account and ends its sessions. Not your own |
+
+Passwords are stored as PBKDF2 hashes; nothing in the platform can read one back.
+
+## 7. Health
 
 `GET /health` answers `200` with the state of each store when the platform is up.

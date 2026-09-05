@@ -6,7 +6,7 @@ credentials the platform checks, and both sides have seen the check pass.
 
 ## The staging platform
 
-The platform's staging host is `https://edge-platform-staging.expedge.workers.dev`. It runs with the site key enforced and the operator token required for configuration, on its own stores, with the Coach content catalog and slot document seeded. The learning console is at `/learning.html?scope=coach` and the tuning page at `/tuning.html?scope=coach` on that host; an operator presses Sign in on the console and signs in with the email and password we issue; the session renews itself while the tab is open. (`POST /auth/login` is the route behind it, for an integration that needs a token of its own.)
+The platform's staging host is `https://edge-platform-staging.expedge.workers.dev`. It runs with the site key enforced and the operator token required for configuration, on its own stores, with the Coach content catalog and slot document seeded. The learning console is at `/learning.html?scope=coach` and the tuning page at `/tuning.html?scope=coach` on that host; an operator presses Sign in on the console and signs in with their email and password; the session renews itself while the tab is open. Your admin creates the accounts in the console's Accounts section and hands each person a temporary password, which they replace at their first sign-in. (`POST /auth/login` is the route behind it, for an integration that needs a token of its own.)
 
 ## What we need from you
 
