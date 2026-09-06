@@ -181,13 +181,30 @@ function platform(fx: Fixtures, log: string[], saved: Array<Record<string, unkno
     if (u.pathname === '/auth/login') {
       const b = JSON.parse(init?.body || '{}') as { email?: string; password?: string };
       if (b.password !== 'right-password' && b.password !== 'temp-password') return okJson({ error: 'Invalid credentials' }, 401);
-      const token = 'h.' + Buffer.from(JSON.stringify({ sub: 'ops-1', exp: Math.floor(Date.now() / 1000) + 900 })).toString('base64url') + '.s';
-      return okJson({ accessToken: token, refreshToken: 'r', user: { id: 'ops-1', email: b.email, name: 'Test Operator', roles: ['operator'] }, mustChangePassword: b.password === 'temp-password', expiresIn: 900 });
+      const token = 'h.' + Buffer.from(JSON.stringify({ sub: 'ops-1', roles: ['admin'], exp: Math.floor(Date.now() / 1000) + 900 })).toString('base64url') + '.s';
+      return okJson({ accessToken: token, refreshToken: 'r', user: { id: 'ops-1', email: b.email, name: 'Test Operator', roles: ['admin'] }, mustChangePassword: b.password === 'temp-password', expiresIn: 900 });
     }
     if (u.pathname === '/auth/password') {
       const b = JSON.parse(init?.body || '{}') as { newPassword?: string };
       saved.push({ passwordChangedTo: b.newPassword });
       return okJson({ ok: true, user: { id: 'ops-1', email: 'ops@brand.test', name: 'Test Operator', roles: ['operator'] } });
+    }
+    if (u.pathname === '/auth/users' && init?.method !== 'POST') {
+      return signed ? okJson({ ok: true, users: [
+        { id: 'ops-1', email: 'ops@brand.test', name: 'Test Operator', roles: ['admin'], disabled: false, mustChangePassword: false, lastSignInAt: 1_788_000_000_000 },
+        { id: 'ops-2', email: 'buyer@brand.test', name: 'A Buyer', roles: ['operator'], disabled: false, mustChangePassword: true, lastSignInAt: null },
+      ] }) : okJson({ ok: false, error: 'unauthorized' }, 401);
+    }
+    if (u.pathname === '/auth/users' && init?.method === 'POST') {
+      const b = JSON.parse(init.body || '{}') as { email?: string };
+      saved.push({ createdAccount: b.email });
+      return okJson({ ok: true, user: { id: 'ops-3', email: b.email, name: 'New', roles: ['operator'] }, temporaryPassword: 'Temp-1234-Temp' }, 201);
+    }
+    if (u.pathname === '/auth/audit') {
+      return signed ? okJson({ ok: true, entries: [
+        { at: 1_788_000_000_000, action: 'sign_in', actorEmail: null, targetEmail: 'ops@brand.test' },
+        { at: 1_787_900_000_000, action: 'account_created', actorEmail: 'ops@brand.test', targetEmail: 'buyer@brand.test' },
+      ] }) : okJson({ ok: false, error: 'unauthorized' }, 401);
     }
     if (u.pathname === '/auth/logout') return okJson({ success: true });
     return okJson({ ok: false, error: `unstubbed ${p}` }, 404);
@@ -217,6 +234,7 @@ async function open(fx: Fixtures = {}, hash = '#/work?scope=coach') {
   w.eval(pub('console/views.js'));
   w.eval(pub('console/views-config.js'));
   w.eval(pub('console/views-measure.js'));
+  w.eval(pub('console/views-accounts.js'));
   const settle = async () => { for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 12)); };
   /** Long enough for the dials' validator, which waits 350ms after the last keystroke. */
   const settleChecked = async () => { await new Promise((r) => setTimeout(r, 450)); await settle(); };
@@ -525,7 +543,11 @@ describe('the operator application, rendered', () => {
       // Building the day reads the ledger and changes nothing served.
       const build = c.all('#view button').find((b) => (b.textContent || '').includes('Build this day'))!;
       build.click(); await c.settle(); await c.settle();
-      expect(c.saved.some((x) => x.date === '2026-09-05')).toBe(true);
+      // The day the view builds is TODAY IN UTC, which is what iso(Date.now())
+      // returns. Hardcoding a date made this test fail every night between
+      // midnight UTC and midnight local, which is not a property of the code.
+      const todayUtc = new Date().toISOString().slice(0, 10);
+      expect(c.saved.some((x) => x.date === todayUtc)).toBe(true);
       expect(c.text()).toContain('117 decisions, 9 outcomes, 9 visitors');
       expect(c.text()).toContain('learning 4 · visitor-scope 9');
       expect(c.text()).toContain('9% of 96 decisions in the first position, against 10% configured');
@@ -647,6 +669,73 @@ describe('the operator application, rendered', () => {
       expect((c.$('si-error').textContent || '').length).toBeGreaterThan(0);
       expect(c.$('sign-in').hidden).toBe(false);
       expect(c.$('who').textContent).toBe('');
+    } finally { c.close(); }
+  });
+
+  // ── The rail is routes, and what leaves says so ────────────────────────────
+  // Simone walked the console and asked what the old pages were doing in the
+  // rail: opening one replaces the whole application with a page that has no
+  // rail and no way back. A rail entry is a route INSIDE this application; a
+  // link that leaves is allowed to exist but must not look the same.
+  it('keeps the old pages out of the routes and marks them as leaving', async () => {
+    const c = await open();
+    try {
+      const railRoutes = c.all('#rail-views a:not(.away)').map((a) => String(a.getAttribute('href') || ''));
+      expect(railRoutes.length).toBeGreaterThan(8);
+      for (const href of railRoutes) expect(href.startsWith('#/')).toBe(true);
+
+      const away = c.all('#rail-views a.away').map((a) => String(a.getAttribute('href') || ''));
+      expect(away).toHaveLength(2);
+      expect(away.some((h) => h.startsWith('/learning.html'))).toBe(true);
+      expect(away.some((h) => h.startsWith('/tuning.html'))).toBe(true);
+      // Under a heading that says what happens, not one that just names them.
+      expect(c.$('rail-views').textContent).toContain('Leaves this console');
+    } finally { c.close(); }
+  });
+
+  // ── Accounts, the last screen that lived only on the old page ──────────────
+  it('shows an operator why Accounts is empty rather than refusing them', async () => {
+    const c = await open({}, '#/accounts?scope=coach');
+    try {
+      // Signed out first: an instruction, not an error.
+      expect(c.$('view').textContent).toContain('Sign in');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('lists the accounts and the activity for an admin, and never offers to remove yourself', async () => {
+    const c = await open({}, '#/accounts?scope=coach');
+    try {
+      await c.signIn();
+      const shown = c.$('view').textContent || '';
+      expect(shown).toContain('ops@brand.test');
+      expect(shown).toContain('buyer@brand.test');
+      // The state of an account nobody has signed into yet is said in words.
+      expect(shown).toContain('temporary password, not yet changed');
+      // The audit is joined to words, never left as a raw action name.
+      expect(shown).toContain('created the account');
+      expect(shown).not.toContain('account_created');
+      // The person signed in cannot remove themselves.
+      expect(shown).toContain('this is you');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('shows a new account\'s temporary password once, in the page, and says it cannot be recovered', async () => {
+    const c = await open({}, '#/accounts?scope=coach');
+    try {
+      await c.signIn();
+      const emailBox = c.all('#view input[data-focus-key="acct-email"]')[0];
+      const nameBox = c.all('#view input[data-focus-key="acct-name"]')[0];
+      emailBox.value = 'new@brand.test';
+      nameBox.value = 'New Person';
+      const form = c.$('view').querySelector('form') as unknown as { dispatchEvent: (e: unknown) => boolean };
+      form.dispatchEvent(new (c.w.window as unknown as { Event: new (t: string, o: object) => unknown }).Event('submit', { bubbles: true, cancelable: true }));
+      await c.settle(); await c.settle();
+      expect(c.saved.some((x) => x.createdAccount === 'new@brand.test')).toBe(true);
+      const shown = c.$('view').textContent || '';
+      expect(shown).toContain('Temp-1234-Temp');
+      expect(shown).toContain('shown once');
     } finally { c.close(); }
   });
 });

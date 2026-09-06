@@ -25,6 +25,11 @@
     /* Every rule below sets a display, which would otherwise beat the hidden
        attribute's default and leave the sign-in form and the save bar on screen. */
     [hidden] { display: none !important; }
+
+    /* A rail link that leaves the application does not look like one that does
+       not. Same list, quieter, and it says so on the way out. */
+    #rail-views a.away { color: var(--ink-3, #6b6b6b); font-style: italic; }
+    #rail-views a.away:hover { color: var(--ink-1, #1a1a1a); }
     html, body { margin: 0; padding: 0; }
     body {
       background: var(--paper); color: var(--ink); font-family: var(--font-body);
@@ -263,5 +268,6 @@
   <script src="/console/views.js"></script>
   <script src="/console/views-config.js"></script>
   <script src="/console/views-measure.js"></script>
+    <script src="/console/views-accounts.js"></script>
 </body>
 </html>

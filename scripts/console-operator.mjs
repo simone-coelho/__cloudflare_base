@@ -51,16 +51,33 @@ const call = async (path, body, token) => {
   return { status: res.status, data: await res.json().catch(() => ({})) };
 };
 
-// 1. Does it already work? Then there is nothing to do.
+/** The preview account is an ADMIN, because the preview exists to be looked at
+    and the Accounts screen is an admin's. A real brand's people are operators;
+    an admin is the person who creates them. */
+async function ensureAdmin() {
+  const users = await fetch(`${base}/auth/users`, { headers: { authorization: `Bearer ${adminToken}` } })
+    .then((r) => r.json()).catch(() => ({}));
+  const found = (users.users || []).find((u) => u.email === email);
+  if (!found || (found.roles || []).includes('admin')) return;
+  await fetch(`${base}/auth/users/${encodeURIComponent(found.id)}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({ roles: ['admin'] }),
+  });
+  console.log('  Raised to admin, so the Accounts screen has something to show.');
+}
+
+// 1. Does it already work? Then there is nothing to do but check the role.
 const already = await call('/auth/login', { email, password });
 if (already.status === 200 && !already.data.mustChangePassword) {
   console.log(`▸ Operator already there and its password is set: ${email}`);
+  await ensureAdmin();
   process.exit(0);
 }
 
 // 2. Create it, unless it exists.
 let temporary = null;
-const made = await call('/auth/users', { email, name: 'Local Ops', roles: ['operator'] }, adminToken);
+const made = await call('/auth/users', { email, name: 'Local Ops', roles: ['admin'] }, adminToken);
 if (made.status === 201) {
   temporary = made.data.temporaryPassword;
   console.log(`▸ Operator created by an admin: ${email}`);
@@ -84,4 +101,5 @@ const signedIn = await call('/auth/login', { email, password: temporary });
 if (signedIn.status !== 200) { console.error(`  The temporary password was not accepted (HTTP ${signedIn.status}).`); process.exit(1); }
 const changed = await call('/auth/password', { currentPassword: temporary, newPassword: password }, signedIn.data.accessToken);
 if (changed.status !== 200) { console.error(`  The password was not changed: ${changed.data.error || changed.status}`); process.exit(1); }
+await ensureAdmin();
 console.log(`  Password set. Sign in with ${email} and the password this script was given.`);
