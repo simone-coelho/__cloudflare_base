@@ -181,7 +181,7 @@ describe('the hourly fold', () => {
     expect(second.pending).toBe(0);
     expect(r2.json<{ hours: { built: number[]; missing: number[] } }>(reportKey('coach', 'coach', '2026-09-03')).hours).toMatchObject({ built: [11, 12, 13], missing: earlier });
     const third = await catchUp(r2, 'coach', learn, now, { lookbackHours: 3, maxHours: 2 });
-    expect(third).toEqual({ built: [], pending: 0 });
+    expect(third).toEqual({ built: [], failed: [], pending: 0 });
     expect(r2.keys('aggregates/coach/2026-09-03/')).toEqual([hourKey('coach', '2026-09-03', 11), hourKey('coach', '2026-09-03', 12), hourKey('coach', '2026-09-03', 13)]);
     // A day nothing was folded for lists every closed hour as missing.
     expect((await loadHours(r2, 'coach', '2026-09-02', now)).missing).toHaveLength(24);
@@ -201,6 +201,31 @@ describe('the hourly fold', () => {
     await expect(runDayReport(r2, ids, learn, [{ name: 'mine', ...DEFAULT_POLICY, match: 'any' }], NOW, { maxObjects: 1 })).rejects.toBeInstanceOf(ReportTooLarge);
     const custom = await runDayReport(r2, ids, learn, [{ name: 'mine', ...DEFAULT_POLICY, match: 'any' }], NOW, { maxObjects: 100 });
     expect(custom.policies.map((p) => p.name)).toEqual(['learning', 'mine']);
+  });
+
+  it('an hour past the object cap is read in time order up to the cap and marked truncated; the day says so', async () => {
+    const r2 = new FakeR2();
+    ledger(r2, decisions, outcomes);                                  // hour 12: five decision objects (v1 and v2 share 12:00) and three outcome objects
+    const agg = await buildHour(r2, 'coach', { date: '2026-09-03', hour: 12 }, learn, NOW, { maxObjects: 4 });
+    expect([agg.objects, agg.objectsRead, agg.truncated]).toEqual([8, 4, true]);
+    // The four earliest objects in time order, both streams: 12:00 (v1 a, v2 a), 12:00:30 (v2's click), 12:01 (v1 b), 12:02 (v1's click).
+    expect([agg.brands.coach!.decisions, agg.brands.coach!.outcomes]).toEqual([3, 2]);
+    const r = reportFromHours([agg], ids, learn, NOW, { pending: 0, missing: [] });
+    expect(r.counts.truncated).toBe(true);
+  });
+
+  it('the run continues past an hour whose fold throws, and stops when its budget is spent', async () => {
+    class Flaky extends FakeR2 { override async get(key: string) { if (key.includes('/2026-09-03/12/')) throw new Error('storage said no'); return super.get(key); } }
+    const r2 = new Flaky();
+    ledger(r2, decisions, outcomes);
+    const now = T12 + 2 * H + 7 * MIN;
+    const r = await catchUp(r2, 'coach', learn, now, { lookbackHours: 3, maxHours: 3 });
+    expect(r.built.map((b) => b.hour)).toEqual([11, 13]);
+    expect(r.failed).toEqual([{ date: '2026-09-03', hour: 12, error: 'storage said no' }]);
+    expect(r.pending).toBe(1);
+    const tight = new FakeR2();
+    ledger(tight, decisions, outcomes);
+    expect((await catchUp(tight, 'coach', learn, now, { lookbackHours: 3, maxHours: 3, budget: 1 })).built.map((b) => b.hour)).toEqual([11]);
   });
 
   it('a visitor always lands in the same shard, inside the range', () => {

@@ -37,6 +37,15 @@ export const RING_CAP = 200;
 export const DEFAULT_HORIZON_MS = 48 * HOUR_MS;
 /** An hour is folded this long after it ends, so the queue has drained into the ledger. */
 export const CLOSE_GRACE_MS = 5 * 60_000;
+/**
+ * The ledger objects one fold opens at most. A Worker invocation may open only so many objects, and a
+ * fold must leave room for the shards and the day report. Since doc 31 an object holds hundreds of
+ * records, so an hour past this cap is hundreds of thousands of decisions; the hour is read up to the
+ * cap, in time order, and marked truncated with the count it could not read.
+ */
+export const MAX_HOUR_OBJECTS = 600;
+/** The subrequests one catch-up run may spend on folding, under a Worker invocation's limit with room for the day reports. */
+export const RUN_BUDGET = 700;
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 export const hourKey = (tenant: string, date: string, hour: number) => `aggregates/${tenant}/${date}/${pad2(hour)}.json`;
@@ -107,8 +116,10 @@ export interface HourAggregate {
   from: number;
   to: number;
   builtAt: number;
-  /** Ledger objects the fold read. */
+  /** Ledger objects the hour holds, and how many the fold opened; `truncated` when the cap stopped it short. */
   objects: number;
+  objectsRead: number;
+  truncated: boolean;
   horizonMs: number;
   shards: number;
   /** False when the hour was built after a later one and its decisions could not join the rings (they still count everywhere else). */
@@ -310,7 +321,7 @@ export function reportFromHours(aggs: readonly HourAggregate[], ids: { tenant: s
   const last = sorted[sorted.length - 1];
   return {
     tenant: ids.tenant, brand: ids.brand, date: ids.date, builtAt: now,
-    counts: { decisions: hb.decisions, outcomes: hb.outcomes, visitors: hb.visitorsDay, truncated: false },
+    counts: { decisions: hb.decisions, outcomes: hb.outcomes, visitors: hb.visitorsDay, truncated: sorted.some((a) => a.truncated) },
     policies, grids, exploration, holdout, holdoutComparison,
     erasures: { pending: opts.pending, rows_hidden: hb.rows_hidden },
     hours: { source: 'aggregates', built: sorted.map((a) => a.hour), missing: [...opts.missing], ...(last ? { horizonMs: last.horizonMs } : {}) },
@@ -332,9 +343,13 @@ async function listKeys(r2: R2Like, prefix: string): Promise<string[]> {
   return keys;
 }
 
-/** The hour's ledger objects, one at a time, each decision reduced to what the fold keeps before the next object is opened. */
-export async function loadHourRecords(r2: R2Like, tenant: string, date: string, hour: number): Promise<{ decisions: CompactDecision[]; outcomes: OutcomeRecord[]; objects: number }> {
-  const keys = (await listKeys(r2, `${tenant}/${date}/${pad2(hour)}/`)).sort();
+/** Where an object's name says it starts, so both streams read in time order under a cap; a name without one sorts last. */
+const startOf = (key: string): string => /\/(?:decision|outcome)\/([0-9a-z]{9})-/.exec(key)?.[1] ?? '~';
+
+/** The hour's ledger objects, one at a time and in time order, each decision reduced to what the fold keeps before the next object is opened; at most `cap` of them. */
+export async function loadHourRecords(r2: R2Like, tenant: string, date: string, hour: number, cap = MAX_HOUR_OBJECTS): Promise<{ decisions: CompactDecision[]; outcomes: OutcomeRecord[]; objects: number; read: number; truncated: boolean }> {
+  const all = (await listKeys(r2, `${tenant}/${date}/${pad2(hour)}/`)).sort((a, b) => (startOf(a) < startOf(b) ? -1 : startOf(a) > startOf(b) ? 1 : a < b ? -1 : 1));
+  const keys = all.slice(0, cap);
   const decisions: CompactDecision[] = [], outcomes: OutcomeRecord[] = [];
   for (const key of keys) {
     const stream = key.includes('/decision/') ? 'decision' : key.includes('/outcome/') ? 'outcome' : null;
@@ -349,17 +364,17 @@ export async function loadHourRecords(r2: R2Like, tenant: string, date: string, 
       } catch { /* a bad line never hides the good ones */ }
     }
   }
-  return { decisions, outcomes, objects: keys.length };
+  return { decisions, outcomes, objects: all.length, read: keys.length, truncated: all.length > keys.length };
 }
 
-export interface BuildOptions { horizonMs?: number; ringCap?: number; shards?: number }
+export interface BuildOptions { horizonMs?: number; ringCap?: number; shards?: number; maxObjects?: number }
 
 /** One hour, folded: its ledger objects read once, every shard visited, the aggregate written. Re-running an hour never doubles it. */
 export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; hour: number }, learn: LearnConfig, now = Date.now(), opts: BuildOptions = {}): Promise<HourAggregate> {
   const from = hourStart(at.date, at.hour), to = from + HOUR_MS;
   const shards = opts.shards ?? SHARDS, horizonMs = opts.horizonMs ?? DEFAULT_HORIZON_MS, ringCap = opts.ringCap ?? RING_CAP;
   const statsCfg: StatsConfig = learn.stats ?? DEFAULT_STATS, slotCfg = slotConfigsOf(learn), policies = policiesOf(learn);
-  const [loaded, tombs] = await Promise.all([loadHourRecords(r2, tenant, at.date, at.hour), loadTombstones(r2, tenant)]);
+  const [loaded, tombs] = await Promise.all([loadHourRecords(r2, tenant, at.date, at.hour, opts.maxObjects), loadTombstones(r2, tenant)]);
   const decisions = withoutErased(loaded.decisions, tombs), outcomes = withoutErased(loaded.outcomes, tombs);
   const brands = foldDecisions(decisions, policies, statsCfg);
   for (const o of outcomes) (brands[o.brand] ??= emptyBrand()).outcomes += 1;
@@ -382,7 +397,7 @@ export async function buildHour(r2: R2Agg, tenant: string, at: { date: string; h
     for (const [brand, ids] of Object.entries(r.state.seen)) (brands[brand] ??= emptyBrand()).visitorsDay += ids.length;
     if (r.changed) await r2.put(shardKey(tenant, s), JSON.stringify(r.state), { httpMetadata: { contentType: 'application/json' } });
   }
-  const agg: HourAggregate = { version: 1, tenant, date: at.date, hour: at.hour, from, to, builtAt: now, objects: loaded.objects, horizonMs, shards, ringsFolded, brands };
+  const agg: HourAggregate = { version: 1, tenant, date: at.date, hour: at.hour, from, to, builtAt: now, objects: loaded.objects, objectsRead: loaded.read, truncated: loaded.truncated, horizonMs, shards, ringsFolded, brands };
   await r2.put(hourKey(tenant, at.date, at.hour), JSON.stringify(agg), { httpMetadata: { contentType: 'application/json' } });
   return agg;
 }
@@ -400,28 +415,46 @@ export function closedHours(now: number, lookbackHours = 26, graceMs = CLOSE_GRA
   return out;
 }
 
-export interface CatchUpResult { built: Array<{ date: string; hour: number; decisions: number; outcomes: number; objects: number }>; pending: number }
+export interface CatchUpResult {
+  built: Array<{ date: string; hour: number; decisions: number; outcomes: number; objects: number; truncated: boolean }>;
+  /** Hours whose fold threw this run; they stay missing and are tried again next run, after the others. */
+  failed: Array<{ date: string; hour: number; error: string }>;
+  pending: number;
+}
 
 /**
- * What the five-minute job calls: fold the closed hours that have no aggregate yet, oldest first, a
- * few per run so one run stays inside a Worker's budget, then refresh the day report of each date
- * touched so `GET learn/report` answers for today through the last closed hour.
+ * What the five-minute job calls: fold the closed hours that have no aggregate yet, oldest first, as
+ * many as the run's budget allows, then refresh the day report of each date touched so `GET
+ * learn/report` answers for today through the last closed hour. An hour whose fold throws is logged
+ * and skipped for this run, so one bad hour never stalls the ones after it.
  */
-export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now = Date.now(), opts: BuildOptions & { maxHours?: number; lookbackHours?: number } = {}): Promise<CatchUpResult> {
+export async function catchUp(r2: R2Agg, tenant: string, learn: LearnConfig, now = Date.now(), opts: BuildOptions & { maxHours?: number; lookbackHours?: number; budget?: number } = {}): Promise<CatchUpResult> {
   const candidates = closedHours(now, opts.lookbackHours ?? 26);
   const existing = new Set<string>();
   for (const date of new Set(candidates.map((c) => c.date))) for (const k of await listKeys(r2, `aggregates/${tenant}/${date}/`)) existing.add(k);
   const missing = candidates.filter((c) => !existing.has(hourKey(tenant, c.date, c.hour)));
-  const built: CatchUpResult['built'] = [];
-  for (const c of missing.slice(0, opts.maxHours ?? 2)) {
-    const agg = await buildHour(r2, tenant, c, learn, now, opts);
-    const sum = (k: 'decisions' | 'outcomes') => Object.values(agg.brands).reduce((n, b) => n + b[k], 0);
-    built.push({ date: c.date, hour: c.hour, decisions: sum('decisions'), outcomes: sum('outcomes'), objects: agg.objects });
+  const built: CatchUpResult['built'] = [], failed: CatchUpResult['failed'] = [];
+  const shards = opts.shards ?? SHARDS;
+  let budget = opts.budget ?? RUN_BUDGET;
+  for (const c of missing) {
+    if (built.length >= (opts.maxHours ?? 2) || budget <= 0) break;
+    try {
+      const agg = await buildHour(r2, tenant, c, learn, now, opts);
+      budget -= agg.objectsRead + 2 * shards + 4;
+      const sum = (k: 'decisions' | 'outcomes') => Object.values(agg.brands).reduce((n, b) => n + b[k], 0);
+      built.push({ date: c.date, hour: c.hour, decisions: sum('decisions'), outcomes: sum('outcomes'), objects: agg.objects, truncated: agg.truncated });
+    } catch (e) {
+      // The spend is unknown; a storage failure is usually the first request, so charge the shards and a little,
+      // and give up on this run after two failures rather than risk the invocation's limit.
+      budget -= 2 * shards + 50;
+      failed.push({ date: c.date, hour: c.hour, error: e instanceof Error ? e.message : String(e) });
+      if (failed.length >= 2) break;
+    }
   }
   for (const date of new Set(built.map((b) => b.date))) {
     try { await runDayReport(r2, { tenant, brand: tenant, date }, learn, null, now); } catch { /* the hours are built; the report is retried at the next fold */ }
   }
-  return { built, pending: missing.length - built.length };
+  return { built, failed, pending: missing.length - built.length };
 }
 
 /** The aggregates a date has, and the closed hours it lacks. */

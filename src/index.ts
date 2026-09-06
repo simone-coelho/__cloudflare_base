@@ -202,7 +202,8 @@ export default {
           ctx.waitUntil((async () => {
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
             const r = await catchUp(env.STORAGE as unknown as Parameters<typeof catchUp>[0], tenant, learn);
-            if (r.built.length) console.log(`hourly fold ${tenant}: ${r.built.map((b) => `${b.date} ${String(b.hour).padStart(2, '0')}h from ${b.objects} object(s): ${b.decisions} decisions, ${b.outcomes} outcomes`).join('; ')}${r.pending ? `; ${r.pending} hour(s) still to fold` : ''}`);
+            if (r.built.length) console.log(`hourly fold ${tenant}: ${r.built.map((b) => `${b.date} ${String(b.hour).padStart(2, '0')}h from ${b.objects} object(s)${b.truncated ? ' (truncated at the cap)' : ''}: ${b.decisions} decisions, ${b.outcomes} outcomes`).join('; ')}${r.pending ? `; ${r.pending} hour(s) still to fold` : ''}`);
+            for (const f of r.failed) console.error(`hourly fold ${tenant}: ${f.date} ${String(f.hour).padStart(2, '0')}h failed and is skipped this run: ${f.error}`);
           })().catch((e) => console.error(`hourly fold ${tenant} failed`, e)));
         }
         break;
