@@ -140,4 +140,30 @@ describe('CW37: a visit is never split across two sessions', () => {
     expect(two.sessionId).toBe(one.sessionId);
     await Promise.all(deferred);
   });
+
+  it('names the session after the one the client is already carrying', async () => {
+    // CW39. The SDK sends its browsing session on the snapshot. Two requests
+    // arriving together both carry it, so both land on one session instead of
+    // each inventing its own and counting one visit as two.
+    const e = engine();
+    const a = await e.getOrCreateSessionFromCookies(null, 'v1', undefined, 'sdk-session-7');
+    expect(a.sessionId).toBe('sdk-session-7');
+    const b = await e.getOrCreateSessionFromCookies(null, 'v1', undefined, 'sdk-session-7');
+    expect(b.sessionId).toBe('sdk-session-7');
+    // The second request joined the first one's session instead of starting a
+    // second. That is the whole property: one visit, one session.
+    expect(b.isNewSession).toBe(false);
+  });
+
+  it('lets the browser\'s own cookie win over the client\'s, since that is the older claim', async () => {
+    const e = engine();
+    const r = await e.getOrCreateSessionFromCookies('opt_session_id=from-cookie', 'v1', undefined, 'sdk-session-7');
+    expect(r.sessionId).toBe('from-cookie');
+  });
+
+  it('still mints one when the client sends nothing at all', async () => {
+    const r = await engine().getOrCreateSessionFromCookies(null, 'v9');
+    expect(r.sessionId).toBeTruthy();
+    expect(r.sessionId.length).toBeGreaterThan(8);
+  });
 });

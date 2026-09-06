@@ -94,6 +94,8 @@ async function readShopper(
   env: Env, visitorId: string, cookieHeader: string | null, cfg: ReflexConfig, now: number, tenant: TenantId,
   /** CW37: where the session write goes, so it is not on the decision's path. */
   defer?: (p: Promise<unknown>) => void,
+  /** CW39: the browsing session the client sent, which names the session it creates. */
+  clientSessionId?: string | null,
 ): Promise<ShopperRead> {
   if ((env.REFLEX_HOST ?? 'session') === 'do') {
     try {
@@ -108,7 +110,7 @@ async function readShopper(
   }
   try {
     const engine = new RealtimeSegmentEngine(env, getConnectors(env), { tenant });
-    const { sessionId, sessionData, isNewSession } = await engine.getOrCreateSessionFromCookies(cookieHeader, visitorId, defer);
+    const { sessionId, sessionData, isNewSession } = await engine.getOrCreateSessionFromCookies(cookieHeader, visitorId, defer, clientSessionId ?? undefined);
     return {
       affinity: sessionData.reflex ? reflexSnapshot(sessionData.reflex, now, cfg) : null,
       sessionId, isNewSession, state: 'session',
@@ -151,7 +153,7 @@ export async function serveContentDecisions(
   // caller's waitUntil with the rest of the after-response work.
   const sessionWrites: Promise<unknown>[] = [];
   const shopper = await readShopper(env, r.visitorId, r.cookieHeader, cfg, now, r.stateTenant ?? DEFAULT_TENANT,
-    (p) => { sessionWrites.push(p); });
+    (p) => { sessionWrites.push(p); }, r.sessionId);
   lap('shopper');
   const cell = cellFor({
     cf: r.cf, snap: shopper.affinity, cfg, channel: r.channel,

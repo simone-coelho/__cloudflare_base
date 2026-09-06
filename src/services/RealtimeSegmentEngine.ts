@@ -868,13 +868,23 @@ export class RealtimeSegmentEngine {
     userId: string,
     /** CW37. Where the session write goes instead of the response path. See SessionManager. */
     defer?: (p: Promise<unknown>) => void,
+    /**
+     * CW39. The browsing session the CLIENT is already carrying. The SDK keeps
+     * one with an idle rule and sends it on the snapshot and on every event, and
+     * both the decision record and the outcome prefer it -- but nothing used it
+     * to find or name the session, so two requests arriving together each made a
+     * session of their own and one visit was counted as two. Used when the
+     * cookie says nothing, which on the decision route is always: that route
+     * sets no cookie.
+     */
+    clientSessionId?: string,
   ): Promise<{
     sessionId: string;
     sessionData: SessionData;
     isNewSession: boolean;
   }> {
     const cookies = this.sessionManager.parseSessionCookies(cookieHeader);
-    let sessionId = cookies.sessionId;
+    let sessionId = cookies.sessionId || (clientSessionId || '').trim();
     let sessionData: SessionData | null = null;
     let isNewSession = false;
 
