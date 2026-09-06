@@ -51,6 +51,7 @@
 
 import { actionOf, contentTouches, isContentAction } from '@/reflex/contentTelemetry';
 import type { Env } from '@/types/env';
+import { ACTION_EVENT_TYPE_SET } from '@/events/actionTypes';
 import { applyHistorical, mergeReflexStates } from '@/reflex/identityMerge';
 import { fanInRegionTrend } from '@/reflex/regionTrend';
 import type { PersonalizationUpdate } from './PersonalizationWebSocket';
@@ -147,11 +148,14 @@ interface IngestOutcome {
   update: PersonalizationUpdate | null;
 }
 
-/** Event types accepted by the doors — keep in sync with `actionEventSchema` in src/routes/realtime.ts. */
-const ACTION_EVENT_TYPES: ReadonlySet<string> = new Set([
-  'email_open', 'form_submit', 'page_view', 'button_click', 'custom',
-  'product_view', 'add_to_cart', 'wishlist_add',
-]);
+/**
+ * Event types accepted at this object's doors. The same list POST /realtime/action
+ * validates against, imported rather than restated: this Set used to be written
+ * out here beside a comment asking it to stay in step, and it did not. It was
+ * missing `purchase` and all four content events, so the object answered 400 to
+ * every content click and staging stayed on the slower session host (doc 31 §4).
+ */
+const ACTION_EVENT_TYPES = ACTION_EVENT_TYPE_SET;
 
 /** Never set an alarm in the past; give the current event a beat to settle. */
 const MIN_ALARM_DELAY_MS = 50;

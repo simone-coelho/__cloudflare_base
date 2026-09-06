@@ -14,6 +14,7 @@ import { forwardEventToOdp, mapActionToOdp, odpEnabled, upsertOdpProfile } from 
 import { outcomeFromAction } from '@/ledger/records';
 import { enqueueOutcome } from '@/ledger/enqueue';
 import { consentFromCookies, consentOf } from '@/content/consent';
+import { ACTION_EVENT_TYPES } from '@/events/actionTypes';
 import { outcomeToLearning } from '@/learn/route';
 import { CatalogService } from '@/services/CatalogService';
 import { z } from 'zod';
@@ -60,15 +61,9 @@ realtimeRoutes.get('/ws', async (c) => {
 // alongside the original B2B types so the Coach storefront and existing callers
 // share one ingestion path (REAL SEAMS, MOCKED CALLS — see docs/architecture/05-demo-build-spec.md §3).
 export const actionEventSchema = z.object({
-  type: z.enum([
-    // existing (backward compatible)
-    'email_open', 'form_submit', 'page_view', 'button_click', 'custom',
-    // retail / Coach storefront signals
-    'product_view', 'add_to_cart', 'wishlist_add',
-    // first-class since CW3. The SDK may still send these as custom + data.event;
-    // actionOf() reads both, so its wire table can flip whenever it likes.
-    'purchase', 'content_impression', 'content_click', 'content_dwell', 'video_complete',
-  ]),
+  // One list, in @/events/actionTypes, so this and the shopper object's door
+  // cannot drift apart again (doc 31 §4: the object refused every content event).
+  type: z.enum(ACTION_EVENT_TYPES),
   userId: z.string(),
   anonymousId: z.string().optional(),
   data: z.record(z.string(), z.any()),
