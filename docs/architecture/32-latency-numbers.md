@@ -104,15 +104,26 @@ store. It is NOT caused by deferring the write: the same probe against the previ
 back to staging to check, splits five out of five as well. Awaiting the write never fixed it, which
 is why it was invisible.
 
-It matters little today and should not be left. The SDK sends its own browsing session id on the
+**Closed the same evening (CW39), and measured closed: five out of five now land on one session,
+where five out of five split before.** The fix needed no new API and no cookie. The SDK already sends
+its browsing session on the snapshot, and the decision record and the outcome already prefer it;
+nothing used it to find or name the session, so each request invented one. It is used now when the
+browser's cookie says nothing, which on the decision route is always.
+
+One note on how it was measured, because the first attempt got it wrong: the probe ran five seconds
+after the deploy and read the OLD code, reporting one success in five. Re-run after the deploy had
+propagated, it is five in five. A deploy is not live the instant wrangler prints a version id.
+
+What follows was the position before that fix, kept because it is why the fix was chosen.
+
+It mattered little even then. The SDK sends its own browsing session id on the
 snapshot and on every event, and both the decision record and the outcome prefer it, so an
 integrated client's attribution does not depend on the server's session at all (doc 22 §4.1). A
-caller that sends none gets a duplicated session record and a visit counted twice. Two ways to close
-it, neither taken here because both change something that is not mine alone to change: have the
-snapshot set the session cookie the event route already sets, so the browser carries the id and the
-CW37 guard reuses it; or key the session by the visitor id, which removes the race entirely but
-makes a session id derivable from a visitor id that travels in query strings, and session ids are
-bearer tokens in a cookie today. The first looks right.
+caller that sends none gets a duplicated session record and a visit counted twice. Of the three ways to close it, the one taken
+needed no change a customer would see: use the session the client already sends. The other two were
+rejected -- setting a cookie on a decision response changes what the API does, and keying the session
+by the visitor id would make a session id derivable from an id that travels in query strings, and
+session ids are bearer tokens in a cookie today.
 
 ## 6 · Reproducing it
 
