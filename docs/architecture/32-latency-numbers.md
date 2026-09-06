@@ -77,7 +77,44 @@ Not decided here, and not mine to decide alone; recorded so the options are on p
    and it is held back by its ingest refusing the content events, not by its speed. `REFLEX_HOST` in
    `[env.staging.vars]` says exactly this and says session until the object host passes its acceptance run.
 
-## 5 · Reproducing it
+## 5 · What changed, and what it measured (CW37, the same evening)
+
+Item 1 of §4 is done. The two writes that create a session went together instead of one after the
+other, and on the decision path they left the response entirely, into the `waitUntil` the snapshot
+route already had. Measured the same way, on staging, before and after:
+
+| Route, a shopper it has never seen | Before | After |
+|---|---|---|
+| snapshot, P50 wall | 627.5 ms | 285.3 ms |
+| snapshot, inside the worker | 591 ms | 235 ms |
+| sort, P50 wall | 616.3 ms | 464.4 ms |
+| action, P50 wall | 1,896.1 ms | 1,731 ms |
+
+The returning-shopper rows did not move, which is right: they were never paying for a write.
+
+**What is left in the 235 ms.** Three KV reads that all miss for a shopper nobody has seen: the
+session by its cookie, the session by her visitor id, and her profile. They run one after another
+because each only runs when the one before it missed, which is the right shape for a returning
+shopper and the wrong one for a new shopper, where all three always miss.
+
+**Something this measurement found that is not about speed.** Two snapshot requests back to back for
+one new visitor create TWO sessions: the second request cannot see the first, because a KV write is
+not readable that quickly. Five out of five, measured by reading `sessionCount` out of staging's own
+store. It is NOT caused by deferring the write: the same probe against the previous build, deployed
+back to staging to check, splits five out of five as well. Awaiting the write never fixed it, which
+is why it was invisible.
+
+It matters little today and should not be left. The SDK sends its own browsing session id on the
+snapshot and on every event, and both the decision record and the outcome prefer it, so an
+integrated client's attribution does not depend on the server's session at all (doc 22 §4.1). A
+caller that sends none gets a duplicated session record and a visit counted twice. Two ways to close
+it, neither taken here because both change something that is not mine alone to change: have the
+snapshot set the session cookie the event route already sets, so the browser carries the id and the
+CW37 guard reuses it; or key the session by the visitor id, which removes the race entirely but
+makes a session id derivable from a visitor id that travels in query strings, and session ids are
+bearer tokens in a cookie today. The first looks right.
+
+## 6 · Reproducing it
 
 ```
 node scripts/latency.mjs https://edge-platform-staging.expedge.workers.dev --tenant coach --n 40 --key <site key>
@@ -87,7 +124,7 @@ node scripts/latency.mjs https://edge-platform-staging.expedge.workers.dev --ten
 than nothing. `--token <operator JWT>` works in place of `--key`, because an operator token passes the
 same gate (CW22).
 
-## 6 · One thing to fix that is not a latency number
+## 7 · One thing to fix that is not a latency number
 
 Staging accepts `demo-site` as its site key: the example value printed in this repo's own deploy
 instructions (`wrangler.toml`, `scripts/deploy.sh`). It was tried on the assumption that it would be
