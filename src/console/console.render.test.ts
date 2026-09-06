@@ -214,7 +214,7 @@ function platform(fx: Fixtures, log: string[], saved: Array<Record<string, unkno
 type El = {
   value: string; hidden: boolean; disabled: boolean; textContent: string | null; dataset: Record<string, string>;
   firstChild: { textContent: string | null } | null;
-  click: () => void; focus: () => void;
+  click: () => void; focus: () => void; getAttribute: (name: string) => string | null;
   querySelectorAll: (sel: string) => ArrayLike<El>; querySelector: (sel: string) => El | null;
   dispatchEvent: (e: unknown) => boolean;
 };
