@@ -1,6 +1,6 @@
 import { tenantConfig, tenantMiddleware } from '@/tenancy/middleware';
 import { retentionDays, rewriteErasures, type R2Erasable } from '@/ledger/erasure';
-import { runReport } from '@/learn/report';
+import { catchUp, runDayReport } from '@/learn/hourly';
 import { runMonitor } from '@/ops/monitor';
 import { read } from '@/config/versionedStore';
 import { DEFAULT_LEARN, LEARN_KIND } from '@/content/kinds';
@@ -196,6 +196,15 @@ export default {
             (e) => console.error(`monitor ${tenant} failed to run`, e),
           ));
         }
+        // Doc 31 §3: the closed hours the ledger holds, folded into their aggregates, oldest first, two per run;
+        // then the day report of each date touched, so GET learn/report answers for today through the last closed hour.
+        for (const tenant of tenantConfig(env).provisioned) {
+          ctx.waitUntil((async () => {
+            const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
+            const r = await catchUp(env.STORAGE as unknown as Parameters<typeof catchUp>[0], tenant, learn);
+            if (r.built.length) console.log(`hourly fold ${tenant}: ${r.built.map((b) => `${b.date} ${String(b.hour).padStart(2, '0')}h from ${b.objects} object(s): ${b.decisions} decisions, ${b.outcomes} outcomes`).join('; ')}${r.pending ? `; ${r.pending} hour(s) still to fold` : ''}`);
+          })().catch((e) => console.error(`hourly fold ${tenant} failed`, e)));
+        }
         break;
       }
       case '0 3 * * *': {
@@ -212,8 +221,8 @@ export default {
         for (const tenant of tenantConfig(env).provisioned) {
           ctx.waitUntil((async () => {
             const learn = await read<LearnConfig>(env, LEARN_KIND, tenant, DEFAULT_LEARN);
-            const r = await runReport(env.STORAGE as unknown as Parameters<typeof runReport>[0], { tenant, brand: tenant, date: yesterday }, learn, null);
-            console.log(`day report ${tenant} ${yesterday}: ${r.counts.decisions} decisions, ${r.counts.outcomes} outcomes${r.counts.truncated ? ' (truncated)' : ''}`);
+            const r = await runDayReport(env.STORAGE as unknown as Parameters<typeof runDayReport>[0], { tenant, brand: tenant, date: yesterday }, learn, null);
+            console.log(`day report ${tenant} ${yesterday}: ${r.counts.decisions} decisions, ${r.counts.outcomes} outcomes from ${r.hours?.source ?? 'ledger'}${r.hours?.missing.length ? ` (${r.hours.missing.length} hour(s) unfolded)` : ''}${r.counts.truncated ? ' (truncated)' : ''}`);
           })().catch((e) => console.error(`day report ${tenant} ${yesterday} failed`, e)));
         }
         // CW28 (doc 22 §15): the erasure rewrite. Newest day first over the retention window, capped per run, resumes tomorrow.

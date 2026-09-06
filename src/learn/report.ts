@@ -53,6 +53,8 @@ export interface DayReport {
   holdoutComparison: Record<string, ArmComparison[]>;
   /** CW28: tombstones pending for the tenant, and the rows this report dropped for them (doc 22 §15). */
   erasures?: { pending: number; rows_hidden: number };
+  /** Doc 31 §3: how the day was built. `aggregates`: the sum of the hours in `built`, the closed hours still unfolded in `missing`, the batch ring's reach in `horizonMs`; `ledger`: read straight from the day's records. */
+  hours?: { source: 'aggregates' | 'ledger'; built: number[]; missing: number[]; horizonMs?: number };
 }
 
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
@@ -215,6 +217,7 @@ export async function runReport(
     now, truncated: d.truncated || o.truncated,
   });
   report.erasures = { pending: tombs.size, rows_hidden: dBrand.length + oBrand.length - decisions.length - outcomes.length };
+  report.hours = { source: 'ledger', built: [], missing: [] };
   try { await r2.put(reportKey(ids.tenant, ids.brand, ids.date), JSON.stringify(report), { httpMetadata: { contentType: 'application/json' } }); } catch { /* the response still carries it */ }
   return report;
 }
