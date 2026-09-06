@@ -1028,14 +1028,24 @@ describe('POST /live/api/page + GET /live/api/decisions/export', () => {
       const inner = kv.put.bind(kv);
       const seen = { depth: 0, max: 0, lastAt: Date.now() };
       kv.put = async (key: string, value: string) => {
-        seen.depth += 1;
-        seen.max = Math.max(seen.max, seen.depth);
+        // Count the SESSION RECORD only. One pipeline pass writes exactly one
+        // `session:<id>`, so overlapping ones are overlapping passes, which is
+        // the property this describe block exists to hold. Counting every put
+        // stopped measuring that in CW37, when the record and the `user:` pointer
+        // that finds it started going together instead of one after the other:
+        // a single pass then shows as a depth of two and the proxy reads a
+        // stampede that is not there.
+        const counted = key.startsWith('session:');
+        if (counted) {
+          seen.depth += 1;
+          seen.max = Math.max(seen.max, seen.depth);
+        }
         seen.lastAt = Date.now();
         await new Promise((r) => setTimeout(r, 1)); // widen the window a racer could enter
         try {
           return await inner(key, value);
         } finally {
-          seen.depth -= 1;
+          if (counted) seen.depth -= 1;
           seen.lastAt = Date.now();
         }
       };

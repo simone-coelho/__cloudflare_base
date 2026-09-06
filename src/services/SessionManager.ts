@@ -183,6 +183,15 @@ export class SessionManager {
      * of every event inside it. Optional, so no existing call site changes.
      */
     entry?: ChannelSignals,
+    /**
+     * CW37. Where the KV writes go instead of being awaited. A decision does not
+     * depend on the session having been STORED -- it is computed from the record
+     * this call returns -- and a KV write costs half a second or more from a
+     * Worker, which doc 32 measured as the whole of a new shopper's 627 ms. Hand
+     * this a sink (the request's `waitUntil`) and the write leaves the response
+     * path. Omit it and nothing changes: every existing caller still awaits.
+     */
+    defer?: (p: Promise<unknown>) => void,
   ): Promise<SessionData> {
     try {
       // CW25. A browser that was linked to a person writes to the person's
@@ -269,29 +278,23 @@ export class SessionManager {
                 preferences: validatedData.preferences,
               }
         );
-        await this.kv.put(
-          `session:${sessionId}`,
-          JSON.stringify(onlyTheInstruction),
-          { expirationTtl: this.sessionTTL }
-        );
         // The pointer stays, or the switches could not be found again.
-        await this.kv.put(`user:${userId}`, sessionId, { expirationTtl: this.sessionTTL });
+        const refusal = Promise.all([
+          this.kv.put(`session:${sessionId}`, JSON.stringify(onlyTheInstruction), { expirationTtl: this.sessionTTL }),
+          this.kv.put(`user:${userId}`, sessionId, { expirationTtl: this.sessionTTL }),
+        ]);
+        if (defer) defer(refusal); else await refusal;
         return validatedData;
       }
 
-      // Store session in KV
-      await this.kv.put(
-        `session:${sessionId}`,
-        JSON.stringify(validatedData),
-        { expirationTtl: this.sessionTTL }
-      );
-
-      // Also store by userId for quick lookup
-      await this.kv.put(
-        `user:${userId}`,
-        sessionId,
-        { expirationTtl: this.sessionTTL }
-      );
+      // The record, and the pointer that finds it by user id. These were two
+      // awaits in sequence, which paid for two round trips where one would do;
+      // neither depends on the other.
+      const writes = Promise.all([
+        this.kv.put(`session:${sessionId}`, JSON.stringify(validatedData), { expirationTtl: this.sessionTTL }),
+        this.kv.put(`user:${userId}`, sessionId, { expirationTtl: this.sessionTTL }),
+      ]);
+      if (defer) defer(writes); else await writes;
 
       return validatedData;
 

@@ -92,6 +92,8 @@ interface ShopperRead {
  */
 async function readShopper(
   env: Env, visitorId: string, cookieHeader: string | null, cfg: ReflexConfig, now: number, tenant: TenantId,
+  /** CW37: where the session write goes, so it is not on the decision's path. */
+  defer?: (p: Promise<unknown>) => void,
 ): Promise<ShopperRead> {
   if ((env.REFLEX_HOST ?? 'session') === 'do') {
     try {
@@ -106,7 +108,7 @@ async function readShopper(
   }
   try {
     const engine = new RealtimeSegmentEngine(env, getConnectors(env), { tenant });
-    const { sessionId, sessionData, isNewSession } = await engine.getOrCreateSessionFromCookies(cookieHeader, visitorId);
+    const { sessionId, sessionData, isNewSession } = await engine.getOrCreateSessionFromCookies(cookieHeader, visitorId, defer);
     return {
       affinity: sessionData.reflex ? reflexSnapshot(sessionData.reflex, now, cfg) : null,
       sessionId, isNewSession, state: 'session',
@@ -142,7 +144,14 @@ export async function serveContentDecisions(
   const configRevision = cfgRev?.revision ?? 0;
   lap('documents');
 
-  const shopper = await readShopper(env, r.visitorId, r.cookieHeader, cfg, now, r.stateTenant ?? DEFAULT_TENANT);
+  // CW37 (doc 32 §4 item 1). Creating a shopper's session is two KV writes, and
+  // doc 32 measured them as effectively the whole of a new shopper's 627 ms. The
+  // decision does not depend on them having landed -- it is computed from the
+  // record the call returns -- so they are collected here and handed to the
+  // caller's waitUntil with the rest of the after-response work.
+  const sessionWrites: Promise<unknown>[] = [];
+  const shopper = await readShopper(env, r.visitorId, r.cookieHeader, cfg, now, r.stateTenant ?? DEFAULT_TENANT,
+    (p) => { sessionWrites.push(p); });
   lap('shopper');
   const cell = cellFor({
     cf: r.cf, snap: shopper.affinity, cfg, channel: r.channel,
@@ -225,7 +234,11 @@ export async function serveContentDecisions(
   if (!personalizes(consent)) for (const rec of set.records) rec.explain.note = 'the site\'s defaults: personalization is off by the shopper\'s choice';
   // After the response: the visitor's ring and each slot's exposures. Never awaited here.
   // CW31: with tracking withheld the engine writes nothing about this request, here or in the ledger (`write`).
-  const afterResponse = consent.tracking ? fanDecisions(env, set, slotLearnConfigOf(learn)) : Promise.resolve();
+  const afterResponse = Promise.all([
+    // The session write, off the response path but still before the request ends.
+    Promise.all(sessionWrites).catch(() => undefined),
+    consent.tracking ? fanDecisions(env, set, slotLearnConfigOf(learn)) : Promise.resolve(),
+  ]).then(() => undefined);
 
   return {
     ...set,

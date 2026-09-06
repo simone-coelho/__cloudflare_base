@@ -863,7 +863,12 @@ export class RealtimeSegmentEngine {
   /**
    * Create or get session from cookie header
    */
-  async getOrCreateSessionFromCookies(cookieHeader: string | null, userId: string): Promise<{
+  async getOrCreateSessionFromCookies(
+    cookieHeader: string | null,
+    userId: string,
+    /** CW37. Where the session write goes instead of the response path. See SessionManager. */
+    defer?: (p: Promise<unknown>) => void,
+  ): Promise<{
     sessionId: string;
     sessionData: SessionData;
     isNewSession: boolean;
@@ -892,7 +897,17 @@ export class RealtimeSegmentEngine {
 
     // If no valid session, create new one
     if (!sessionData) {
-      sessionId = this.sessionManager.generateSessionId();
+      // CW37. THE ID THE BROWSER ALREADY HOLDS WINS. A cookie naming a session
+      // this read could not find is not a reason to mint a second id: KV is
+      // eventually consistent, so a record written moments ago can read as
+      // absent, and deferring the write off the response path widens that
+      // window on purpose. Minting a new id there would split one visit across
+      // two sessions, and session-scope attribution compares the decision's
+      // session to the outcome's -- a split credits nothing, which is the exact
+      // failure found on 2026-09-04. Reusing the id the browser presents costs
+      // nothing when it is genuinely new (an id nobody has written is an empty
+      // session either way) and keeps the visit whole when it is not.
+      sessionId = sessionId || this.sessionManager.generateSessionId();
       isNewSession = true;
 
       // Get user profile for initial session creation
@@ -916,7 +931,7 @@ export class RealtimeSegmentEngine {
           personalizationEnabled: cookies.personalizationEnabled !== 'false',
           cookieConsent: true
         }
-      });
+      }, undefined, defer);
     }
 
     return {

@@ -78,7 +78,7 @@ function platform(fx: Fixtures, log: string[]) {
 
 async function openConsole(fx: Fixtures) {
   const log: string[] = [];
-  const dom = new JSDOM(pub('learning.html'), { url: 'http://console.test/learning.html?scope=coach&slot=chero', pretendToBeVisual: true, runScripts: 'outside-only' });
+  const dom = new JSDOM(pub('legacy/learning.html'), { url: 'http://console.test/learning.html?scope=coach&slot=chero', pretendToBeVisual: true, runScripts: 'outside-only' });
   type Node = { textContent: string | null; firstChild: { textContent: string | null } | null; querySelectorAll: (sel: string) => ArrayLike<Node> };
   type Doc = { body: Node; getElementById: (id: string) => unknown; querySelectorAll: (sel: string) => ArrayLike<Node> };
   const w = dom.window as unknown as Record<string, unknown> & { document: Doc; eval: (s: string) => unknown; close: () => void };
