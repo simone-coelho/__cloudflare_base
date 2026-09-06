@@ -178,24 +178,9 @@
           v.title, n === null || n === undefined ? null : h('span', { class: 'n' }, fmt(n))));
       }
     }
-    // The two older pages are still served, because ONE screen has not moved
-    // into the application yet: the under-floor list, which waits on a route
-    // that can page it (doc 29). They are not rail entries. A rail entry is a
-    // route inside this application, and these replace the whole page with a
-    // different one that has no rail and no way back, which is a trap rather
-    // than a link. They live at the foot of the rail, under a heading that says
-    // they leave, with the mark a link that leaves the page carries everywhere.
-    nav.append(h('div', { class: 'heading' }, 'Leaves this console'));
-    nav.append(h('a', {
-      class: 'away',
-      href: `/learning.html?scope=${encodeURIComponent(S.scope)}&slot=${encodeURIComponent(S.slot)}`,
-      title: 'The page this console replaced. The only thing still on it and not here is the under-floor list.',
-    }, 'Old learning page ↗'));
-    nav.append(h('a', {
-      class: 'away',
-      href: `/tuning.html?scope=${encodeURIComponent(S.scope)}`,
-      title: 'The page this console replaced. Everything on it is now under Interests.',
-    }, 'Old tuning page ↗'));
+    // Nothing else. Every screen the two older pages held is now a route here,
+    // and both of them redirect into this application, so a rail entry that
+    // leaves would be a link to a redirect back to where you already are.
   }
 
   // ---------- components ----------

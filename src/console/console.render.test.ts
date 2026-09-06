@@ -139,6 +139,30 @@ function platform(fx: Fixtures, log: string[], saved: Array<Record<string, unkno
       if (init?.method === 'POST') { saved.push(JSON.parse(init.body || '{}') as Record<string, unknown>); return okJson({ ok: true, report: DAY }); }
       return okJson({ ok: false, error: 'no report built for that day yet' }, 404);
     }
+    if (u.pathname === '/v1/coach/learn/exploring') {
+      return okJson({
+        ok: true, tenant: 'coach', brand: 'coach', slot: 'chero', version: 1_788_000_000_000, published: true,
+        mode: 'rotation', share: 0.1, floor: 50, total: 2, offset: 0, limit: 50, cursor: null,
+        rows: [
+          { item: 'cnt_new', customer_item_id: 'CCH-NEW', title: 'The new story', n: 3.2, to_floor: 46.8 },
+          { item: 'cnt_thin', customer_item_id: null, title: null, n: 11, to_floor: 39 },
+        ],
+      });
+    }
+    if (/^\/v1\/coach\/visitors\/[^/]+\/receipts$/.test(u.pathname)) {
+      if (!signed) return okJson({ ok: false, error: 'unauthorized' }, 401);
+      if (u.pathname.includes('erased-one')) return okJson({ ok: false, error: 'erased at the visitor\'s request' }, 410);
+      return okJson({
+        ok: true, tenant: 'coach', visitor_id: 'vis-1', total: 1, offset: 0, limit: 50, cursor: null,
+        receipts: [{
+          decision_id: 'd1', at: 1_788_000_000_000, page: 'home', slot: 'chero', position: 0,
+          item: 'cnt_aaa', customer_item_id: 'CCH-AAA', title: 'The Tabby story', arm: 'personalized',
+          explored: false, authority: 'engine', context: 'email, third visit, considering, in US-NY, leading interest line tabby',
+          score_base: 0.42, score_final: 0.58,
+          why: ['Interest matched: line tabby (interest 0.8 × weight 0.35).', 'What is trending in US-NY contributed 0.04.'],
+        }],
+      });
+    }
     if (u.pathname === '/v1/coach/lift/history') return okJson({ ok: true, versions: [{ version: 1_788_000_000_000, size: 2048, uploaded: '2026-09-05T00:00:00Z' }] });
     if (u.pathname.endsWith('/history')) {
       const kind = u.pathname.split('/').slice(-2)[0];
@@ -235,6 +259,7 @@ async function open(fx: Fixtures = {}, hash = '#/work?scope=coach') {
   w.eval(pub('console/views-config.js'));
   w.eval(pub('console/views-measure.js'));
   w.eval(pub('console/views-accounts.js'));
+  w.eval(pub('console/views-explore.js'));
   const settle = async () => { for (let i = 0; i < 8; i++) await new Promise((r) => setTimeout(r, 12)); };
   /** Long enough for the dials' validator, which waits 350ms after the last keystroke. */
   const settleChecked = async () => { await new Promise((r) => setTimeout(r, 450)); await settle(); };
@@ -672,27 +697,6 @@ describe('the operator application, rendered', () => {
     } finally { c.close(); }
   });
 
-  // ── The rail is routes, and what leaves says so ────────────────────────────
-  // Simone walked the console and asked what the old pages were doing in the
-  // rail: opening one replaces the whole application with a page that has no
-  // rail and no way back. A rail entry is a route INSIDE this application; a
-  // link that leaves is allowed to exist but must not look the same.
-  it('keeps the old pages out of the routes and marks them as leaving', async () => {
-    const c = await open();
-    try {
-      const railRoutes = c.all('#rail-views a:not(.away)').map((a) => String(a.getAttribute('href') || ''));
-      expect(railRoutes.length).toBeGreaterThan(8);
-      for (const href of railRoutes) expect(href.startsWith('#/')).toBe(true);
-
-      const away = c.all('#rail-views a.away').map((a) => String(a.getAttribute('href') || ''));
-      expect(away).toHaveLength(2);
-      expect(away.some((h) => h.startsWith('/learning.html'))).toBe(true);
-      expect(away.some((h) => h.startsWith('/tuning.html'))).toBe(true);
-      // Under a heading that says what happens, not one that just names them.
-      expect(c.$('rail-views').textContent).toContain('Leaves this console');
-    } finally { c.close(); }
-  });
-
   // ── Accounts, the last screen that lived only on the old page ──────────────
   it('shows an operator why Accounts is empty rather than refusing them', async () => {
     const c = await open({}, '#/accounts?scope=coach');
@@ -736,6 +740,58 @@ describe('the operator application, rendered', () => {
       const shown = c.$('view').textContent || '';
       expect(shown).toContain('Temp-1234-Temp');
       expect(shown).toContain('shown once');
+    } finally { c.close(); }
+  });
+
+  // ── The last two screens off the old pages, and the rail with nothing left ──
+  it('shows what is under the floor, with the slot\'s exploration in words', async () => {
+    const c = await open({}, '#/exploring?scope=coach&slot=chero');
+    try {
+      await c.settle();
+      const shown = c.$('view').textContent || '';
+      expect(shown).toContain('Exploring by rotation, 10% of this slot’s impressions, until a piece reaches 50 observations');
+      expect(shown).toContain('The new story');
+      // A piece with no title falls back to its id rather than printing nothing.
+      expect(shown).toContain('cnt_thin');
+      expect(shown).toContain('2 pieces');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('answers why a shopper saw something, in her own words, and never as a raw record', async () => {
+    const c = await open({}, '#/why?scope=coach&visitor=vis-1');
+    try {
+      await c.signIn();
+      const shown = c.$('view').textContent || '';
+      expect(shown).toContain('The Tabby story');
+      expect(shown).toContain('position 1 in chero on home');
+      expect(shown).toContain('leading interest line tabby');
+      expect(shown).toContain('Interest matched: line tabby');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('says an erased shopper was forgotten rather than showing an error', async () => {
+    const c = await open({}, '#/why?scope=coach&visitor=erased-one');
+    try {
+      await c.signIn();
+      const shown = c.$('view').textContent || '';
+      expect(shown).toContain('asked to be forgotten, and was');
+      expect(shown).not.toContain('410');
+      expect(c.text()).not.toMatch(STRAY);
+    } finally { c.close(); }
+  });
+
+  it('has no link left in the rail that leaves the application', async () => {
+    const c = await open();
+    try {
+      // Both old pages redirect here now, so an outbound rail link would point
+      // at a redirect back to where you already are.
+      expect(c.all('#rail-views a.away')).toHaveLength(0);
+      const hrefs = c.all('#rail-views a').map((a) => String(a.getAttribute('href') || ''));
+      expect(hrefs.length).toBeGreaterThan(10);
+      for (const href of hrefs) expect(href.startsWith('#/')).toBe(true);
+      expect(c.$('rail-views').textContent).not.toContain('Leaves this console');
     } finally { c.close(); }
   });
 });

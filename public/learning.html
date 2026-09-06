@@ -1,0 +1,45 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The learning console moved</title>
+<meta name="robots" content="noindex" />
+<!--
+  This page moved into the operator console. Every screen it held is a route
+  there now, so this is a redirect and not a stub: the links to it in the kit,
+  in the deployment notes and in whatever anyone bookmarked go on working, and
+  land on the same subject rather than on a front page.
+
+  The scope and slot on the query are carried across, because they are the whole
+  context of what someone was looking at.
+
+  The page as it was is still served, unchanged, at /legacy/learning.html. It is there so a
+  problem with the console in front of a customer has a way back, not because
+  anything still needs it.
+-->
+<style>
+  body { margin: 0; font: 15px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; color: #1a1a1a; background: #faf9f7; }
+  main { max-width: 34rem; margin: 18vh auto; padding: 0 1.5rem; }
+  h1 { font-size: 1.25rem; font-weight: 600; margin: 0 0 .5rem; }
+  p { margin: 0 0 .75rem; color: #4a4a4a; }
+  a { color: #1a4fd6; }
+</style>
+<main>
+  <h1>The learning console moved</h1>
+  <p>This page is now part of the operator console. Taking you there.</p>
+  <p><a id="go" href="/console/">Go to the console</a> if nothing happens.</p>
+  <p style="color:#8a8a8a">The page as it was is still at <a href="/legacy/learning.html">/legacy/learning.html</a>.</p>
+</main>
+<script>
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var next = new URLSearchParams();
+    var scope = (q.get('scope') || '').trim();
+    var slot = (q.get('slot') || '').trim();
+    if (scope) next.set('scope', scope);
+    if (slot) next.set('slot', slot);
+    var s = next.toString();
+    var to = '/console/#/lift' + (s ? '?' + s : '');
+    document.getElementById('go').setAttribute('href', to);
+    location.replace(to);
+  })();
+</script>
