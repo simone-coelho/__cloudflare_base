@@ -42,8 +42,9 @@ one to three engineer-days, while the audit's single size label covered the full
 The audit's estimates are right for the programmes; presenting each as one unit is what would cause
 the sharp, hours-long fixes to be scheduled behind multi-week builds. Section 4 separates them.
 
-**Thirty new findings** neither document had, from the five sweeps. Nine block launch. The three
-sharpest: an authenticated generic store route that lets any operator token read, overwrite and
+**Thirty new findings** neither document had, from the five sweeps; nineteen distinct defects once the
+same defect seen through two lenses is counted once (the store proxy, and the Analytics Engine rows,
+each surfaced twice). Nine block launch. The three sharpest: an authenticated generic store route that lets any operator token read, overwrite and
 delete any tenant's KV keys and ledger objects; the default environment enforcing authentication
 against a JWT secret published in the repository; and erasure that the browser undoes on the next
 page view because the profile is mirrored into cookies. Section 3 lists all thirty.
@@ -716,8 +717,15 @@ customer, L leadership.
 
 ## 6 · Decisions only a person can make
 
+The synthesis agent, given every verdict, sized the first gate (items 1 to 14 of section 5) at roughly
+8 to 12 engineer-weeks with verification across two tracks. That does not all fit before the customer's
+November code freeze at today's staffing, which makes the first two rows below the ones that decide
+everything else.
+
 | Decision | Who | Options |
 |---|---|---|
+| What ships in January, given the first gate's size against the November freeze | Simone with leadership and the customer's capability owner | (a) Hold January with one page, learning in shadow, no incrementality claim, a corrected register: the smallest honest move, and deliverable. (b) Hold January and formally defer the measurement claims to a dated later milestone. (c) Move January. |
+| Staffing for the remediation | Leadership | (a) Two tracks, the list as ranked, a later date. (b) Add a platform and security engineer for items 1 to 4 and a data-science engineer for items 21 to 32. (c) Contract the January scope down to what two tracks can close. |
 | Whether the demo storefront and its routes ship in customer stamps at all | Simone, leadership | Item 1 removes them from enforced mode; full deployable separation (L) is the alternative |
 | The staging site key, and whether the demo pages on staging get a real key | Simone | One command; the demo pages break there unless re-keyed |
 | The holdout's representation to the customer | Simone with the customer's data science | Attribution diagnostic now; a real incrementality design (unit, control, metrics, window) is item 21 plus a customer-owned production control |
