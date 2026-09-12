@@ -47,6 +47,28 @@ The secondary asks, all from the transcript:
 The one signal they have today: a `uattr` cookie holding category affinities, computed from the category
 pages visited in the session. They want to expand it with us.
 
+### 1a · Garrett's written use case (received 2026-09-11) and the visual
+
+Garrett's note restates the module as their number one use case and adds, line by line:
+
+| His line | What it changes |
+|---|---|
+| "Our CMS is the source of content. Content could be headless or headful. We would likely handle the rendering with our own components" | Confirms decisions by content id, rendered by them. Headful (the CMS returns markup) still works: we return ids, their component fetches the markup. The SDK is optional if their component calls the snapshot server-side |
+| "Personalize between 20+ pieces of content" and "let's say there are 50 pieces on any given day" | A pool of 20 to 50 live pieces at once. Far inside every limit |
+| "Based on category affinity, past purchases, customer type, products recently viewed, etc" | Four signal families. Category affinity and recently viewed products are the vector's native inputs. Past purchases are the historical-transactions ingest, which exists (weighted, timestamped rows) but resolves the wrong registry today (F11, F31). Customer type is a trait from their side: it needs a seeded attribute on identify or a registry dimension fed by their data, which is the contextual-seeds feature below, not a new idea |
+| "Do you have options for location? What about weather forecast? It's snowing in the Pacific Northwest, we might want to display relevant content to those customers" | Location is in every decision's context today (region from the edge), used for learning and for the regional prior. Weather as he frames it is a targeting rule, not an affinity: show this content to these customers when this is true. A piece has eligibility by window, stock, slot type and journey stage, but no eligibility by region or by an external condition. That is the feature: `eligibleWhen: { regions, context }` on the piece, with the page or a scheduled job supplying the condition. S to M |
+| "Content has varying start and end dates. Content should not be presented if it's not within the active window. A few hours to a few days, usually not longer than a week" | Exactly `window.from/to` and `isEligibleAt`. Hours-long windows raise one thing: the day report's batch attribution reaches back 48 hours and the online ring seven days, so a purchase after a two-hour offer is credited online but not in the batch report past two days (F17). For a click-judged module this does not matter |
+| "Swap out creative towards the end of the promotion window with new creative, Final Hours or Final Day" | Keep the piece id and change the creative behind it (`renderUrl` or their markup), and the offer keeps everything it learned. A new id restarts learning for the last hours, which is the worst moment to restart. An urgency term can also lift it for shoppers already interested. Say: same id, new creative |
+
+The visual, "Our Best Promotions For You" over four cards and "20 Available Promotions" beneath, shows
+the pool's cards carrying promotion types as badges: Best Seller, Limited Time, Clearance, Featured
+Value, Just Reduced, Easy Pay event. That is a fourth dimension beyond category, subcategory and brand,
+and a valuable one: shoppers who respond to clearance and shoppers who respond to easy-pay are different
+audiences, and the badge is free metadata. Add `offerType` to the registry from day one.
+
+Every card is image, title and one call to action, and the four are the same shape as the twenty. The
+module is one slot, `take: 4`, with the whole pool as candidates. Nothing about it needs a second slot.
+
 ---
 
 ## 2 · Fit, requirement by requirement
@@ -74,17 +96,19 @@ defect on it), **needs a feature** (a bounded addition), **not this engine** (sa
 | Category, collection and new-product pages | Slots are per page; `/sort` re-ranks a candidate list the page supplies, capped at 500, candidate-preserving | **Fits** |
 | Their identifier | `identify()` with a backend-signed assertion | **Fits with a fix**: the assertion is optional until `IDENTITY_SECRETS` is provisioned (F04). Provision it |
 | Location | The region is in every decision's context cell today | **Fits** |
-| Weather | No context input exists for a signal the page knows and the platform does not | **Needs a feature**: contextual seed attributes on the snapshot request (`context: { weather: 'cold' }`) treated as a registry dimension. S |
+| Weather, and "show this content to these customers when" | No eligibility by region or external condition on a piece, and no context input for a signal the page knows and the platform does not | **Needs a feature**, two halves: `eligibleWhen` on the piece (regions, conditions) for the targeting rule Garrett describes, and contextual seeds on the request (`context: { weather: 'snow' }`) for affinity. S to M |
+| Customer type, past purchases | Historical transactions ingest exists (weighted, timestamped rows) but resolves the wrong registry (F11, F31); customer type has no input today | **Fits with a fix** for purchases; customer type rides the contextual-seeds feature as a seeded attribute on identify. S |
+| Offer type as a signal (the badges in the visual) | Any tag is a dimension; nothing to build | **Fits**: add `offerType` to the registry |
 | Final Day / Final Hours creative | The CMS can publish a second piece with the closing window, or swap the creative behind the same id. The engine has no urgency term | **Fits as the CMS pattern**; optionally a feature: an `urgency` term, weight times a function of time remaining, the mirror of freshness. S |
 | Explain every choice | Every decision carries a receipt: drivers, the level of evidence, the lift; replay by decision id | **Fits with a fix** for replay on multi-slot pages (F22). For a single four-take slot the receipt is complete today |
 | Engagement as lead metric, incrementality as the bridge | The day report per slot; a holdout arm | **Fits for attribution**, **not yet for incrementality**: the holdout comparison is not a valid test of business lift (F07). Say "we report attribution now; a proper control design is the measurement workstream" |
 | AI enrichment of their content | Done as a services step for our first customer with computer vision; no product workflow exists (F11) | **Not the engine**: a services offer, honestly priced |
 | Auto-created bandits, winners declared, TikTok trend to test | Not this engine. That path was the Signal-Led Moment demo on Optimizely Experimentation. The content engine's Thompson mode ignores its budget (F23) and autonomy applies stale proposals (F24); both should be withdrawn from the surface until repaired | **Not this engine today**. Do not repeat the claim |
 
-Net: the primary use case is the engine's home ground. Of the twenty rows, fourteen fit or fit with a
+Net: the primary use case is the engine's home ground. Of the twenty-two rows, sixteen fit or fit with a
 fix already on the doc 35 list, four need bounded features (the evidence gate, two-horizon memory,
-contextual seeds, urgency), two are honest no's (enrichment is services, bandit automation is not this
-product).
+eligibility rules with contextual seeds, urgency), two are honest no's (enrichment is services, bandit
+automation is not this product).
 
 ---
 
@@ -99,8 +123,11 @@ All four are additive terms or dials in the shape the engine already has. None i
    (weeks), beside the existing one (minutes to hours), and a slot dial `memory: { long: 0.3, moment: 0.7 }`
    for the blend. The receipt shows both numbers. Answers Kevin's push and pull with two dials a
    merchandiser can read. M, because the reflex state schema changes and the object host must carry it.
-3. **Contextual seeds.** Attributes the page passes on the snapshot request, scored as a seeded touch
-   the way entry channel is meant to be: weather, device, campaign. S.
+3. **Eligibility rules and contextual seeds.** Two halves of one feature. `eligibleWhen` on the piece:
+   regions and named conditions under which it may be served at all, evaluated beside the window and the
+   stock flag, for "snowing in the Pacific Northwest, show this". And attributes the page or their backend
+   passes on the request or on identify (weather, device, campaign, customer type), scored as a seeded
+   touch the way entry channel is meant to be, so they shape affinity rather than only gate it. S to M.
 4. **Urgency.** A term on the piece, `weight × f(time remaining in window)`, the mirror of freshness,
    so an offer in its last hours can rise for shoppers who have shown interest. S. Or leave it to the
    CMS swap, which Jon already offered.
@@ -138,9 +165,8 @@ where the description ran ahead of the code, and the audit this week measured ea
 
 ## 5 · The walkthrough Garrett asked for
 
-Garrett dropped a use case in the chat that is not in the transcript; get its text from Jon before
-building the walkthrough. Assuming it is the four-container homepage module, the walkthrough should be
-in their vocabulary and their shape, not ours:
+Garrett's written use case (§1a) is the four-container homepage module, "Our Best Promotions For You",
+over a pool of twenty to fifty. The walkthrough should be in their vocabulary and their shape, not ours:
 
 1. **Their module, their pool.** A page with one module of four containers and a pool of fifty offers
    from a feed: id, title, image, category, subcategory, brand, live-from, live-to. Two are TSVs with a
@@ -188,15 +214,14 @@ and campaign as contextual seeds; more modules.
 
 ## 7 · Questions to put to QVC before the next call
 
-1. The text of Garrett's chat use case.
-2. What "module engagement" counts: a click on any container, or a click on the offer through to its
+1. What "module engagement" counts: a click on any container, or a click on the offer through to its
    page, or both, and whether an impression must be viewable.
-3. Whether the module renders client-side from ids (our default) or server-side (then the snapshot
+2. Whether the module renders client-side from ids (our default) or server-side (then the snapshot
    is a server call and the SDK is not involved).
-4. The size of the live pool at any moment, and how many offers enter and leave per day.
-5. Whether "Final Day" is a separate creative id in the CMS or the same offer with a flag.
-6. The exact semantics of `uattr`: which pages, what weights, what decay, so the first registry
+3. The size of the live pool at any moment, and how many offers enter and leave per day.
+4. Whether "Final Day" is a separate creative id in the CMS or the same offer with a flag.
+5. The exact semantics of `uattr`: which pages, what weights, what decay, so the first registry
    reproduces what they trust today before improving on it.
-7. Whether the five-page rule is per lifetime (needs their identifier or a durable cookie) or per session.
-8. What their analytics team would accept as a control for the module, since the incumbent's
+6. Whether the five-page rule is per lifetime (needs their identifier or a durable cookie) or per session.
+7. What their analytics team would accept as a control for the module, since the incumbent's
    brute-force test is what they are used to.
