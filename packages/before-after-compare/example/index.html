@@ -1,0 +1,82 @@
+<!doctype html>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Before / Now compare, example</title>
+<link rel="stylesheet" href="../compare.css" />
+<style>
+  :root { --paper: #ffffff; --p-bg: #eef1f5; --p-text: #1b2229; --p-dim: #5b6874; --p-line: #cfd6dd; --p-blue: #0b6e6e; --sans: system-ui, sans-serif; --serif: Georgia, serif; }
+  body { margin: 0; font: 15px/1.5 var(--sans); color: var(--p-text); background: var(--p-bg); }
+  /* The page element that gets captured: it scrolls, it has an id, and it holds the whole page. */
+  #page { height: 100vh; overflow: auto; background: var(--paper); }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px; }
+  header { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
+  header h1 { font: 600 22px/1.2 var(--serif); margin: 0 auto 0 0; }
+  button { font: 500 13px/1.2 var(--sans); padding: 9px 12px; border: 1px solid var(--p-line); background: #fff; border-radius: 5px; cursor: pointer; display: grid; text-align: left; }
+  button small { font-weight: 400; color: var(--p-dim); }
+  button.on { border-color: var(--p-blue); }
+  .hero { height: 220px; border-radius: 8px; display: grid; place-items: center; color: #fff; font: 600 28px var(--serif); margin-bottom: 20px; background: #7a4a1e; transition: background .3s; }
+  .hero.variant { background: #0b6e6e; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .card { border: 1px solid var(--p-line); border-radius: 8px; padding: 14px; background: #fff; transition: transform .35s; }
+  .card .img { height: 110px; border-radius: 6px; margin-bottom: 10px; background: #dbe3ea; }
+  .card h3 { margin: 0 0 4px; font: 600 15px var(--sans); }
+  .card p { margin: 0; color: var(--p-dim); }
+  footer { margin-top: 40px; padding: 16px; background: #f5f7f9; border-radius: 8px; color: var(--p-dim); }
+</style>
+
+<div id="page">
+  <div class="wrap">
+    <header>
+      <h1>A page that changes</h1>
+      <button id="btn-capture" class="cmp-capture">Capture baseline<small>freeze the page now</small></button>
+      <button id="btn-change">Apply the variant<small>re-order the cards, recolour the hero</small></button>
+      <button id="btn-compare">Compare<small>before vs now</small></button>
+    </header>
+    <div class="hero" id="hero">Spring collection</div>
+    <div class="grid" id="grid">
+      <div class="card" data-id="a"><div class="img"></div><h3>Tote</h3><p>Canvas, natural</p></div>
+      <div class="card" data-id="b"><div class="img"></div><h3>Crossbody</h3><p>Leather, tan</p></div>
+      <div class="card" data-id="c"><div class="img"></div><h3>Wallet</h3><p>Pebbled, black</p></div>
+      <div class="card" data-id="d"><div class="img"></div><h3>Belt</h3><p>Reversible</p></div>
+      <div class="card" data-id="e"><div class="img"></div><h3>Scarf</h3><p>Silk, printed</p></div>
+      <div class="card" data-id="f"><div class="img"></div><h3>Sneaker</h3><p>Low, white</p></div>
+      <div class="card" data-id="g"><div class="img"></div><h3>Sunglasses</h3><p>Aviator</p></div>
+      <div class="card" data-id="h"><div class="img"></div><h3>Backpack</h3><p>Nylon, navy</p></div>
+    </div>
+    <footer>Press Capture, then Apply the variant, then Compare. Drag the seam; press Side by side; use + and &minus; to zoom; Esc closes.</footer>
+  </div>
+</div>
+
+<script type="module">
+  import { configure, attach } from '../compare.js';
+
+  // Where the library is served from on THIS site. In the example the vendor
+  // folder sits beside the module.
+  configure({ libUrl: '../vendor/html2canvas.min.js', rootId: 'page', flipTargets: '.card' });
+
+  attach({
+    root: '#page',
+    captureButton: '#btn-capture',
+    compareButton: '#btn-compare',
+    onCaptured: (r) => console.log('baseline', r),
+    onCompared: (r) => console.log('compared', r),
+  });
+
+  // The change: a variant that recolours the hero and moves two cards to the
+  // front. Real pages animate; this one uses a FLIP transform on the cards so the
+  // capture's "wait until the page is at rest" rule is exercised.
+  document.getElementById('btn-change').addEventListener('click', () => {
+    const grid = document.getElementById('grid');
+    const cards = [...grid.children];
+    const first = cards.map((c) => c.getBoundingClientRect());
+    grid.prepend(cards[5], cards[2]);                // sneaker, wallet to the front
+    document.getElementById('hero').classList.toggle('variant');
+    document.getElementById('hero').textContent = 'Picked for you';
+    const after = [...grid.children];
+    after.forEach((c) => {
+      const i = cards.indexOf(c), r = c.getBoundingClientRect(), f = first[i];
+      c.style.transform = `translate(${f.left - r.left}px, ${f.top - r.top}px)`;
+    });
+    requestAnimationFrame(() => requestAnimationFrame(() => after.forEach((c) => { c.style.transform = ''; })));
+  });
+</script>

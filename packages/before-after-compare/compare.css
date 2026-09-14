@@ -1,0 +1,163 @@
+/* compare.css — the Before / Now compare overlay.
+   Standalone. It reads the host page's tokens (--paper, --p-bg, --p-text,
+   --p-dim, --p-line, --p-blue, --serif, --sans) when they exist and carries
+   literal values as fallbacks, so it also stands on its own. Link it after the
+   page's own stylesheet.
+
+   Light theme, at home on the demo: the box is the page ground (white), the
+   chrome is the panel ground, text is the panel ink, the accent is the panel
+   blue, the title is the display serif, labels and readouts are mono.
+
+   The mechanic: one stage; the Now frame underneath (#cmp-after); the Before
+   frame on top (#cmp-before) clipped to the left of the seam (--cmp-seam,
+   0–100%); a divider with a ↔ handle riding the seam. The stage is sized by
+   compare.js: the captured frame fitted inside min(86vw, 1180px) ×
+   min(72vh, 760px) at its own aspect ratio. */
+
+.cmp-back{
+  --cmp-paper:var(--paper,#FFFFFF);
+  --cmp-ground:var(--p-bg,#CDD5E0);
+  --cmp-ink:var(--p-text,#171A20);
+  --cmp-dim:var(--p-dim,#4E5665);
+  --cmp-line:var(--p-line,#9BA7B8);
+  --cmp-blue:var(--p-blue,#0E5FBF);
+  --cmp-serif:var(--serif,'Playfair Display',ui-serif,Georgia,serif);
+  --cmp-sans:var(--sans,'Inter',ui-sans-serif,-apple-system,'Segoe UI',system-ui,sans-serif);
+  --cmp-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+  position:fixed;inset:0;z-index:950;   /* above anything the host page fixes to the viewport */
+  display:none;place-items:center;padding:28px;
+  background:rgba(11,14,19,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  color:var(--cmp-ink);font:14px/1.45 var(--cmp-sans);
+  outline:none;   /* focusable scrim (tabindex=-1) so a click inside keeps keys in the dialog; the ring belongs on controls */
+}
+.cmp-back.open{display:grid}
+
+.cmp-box{
+  background:var(--cmp-paper);border-radius:14px;overflow:hidden;
+  display:flex;flex-direction:column;
+  max-width:calc(100vw - 56px);max-height:calc(100vh - 56px);
+  box-shadow:0 30px 90px rgba(11,14,19,.5);
+}
+
+/* ── chrome ─────────────────────────────────────────────────────────────── */
+.cmp-bar{
+  display:flex;align-items:center;gap:10px;padding:13px 18px;
+  background:var(--cmp-ground);border-bottom:1px solid var(--cmp-line);
+}
+.cmp-title{
+  flex:1;min-width:0;margin:0;
+  font:500 22px/1 var(--cmp-serif);letter-spacing:-.01em;color:var(--cmp-ink);
+}
+.cmp-btn{
+  min-height:38px;padding:8px 13px;border-radius:5px;cursor:pointer;
+  background:var(--cmp-paper);color:var(--cmp-ink);border:1px solid var(--cmp-line);
+  font:500 13px/1.25 var(--cmp-sans);white-space:nowrap;
+}
+.cmp-btn:hover{border-color:var(--cmp-blue)}
+.cmp-btn kbd{
+  font:500 10.5px/1 var(--cmp-mono);color:var(--cmp-dim);
+  padding:3px 5px;margin-left:6px;border:1px solid var(--cmp-line);border-radius:3px;background:var(--cmp-ground);
+}
+
+/* ── stage: one surface, two frames, a seam ─────────────────────────────── */
+.cmp-stage{
+  position:relative;overflow-x:hidden;overflow-y:auto;margin:0 auto;
+  background:var(--cmp-ground);
+  touch-action:none;user-select:none;-webkit-user-select:none;cursor:ew-resize;
+}
+.cmp-frame{
+  position:absolute;top:0;left:0;right:0;   /* height is set by fit(): the full page */
+  background:var(--cmp-paper) center top / 100% auto no-repeat;   /* never stretched */
+}
+/* The mechanic: Now underneath (#cmp-after, plain), Before on top,
+   clipped to the LEFT of the seam — everything right of it reveals Now. */
+.cmp-before{clip-path:inset(0 calc(100% - var(--cmp-seam,50%)) 0 0)}
+
+/* the divider rides the seam; the ↔ handle sits at its middle */
+.cmp-divider{
+  position:absolute;top:0;left:var(--cmp-seam,50%);width:2px;margin-left:-1px;
+  background:var(--cmp-blue);pointer-events:none;
+  box-shadow:0 0 0 1px rgba(255,255,255,.55);
+}
+.cmp-handle{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:38px;height:38px;border-radius:50%;
+  background:var(--cmp-blue);color:#fff;border:2px solid #fff;
+  display:grid;place-items:center;
+  font:600 17px/1 var(--cmp-sans);
+  box-shadow:0 2px 10px rgba(11,14,19,.35);
+}
+
+/* the frame labels, pinned to their side of the stage:
+   "Before · HH:MM:SS" top-left, "Now · HH:MM:SS · Ns later" top-right */
+.cmp-tag{
+  position:absolute;top:12px;z-index:2;
+  display:inline-flex;align-items:baseline;gap:6px;
+  padding:7px 10px;border-radius:4px;
+  background:var(--cmp-ink);color:#fff;
+  font:600 11px/1 var(--cmp-mono);letter-spacing:.12em;text-transform:uppercase;
+  pointer-events:none;white-space:nowrap;
+}
+.cmp-tag[hidden]{display:none}
+.cmp-tag span{font-weight:500;letter-spacing:.02em;text-transform:none;opacity:.85}
+.cmp-tag-before{left:12px}
+.cmp-tag-now{right:12px}
+
+/* the failure state — never a blank stage */
+.cmp-msg{
+  position:absolute;inset:0;z-index:3;
+  display:grid;place-items:center;align-content:center;
+  padding:40px;text-align:center;
+  background:var(--cmp-ground);color:var(--cmp-ink);
+  font:400 16px/1.5 var(--cmp-sans);
+}
+.cmp-msg[hidden]{display:none}
+.cmp-msg b{display:block;font:500 26px/1.2 var(--cmp-serif);margin-bottom:10px}
+
+/* ── foot: the hint line ────────────────────────────────────────────────── */
+.cmp-hint{
+  padding:10px 18px 13px;background:var(--cmp-paper);border-top:1px solid var(--cmp-line);
+  font:400 12px/1.4 var(--cmp-mono);color:var(--cmp-dim);text-align:center;
+}
+/* A diagnostic — no baseline, nothing changed, still moving, resized — is not a
+   hint: it is the reason the two sides look alike, and it has to be read from
+   the back of the room, not found in 12px dim mono. */
+.cmp-hint.warn{
+  font:600 14px/1.45 var(--cmp-sans);color:#7A2E0E;background:#FFF1E8;border-top-color:#E8B39B;
+}
+
+/* ── keyboard focus, visible on every control ───────────────────────────── */
+.cmp-btn:focus-visible{outline:2px solid var(--cmp-blue);outline-offset:2px}
+.cmp-stage:focus-visible{outline:2px solid var(--cmp-blue);outline-offset:-2px}
+
+/* ── the Capture button while a capture is rendering ────────────────────── */
+/* attach() puts .busy on the capture button from the press until
+   captureBaseline() resolves (html2canvas takes a second or more on a retina
+   screen, and the capture waits for the page to come to rest first). The user
+   sees the button working rather than a press that did nothing. Give your
+   button the class cmp-capture, or the id btn-capture. */
+.cmp-capture.busy,#btn-capture.busy{cursor:progress;opacity:.72;pointer-events:none}
+.cmp-capture.busy small,#btn-capture.busy small{animation:cmp-busy 1s ease-in-out infinite}
+@keyframes cmp-busy{0%,100%{opacity:1}50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.cmp-capture.busy small,#btn-capture.busy small{animation:none}}
+
+/* ── the tools: how to compare, and how close to look ───────────────────── */
+.cmp-tools{display:flex;align-items:center;gap:10px}
+.cmp-seg{display:flex;border:1px solid var(--cmp-line);border-radius:6px;overflow:hidden}
+.cmp-btn.seg{border:0;border-radius:0;padding:7px 12px}
+.cmp-btn.seg + .cmp-btn.seg{border-left:1px solid var(--cmp-line)}
+.cmp-btn.seg.on{background:var(--cmp-blue);color:#fff}
+.cmp-btn.seg.zoomv{min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
+
+/* ── side by side: two whole pages, scrolling together ──────────────────── */
+.cmp-split[hidden]{display:none}
+.cmp-split{display:flex;gap:18px;margin:0 auto}
+.cmp-pane{position:relative;overflow:auto;background:var(--cmp-ground);
+  border:1px solid var(--cmp-line);border-radius:6px}
+.cmp-shot{background:var(--cmp-paper) center top no-repeat;background-size:100% auto}
+.cmp-pane-tag{position:sticky;top:0;z-index:2;display:inline-block;
+  font:600 11px/1 var(--cmp-sans);letter-spacing:.06em;text-transform:uppercase;
+  background:rgba(11,14,19,.82);color:#fff;padding:6px 10px;border-radius:0 0 6px 0}
+.cmp-pane-tag.now{background:var(--cmp-blue)}
+

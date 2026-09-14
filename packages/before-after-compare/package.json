@@ -1,0 +1,11 @@
+{
+  "name": "before-after-compare",
+  "version": "1.0.0",
+  "description": "A full-page Before / Now compare overlay for the browser: a draggable seam or side by side, zoom, a first-change locator. One dependency, html2canvas 1.4.1, vendored.",
+  "type": "module",
+  "main": "compare.js",
+  "exports": { ".": "./compare.js", "./compare.css": "./compare.css", "./vendor/html2canvas.min.js": "./vendor/html2canvas.min.js" },
+  "files": ["compare.js", "compare.css", "vendor/", "example/", "README.md"],
+  "license": "MIT",
+  "sideEffects": ["./compare.css"]
+}
