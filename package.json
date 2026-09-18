@@ -16,6 +16,8 @@
     "test": "vitest run src",
     "test:watch": "vitest",
     "ci": "npm run lint && npm run typecheck && npm run test",
+    "score": "node scripts/remediation/score.mjs",
+    "gate": "GATE_JSON=${TMPDIR:-/tmp}/cfbase-gate-vitest.json; node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false && node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit && { node node_modules/vitest/vitest.mjs run src --maxWorkers=1 --minWorkers=1 --reporter=default --reporter=json --outputFile=$GATE_JSON || true; } && node scripts/remediation/score.mjs --from $GATE_JSON --check-ratchet && node scripts/remediation/score.mjs --from $GATE_JSON --check --typecheck green && node scripts/build-sdk.mjs --check && node scripts/build-meridian.mjs --check && npm run lint",
     "optly": "node optly-npx-fix.cjs optly",
     "optly-help": "node optly-npx-fix.cjs optly --help",
     "optly-version": "node optly-npx-fix.cjs optly --version",

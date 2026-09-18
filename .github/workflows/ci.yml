@@ -15,8 +15,50 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The gate of docs/remediation/METHOD.md section 7, in its order and with its
+  # exact commands. `npm run gate` runs the same list locally; a builder runs it
+  # before handover, and CI is the second opinion, never the first.
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      VITEST_JSON: ${{ runner.temp }}/vitest.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: App typecheck
+        run: node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit --incremental false --composite false
+      - name: SDK typecheck
+        run: node node_modules/typescript/bin/tsc -p src/sdk/tsconfig.json --noEmit
+      # The suite is red at the checkpoint baseline (ruling R3): the ratchet below
+      # is the judge, not this step's exit code. It fails on any failing test that
+      # is absent from docs/remediation/baseline-failures.json, and that list may
+      # only shrink. When it reaches zero this flag goes with it.
+      - name: Suite
+        continue-on-error: true
+        run: node node_modules/vitest/vitest.mjs run src --maxWorkers=1 --minWorkers=1 --reporter=default --reporter=json --outputFile="$VITEST_JSON"
+      - name: Ratchet
+        run: node scripts/remediation/score.mjs --from "$VITEST_JSON" --check-ratchet
+      # The typecheck state is an input, not a decoration: the two steps above
+      # must have passed for this step to run at all.
+      - name: Score
+        run: node scripts/remediation/score.mjs --from "$VITEST_JSON" --check --typecheck green
+      - name: Generated files
+        run: |
+          node scripts/build-sdk.mjs --check
+          node scripts/build-meridian.mjs --check
+      - run: npm run lint
+
   verified-package:
     runs-on: ubuntu-latest
+    # Batch TOOLS owns removing this flag. The packager is retained history that
+    # has never run against the remediation work; until batch TOOLS re-proves it
+    # on this branch it reports, it does not block the gate above.
+    continue-on-error: true
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
