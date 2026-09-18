@@ -351,6 +351,11 @@ describe('unit:W16.C2.04', () => {
     // Nothing known at all: no channel, and no invented visit 1 on the read path.
     expect(projectVisit(undefined, undefined, T0)).toEqual({ visitNumber: null, entryChannel: null });
     expect(projectVisit(null, null, T0)).toEqual({ visitNumber: null, entryChannel: null });
+    // Lead ruling R14: an empty or invalid site host carries no page-view
+    // evidence, so the SDK's all-empty placeholder stays unknown. `direct`
+    // needs a present, valid site host with an empty or same-site referrer.
+    expect(projectVisit(null, null, T0, { utmMedium: '', utmSource: '', referrer: '', siteHost: '' }))
+      .toEqual({ visitNumber: null, entryChannel: null });
     // An unrecognized medium or source is not evidence of a direct arrival.
     const prior = { visitCount: 2, lastVisitAt: T0, entryChannel: undefined };
     for (const entry of [{ utmMedium: 'wombat-unrecognized' }, { utmSource: 'some-unknown-affiliate' },
