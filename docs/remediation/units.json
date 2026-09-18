@@ -1,0 +1,92 @@
+[
+  {
+    "id": "W16.C2.01",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "An ordinary search referrer (https://www.google.com/search?q=…, and each host family in SEARCH_HOSTS: bing, duckduckgo, yahoo, ecosia, baidu, yandex, brave, startpage) with no UTM classifies as `organic`.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B1 row 01; docs/handover/HANDOFF-2026-09-18.md §5 \"Concrete source-inspection defect\" (SEARCH_HOSTS prefix tokens vs the dot-stripping matcher); src/services/visit.ts SEARCH_HOSTS and the six-value EntryChannel vocabulary",
+    "status": "specified",
+    "batch": "W16-B1"
+  },
+  {
+    "id": "W16.C2.02",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "A lookalike host (google.com.evil.example, notgoogle.com, evilgoogle.co) never classifies as search or social: host matching is exact or dot-boundary suffix, never substring or prefix. This covers the declared utm_source, which classifyEntryChannel matches as a host.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B1 row 02; docs/handover/HANDOFF-2026-09-18.md §5 (\"preserving the anti-spoof requirement\"; \"the social-source startsWith branches also need review\"); src/services/visit.ts matches()/SOCIAL_HOSTS",
+    "status": "specified",
+    "batch": "W16-B1"
+  },
+  {
+    "id": "W16.C2.03",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "A social source with a paid medium (utm_source=facebook|instagram|meta|tiktok|pinterest, utm_medium=cpc|ppc|paid|paid_social|cpm) classifies as `paid_social` before any paid-search rule.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B1 row 03; docs/architecture/35-verification-reports/F13.md §5.H (Meta's default utm_medium=cpc pools into the paid-search cell); docs/handover/HANDOFF-2026-09-18.md §5 saved-behavior row for src/services/visit.ts",
+    "status": "specified",
+    "batch": "W16-B1"
+  },
+  {
+    "id": "W16.C2.04",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Absent referrer, absent UTM and an unrecognized utm_medium never invent `direct`: the entry stays unknown (entryChannelOf null / no entry recorded) and no first visit is fabricated; `direct` only when the referrer is empty or same-site on a real page view.",
+    "legs": ["logic", "host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B1 row 04 and the \"RULINGS TO APPLY\" ruling (unknown stays unknown, never an invented direct); docs/handover/HANDOFF-2026-09-18.md §5 C2 (\"unknown stays unknown, no invented direct/first visit\"); docs/architecture/35-verification-reports/F13.md §5.A/§5.D",
+    "status": "specified",
+    "batch": "W16-B1"
+  },
+  {
+    "id": "W16.C2.05",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "An established owned visit entry channel wins over a request-supplied fallback channel on the content decision path (src/content/service.ts), on both hosts.",
+    "legs": ["host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B1 row 05; docs/handover/HANDOFF-2026-09-18.md §5 saved-behavior row for src/content/service.ts; src/content/service.ts serveContentDecisions channel precedence comment",
+    "status": "specified",
+    "batch": "W16-B1"
+  },
+  {
+    "id": "W16.C2.06",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Read-time idle rollover: after VISIT_GAP_MS of inactivity the next read yields the next visit number and a freshly classified entry channel; within the gap both are unchanged. Both hosts agree.",
+    "legs": ["logic", "host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B1 row 06; docs/architecture/35-verification-reports/F13.md §5.B (the decision path never advances the visit boundary); docs/architecture/tapestry_requirements.txt:152 Return Visit Recognition",
+    "status": "specified",
+    "batch": "W16-B1"
+  },
+  {
+    "id": "W16.C2.07",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Visit number and entry channel are identical for the same event sequence through the SessionManager path and the ShopperReflex path, and appear identically in the SDK-visible projection.",
+    "legs": ["host"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B1 row 07; docs/architecture/35-audit-verification-and-source-of-truth.md §5 W16 (\"Carry validated visit/channel through both hosts … and SDK\"); docs/architecture/35-verification-reports/F13.md §5.C (the object host has no visit or channel state at all)",
+    "status": "specified",
+    "batch": "W16-B1"
+  },
+  {
+    "id": "W16.C2.08",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "SDK: the cached entry is cleared on consent transition, identity-generation change and browsing-session rollover before entry signals are recomputed; entrySessionId names the session that produced the entry.",
+    "legs": ["sdk"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B1 row 08; docs/handover/HANDOFF-2026-09-18.md §5 saved-behavior row for src/sdk/core.ts (\"Track entrySessionId; clear cached entry on consent/identity-generation transitions and browsing-session rollover before recomputing entry signals\")",
+    "status": "specified",
+    "batch": "W16-B1"
+  },
+  {
+    "id": "W16.C2.09",
+    "w": "W16",
+    "criterion": "C2",
+    "outcome": "Vocabulary validation: validEntry/entryChannelOf reject values outside the six-value channel vocabulary and hosts that are not valid hostnames; oversize query strings beyond ENTRY_QUERY_LIMIT are refused, not truncated into a wrong channel.",
+    "legs": ["logic"],
+    "witness": "docs/remediation/LANE-LOG.md W16-B1 row 09; docs/architecture/35-verification-reports/F13.md §5.E (the channel is unvalidated free text and becomes a statistics key); docs/handover/HANDOFF-2026-09-18.md §5 C2 (\"validate vocabulary and host\"); src/services/visit.ts ENTRY_LIMITS/ENTRY_QUERY_LIMIT",
+    "status": "specified",
+    "batch": "W16-B1"
+  }
+]
